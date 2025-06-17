@@ -17,7 +17,7 @@ def print_result(method_name, start, end, itr):
     per_time = total_time / itr
     fps = 1 / per_time
 
-    print(f"{method_name:<28}: itr:{itr}, per:{per_time*1000:.2f} ms, {fps:.2f}fps, total:{total_time*1000:.2f} ms")
+    print(f"{method_name:<28}: itr:{itr}, per:{per_time * 1000:.2f} ms, {fps:.2f}fps, total:{total_time * 1000:.2f} ms")
     time.sleep(1)
 
 
@@ -138,9 +138,7 @@ def test_resize(image_path: str, itr: int):
         start = timeit.default_timer()
         resized_image_cp_catmull_rom_c = None
         for _ in range(itr):
-            resized_image_cp_catmull_rom_c = px.resize(
-                image_cp, (new_width, new_height), interpolation=px.INTER_CATMULL_ROM
-            )
+            resized_image_cp_catmull_rom_c = px.resize(image_cp, (new_width, new_height), interpolation=px.INTER_CATMULL_ROM)
         end = timeit.default_timer()
         print_result("px.INTER_CATMULL_ROM", start, end, itr)
 

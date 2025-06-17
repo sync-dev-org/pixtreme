@@ -1,7 +1,7 @@
 [project]
 name            = "pixtreme"
 description     = "pixtreme: A High-Performance Graphics Library with CUDA Support"
-version = "0.1.1"
+version = "0.1.2"
 authors = [{name = "minamik", email = "mia@sync.dev"}]
 readme          = "README.md"
 license = "MIT"
@@ -66,6 +66,17 @@ requires      = [
     "pybind11-stubgen>=2.5.4",
     ]
 build-backend = "setuptools.build_meta"
+
+#[tool.cibuildwheel]
+#repair-wheel-command = [
+#  "bash stubgen.sh {wheel} {dest_dir}"
+#]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
 
 #[tool.setuptools.packages.find]
 #where = ["src"]

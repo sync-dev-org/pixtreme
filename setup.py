@@ -29,9 +29,6 @@ class BuildExtWithStubs(build_ext):
         # build extensions
         super().run()
 
-
-
-
         procs = []
         for ext in self.extensions:
             assert isinstance(ext, Extension), f"Extension must be of type Extension, got {type(ext)}"
@@ -161,7 +158,7 @@ for root, _, files in os.walk(source_dir):
             shutil.copyfile(os.path.join(root, file), dest_path)
         # elif file.endswith(".cpp") or file.endswith(".h"):
         #    os.remove(os.path.join(root, file))
-        
+
 
 third_party_dir = os.path.join(os.path.dirname(__file__), "third_party")
 for root, _, files in os.walk(third_party_dir):
@@ -245,6 +242,7 @@ setup(
         ],
     },
     cmdclass={"build_ext": BuildExtWithStubs},
+    # cmdclass={"build_ext": build_ext},
     options={"build_ext": {"parallel": 32}},
     include_package_data=True,
     ext_modules=ext_modules,

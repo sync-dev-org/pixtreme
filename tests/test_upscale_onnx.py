@@ -12,8 +12,7 @@ def test_upscale_onnx():
     itr = 8
 
     with px.Device(device_id):
-
-        image: cp.ndarray = px.imread("example/input/albrecht-voss-x2d-xcd20-35e-1_HD.png")
+        image: cp.ndarray = px.imread("examples/example.png")
         image = px.to_float32(image)
 
         images = [image.copy() for _ in range(itr)]

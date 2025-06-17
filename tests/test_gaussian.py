@@ -13,7 +13,6 @@ def _test_gaussian():
     itr = 1000
 
     with px.Device(0):
-
         start = timeit.default_timer()
         image_cp = px.imread("example/example.png")
         image_cp = px.to_float32(image_cp)
@@ -68,9 +67,7 @@ def _test_gaussian():
         total_time = end - start
         fps = itr / total_time
         per_frame = total_time / itr
-        print(
-            f"Gaussian Blur (OpenCV): Time: {total_time:.6f} seconds, FPS: {fps:.2f}, Per Frame: {per_frame:.6f} seconds"
-        )
+        print(f"Gaussian Blur (OpenCV): Time: {total_time:.6f} seconds, FPS: {fps:.2f}, Per Frame: {per_frame:.6f} seconds")
 
         # px.imshow("Gaussian Blur (OpenCV)", blurred_image_np)
 

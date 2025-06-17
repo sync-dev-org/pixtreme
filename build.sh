@@ -39,14 +39,7 @@ else
     source ${VENV_DIR}/bin/activate
 fi
 
-# if not "*.pyi" in src/pixtreme
-if ! ls src/pixtreme/*.pyi 1> /dev/null 2>&1; then
-    echo "[build.sh] No .pyi files found in src/pixtreme."
-    python setup.py build_ext --inplace
-    #uv build
-    #python -m build
-fi
-
+python setup.py build_ext --inplace
 
 export CIBW_BUILD="cp310-* cp311-* cp312-* cp313-*"
 export CIBW_BUILD_FRONTEND="build[uv]"

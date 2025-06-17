@@ -154,7 +154,7 @@ cython_debug/
 
 # Development
 cache/
-example/
+examples/
 models/
 sandbox/
 src/pixtreme/

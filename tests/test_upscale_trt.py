@@ -9,7 +9,6 @@ import torch
 import pixtreme as px
 
 
-# async
 @pytest.mark.asyncio
 async def test_upscale_trt():
     print()
@@ -18,7 +17,6 @@ async def test_upscale_trt():
     itr = 300
 
     with px.Device(device_id):
-
         input_dir = "example/source/input"
         files = os.listdir(input_dir)
 
