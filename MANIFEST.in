@@ -1,0 +1,4 @@
+include pyproject.toml LICENSE README.md
+recursive-include src/pixtreme_source *.py *.cpp *.h
+recursive-include src/pixtreme *.pyi *.cube py.typed
+recursive-include third_party/aces *.txt *.cube

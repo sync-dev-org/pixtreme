@@ -1,0 +1,94 @@
+[project]
+name            = "pixtreme"
+description     = "pixtreme: A High-Performance Graphics Library with CUDA Support"
+version = "0.1.1"
+authors = [{name = "minamik", email = "mia@sync.dev"}]
+readme          = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "third_party/aces/LICENSE_ACES.txt"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: GPU :: NVIDIA CUDA :: 12",
+    "Intended Audience :: Developers",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Software Development :: Libraries",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "basicsr-fixed>=1.4.2",
+    "cupy-cuda12x>=13.4.1",
+    "numpy>=2.2.6",
+    "nvidia-nvimgcodec-cu12-stubs>=0.5.0.13",
+    "nvidia-nvimgcodec-cu12[all]>=0.5.0.13",
+    "onnx>=1.18.0",
+    "onnxconverter-common>=1.13.0",
+    "onnxruntime-gpu>=1.22.0",
+    "opencv-python>=4.11.0.86",
+    "openexr>=3.3.3",
+    "pydantic>=2.11.4",
+    "spandrel>=0.4.1",
+    "spandrel_extra_arches>=0.2.0",
+    "tensorrt>=10.11.0.33",
+    "tensorrt_stubs>=10.11.0.33",
+    "torch>=2.4",
+    "torchvision>=0.19",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=25.1.0",
+    "build>=1.2.2.post1",
+    "cibuildwheel[uv]>=2.23.3",
+    "cython>=3.1.2",
+    "flake8>=7.2.0",
+    "isort>=6.0.1",
+    "pybind11-stubgen>=2.5.4",
+    "pytest>=8.3.5",
+    "setuptools>=80.9",
+    "packaging>=24.2",
+    "wheel>=0.45.1",
+    "twine>=6.1.0",
+]
+
+[build-system]
+requires      = [
+    "setuptools>=80.9",
+    "packaging>=24.2",
+    "wheel>=0.45.1",
+    "Cython>=3.1.2",
+    "numpy>=2.2.6",
+    "pybind11-stubgen>=2.5.4",
+    ]
+build-backend = "setuptools.build_meta"
+
+#[tool.setuptools.packages.find]
+#where = ["src"]
+
+#[tool.setuptools.package-data]
+#pixtreme = [ "__init__.py", "*.pyd", "*.so", "*.pyi", "*.cube", "py.typed" ]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cuda" }
+torchvision = { index = "pytorch-cuda" }
+
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[project.urls]
+repository = "https://github.com/sync-dev-org/pixtreme"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = ["-v", "-s"]
+filterwarnings = [
+    "ignore::DeprecationWarning"
+]
