@@ -57,13 +57,12 @@ pip install pixtreme
 git clone https://github.com/minamikik/pixtreme.git
 cd pixtreme
 
-# Using uv (recommended)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 uv python pin 3.12  # supports 3.10 - 3.13
 uv sync --extra dev
 ```
 
-## Complete API Reference
+## API Reference
 
 ### Color Space Conversions
 
@@ -80,19 +79,21 @@ uv sync --extra dev
 - `hsv_to_rgb(image: cp.ndarray) -> cp.ndarray` - Convert HSV to RGB
 
 #### YCbCr Color Space
-- `bgr_to_ycbcr(image: cp.ndarray) -> cp.ndarray` - Convert BGR to YCbCr
-- `rgb_to_ycbcr(image: cp.ndarray) -> cp.ndarray` - Convert RGB to YCbCr (Rec.709, legal range)
-- `ycbcr_to_bgr(image: cp.ndarray) -> cp.ndarray` - Convert YCbCr to BGR
-- `ycbcr_to_rgb(image: cp.ndarray) -> cp.ndarray` - Convert YCbCr to RGB (10-bit precision)
+- `bgr_to_ycbcr(image: cp.ndarray) -> cp.ndarray` - Convert BGR to YCbCr (10-bit precision, Full Range)
+- `rgb_to_ycbcr(image: cp.ndarray) -> cp.ndarray` - Convert RGB to YCbCr (10-bit precision, Full Range)
+- `ycbcr_to_bgr(image: cp.ndarray) -> cp.ndarray` - Convert YCbCr to BGR (10-bit precision, Full Range)
+- `ycbcr_to_rgb(image: cp.ndarray) -> cp.ndarray` - Convert YCbCr to RGB (10-bit precision, Full Range)
+- `ycbcr_full_to_legal(image: cp.ndarray) -> cp.ndarray` - Convert Full Range YCbCr to Legal Range YCbCr
+- `ycbcr_legal_to_full(image: cp.ndarray) -> cp.ndarray` - Convert Legal Range YCbCr to Full Range YCbCr
 - `ycbcr_to_grayscale(image: cp.ndarray) -> cp.ndarray` - Extract Y channel as grayscale
 
-#### YUV Format Conversions
+#### YUV Color Space
 - `yuv420p_to_ycbcr444(yuv420_data: cp.ndarray, width: int, height: int, interpolation: int = 1) -> cp.ndarray` - Convert YUV 4:2:0 planar to YCbCr 4:4:4
 - `yuv422p10le_to_ycbcr444(ycbcr422_data: cp.ndarray, width: int, height: int) -> cp.ndarray` - Convert 10-bit YUV 4:2:2 to YCbCr 4:4:4
 - `uyvy422_to_ycbcr444(uyvy_data: cp.ndarray, height: int, width: int) -> cp.ndarray` - Convert UYVY 4:2:2 packed format
 - `ndi_uyvy422_to_ycbcr444(uyvy_data: cp.ndarray) -> cp.ndarray` - NDI-specific UYVY conversion
 
-#### ACES Color Space Transformations
+#### ACES Color Space
 - `aces2065_1_to_acescct(image: cp.ndarray) -> cp.ndarray` - ACES2065-1 to ACEScct (log encoding)
 - `aces2065_1_to_acescg(image: cp.ndarray) -> cp.ndarray` - ACES2065-1 to ACEScg (linear)
 - `aces2065_1_to_rec709(image: cp.ndarray) -> cp.ndarray` - ACES2065-1 to Rec.709
@@ -101,7 +102,6 @@ uv sync --extra dev
 - `rec709_to_aces2065_1(image: cp.ndarray) -> cp.ndarray` - Rec.709 to ACES2065-1
 
 ### 3D LUT Operations
-
 - `read_lut(file_path: str, use_cache: bool = True, cache_dir: str = "cache") -> cp.ndarray` - Read .cube format 3D LUT files
 - `apply_lut(frame_rgb: cp.ndarray, lut: cp.ndarray, interpolation: int = 0) -> cp.ndarray` - Apply 3D LUT with interpolation
   - `interpolation=0`: Trilinear interpolation
@@ -127,8 +127,6 @@ Interpolation constants:
 
 #### Geometric Transformations
 - `affine_transform(src: cp.ndarray, M: cp.ndarray, dsize: tuple, flags: int = INTER_AUTO) -> cp.ndarray` - Apply affine transformation
-- `crop_from_kps(image: cp.ndarray, kps: cp.ndarray, size: int = 512) -> tuple[cp.ndarray, cp.ndarray]` - Crop image based on keypoints
-- `get_inverse_matrix(M: cp.ndarray) -> cp.ndarray` - Calculate inverse transformation matrix
 
 #### Morphological Operations
 - `erode(image: cp.ndarray, kernel_size: int, kernel: cp.ndarray | None = None, border_value: float = 0.0) -> cp.ndarray` - Morphological erosion
@@ -136,18 +134,20 @@ Interpolation constants:
 ### Face Processing
 
 #### Detection and Analysis
-- `FaceDetection` - Face detection using ONNX models
+- `FaceDetection` - Face detection
   - Constructor: `FaceDetection(model_path: str | None = None, model_bytes: bytes | None = None, device_id: int = 0, device: str = "cuda")`
   - Supports CUDA, TensorRT, and CPU backends
 
-- `FaceEmbedding` - Extract face embeddings for recognition
+- `FaceEmbedding` - Extract face embeddings
   - Constructor: `FaceEmbedding(model_path: str | None = None, model_bytes: bytes | None = None, device: str = "cuda")`
 
-- `FaceSwap` - Swap faces between images
+- `FaceSwap` - Swap faces
   - Constructor: `FaceSwap(model_path: str | None = None, model_bytes: bytes | None = None, device_id: int = 0, device: str = "cuda")`
 
-- `PasteBack` - Seamlessly paste processed faces back
-- `paste_back(target_image: cp.ndarray, paste_image: cp.ndarray, M: cp.ndarray, mask: cp.ndarray = None) -> cp.ndarray` - Function interface for paste back
+- `PasteBack` - Seamlessly paste back class
+- `paste_back(target_image: cp.ndarray, paste_image: cp.ndarray, M: cp.ndarray, mask: cp.ndarray = None) -> cp.ndarray` - Seamlessly paste back function
+- `crop(image: cp.ndarray, kps: cp.ndarray, size: int = 512) -> tuple[cp.ndarray, cp.ndarray]` - Crop image based on keypoints
+- `get_inverse_matrix(M: cp.ndarray) -> cp.ndarray` - Calculate inverse transformation matrix
 
 - `Face` - Data class for face information (Pydantic model)
 
@@ -177,6 +177,7 @@ Interpolation constants:
 - `to_uint16(image: np.ndarray | cp.ndarray) -> np.ndarray | cp.ndarray` - Convert to 16-bit unsigned integer
 - `to_float16(image: np.ndarray | cp.ndarray) -> np.ndarray | cp.ndarray` - Convert to 16-bit float
 - `to_float32(image: np.ndarray | cp.ndarray) -> np.ndarray | cp.ndarray` - Convert to 32-bit float
+- `to_float64(image: np.ndarray | cp.ndarray) -> np.ndarray | cp.ndarray` - Convert to 64-bit float
 - `to_dtype(image: np.ndarray | cp.ndarray, dtype: str) -> np.ndarray | cp.ndarray` - Convert to specified dtype
 
 ### I/O Operations
@@ -240,8 +241,12 @@ swapper = px.FaceSwap(model_path="models/swap.onnx")
 # Process faces
 image = px.imread("portrait.jpg")
 faces = detector.get(image)
-embeddings = embedder.get(face)
-swapped = swapper.get(target_face, source_face)
+
+for face in faces:
+    embeddings = embedder.get(face)
+
+
+    swapped = swapper.get(target_face, source_face)
 ```
 
 ### Super Resolution
