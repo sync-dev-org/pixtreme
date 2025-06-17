@@ -1,9 +1,5 @@
-from typing import Union
-
 import cupy as cp
-import numpy as np
 
-from ..utils.dlpack import to_cupy, to_numpy
 from ..utils.dtypes import to_float32
 
 # Horizontal blur kernel for RGB images
@@ -156,9 +152,7 @@ def gaussian_blur(image: cp.ndarray, kernel_size: int, sigma: float, kernel=None
     # print(f"After horizontal blur - max: {temp.max()}, min: {temp.min()}")
 
     # Vertical blur
-    vertical_blur_kernel(
-        grid_size, block_size, (temp.reshape(-1), output.reshape(-1), kernel, height, width, kernel_size)
-    )
+    vertical_blur_kernel(grid_size, block_size, (temp.reshape(-1), output.reshape(-1), kernel, height, width, kernel_size))
 
     return output
 

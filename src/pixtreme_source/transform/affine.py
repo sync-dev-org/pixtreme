@@ -1,9 +1,6 @@
-from typing import Union
-
 import cupy as cp
 import numpy as np
 
-from ..utils.dlpack import to_cupy, to_numpy
 from .interporation.area import area_affine_kernel
 from .interporation.bicubic import bicubic_affine_kernel
 from .interporation.bilinear import bilinear_affine_kernel
@@ -81,21 +78,15 @@ def affine_transform(src: cp.ndarray, M: cp.ndarray, dsize: tuple, flags: int = 
     elif interpolation == INTER_MITCHELL:
         B = cp.float32(1 / 3)
         C = cp.float32(1 / 3)
-        mitchell_affine_kernel(
-            grid, block, (src, output_image, inv_M_flat, src.shape[0], src.shape[1], dst_h, dst_w, B, C)
-        )
+        mitchell_affine_kernel(grid, block, (src, output_image, inv_M_flat, src.shape[0], src.shape[1], dst_h, dst_w, B, C))
     elif interpolation == INTER_CATMULL_ROM:
         B = cp.float32(0)
         C = cp.float32(0.5)
-        mitchell_affine_kernel(
-            grid, block, (src, output_image, inv_M_flat, src.shape[0], src.shape[1], dst_h, dst_w, B, C)
-        )
+        mitchell_affine_kernel(grid, block, (src, output_image, inv_M_flat, src.shape[0], src.shape[1], dst_h, dst_w, B, C))
     elif interpolation == INTER_B_SPLINE:
         B = cp.float32(1)
         C = cp.float32(0)
-        mitchell_affine_kernel(
-            grid, block, (src, output_image, inv_M_flat, src.shape[0], src.shape[1], dst_h, dst_w, B, C)
-        )
+        mitchell_affine_kernel(grid, block, (src, output_image, inv_M_flat, src.shape[0], src.shape[1], dst_h, dst_w, B, C))
     elif interpolation == INTER_LANCZOS2:
         A = 2
         lanczos_affine_kernel(grid, block, (src, output_image, inv_M_flat, src.shape[0], src.shape[1], dst_h, dst_w, A))

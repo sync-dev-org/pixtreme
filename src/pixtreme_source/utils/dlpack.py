@@ -4,9 +4,7 @@ import torch
 from nvidia import nvimgcodec
 
 
-def to_tensor(
-    image: np.ndarray | cp.ndarray | nvimgcodec.Image, device: str | torch.device | None = None
-) -> torch.Tensor:
+def to_tensor(image: np.ndarray | cp.ndarray | nvimgcodec.Image, device: str | torch.device | None = None) -> torch.Tensor:
     if isinstance(image, nvimgcodec.Image):
         image = cp.asarray(image)
 
@@ -22,7 +20,6 @@ def to_tensor(
 
 
 def to_numpy(image: cp.ndarray | torch.Tensor | nvimgcodec.Image) -> np.ndarray:
-
     if isinstance(image, cp.ndarray):
         image = cp.asnumpy(image)
     elif isinstance(image, torch.Tensor):

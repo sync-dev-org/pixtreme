@@ -123,6 +123,4 @@ void yuv422p10le_to_ycbcr444_kernel(const unsigned short* src, float* dst, int w
 
 
 """
-yuv422p10le_to_ycbcr444_kernel = cp.RawKernel(
-    code=yuv422p10le_to_ycbcr444_kernel_code, name="yuv422p10le_to_ycbcr444_kernel"
-)
+yuv422p10le_to_ycbcr444_kernel = cp.RawKernel(code=yuv422p10le_to_ycbcr444_kernel_code, name="yuv422p10le_to_ycbcr444_kernel")

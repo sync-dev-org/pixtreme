@@ -120,9 +120,7 @@ class FaceDetection:
         mean_val = float(self.input_mean)
 
         # blob = cv2.dnn.blobFromImage(image, 1.0 / self.input_std, input_size, mean_val, swapRB=True)
-        blob = to_blob(
-            image, scalefactor=1.0 / self.input_std, size=self.input_size, mean=(mean_val, mean_val, mean_val)
-        )
+        blob = to_blob(image, scalefactor=1.0 / self.input_std, size=self.input_size, mean=(mean_val, mean_val, mean_val))
         blob = to_numpy(blob)
 
         net_outs = self.session.run(self.output_names, {self.input_name: blob})
@@ -164,7 +162,7 @@ class FaceDetection:
                 kpss_list.append(pos_kpss)
         return scores_list, bboxes_list, kpss_list
 
-    def get(self, image, crop_size=512, max_num=0, metric="default"):
+    def get(self, image, crop_size=512, max_num=0, metric="default") -> list[Face]:
         if isinstance(image, np.ndarray):
             is_np = True
         else:

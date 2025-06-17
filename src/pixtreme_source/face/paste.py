@@ -63,7 +63,6 @@ def paste_back(
     M: cp.ndarray,
     mask: cp.ndarray = None,
 ) -> cp.ndarray:
-
     if mask is None:
         mask = cp.ones((paste_image.shape[0], paste_image.shape[1], 3), dtype=cp.float32)
 

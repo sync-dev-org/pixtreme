@@ -1,12 +1,7 @@
-from typing import Union
-
 import cupy as cp
-import numpy as np
 
-from ..color.bgr import bgr_to_rgb, rgb_to_bgr
+from ..color.bgr import bgr_to_rgb
 from ..transform.resize import resize
-from .dlpack import to_cupy, to_numpy
-from .dtypes import to_float16, to_float32
 
 
 def to_blobs(

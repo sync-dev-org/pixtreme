@@ -100,7 +100,6 @@ def merge_tiles(
     tile_size: int = 128,
     overlap: int = 16,
 ) -> cp.ndarray:
-
     tile_size = tile_size * scale
     overlap = overlap * scale
     original_shape = (original_shape[0] * scale, original_shape[1] * scale, original_shape[2])

@@ -1,5 +1,4 @@
 import cupy as cp
-import numpy as np
 
 from ..utils.dtypes import to_float32
 from .interporation.area import area_kernel

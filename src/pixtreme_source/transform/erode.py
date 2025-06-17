@@ -1,9 +1,6 @@
-from typing import Union
-
 import cupy as cp
 import numpy as np
 
-from ..utils.dlpack import to_cupy, to_numpy
 from ..utils.dtypes import to_float32
 
 erode_kernel_code = r"""

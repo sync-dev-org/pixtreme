@@ -67,6 +67,22 @@ def to_float32(image: np.ndarray | cp.ndarray) -> np.ndarray | cp.ndarray:
     return image
 
 
+def to_float64(image: np.ndarray | cp.ndarray) -> np.ndarray | cp.ndarray:
+    if image.dtype == "float64":
+        pass
+    elif image.dtype == "float32":
+        image = image.astype("float64")
+    elif image.dtype == "uint8":
+        image = (image.astype("float32") / 255.0).astype("float64")
+    elif image.dtype == "uint16":
+        image = (image.astype("float32") / 65535.0).astype("float64")
+    elif image.dtype == "float16":
+        image = image.astype("float64")
+    else:
+        raise ValueError(f"Unsupported dtype {image.dtype}")
+    return image
+
+
 def to_dtype(image: np.ndarray | cp.ndarray, dtype: str) -> np.ndarray | cp.ndarray:
     if dtype == "uint8":
         image = to_uint8(image)

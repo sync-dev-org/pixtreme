@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 import onnxruntime
 
@@ -14,8 +12,8 @@ from .schema import Face
 class FaceSwap:
     def __init__(
         self,
-        model_path: Optional[str] = None,
-        model_bytes: Optional[bytes] = None,
+        model_path: str | None = None,
+        model_bytes: bytes | None = None,
         device_id: int = 0,
         device: str = "cuda",
     ):
@@ -97,7 +95,6 @@ class FaceSwap:
 
     def get(self, target_face: Face, source_face: Face) -> np.ndarray:
         try:
-
             assert target_face.image is not None
             image = target_face.image
             normed_embedding = source_face.normed_embedding
@@ -113,9 +110,7 @@ class FaceSwap:
 
             aimage = resize(image, (128, 128), interpolation=INTER_AUTO)
 
-            blob = to_blob(
-                aimage, 1.0 / self.input_std, (128, 128), (self.input_mean, self.input_mean, self.input_mean)
-            )
+            blob = to_blob(aimage, 1.0 / self.input_std, (128, 128), (self.input_mean, self.input_mean, self.input_mean))
             latent = normed_embedding.reshape((1, -1))
             latent = np.dot(latent, self.emap)
             latent /= np.linalg.norm(latent)

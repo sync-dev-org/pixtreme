@@ -1,5 +1,6 @@
 import cupy as cp
 
+from ..utils.dtypes import to_float32
 from .bgr import bgr_to_rgb, rgb_to_bgr
 
 
@@ -17,9 +18,7 @@ def hsv_to_bgr(image: cp.ndarray) -> cp.ndarray:
     image_bgr : cp.ndarray
         Output frame. Shape 3D array (height, width, 3) in BGR format.
     """
-    image_hsv: cp.ndarray = image
-    image_rgb: cp.ndarray = hsv_to_rgb(image_hsv)
-    return rgb_to_bgr(image_rgb)
+    return rgb_to_bgr(hsv_to_rgb(image))
 
 
 def hsv_to_rgb(image: cp.ndarray) -> cp.ndarray:
@@ -36,7 +35,8 @@ def hsv_to_rgb(image: cp.ndarray) -> cp.ndarray:
     image_rgb : cp.ndarray
         Output frame. Shape 3D array (height, width, 3) in RGB format.
     """
-    image_hsv: cp.ndarray = image
+    image_hsv: cp.ndarray = to_float32(image)
+    assert 0.0 <= image_hsv[..., 0].max() <= 1.0
     height, width, _ = image_hsv.shape
     image_rgb: cp.ndarray = cp.empty_like(image_hsv)
     block_size: tuple = (32, 32)
@@ -54,12 +54,16 @@ void hsv_to_rgb_kernel_optimized(const float* hsv, float* rgb, int height, int w
     if (x >= width || y >= height) return;
 
     int idx = (y * width + x) * 3;
-    float h = hsv[idx];
+    float h = hsv[idx] * 360.0f;
     float s = hsv[idx + 1];
     float v = hsv[idx + 2];
 
     float c = v * s;
-    float h_prime = fmodf(h / 60.0, 6);
+    //float h_prime = fmodf(h / 60.0, 6);
+    h = fmodf(h, 360.0f);
+    if (h < 0) h += 360.0f;
+    float h_prime = h / 60.0f;
+
     float x_tmp = c * (1 - fabsf(fmodf(h_prime, 2) - 1));
     float m = v - c;
 
@@ -108,9 +112,7 @@ def bgr_to_hsv(image: cp.ndarray) -> cp.ndarray:
     image_hsv : cp.ndarray
         Output frame. Shape 3D array (height, width, 3) in
     """
-    image_bgr: cp.ndarray = image
-    image_rgb: cp.ndarray = bgr_to_rgb(image_bgr)
-    return rgb_to_hsv(image_rgb)
+    return rgb_to_hsv(bgr_to_rgb(image))
 
 
 def rgb_to_hsv(image: cp.ndarray) -> cp.ndarray:
@@ -127,7 +129,7 @@ def rgb_to_hsv(image: cp.ndarray) -> cp.ndarray:
     image_hsv : cp.ndarray
         Output frame. Shape 3D array (height, width, 3) in HSV format.
     """
-    image_rgb: cp.ndarray = image
+    image_rgb: cp.ndarray = to_float32(image)
     height, width, _ = image_rgb.shape
     image_hsv: cp.ndarray = cp.empty_like(image_rgb)
     block_size: tuple = (32, 32)
@@ -173,6 +175,7 @@ void rgb_to_hsv_kernel(const float* rgb, float* hsv, int height, int width) {
         if (h < 0) h += 360.0f;
     }
 
+    h /= 360.0f;
     hsv[idx] = h;
     hsv[idx + 1] = s;
     hsv[idx + 2] = v;

@@ -1,5 +1,4 @@
 import os
-from typing import Union
 
 import cupy as cp
 import cv2
@@ -13,7 +12,7 @@ from ..utils.dlpack import to_numpy
 from ..utils.dtypes import to_float16, to_uint8, to_uint16
 
 
-def imwrite(output_path: str, image: Union[cp.ndarray, np.ndarray], param: int = -1, is_rgb: bool = False) -> None:
+def imwrite(output_path: str, image: cp.ndarray | np.ndarray, param: int = -1, is_rgb: bool = False) -> None:
     filename, ext = os.path.splitext(output_path)
     if isinstance(image, cp.ndarray):
         image = to_numpy(image)

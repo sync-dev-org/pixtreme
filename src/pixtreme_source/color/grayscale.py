@@ -1,5 +1,6 @@
 import cupy as cp
 
+from ..utils.dtypes import to_float32
 from .bgr import bgr_to_rgb
 
 
@@ -17,9 +18,7 @@ def bgr_to_grayscale(image: cp.ndarray) -> cp.ndarray:
     image_gray : cp.ndarray
         Output frame. Shape 3D array (height, width, 3) in RGB format.
     """
-    image_bgr: cp.ndarray = image
-    image_rgb: cp.ndarray = bgr_to_rgb(image_bgr)
-    return rgb_to_grayscale(image_rgb)
+    return rgb_to_grayscale(bgr_to_rgb(image))
 
 
 def rgb_to_grayscale(image: cp.ndarray) -> cp.ndarray:
@@ -36,7 +35,7 @@ def rgb_to_grayscale(image: cp.ndarray) -> cp.ndarray:
     frame_gray : cp.ndarray
         Output frame. Shape 3D array (height, width, 3) in RGB format.
     """
-    image_rgb: cp.ndarray = image
+    image_rgb: cp.ndarray = to_float32(image)
 
     height, width, _ = image_rgb.shape
     image_gray: cp.ndarray = cp.empty_like(image_rgb)

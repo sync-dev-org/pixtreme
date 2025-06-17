@@ -3,14 +3,14 @@ import cupy as cp
 from ..utils.dtypes import to_float32
 
 
-def apply_lut(frame_rgb: cp.ndarray, lut: cp.ndarray, interpolation: int = 0) -> cp.ndarray:
+def apply_lut(image: cp.ndarray, lut: cp.ndarray, interpolation: int = 0) -> cp.ndarray:
     """
-    Apply a 3D LUT to an frame_rgb with trilinear interpolation.
+    Apply a 3D LUT to an image with trilinear interpolation.
 
     Parameters:
     ----------
-    frame_rgb : cp.ndarray
-        Input frame. Shape 3D array (height, width, 3) in RGB format.
+    image : cp.ndarray
+        Input image. Shape 3D array (height, width, 3) in RGB format.
     lut : cp.ndarray
         3D LUT. Shape 3D array (N, N, N, 3) in RGB format.
     interpolation : int
@@ -19,21 +19,22 @@ def apply_lut(frame_rgb: cp.ndarray, lut: cp.ndarray, interpolation: int = 0) ->
     Returns
     -------
     result : cp.ndarray
-        Output frame. Shape 3D array (height, width, 3) in RGB format.
+        Output image. Shape 3D array (height, width, 3) in RGB format.
     """
-    frame_rgb = to_float32(frame_rgb)
-    height, width, channels = frame_rgb.shape
+    image_rgb: cp.ndarray = to_float32(image)
+
+    height, width, channels = image_rgb.shape
     N = lut.shape[0]
-    result = cp.zeros_like(frame_rgb)
+    result = cp.zeros_like(image_rgb)
     block_size = (32, 32)
     grid_size = ((width + block_size[0] - 1) // block_size[0], (height + block_size[1] - 1) // block_size[1])
 
     if interpolation == 0:
         # Flatten the LUT for trilinear interpolation
         lut_flat = lut.reshape(-1)
-        lut_trilinear_kernel(grid_size, block_size, (frame_rgb, lut_flat, result, height, width, N))
+        lut_trilinear_kernel(grid_size, block_size, (image_rgb, lut_flat, result, height, width, N))
     elif interpolation == 1:
-        lut_tetrahedral_kernel(grid_size, block_size, (frame_rgb, result, lut, height, width, N, N * N))
+        lut_tetrahedral_kernel(grid_size, block_size, (image_rgb, result, lut, height, width, N, N * N))
 
     return result
 
@@ -181,13 +182,13 @@ void lut_tetrahedral_kernel(const float *frame_rgb, float *output, const float *
 lut_tetrahedral_kernel = cp.RawKernel(lut_tetrahedral_kernel_code, "lut_tetrahedral_kernel")
 
 
-def apply_lut_cp(frame_rgb: cp.ndarray, lut: cp.ndarray, interpolation: int = 0) -> cp.ndarray:
+def apply_lut_cp(image: cp.ndarray, lut: cp.ndarray, interpolation: int = 0) -> cp.ndarray:
     """
-    Apply a 3D LUT to an frame_rgb with trilinear interpolation.
+    Apply a 3D LUT to an image with trilinear interpolation.
 
     Parameters:
-    frame_rgb : cp.ndarray
-        Input frame_rgb. The shape is (height, width, 3). dtype is float32.
+    image : cp.ndarray
+        Input image. The shape is (height, width, 3). dtype is float32.
     lut : cp.ndarray
         Input LUT. The shape is (N, N, N, 3). dtype is float32.
     interpolation : int (optional)
@@ -195,25 +196,26 @@ def apply_lut_cp(frame_rgb: cp.ndarray, lut: cp.ndarray, interpolation: int = 0)
 
     Returns:
     result : cp.ndarray
-        Output frame_rgb. The shape is (height, width, 3). dtype is float32.
+        Output image. The shape is (height, width, 3). dtype is float32.
     """
     try:
-        height, width, _ = frame_rgb.shape
-        result = cp.zeros_like(frame_rgb)
+        image_rgb: cp.ndarray = to_float32(image)
+        height, width, _ = image_rgb.shape
+        result = cp.zeros_like(image_rgb)
 
         if interpolation == 0:
             # Get the number of LUT entries minus 1 (for zero-based indexing)
             N = lut.shape[0] - 1
 
-            # Scale the frame_rgb to the LUT size
-            scaled_frame_rgb = frame_rgb * N
+            # Scale the image_rgb to the LUT size
+            scaled_image_rgb = image_rgb * N
 
             # Calculate the indices for the corners of the cube for interpolation
-            index_low = cp.floor(scaled_frame_rgb).astype(cp.int32)
+            index_low = cp.floor(scaled_image_rgb).astype(cp.int32)
             index_high = cp.clip(index_low + 1, 0, N)
 
             # Calculate the fractional part for interpolation
-            fractional = scaled_frame_rgb - index_low
+            fractional = scaled_image_rgb - index_low
 
             # Interpolate
             for i in range(3):  # Iterate over each channel
@@ -247,15 +249,15 @@ def apply_lut_cp(frame_rgb: cp.ndarray, lut: cp.ndarray, interpolation: int = 0)
             dim = lut.shape[0]
             dim_minus_one = dim - 1
 
-            # Scale the frame_rgb to the LUT size
-            scaled_frame_rgb = cp.clip(frame_rgb * dim_minus_one, 0, dim_minus_one - 1e-5)
+            # Scale the image_rgb to the LUT size
+            scaled_image_rgb = cp.clip(image_rgb * dim_minus_one, 0, dim_minus_one - 1e-5)
 
             # Calculate the indices for the corners of the cube for interpolation
-            index_floor = cp.floor(scaled_frame_rgb).astype(cp.int32)
-            index_ceil = cp.ceil(scaled_frame_rgb).astype(cp.int32)
+            index_floor = cp.floor(scaled_image_rgb).astype(cp.int32)
+            index_ceil = cp.ceil(scaled_image_rgb).astype(cp.int32)
 
             # Calculate the fractional part for interpolation
-            weights = scaled_frame_rgb - index_floor
+            weights = scaled_image_rgb - index_floor
 
             # Interpolate
             for i in range(height):

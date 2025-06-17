@@ -16,7 +16,6 @@ def torch_to_onnx(
     dynamic_axes: dict | None = None,
     device: str = "cuda",
 ) -> None:
-
     print(f"Exporting PyTorch model to ONNX: {model_path} → {onnx_path}")
     ex_arch.install()
 

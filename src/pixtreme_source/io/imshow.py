@@ -10,9 +10,7 @@ from ..utils.dlpack import to_cupy, to_numpy
 from ..utils.dtypes import to_float32, to_uint8
 
 
-def imshow(
-    title: str, image: np.ndarray | cp.ndarray | nvimgcodec.Image, scale: float = 1.0, is_rgb: bool = False
-) -> None:
+def imshow(title: str, image: np.ndarray | cp.ndarray | nvimgcodec.Image, scale: float = 1.0, is_rgb: bool = False) -> None:
     """
     Image show function for numpy and cupy arrays. in RGB format.
 

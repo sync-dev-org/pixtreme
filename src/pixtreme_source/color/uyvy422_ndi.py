@@ -41,9 +41,7 @@ def ndi_uyvy422_to_ycbcr444(uyvy_data: cp.ndarray, use_bilinear: bool = True) ->
             (blocks_per_grid,), (threads_per_block,), (uyvy_flat, yuv444_flat, height, width)
         )
     else:
-        ndi_uyvy422_to_ycbcr444_kernel(
-            (blocks_per_grid,), (threads_per_block,), (uyvy_flat, yuv444_flat, height, width)
-        )
+        ndi_uyvy422_to_ycbcr444_kernel((blocks_per_grid,), (threads_per_block,), (uyvy_flat, yuv444_flat, height, width))
 
     # Reshape to 3D array
     yuv444p = yuv444_flat.reshape(height, width, 3)
@@ -113,9 +111,7 @@ void ndi_uyvy422_to_ycbcr444_kernel(
     yuv444_data[output_idx + 2] = v_val;  // V
 }
 """
-ndi_uyvy422_to_ycbcr444_kernel = cp.RawKernel(
-    code=ndi_uyvy422_to_ycbcr444_kernel_code, name="ndi_uyvy422_to_ycbcr444_kernel"
-)
+ndi_uyvy422_to_ycbcr444_kernel = cp.RawKernel(code=ndi_uyvy422_to_ycbcr444_kernel_code, name="ndi_uyvy422_to_ycbcr444_kernel")
 
 ndi_uyvy422_to_ycbcr444_bilinear_kernel_code = """
 extern "C" __global__

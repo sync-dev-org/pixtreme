@@ -123,7 +123,7 @@ class FaceEmbedding:
 
         return face
 
-    def get_feat(self, imgs):
+    def get_feat(self, imgs) -> np.ndarray:
         if not isinstance(imgs, list):
             imgs = [imgs]
         input_size = self.input_size
@@ -135,4 +135,6 @@ class FaceEmbedding:
         blob = to_numpy(blob)
 
         net_out = self.session.run(self.output_names, {self.input_name: blob})[0]
+        assert isinstance(net_out, np.ndarray), f"Output is not a numpy array: {type(net_out)}"
+
         return net_out

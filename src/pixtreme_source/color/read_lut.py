@@ -2,9 +2,10 @@ import hashlib
 import os
 
 import cupy as cp
+from platformdirs import user_cache_dir
 
 
-def read_lut(file_path: str, use_cache: bool = True, cache_dir="cache") -> cp.ndarray:
+def read_lut(file_path: str, use_cache: bool = True) -> cp.ndarray:
     """
     Read a 3D LUT Cube file and return the LUT data as a CuPy ndarray.
 
@@ -14,8 +15,6 @@ def read_lut(file_path: str, use_cache: bool = True, cache_dir="cache") -> cp.nd
         The path to the LUT file. Must be a .cube file.
     use_cache : bool, optional
         Whether to use the cache, by default True
-    cache_dir : str, optional
-        The directory to store the cache, by default "cache"
 
     Returns
     -------
@@ -27,7 +26,9 @@ def read_lut(file_path: str, use_cache: bool = True, cache_dir="cache") -> cp.nd
         if os.path.exists(file_path) is False:
             raise FileNotFoundError(f"Error: {file_path} not found.")
 
+        cache_dir = user_cache_dir(appauthor=False, appname="pixtreme", ensure_exists=True, version="1")
         os.makedirs(cache_dir, exist_ok=True)
+
         with open(file_path, "rb") as file:
             file_hash = hashlib.md5(file.read()).hexdigest()
         cache_path = os.path.join(cache_dir, f"{file_hash}.npy")

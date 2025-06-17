@@ -9,7 +9,6 @@ from .read_lut import read_lut
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-
 ap0_to_ap1_matrix = cp.array(
     [
         [1.4514393161, -0.2365107469, -0.2149285693],
