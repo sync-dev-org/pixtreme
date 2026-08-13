@@ -1,0 +1,4263 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="GPU-first image processing for Python, built on CUDA and CuPy">
+      
+      
+      
+      
+        <link rel="prev" href="../performance/">
+      
+      
+        <link rel="next" href="../reference/channel/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Token Reference - pixtreme 1.1.0</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#token-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="pixtreme 1.1.0" class="md-header__button md-logo" aria-label="pixtreme 1.1.0" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            pixtreme 1.1.0
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Token Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sync-dev-org/pixtreme" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sync-dev-org/pixtreme
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="pixtreme 1.1.0" class="md-nav__button md-logo" aria-label="pixtreme 1.1.0" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    pixtreme 1.1.0
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sync-dev-org/pixtreme" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sync-dev-org/pixtreme
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Token Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Token Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#literal-aliases-and-synchronization-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Literal aliases and synchronization contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        channels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rgb-hsv-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RGB / HSV conversion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#channel-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        channel routing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#device-array-affine-copy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        device array affine / copy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gamma" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gamma
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#colorspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        colorspace
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#golden-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        golden path
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tonemap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        tonemap
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tonemap-combinations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        tonemap combinations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        matrix
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#matrix-own-row" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        matrix own-row
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#matrix-resolver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        matrix resolver
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#range" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        range
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pixel-value-quantization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pixel value quantization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        interpolation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stack-direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        stack direction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sobel-direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sobel direction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#template-matching-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        template matching method
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chroma-siting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        chroma siting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#draw-continuous-coordinates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        draw continuous coordinates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#language" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        language
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#anchor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        anchor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        text placement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-align" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        text align
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-font" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        text font
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-block-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        text block layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#blend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        blend
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alpha" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        alpha
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        aa
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generator-kind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        generator kind
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#color-bars-standard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        color bars standard
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#color-bars-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        color bars output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#morphology-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        morphology shape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#border" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        border
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vector-blur-shutter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        vector blur shutter
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#from_-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_ conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#to_-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_ conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dtype
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dtype-operation-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dtype operation comparison
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-read-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        image read conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-write-dtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        image write dtype
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-encode-kwargs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        image encode kwargs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        image format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tiff-compression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TIFF compression
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exr-compression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EXR compression
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frame-boundary-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frame boundary contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/channel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.channel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/color/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.color
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/composite/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.composite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/draw/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.draw
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/feature/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.feature
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.filter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.generate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/io/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.io
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/morphology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.morphology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/transform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.transform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.values
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#literal-aliases-and-synchronization-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Literal aliases and synchronization contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        channels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rgb-hsv-conversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RGB / HSV conversion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#channel-routing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        channel routing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#device-array-affine-copy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        device array affine / copy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gamma" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gamma
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#colorspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        colorspace
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#golden-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        golden path
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tonemap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        tonemap
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tonemap-combinations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        tonemap combinations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        matrix
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#matrix-own-row" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        matrix own-row
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#matrix-resolver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        matrix resolver
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#range" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        range
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pixel-value-quantization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pixel value quantization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        interpolation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stack-direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        stack direction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sobel-direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sobel direction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#template-matching-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        template matching method
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chroma-siting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        chroma siting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#draw-continuous-coordinates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        draw continuous coordinates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#language" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        language
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#anchor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        anchor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-placement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        text placement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-align" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        text align
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-font" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        text font
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#text-block-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        text block layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#blend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        blend
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alpha" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        alpha
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aa" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        aa
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generator-kind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        generator kind
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#color-bars-standard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        color bars standard
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#color-bars-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        color bars output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#morphology-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        morphology shape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#border" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        border
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vector-blur-shutter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        vector blur shutter
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#from_-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_ conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#to_-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_ conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dtype
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dtype-operation-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dtype operation comparison
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-read-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        image read conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-write-dtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        image write dtype
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-encode-kwargs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        image encode kwargs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        image format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tiff-compression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TIFF compression
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exr-compression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EXR compression
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frame-boundary-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frame boundary contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="token-reference">Token Reference</h1>
+<p>This page defines the exact spelling and meaning of every named token accepted by the public API, together with the
+subset accepted by each API. The single definition point for each closed vocabulary is the corresponding
+<code>typing.Literal</code> alias exported by <code>pixtreme.core</code>; documentation tests mechanically compare the token columns on this
+page with those aliases. Runtime validators derive their accepted sets with <code>typing.get_args(alias)</code>. Tokens are
+case-sensitive exactly as shown. Alternate casing and unlisted tokens raise <code>ValueError</code>. Channel sequences are the
+only exception: they may contain application-defined labels not listed here.</p>
+<h2 id="literal-aliases-and-synchronization-contract">Literal aliases and synchronization contract</h2>
+<p>Closed-vocabulary aliases use PascalCase and map to the sections below. When multiple APIs accept subsets of one
+vocabulary, the alias remains a single definition of the complete token set. Each API-specific subset is fixed in the
+corresponding section.</p>
+<table>
+<thead>
+<tr>
+<th>Alias</th>
+<th>Vocabulary section</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Layout</code></td>
+<td>layout</td>
+</tr>
+<tr>
+<td><code>Gamma</code></td>
+<td>gamma</td>
+</tr>
+<tr>
+<td><code>Colorspace</code></td>
+<td>colorspace</td>
+</tr>
+<tr>
+<td><code>Tonemap</code></td>
+<td>tonemap</td>
+</tr>
+<tr>
+<td><code>Matrix</code></td>
+<td>matrix</td>
+</tr>
+<tr>
+<td><code>Range</code></td>
+<td>range</td>
+</tr>
+<tr>
+<td><code>Interpolation</code></td>
+<td>interpolation</td>
+</tr>
+<tr>
+<td><code>StackDirection</code></td>
+<td>stack direction</td>
+</tr>
+<tr>
+<td><code>SobelDirection</code></td>
+<td>sobel direction</td>
+</tr>
+<tr>
+<td><code>TemplateMatchingMethod</code></td>
+<td>template matching method</td>
+</tr>
+<tr>
+<td><code>ChromaSiting</code></td>
+<td>chroma siting</td>
+</tr>
+<tr>
+<td><code>TextLanguage</code></td>
+<td>language</td>
+</tr>
+<tr>
+<td><code>TextAnchor</code></td>
+<td>anchor</td>
+</tr>
+<tr>
+<td><code>TextAlign</code></td>
+<td>text align</td>
+</tr>
+<tr>
+<td><code>TextFont</code></td>
+<td>text font</td>
+</tr>
+<tr>
+<td><code>Blend</code></td>
+<td>blend</td>
+</tr>
+<tr>
+<td><code>Alpha</code></td>
+<td>alpha</td>
+</tr>
+<tr>
+<td><code>Antialiasing</code></td>
+<td>aa</td>
+</tr>
+<tr>
+<td><code>GeneratorKind</code></td>
+<td>generator kind</td>
+</tr>
+<tr>
+<td><code>ColorBarsStandard</code></td>
+<td>color bars standard</td>
+</tr>
+<tr>
+<td><code>ColorBarsOutput</code></td>
+<td>color bars output</td>
+</tr>
+<tr>
+<td><code>MorphologyShape</code></td>
+<td>morphology shape</td>
+</tr>
+<tr>
+<td><code>Border</code></td>
+<td>border</td>
+</tr>
+<tr>
+<td><code>VectorBlurShutter</code></td>
+<td>vector blur shutter</td>
+</tr>
+<tr>
+<td><code>Dtype</code></td>
+<td>dtype</td>
+</tr>
+<tr>
+<td><code>ImageFormat</code></td>
+<td>image format</td>
+</tr>
+<tr>
+<td><code>TiffCompression</code></td>
+<td>TIFF compression</td>
+</tr>
+<tr>
+<td><code>ExrCompression</code></td>
+<td>EXR compression</td>
+</tr>
+</tbody>
+</table>
+<p><code>channels</code> is an open set because it permits unknown labels, so it has no Literal alias. Closed numeric and Boolean
+arguments such as <code>bit_depth</code>, the three-state <code>copy</code> option, dimensions, and quality values are not named tokens and
+are outside this alias table.</p>
+<h2 id="channels">channels</h2>
+<p>A compact channel string is split greedily by longest match against the known labels below. An unlisted label can be
+specified only through <code>Sequence[str]</code>. <code>px.core.channels</code> is the single public normalizer; this open vocabulary
+therefore retains <code>str</code> plus runtime validation.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Definition</th>
+<th>Standard or convention</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>R</code></td>
+<td>Red component of an RGB representation</td>
+<td>RGB standard named by the colorspace token</td>
+<td>Chromaticity and transfer are determined by the Frame colorspace and gamma</td>
+</tr>
+<tr>
+<td><code>G</code></td>
+<td>Green component of an RGB representation</td>
+<td>RGB standard named by the colorspace token</td>
+<td>Chromaticity and transfer are determined by the Frame colorspace and gamma</td>
+</tr>
+<tr>
+<td><code>B</code></td>
+<td>Blue component of an RGB representation</td>
+<td>RGB standard named by the colorspace token</td>
+<td>Chromaticity and transfer are determined by the Frame colorspace and gamma</td>
+</tr>
+<tr>
+<td><code>H</code></td>
+<td>Hue turn</td>
+<td>HSV cylindrical coordinates</td>
+<td>Period 1; canonical output is <code>[0, 1)</code>, and the inverse conversion accepts all real values modulo 1</td>
+</tr>
+<tr>
+<td><code>S</code></td>
+<td>HSV saturation</td>
+<td>HSV cylindrical coordinates</td>
+<td>In <code>[0, 1]</code> for nonnegative RGB input; the range is not enforced for arbitrary input</td>
+</tr>
+<tr>
+<td><code>V</code></td>
+<td>HSV value</td>
+<td>HSV cylindrical coordinates</td>
+<td>The RGB maximum; an unbounded scene scale that may exceed 1</td>
+</tr>
+<tr>
+<td><code>A</code></td>
+<td>Alpha or opacity component</td>
+<td>OpenEXR and general image-API convention</td>
+<td>Premultiplication state is not stored in Frame metadata</td>
+</tr>
+<tr>
+<td><code>Y</code></td>
+<td>Luma or nonlinear luminance component</td>
+<td>ITU-T H.273 and grayscale convention</td>
+<td>Read as luma in YCbCr and as achromatic intensity in a one-channel Frame</td>
+</tr>
+<tr>
+<td><code>Cb</code></td>
+<td>Blue-difference chroma component</td>
+<td>ITU-T H.273</td>
+<td>Longest matching treats it as one label in compact notation</td>
+</tr>
+<tr>
+<td><code>Cr</code></td>
+<td>Red-difference chroma component</td>
+<td>ITU-T H.273</td>
+<td>Longest matching treats it as one label in compact notation</td>
+</tr>
+<tr>
+<td><code>Z</code></td>
+<td>Depth component</td>
+<td>OpenEXR channel-naming convention</td>
+<td>Outside golden-path color processing</td>
+</tr>
+</tbody>
+</table>
+<h2 id="rgb-hsv-conversion">RGB / HSV conversion</h2>
+<p><code>px.color.rgb_to_hsv</code> accepts R, G, and B values in any label order and produces a Frame in canonical
+<code>("H", "S", "V")</code> order. Per pixel, let <code>maximum = max(R, G, B)</code>, <code>minimum = min(R, G, B)</code>,
+<code>delta = maximum - minimum</code>, and <code>V = maximum</code>. If <code>maximum == 0</code>, then <code>S = 0</code>; otherwise,
+<code>S = delta / maximum</code>. If <code>delta == 0</code>, then <code>H = 0</code>. A colored pixel uses the row selected by its maximum component,
+then maps the result modulo 1 into <code>[0, 1)</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Maximum component</th>
+<th style="text-align: right;"><code>H</code> before wrapping</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R</td>
+<td style="text-align: right;"><code>((G - B) / delta) / 6</code></td>
+</tr>
+<tr>
+<td>G</td>
+<td style="text-align: right;"><code>(2 + (B - R) / delta) / 6</code></td>
+</tr>
+<tr>
+<td>B</td>
+<td style="text-align: right;"><code>(4 + (R - G) / delta) / 6</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>px.color.hsv_to_rgb</code> accepts H, S, and V values in any label order and produces canonical
+<code>("R", "G", "B")</code> order. Let <code>h = H modulo 1</code>, <code>h6 = 6 * h</code>, <code>i = floor(h6)</code>, <code>C = V * S</code>,
+<code>X = C * (1 - abs((h6 modulo 2) - 1))</code>, and <code>m = V - C</code>. For sectors <code>i = 0..5</code>, <code>(R', G', B')</code> is respectively
+<code>(C, X, 0)</code>, <code>(X, C, 0)</code>, <code>(0, C, X)</code>, <code>(0, X, C)</code>, <code>(X, 0, C)</code>, or <code>(C, 0, X)</code>. The output is
+<code>(R' + m, G' + m, B' + m)</code>. When <code>S = 0</code>, the result is <code>(V, V, V)</code> regardless of H.</p>
+<p>Neither operation infers the input domain, clips, or normalizes. For finite nonnegative RGB, H is in <code>[0, 1)</code>, S is
+in <code>[0, 1]</code>, V is an unbounded nonnegative scene scale, and RGB to HSV to RGB is reversible within fp32 tolerance.
+Negative values and NaN or infinity are evaluated by the same formulas rather than rejected, but fall outside the
+nominal HSV ranges and round-trip guarantee.</p>
+<h2 id="channel-routing">channel routing</h2>
+<p><code>px.channel.shuffle</code> with <code>adapt=False</code> and <code>**outputs</code> is the only public operation for channel reordering,
+extraction, routing across Frames, and constant filling. Each <code>**outputs</code> key is the literal output label. Each value is
+either <code>(source_frame, source_label)</code> or a real number other than <code>bool</code>. Keyword insertion order becomes output
+channel order. The operation does not split compact labels or validate semantic compatibility between source and
+output labels.</p>
+<pre><code class="language-python">px.channel.shuffle(B=(frame, &quot;B&quot;), G=(frame, &quot;G&quot;), R=(frame, &quot;R&quot;))
+px.channel.shuffle(R=(foreground, &quot;R&quot;), G=(foreground, &quot;G&quot;), B=(foreground, &quot;B&quot;), A=(matte, &quot;Y&quot;))
+px.channel.shuffle(Y=(frame, &quot;Y&quot;), Cb=0.5, Cr=0.5)
+px.channel.shuffle(**{&quot;left.diffuse.R&quot;: (frame, &quot;R&quot;), &quot;depth.Z&quot;: (depth, &quot;Z&quot;)})
+</code></pre>
+<p>Pass non-identifier labels, including dotted OpenEXR-style labels, through <code>**{...}</code>. <code>adapt</code> is a reserved option
+name and cannot be an output label. The first Frame source establishes width, height, colorspace, and gamma; preceding
+fills do not participate in this selection. All Frame sources must be float32 with identical geometry. With
+<code>adapt=False</code>, colorspace and gamma must also match. With <code>adapt=True</code>, each distinct mismatching source is converted
+once to the reference representation through <code>px.color.rgb_to_rgb</code>. Routing itself only bit-copies source slices and
+fills float32 constants; it never clips values.</p>
+<p>Matrix provenance is determined from the output labels and the source Frames passed to the call:</p>
+<table>
+<thead>
+<tr>
+<th>Output structure</th>
+<th><code>Frame.matrix</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R / G / B mixed with Y / Cb / Cr</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>RGB-only, or no Y / Cb / Cr channels</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>All Y / Cb / Cr Frame-source claims are the same non-<code>None</code> token</td>
+<td>That token, preserving <code>native</code> literally</td>
+</tr>
+<tr>
+<td>At least one claim is <code>None</code>, or all Y / Cb / Cr outputs are fills</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td>Non-<code>None</code> claims contain multiple tokens</td>
+<td>Three-part error; no implicit rematrixing</td>
+</tr>
+</tbody>
+</table>
+<p>Relabeling a source channel to a different Y / Cb / Cr output label still makes that source Frame contribute its
+claim. Even with <code>adapt=True</code>, provenance comes from the Frames passed by the caller rather than temporary converted
+Frames. Use <code>px.color.rgb_to_ycbcr</code> or <code>px.color.ycbcr_to_rgb</code> for RGB/YCbCr conversion and
+<code>px.color.ycbcr_to_ycbcr</code> for explicit rematrixing; channel routing never combines those operations.</p>
+<h2 id="layout">layout</h2>
+<p>Layout tokens declare dimension order at the device-array boundary. They determine how <code>px.io.from_array</code> interprets
+input shape and which shape <code>px.io.to_array</code> produces. The default is <code>HWC</code>. Tokens are case-sensitive.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Rank / shape</th>
+<th><code>px.io.from_array</code></th>
+<th><code>px.io.to_array</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>HWC</code></td>
+<td><code>(H, W, C)</code></td>
+<td>Interpreted directly as Frame HWC</td>
+<td>HWC view or repacked result</td>
+</tr>
+<tr>
+<td><code>NHWC</code></td>
+<td><code>(1, H, W, C)</code></td>
+<td>HWC view after removing the leading size-1 axis; N &gt; 1 raises <code>ValueError</code></td>
+<td>Zero-copy view with a leading size-1 axis</td>
+</tr>
+<tr>
+<td><code>CHW</code></td>
+<td><code>(C, H, W)</code></td>
+<td>Transposed into HWC</td>
+<td>Repacked as a channel-first C-contiguous array</td>
+</tr>
+<tr>
+<td><code>NCHW</code></td>
+<td><code>(1, C, H, W)</code></td>
+<td>Validates N == 1 and transposes into HWC</td>
+<td>Repacked as a channel-first array with a leading size-1 axis</td>
+</tr>
+</tbody>
+</table>
+<h2 id="device-array-affine-copy">device array affine / copy</h2>
+<p>The <code>px.io.to_array</code> affine is <code>y = (x × scale - mean) / std</code>; the inverse affine in <code>px.io.from_array</code> is
+<code>x = (y × std + mean) / scale</code>. A <code>px.io.to_array</code> followed by <code>px.io.from_array</code> with the same constants returns the
+original Frame values. Each constant accepts either a scalar or a sequence whose length equals the channel count.
+Defaults are <code>scale=1</code>, <code>mean=0</code>, and <code>std=1</code>. Arithmetic is fp32, followed by a faithful CuPy cast to the requested
+dtype. For meaning-preserving rounding and clipping, use <code>px.io.to_array(frame, bit_depth=...)</code> or the Frame-domain
+<code>px.values.quantize</code>.</p>
+<p><code>px.io.from_array</code> and <code>px.io.to_array</code> share this three-state <code>copy</code> contract:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>copy=None</code></td>
+<td>Use a zero-copy view when possible; otherwise make exactly one copy when required by layout transposition, channel selection, dtype, affine processing, or another requested operation</td>
+</tr>
+<tr>
+<td><code>copy=False</code></td>
+<td>Strict zero-copy guarantee; a request that requires writing raises a three-part error</td>
+</tr>
+<tr>
+<td><code>copy=True</code></td>
+<td>Always return a private copy that shares no storage with the caller</td>
+</tr>
+</tbody>
+</table>
+<p><code>px.io.to_array(out=...)</code> is outside this three-state contract and cannot be combined with <code>copy=</code>. <code>out</code> must be a
+C-contiguous <code>cupy.ndarray</code> with the expected shape and dtype. The fused pass writes directly into it and returns the
+same object. Other DLPack producers cannot be destinations. When the caller can guarantee a writable zero-copy view,
+it may explicitly pass a CuPy view created with <code>cp.from_dlpack(tensor)</code>.</p>
+<h2 id="gamma">gamma</h2>
+<p>Gamma tokens describe the transfer characteristic applied to pixel values.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Definition</th>
+<th>Standard or convention</th>
+<th>Out-of-domain extension and notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>linear</code></td>
+<td>Scene-linear light</td>
+<td>ACES working convention</td>
+<td>Identity extended naturally to all real values; fixed as <strong>scene-referred</strong> and never used to mean display-linear</td>
+</tr>
+<tr>
+<td><code>srgb</code></td>
+<td>Piecewise sRGB transfer</td>
+<td>IEC 61966-2-1</td>
+<td>Linear and power branches extend naturally below 0 and above 1; the standard transfer for the <code>sRGB</code> colorspace</td>
+</tr>
+<tr>
+<td><code>rec709</code></td>
+<td>Rec.709 camera OETF</td>
+<td>ITU-R BT.709</td>
+<td>Linear and power branches extend naturally below 0 and above 1; independent of the <code>Rec.709</code> primaries token</td>
+</tr>
+<tr>
+<td><code>bt1886</code></td>
+<td>Reference-display EOTF</td>
+<td>ITU-R BT.1886</td>
+<td>Display transfer naturally extended as a signed-power branch with nominal exponent 2.4</td>
+</tr>
+<tr>
+<td><code>pq</code></td>
+<td>Perceptual quantizer</td>
+<td>SMPTE ST 2084 / ITU-R BT.2100</td>
+<td>Apply the standard formula to the nonnegative magnitude and reflect the negative side with preserved sign, <code>f(-x) = -f(x)</code>; absolute-luminance encoding</td>
+</tr>
+<tr>
+<td><code>hlg</code></td>
+<td>Hybrid log-gamma</td>
+<td>ITU-R BT.2100</td>
+<td>Extend the piecewise low power and high logarithmic branches naturally with sign; scene-referred broadcast HDR transfer</td>
+</tr>
+<tr>
+<td><code>s-log3</code></td>
+<td>S-Log3 camera log transfer</td>
+<td>Sony S-Log3 specification</td>
+<td>Apply the standard formula to nonnegative magnitude and reflect the negative side with preserved sign; validate independently of S-Gamut colorspaces</td>
+</tr>
+<tr>
+<td><code>logc4</code></td>
+<td>LogC4 camera log transfer</td>
+<td>ARRI LogC4 specification</td>
+<td>Apply the standard formula to nonnegative magnitude and reflect the negative side with preserved sign; ARRI Wide Gamut 4 is not currently a colorspace token</td>
+</tr>
+<tr>
+<td><code>cineon</code></td>
+<td>Cineon printing-density log transfer</td>
+<td>Kodak Cineon specification</td>
+<td>Formula with black CV=95, white CV=685, 0.002 density/code, and film gamma=0.6; apply to nonnegative magnitude and reflect the negative side with preserved sign</td>
+</tr>
+<tr>
+<td><code>2.2</code></td>
+<td>Power transfer with exponent 2.2</td>
+<td>Conventional value</td>
+<td><strong>Pure power</strong>, reflected with preserved sign; not a piecewise function</td>
+</tr>
+<tr>
+<td><code>2.4</code></td>
+<td>Power transfer with exponent 2.4</td>
+<td>Conventional value</td>
+<td><strong>Pure power</strong>, reflected with preserved sign; not BT.1886</td>
+</tr>
+<tr>
+<td><code>2.6</code></td>
+<td>Power transfer with exponent 2.6</td>
+<td>Conventional value</td>
+<td>Decode with <code>sign(x) * abs(x) ** 2.6</code> and encode with <code>sign(x) * abs(x) ** (1 / 2.6)</code>; no offset, piecewise branch, or clipping</td>
+</tr>
+</tbody>
+</table>
+<h2 id="colorspace">colorspace</h2>
+<p>Colorspace tokens identify a set of RGB primaries and a white point. Gamma tokens independently describe transfer
+characteristics. sRGB and Rec.709 have identical primaries but remain separate tokens because their standard transfers
+and usage contexts differ.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Definition</th>
+<th>Standard or convention</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sRGB</code></td>
+<td>sRGB primaries and D65 white</td>
+<td>IEC 61966-2-1</td>
+<td>Primaries and white point are identical to Rec.709</td>
+</tr>
+<tr>
+<td><code>Rec.709</code></td>
+<td>BT.709 primaries and D65 white</td>
+<td>ITU-R BT.709</td>
+<td>Primaries and white point are identical to sRGB</td>
+</tr>
+<tr>
+<td><code>Rec.2020</code></td>
+<td>BT.2020 wide-gamut primaries and D65 white</td>
+<td>ITU-R BT.2020</td>
+<td>Specify the HDR transfer separately with gamma</td>
+</tr>
+<tr>
+<td><code>ACES2065-1</code></td>
+<td>ACES AP0 primaries and ACES white</td>
+<td>SMPTE ST 2065-1</td>
+<td>ACES interchange colorspace</td>
+</tr>
+<tr>
+<td><code>ACEScg</code></td>
+<td>ACES AP1 primaries and ACES white</td>
+<td>Academy ACES specification</td>
+<td>Scene-linear working colorspace</td>
+</tr>
+<tr>
+<td><code>S-Gamut3</code></td>
+<td>Sony S-Gamut3 primaries</td>
+<td>Sony technical specification</td>
+<td>Camera gamut; specify a transfer such as <code>s-log3</code> separately</td>
+</tr>
+<tr>
+<td><code>S-Gamut3.Cine</code></td>
+<td>Sony S-Gamut3.Cine primaries</td>
+<td>Sony technical specification</td>
+<td>Cinema-oriented camera gamut</td>
+</tr>
+</tbody>
+</table>
+<p><code>px.color.rgb_to_rgb</code> constructs normalized primary matrices from the published RGB primaries and white point in each
+row. Conversions between different white points, such as D65 and ACES white, use the <strong>Bradford</strong> CAT. A colorspace
+conversion between sRGB and Rec.709 is the identity because their primaries and white point match. This is a technical
+conversion and does not include a tone scale or display rendering.</p>
+<h2 id="golden-path">golden path</h2>
+<p>The recommended working state is <strong>ACEScg, linear, full-range, float32</strong>, preserving negative values and overshoots
+above 1.0. This golden path is a recommendation, not a requirement. It does not apply to non-color channels such as Z,
+alpha, or masks, or to ML boundaries. Explicit output operations own display-gamut clipping and tone scaling.</p>
+<h2 id="tonemap">tonemap</h2>
+<p>Tonemap tokens select explicit rendering or direct mapping performed by <code>tonemap=</code> in <code>px.color.rgb_to_rgb</code>. <code>None</code>
+performs only the technical conversion, without rendering or white placement.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Definition</th>
+<th>ACES generation in the OCIO built-in config</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aces-1.3</code></td>
+<td>ACES 1.3 RRT + ODT family SDR rendering</td>
+<td>ACES 1.3</td>
+<td>Evaluate the ACES 1.0 SDR Video view directly in one analytic CUDA pass</td>
+</tr>
+<tr>
+<td><code>aces-1.3-lut</code></td>
+<td>ACES 1.3 RRT + ODT family SDR rendering</td>
+<td>ACES 1.3</td>
+<td>Evaluate the same view with the existing 4,096-point shaper and 65³ LUT</td>
+</tr>
+<tr>
+<td><code>aces-2.0</code></td>
+<td>ACES 2.0 Output Transform SDR rendering</td>
+<td>ACES 2.0</td>
+<td>Evaluate the ACES 2.0 SDR 100-nit view directly with one analytic CUDA pass and a fixed algorithm table</td>
+</tr>
+<tr>
+<td><code>aces-2.0-lut</code></td>
+<td>ACES 2.0 Output Transform SDR rendering</td>
+<td>ACES 2.0</td>
+<td>Evaluate the ACES 2.0 SDR 100-nit view with the existing 4,096-point shaper and 65³ LUT</td>
+</tr>
+<tr>
+<td><code>bt2408</code></td>
+<td>Direct mapping that places SDR reference white at HDR Reference White, 203 cd/m²</td>
+<td>—</td>
+<td>Not inverse tone mapping with a gradation curve; multiplies every Rec.2020-linear RGB component by the same positive gain</td>
+</tr>
+</tbody>
+</table>
+<p>An ACES token without a suffix selects the analytic implementation; <code>-lut</code> selects the LUT implementation. The
+<code>aces-2.0</code> algorithm table contains hue-dependent reach M and gamut-boundary parameters fixed for 100-nit Rec.709/D65;
+it is not a 65³ grid approximation of output RGB. The immutable source constants contain 363 reach-M records,
+non-uniform hue, and cusp and upper-hull data: 1,815 float32 values, or 7,260 bytes. CAM, tone, chroma, gamut, and display
+encoding are evaluated analytically per pixel. ACES generation identities stored in LUT archives remain <code>aces-1.3</code> and
+<code>aces-2.0</code>; public <code>-lut</code> tokens map to them explicitly.</p>
+<p><code>bt2408</code> applies gain after input-transfer decoding and the Rec.2020 primary matrix, but before output-transfer
+encoding. For HLG, derive <code>G_HLG = (exp((0.75 - c) / a) + b) / 12</code> in closed form from the BT.2100 OETF constants
+<code>a = 0.17883277</code>, <code>b = 1 - 4a</code>, and <code>c = 0.5 - a × ln(4a)</code>. For PQ, <code>G_PQ = 203 / 10000</code> under the 10,000 cd/m²
+normalization. Thus Rec.2020-linear <code>(1, 1, 1)</code> maps to HLG signal <code>0.75</code> or approximately 58% PQ signal. The 58% PQ
+figure is an explanatory approximation derived from ST 2084, not an arithmetic constant or numerical oracle. Neither
+intermediate gain application nor output is clipped, preserving negative values and values above reference white.</p>
+<h2 id="tonemap-combinations">tonemap combinations</h2>
+<p>Version 1.0 supplies exactly these ten tonemap/output combinations. Both output colorspace and output gamma must be
+explicit when a tonemap is selected. Any unlisted combination raises <code>ValueError</code> immediately.</p>
+<table>
+<thead>
+<tr>
+<th>Tonemap</th>
+<th>Output colorspace</th>
+<th>Output gamma</th>
+<th>Destination</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aces-1.3</code></td>
+<td><code>Rec.709</code></td>
+<td><code>bt1886</code></td>
+<td>Rec.1886 Rec.709 display</td>
+</tr>
+<tr>
+<td><code>aces-1.3</code></td>
+<td><code>sRGB</code></td>
+<td><code>srgb</code></td>
+<td>sRGB display</td>
+</tr>
+<tr>
+<td><code>aces-1.3-lut</code></td>
+<td><code>Rec.709</code></td>
+<td><code>bt1886</code></td>
+<td>Rec.1886 Rec.709 display</td>
+</tr>
+<tr>
+<td><code>aces-1.3-lut</code></td>
+<td><code>sRGB</code></td>
+<td><code>srgb</code></td>
+<td>sRGB display</td>
+</tr>
+<tr>
+<td><code>aces-2.0</code></td>
+<td><code>Rec.709</code></td>
+<td><code>bt1886</code></td>
+<td>Rec.1886 Rec.709 display</td>
+</tr>
+<tr>
+<td><code>aces-2.0</code></td>
+<td><code>sRGB</code></td>
+<td><code>srgb</code></td>
+<td>sRGB display</td>
+</tr>
+<tr>
+<td><code>aces-2.0-lut</code></td>
+<td><code>Rec.709</code></td>
+<td><code>bt1886</code></td>
+<td>Rec.1886 Rec.709 display</td>
+</tr>
+<tr>
+<td><code>aces-2.0-lut</code></td>
+<td><code>sRGB</code></td>
+<td><code>srgb</code></td>
+<td>sRGB display</td>
+</tr>
+<tr>
+<td><code>bt2408</code></td>
+<td><code>Rec.2020</code></td>
+<td><code>hlg</code></td>
+<td>BT.2100 HLG; SDR reference white = 75% signal</td>
+</tr>
+<tr>
+<td><code>bt2408</code></td>
+<td><code>Rec.2020</code></td>
+<td><code>pq</code></td>
+<td>BT.2100 PQ; SDR reference white = 203 cd/m²</td>
+</tr>
+</tbody>
+</table>
+<p>OCIO DisplayViewTransform is a general boundary that dynamically selects display, view, and look from the caller's
+configuration. In contrast, <code>aces-1.3</code> fixes the <code>ACES 1.0 - SDR Video</code> view from Studio Config
+<code>studio-config-v2.2.0_aces-v1.3_ocio-v2.4</code> as analytic formulas in a fused GPU kernel, without OCIO, shapers, 3D LUTs,
+or package data. <code>aces-2.0</code> likewise fixes the <code>ACES 2.0 - SDR 100 nits (Rec.709)</code> view from Studio Config
+<code>studio-config-v4.0.0_aces-v2.0_ocio-v2.5</code>, evaluating AP1 input limiting, Hellwig JMh, tone/chroma/gamut compression,
+Rec.709/D65 limiting RGB, the reference's intrinsic range, and display encoding in that order. The reference's
+intrinsic <code>[0, 1]</code> range is part of the Output Transform, not an added post-processor clip. <code>aces-1.3-lut</code> and
+<code>aces-2.0-lut</code> fix each generation's image with pre-baked shaper and 65³ LUT data plus the <strong>pixtreme version</strong>; they are
+not runtime OCIO-compatible APIs. <code>bt2408</code> also uses neither LUT data nor ACES shaper or bake tooling, evaluating the
+analytic formula above directly in the fused GPU kernel. A change to a fixed ACES rendering is a pixtreme release and
+changelog event. No path adds a post-clip to rendered output RGB.</p>
+<h2 id="matrix">matrix</h2>
+<p>Matrix tokens identify the luma coefficients used by H.273 non-constant-luminance equations. They always operate on
+full-range float with chroma centered at 0.5. A <strong>token denotes coefficients only; it never bundles a range</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Formal name</th>
+<th>Definition</th>
+<th>Standard or convention</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bt601</code></td>
+<td>BT.601</td>
+<td>Kr = 0.299, Kb = 0.114</td>
+<td>ITU-T H.273 / ITU-R BT.601</td>
+<td>SD-family non-constant-luminance coefficients</td>
+</tr>
+<tr>
+<td><code>bt709</code></td>
+<td>BT.709</td>
+<td>Kr = 0.2126, Kb = 0.0722</td>
+<td>ITU-T H.273 / ITU-R BT.709</td>
+<td>Specification-fixed result for sRGB and Rec.709</td>
+</tr>
+<tr>
+<td><code>bt2020</code></td>
+<td>BT.2020</td>
+<td>Kr = 0.2627, Kb = 0.0593</td>
+<td>ITU-T H.273 / ITU-R BT.2020</td>
+<td>Specification-fixed result for Rec.2020</td>
+</tr>
+<tr>
+<td><code>native</code></td>
+<td>Colorspace own-row</td>
+<td>Y row of the normalized RGB-to-XYZ matrix constructed from the Frame's current published colorspace primaries and white point</td>
+<td>Published standard for each colorspace</td>
+<td>Relative token, not native to a file or device; gamma does not change the coefficients</td>
+</tr>
+</tbody>
+</table>
+<h2 id="matrix-own-row">matrix own-row</h2>
+<p><code>native</code> uses the following own-row <code>(Kr, Kg, Kb)</code> values. They result from constructing normalized primary matrices
+in float64 from published xy primaries and white points. Correcting a colorspace attribute therefore changes the row
+to which <code>native</code> resolves.</p>
+<table>
+<thead>
+<tr>
+<th>Colorspace</th>
+<th>own-row <code>(Kr, Kg, Kb)</code></th>
+<th>Relationship to a known H.273 basis</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sRGB</code></td>
+<td><code>(0.2126390059, 0.7151686788, 0.0721923154)</code></td>
+<td>Numerically identical to <code>bt709</code></td>
+</tr>
+<tr>
+<td><code>Rec.709</code></td>
+<td><code>(0.2126390059, 0.7151686788, 0.0721923154)</code></td>
+<td>Numerically identical to <code>bt709</code></td>
+</tr>
+<tr>
+<td><code>Rec.2020</code></td>
+<td><code>(0.2627002120, 0.6779980715, 0.0593017165)</code></td>
+<td>Numerically identical to <code>bt2020</code></td>
+</tr>
+<tr>
+<td><code>ACES2065-1</code></td>
+<td><code>(0.3439664498, 0.7281660966, -0.0721325464)</code></td>
+<td>AP0 own-row</td>
+</tr>
+<tr>
+<td><code>ACEScg</code></td>
+<td><code>(0.2722287168, 0.6740817658, 0.0536895174)</code></td>
+<td>AP1 own-row</td>
+</tr>
+<tr>
+<td><code>S-Gamut3</code></td>
+<td><code>(0.2709796708, 0.7866064112, -0.0575860820)</code></td>
+<td>Sony S-Gamut3 own-row</td>
+</tr>
+<tr>
+<td><code>S-Gamut3.Cine</code></td>
+<td><code>(0.2150758201, 0.8850685017, -0.1001443219)</code></td>
+<td>Sony S-Gamut3.Cine own-row</td>
+</tr>
+</tbody>
+</table>
+<h2 id="matrix-resolver">matrix resolver</h2>
+<p>When matrix is omitted for RGB encoding (<code>px.color.rgb_to_ycbcr</code> or <code>px.color.rgb_to_grayscale</code>), resolve from the
+output representation in this order: sRGB or Rec.709 to <code>bt709</code>; Rec.2020 to <code>bt2020</code>; any remaining colorspace with
+<code>linear</code> gamma to <code>native</code>; and any remaining colorspace with nonlinear gamma to <code>bt709</code>. An explicit token is never
+canonicalized even when its coefficients are equal to another token. Read Y as luminance under <code>linear</code> gamma and as
+luma under nonlinear gamma.</p>
+<p>When matrix is omitted for YCbCr decoding, on the input side of <code>px.color.ycbcr_to_rgb</code> or
+<code>px.color.ycbcr_to_ycbcr</code>, resolve in this order: explicit per-call value, <code>frame.matrix</code>, <code>bt709</code> for sRGB or Rec.709,
+<code>bt2020</code> for Rec.2020, then error. ACES and S-Gamut families are never guessed. For camera material without provenance,
+<code>matrix="bt709"</code> is the most common practical candidate, but the caller must state it.</p>
+<p><code>px.color.ycbcr_to_ycbcr</code> keeps input and output matrix, range, and bit depth independent. When output matrix is
+omitted, preserve the resolved input token if output colorspace equals input colorspace; only a colorspace change uses
+the RGB-encode resolver. Both ends accept <code>full</code> or <code>legal</code> range and bit depth 8, 10, 12, 14, or 16.</p>
+<h2 id="range">range</h2>
+<p>Range tokens describe code-range interpretation at named-format boundaries. Frame metadata does not store range
+state. The explicit recovery operations <code>px.values.legal_to_full</code> and <code>px.values.full_to_legal</code> are directionally
+named and anchored to the H.273 <code>video_full_range_flag</code>; they map legal code positions for a selected bit depth to
+normalized full-range float values and back. The mapping is linear and does not clip, preserving negative values and
+values above 1.0.</p>
+<p><code>bit_depth</code> accepts the closed set <code>8</code>, <code>10</code>, <code>12</code>, <code>14</code>, and <code>16</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Definition</th>
+<th>Standard or convention</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>legal</code></td>
+<td>H.273 limited-range code positions, <code>video_full_range_flag = 0</code></td>
+<td>ITU-T H.273</td>
+<td>Y and limited-range RGB use the luma interval; Cb and Cr use the chroma interval</td>
+</tr>
+<tr>
+<td><code>full</code></td>
+<td>Full-range values spanning the entire unsigned container, <code>video_full_range_flag = 1</code></td>
+<td>ITU-T H.273</td>
+<td>Normal state for float working; not stored as a Frame state token</td>
+</tr>
+</tbody>
+</table>
+<p>OCIO RangeTransform is a general transform that remaps or clamps arbitrary input and output bounds, so it differs
+semantically from these range tokens. The pixtreme operations are limited to unclipped H.273 legal/full recovery.</p>
+<h2 id="pixel-value-quantization">pixel value quantization</h2>
+<p>Across every path, <code>bit_depth</code> accepts <code>8</code>, <code>10</code>, <code>12</code>, <code>14</code>, or <code>16</code> and means the same <strong>number of effective code
+bits</strong>. Maximum code is <code>2^bit_depth - 1</code>. The container is <code>uint8</code> at 8 bits and <code>uint16</code> at 10 through 16 bits. Bit
+depth is a per-call conversion claim, never persistent Frame metadata.</p>
+<p><code>px.values.quantize</code> clips a float32 Frame to <code>[0, 1]</code>, multiplies by maximum code, and rounds half away from zero.
+<code>px.values.dequantize</code> multiplies by the reciprocal of the declared maximum code and returns a float32 Frame. It does
+not validate or clip values in the container, so input above maximum code remains above 1.0. This is mapping to a
+uniform unsigned full-scale grid, not palette quantization or ML affine quantization.</p>
+<p><code>px.io.from_array(bit_depth=...)</code> and <code>px.io.to_array(bit_depth=...)</code> apply the same numeric rule at the raw-array
+boundary. <code>bit_depth</code> cannot be combined with <code>scale</code>, <code>mean</code>, or <code>std</code>. A <code>from_array</code> bit-depth conversion returns
+float32; a <code>to_array</code> bit-depth conversion fixes its output dtype to the container derived from bit depth.</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>API</th>
+<th>Meaning of <code>bit_depth</code></th>
+<th>Value and container handling</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Range pair</td>
+<td><code>px.values.legal_to_full</code> / <code>px.values.full_to_legal</code></td>
+<td>Effective code bits for H.273 legal code positions</td>
+<td>Linear float32 mapping without clipping</td>
+</tr>
+<tr>
+<td>Quantization pair</td>
+<td><code>px.values.quantize</code> / <code>px.values.dequantize</code></td>
+<td>Effective code bits for the unsigned full-scale grid</td>
+<td>float32 Frame to or from uint Frame</td>
+</tr>
+<tr>
+<td>Named format</td>
+<td><code>px.io.from_&lt;format&gt;</code> / <code>px.io.to_&lt;format&gt;</code></td>
+<td>Effective code bits carried by the format</td>
+<td>Packing, subsampling, and container resolved by the format contract</td>
+</tr>
+<tr>
+<td>General array boundary</td>
+<td><code>px.io.from_array</code> / <code>px.io.to_array</code></td>
+<td>Effective code bits for an unsigned full-scale grid in a raw array</td>
+<td>Composes orthogonally with layout, channel selection, and <code>out=</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="interpolation">interpolation</h2>
+<p>Interpolation tokens form the shared vocabulary for interpolation and resampling kernels. Every API fixes its accepted
+subset and coordinate rules.</p>
+<ul>
+<li><code>px.io.from_uyvy422</code>, <code>px.io.from_v210</code>, <code>px.io.from_nv12</code>, <code>px.io.from_p010</code>, <code>px.io.from_yuv420p</code>, and
+  <code>px.io.from_yuv422p</code> accept the first eight tokens in the table, excluding <code>area</code>; default <code>bilinear</code>.</li>
+<li>Chroma upsampling on a <code>from_</code> path places chroma samples at the frame coordinates defined in chroma siting and
+  evaluates filter weights from each luma-sample coordinate. Edges replicate the final chroma row or column.</li>
+<li><code>px.io.to_uyvy422</code>, <code>px.io.to_v210</code>, <code>px.io.to_nv12</code>, <code>px.io.to_p010</code>, <code>px.io.to_yuv420p</code>, and
+  <code>px.io.to_yuv422p</code> accept <code>nearest</code>, <code>bilinear</code>, <code>bicubic</code>, and <code>area</code>; default <code>area</code>.</li>
+<li>Chroma downsampling on a <code>to_</code> path centers each output sample at the siting offset. Bilinear and bicubic use a
+  scale-two reduction kernel; area averages coverage over the owned interval. Edges replicate.</li>
+<li>4:2:2 filters horizontally and reads the original row directly vertically. Equidistant nearest ties round half up.</li>
+<li><code>px.transform.resize</code> accepts the first nine table tokens. When omitted, it selects <code>area</code> if either dimension
+  shrinks, and <code>lanczos4</code> otherwise.</li>
+<li><code>px.transform.warp_affine</code> accepts the first nine table tokens. When omitted, it inspects the column norms of the
+  effective forward 2×2 matrix: either norm below 1 selects <code>area</code>; both norms at least 1 select <code>lanczos4</code>.</li>
+<li><code>px.composite.merge</code> accepts the first eight table tokens, excluding <code>area</code>; default <code>bilinear</code>. Each background
+  pixel center maps inversely into foreground coordinates.</li>
+<li>Outside foreground support, merge samples transparent zero. It does not replicate edges or renormalize weights after
+  discarding taps outside support.</li>
+<li><code>px.color.apply_lut</code> accepts <code>trilinear</code> and <code>tetrahedral</code>; default <code>tetrahedral</code>. Input RGB maps through the Lut's
+  per-channel declared <code>domain</code> to grid coordinates. Lookup coordinates outside the domain are clamped to its edge.
+  Lut output is not clipped; negative values and values above 1 are returned unchanged.</li>
+</ul>
+<p>Point-sampled <code>px.transform.resize</code> kernels share pixel-center alignment
+<code>src = (dst + 0.5) × (input / output) - 0.5</code> and edge replication. Channels are independent, and neither scene values
+nor kernel overshoot or undershoot is clipped. Each factor-derived output dimension is
+<code>floor(dim × factor + 0.5)</code>.</p>
+<p><code>px.transform.warp_affine</code> places the top-left input and output pixel centers at <code>(0, 0)</code> and inverse-maps every output
+center through the caller-declared forward matrix. Nearest uses <code>floor(coordinate + 0.5)</code>. Bilinear, cubic, and Lanczos
+use fixed-support separable kernels; Lanczos normalizes by the sum of all x- and y-direction tap weights. <code>area</code> is the
+full area average of intersections between the inverse-mapped output-pixel parallelogram and unit input-pixel cells.
+Neither point nor area renormalizes only in-canvas taps; both apply the border section's infinite-plane extension.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Definition</th>
+<th>Standard or convention</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nearest</code></td>
+<td>Nearest sample</td>
+<td>Nearest-neighbor interpolation</td>
+<td>Equidistant ties round half up, on both format-input paths and resize</td>
+</tr>
+<tr>
+<td><code>bilinear</code></td>
+<td>2×2 linear interpolation</td>
+<td>Bilinear interpolation</td>
+<td>Format-input paths align siting offsets; resize aligns pixel centers</td>
+</tr>
+<tr>
+<td><code>bicubic</code></td>
+<td>4×4 support with Keys cubic, <code>a = -0.5</code></td>
+<td>Mathematically identical to Catmull-Rom</td>
+<td>Interpolating kernel</td>
+</tr>
+<tr>
+<td><code>b-spline</code></td>
+<td>4×4 support in the Mitchell family, <code>B = 1, C = 0</code></td>
+<td>Cubic B-spline</td>
+<td>Approximating kernel; smooths even at unchanged size</td>
+</tr>
+<tr>
+<td><code>mitchell</code></td>
+<td>4×4 support in the Mitchell family, <code>B = 1/3, C = 1/3</code></td>
+<td>Mitchell-Netravali</td>
+<td>Approximating kernel; smooths even at unchanged size</td>
+</tr>
+<tr>
+<td><code>lanczos2</code></td>
+<td><code>sinc(x) sinc(x / 2)</code>, two lobes</td>
+<td>Windowed sinc</td>
+<td>Normalize by the weight sum inside support</td>
+</tr>
+<tr>
+<td><code>lanczos3</code></td>
+<td><code>sinc(x) sinc(x / 3)</code>, three lobes</td>
+<td>Windowed sinc</td>
+<td>Normalize by the weight sum inside support</td>
+</tr>
+<tr>
+<td><code>lanczos4</code></td>
+<td><code>sinc(x) sinc(x / 4)</code>, four lobes</td>
+<td>Windowed sinc</td>
+<td>Normalize by the weight sum inside support</td>
+</tr>
+<tr>
+<td><code>area</code></td>
+<td>Box average over the source region covered by each output pixel</td>
+<td>Area or box resampling</td>
+<td>The same definition also applies to enlargement</td>
+</tr>
+<tr>
+<td><code>trilinear</code></td>
+<td>Linear interpolation along three axes over the eight vertices of a 3D grid cell</td>
+<td>Trilinear interpolation</td>
+<td>Subset exclusive to <code>px.color.apply_lut</code></td>
+</tr>
+<tr>
+<td><code>tetrahedral</code></td>
+<td>Linear interpolation after splitting a 3D grid cell into six tetrahedra</td>
+<td>Tetrahedral interpolation</td>
+<td>Subset exclusive to <code>px.color.apply_lut</code>; default</td>
+</tr>
+</tbody>
+</table>
+<p>The cubic and Lanczos support widths in <code>px.transform.resize</code> do not expand on the source side during reduction; these
+kernels provide no scale-aware antialiasing. Use <code>area</code> for antialiased reduction.</p>
+<h2 id="stack-direction">stack direction</h2>
+<p><code>px.transform.stack</code> direction tokens are case-sensitive; default <code>vertical</code>. Input order is preserved, and output
+always owns new storage.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Concatenation rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vertical</code></td>
+<td>Arrange top to bottom; output height is the sum of input heights and width is common</td>
+</tr>
+<tr>
+<td><code>horizontal</code></td>
+<td>Arrange left to right; output width is the sum of input widths and height is common</td>
+</tr>
+</tbody>
+</table>
+<h2 id="sobel-direction">sobel direction</h2>
+<p><code>px.filter.sobel</code> direction tokens are case-sensitive; default <code>magnitude</code>. Each channel is processed independently,
+without dispatch based on channel labels.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>x</code></td>
+<td>First derivative in the horizontal direction; responds to vertical edges</td>
+</tr>
+<tr>
+<td><code>y</code></td>
+<td>First derivative in the vertical direction; responds to horizontal edges</td>
+</tr>
+<tr>
+<td><code>magnitude</code></td>
+<td>Per-channel gradient magnitude <code>sqrt(x² + y²)</code>; default</td>
+</tr>
+</tbody>
+</table>
+<h2 id="template-matching-method">template matching method</h2>
+<p><code>px.feature.match_template</code> method tokens are case-sensitive; default <code>ccoeff_normed</code>. Sums over window <code>I</code> and
+template <code>T</code> include spatial dimensions and every channel. In ccoeff methods, <code>mean_I[c]</code> and <code>mean_T[c]</code> are spatial
+arithmetic means per channel; channels are not combined into one mean.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Response</th>
+<th>Direction of better match</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sqdiff</code></td>
+<td><code>sum((I - T)²)</code></td>
+<td>Lower is better; an exact match is 0</td>
+</tr>
+<tr>
+<td><code>sqdiff_normed</code></td>
+<td><code>sum((I - T)²) / sqrt(sum(I²) × sum(T²))</code></td>
+<td>Lower is better</td>
+</tr>
+<tr>
+<td><code>ccorr</code></td>
+<td><code>sum(I × T)</code></td>
+<td>Higher is better</td>
+</tr>
+<tr>
+<td><code>ccorr_normed</code></td>
+<td><code>sum(I × T) / sqrt(sum(I²) × sum(T²))</code></td>
+<td>Higher is better</td>
+</tr>
+<tr>
+<td><code>ccoeff</code></td>
+<td><code>sum((I - mean_I[c]) × (T - mean_T[c]))</code></td>
+<td>Higher is better</td>
+</tr>
+<tr>
+<td><code>ccoeff_normed</code></td>
+<td><code>ccoeff / sqrt(sum((I - mean_I[c])²) × sum((T - mean_T[c])²))</code></td>
+<td>Higher is better; default</td>
+</tr>
+</tbody>
+</table>
+<p>When a normalized method's denominator is zero, <code>sqdiff_normed</code> returns 0 if its numerator is also zero and <code>+inf</code> if
+the numerator is positive. <code>ccorr_normed</code> and <code>ccoeff_normed</code> return 0. No epsilon or result clipping is introduced.</p>
+<h2 id="chroma-siting">chroma siting</h2>
+<p>Chroma-siting tokens define the centers of chroma samples in progressive 4:2:0 input, using frame coordinates where
+the top-left luma-sample center is <code>(0, 0)</code> and luma spacing is 1. They appear only on <code>px.io.from_nv12</code>,
+<code>px.io.from_p010</code>, <code>px.io.from_yuv420p</code>, <code>px.io.to_nv12</code>, <code>px.io.to_p010</code>, and <code>px.io.to_yuv420p</code>; default <code>left</code>.
+Siting is not inferred from colorimetry. State <code>topleft</code> explicitly for BT.2020 or BT.2100 material that uses the
+standard position.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th style="text-align: right;">Offset <code>(x, y)</code></th>
+<th>H.273</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>left</code></td>
+<td style="text-align: right;"><code>(0, 0.5)</code></td>
+<td>H.273 type 0</td>
+<td>Horizontally co-sited and vertically interstitial; typical BT.601/BT.709 SDR delivery convention</td>
+</tr>
+<tr>
+<td><code>center</code></td>
+<td style="text-align: right;"><code>(0.5, 0.5)</code></td>
+<td>H.273 type 1</td>
+<td>Geometric center of the 2×2 luma block</td>
+</tr>
+<tr>
+<td><code>topleft</code></td>
+<td style="text-align: right;"><code>(0, 0)</code></td>
+<td>H.273 type 2</td>
+<td>Co-sited on both axes; standard BT.2020/BT.2100 position</td>
+</tr>
+</tbody>
+</table>
+<p>4:2:2 (<code>px.io.from_uyvy422</code>, <code>px.io.from_v210</code>, and <code>px.io.from_yuv422p</code>) is fixed as horizontally co-sited and
+vertically full resolution, so it has no siting argument. 4:4:4 (<code>px.io.from_yuv444p</code> and <code>px.io.from_yuva444p</code>) has no
+subsampling and therefore has neither siting nor interpolation arguments.</p>
+<h2 id="draw-continuous-coordinates">draw continuous coordinates</h2>
+<p>Drawing APIs use coordinate pairs in <code>(x, y)</code> order: x follows columns and y follows rows. <code>(0, 0)</code> is the top-left
+corner of the top-left pixel, and the center of pixel at column <code>i</code>, row <code>j</code> is <code>(i + 0.5, j + 0.5)</code>. Coordinates and
+dimensions accept finite real numbers and preserve subpixel positions. Negative and off-image coordinates are valid;
+only the intersection with the image is drawn.</p>
+<h2 id="language">language</h2>
+<p>Text-language tokens select the OpenType shaping language and therefore the CJK glyph forms provided by the selected
+bundled font's <code>locl</code> feature. The default for <code>px.draw.text</code> is <code>ja</code>. Tokens are case-sensitive.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ja</code></td>
+<td>Japanese glyph forms</td>
+</tr>
+<tr>
+<td><code>zh-hans</code></td>
+<td>Simplified Chinese glyph forms</td>
+</tr>
+<tr>
+<td><code>zh-hant</code></td>
+<td>Traditional Chinese glyph forms</td>
+</tr>
+<tr>
+<td><code>ko</code></td>
+<td>Korean glyph forms</td>
+</tr>
+</tbody>
+</table>
+<h2 id="anchor">anchor</h2>
+<p>Text-anchor tokens define which point on the text box <code>position</code> identifies, in <code>&lt;vertical&gt;-&lt;horizontal&gt;</code> order.
+Default <code>baseline-left</code>. <code>px.draw.text</code> defines horizontal positions from block width and vertical positions from the
+first-line ascender, first-line baseline, and final-line descender. This is independent of actual ink, outline,
+bearing, or glyph overhang for both single-line and multiline text.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>top-left</code></td>
+<td>First-line ascender and left edge of the block box</td>
+</tr>
+<tr>
+<td><code>top-center</code></td>
+<td>First-line ascender and horizontal midpoint of the block box</td>
+</tr>
+<tr>
+<td><code>top-right</code></td>
+<td>First-line ascender and right edge of the block box</td>
+</tr>
+<tr>
+<td><code>center-left</code></td>
+<td>Midpoint between top and bottom, and left edge of the block box</td>
+</tr>
+<tr>
+<td><code>center-center</code></td>
+<td>Midpoint between top and bottom, and horizontal midpoint of the block box</td>
+</tr>
+<tr>
+<td><code>center-right</code></td>
+<td>Midpoint between top and bottom, and right edge of the block box</td>
+</tr>
+<tr>
+<td><code>baseline-left</code></td>
+<td>First-line baseline and left edge of the block box</td>
+</tr>
+<tr>
+<td><code>baseline-center</code></td>
+<td>First-line baseline and horizontal midpoint of the block box</td>
+</tr>
+<tr>
+<td><code>baseline-right</code></td>
+<td>First-line baseline and right edge of the block box</td>
+</tr>
+<tr>
+<td><code>bottom-left</code></td>
+<td>Final-line descender and left edge of the block box</td>
+</tr>
+<tr>
+<td><code>bottom-center</code></td>
+<td>Final-line descender and horizontal midpoint of the block box</td>
+</tr>
+<tr>
+<td><code>bottom-right</code></td>
+<td>Final-line descender and right edge of the block box</td>
+</tr>
+</tbody>
+</table>
+<h2 id="text-placement">text placement</h2>
+<p><code>px.draw.text</code> splits text exactly like <code>str.split("\n")</code>, preserving empty lines from consecutive or trailing
+newlines. Carriage returns are rejected rather than normalized. Each nonempty line is independently shaped left to
+right with OpenType GSUB and GPOS in the selected font; shaping never spans lines. Advances and offsets returned by
+the shaper accumulate at subpixel precision.</p>
+<h2 id="text-align">text align</h2>
+<p>Text-align tokens choose each line's pen origin relative to the left edge of the <code>px.draw.text</code> block. Default <code>left</code>.
+Tokens are case-sensitive.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Line placement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>left</code></td>
+<td>Start at the block's left edge</td>
+</tr>
+<tr>
+<td><code>center</code></td>
+<td>Start at <code>(block width - line advance) / 2</code></td>
+</tr>
+<tr>
+<td><code>right</code></td>
+<td>Start at <code>block width - line advance</code></td>
+</tr>
+<tr>
+<td><code>justify</code></td>
+<td>Start at the block's left edge and distribute only positive remaining width evenly between shaped glyphs</td>
+</tr>
+</tbody>
+</table>
+<h2 id="text-font">text font</h2>
+<p>Text-font tokens select the bundled font that <code>px.draw.text</code> reads from package data. Default <code>sans</code>. There is no
+system-font discovery, network access, or font-path argument.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Bundled font</th>
+<th style="text-align: right;">Accepted <code>wght</code> range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sans</code></td>
+<td>Noto Sans CJK JP variable</td>
+<td style="text-align: right;">100.0 through 900.0</td>
+</tr>
+<tr>
+<td><code>mono</code></td>
+<td>Noto Sans Mono CJK JP variable</td>
+<td style="text-align: right;">Measured 400.0 through 700.0</td>
+</tr>
+</tbody>
+</table>
+<h2 id="text-block-layout">text block layout</h2>
+<p><code>line_spacing</code> in <code>px.draw.text</code> is a positive finite multiplier on the selected font's default OpenType horizontal
+line advance, <code>(ascender - descender + lineGap) × size / unitsPerEm</code>; default <code>1.0</code>. Empty lines receive the same
+baseline interval. <code>tracking</code> is a finite em ratio; default <code>0.0</code>. After shaping, <code>tracking × size</code> pixels are added
+between adjacent shaped glyphs. Negative tracking and overlap are permitted. <code>kerning=False</code> disables only the
+OpenType <code>kern</code> feature, preserving <code>liga</code> and <code>locl</code>.</p>
+<p>With <code>width=None</code>, block width is the maximum of zero and every signed line advance. An explicit width is a finite
+nonnegative pixel value and fixes the basis for alignment, justification, and horizontal anchors. Justification first
+applies tracking, then adds positive remaining width to glyph gaps; it never contracts negative remaining width. A
+line wider than the block is not clipped, shrunk, wrapped, or rejected. It overflows the box from its aligned origin,
+and only its intersection with the image is drawn.</p>
+<p>Horizontal block anchors use block width. Vertical top, baseline, bottom, and center refer to the first-line ascender,
+first-line baseline, final-line descender, and midpoint of top and bottom. Line spacing, tracking, justification gaps,
+baselines, and pen origins retain subpixel precision equivalent to 26.6 fixed point. <code>font="sans"</code> accepts weight
+100.0 through 900.0; <code>font="mono"</code> accepts the measured range 400.0 through 700.0. Values outside the ranges are not
+saturated.</p>
+<h2 id="blend">blend</h2>
+<p>Blend tokens choose a separable blend function <code>B(Cb, Cs)</code> for each corresponding color channel. <code>Cb</code> is unassociated
+background color and <code>Cs</code> is unassociated source color. <code>px.composite.merge</code> accepts all ten tokens below. Drawing
+shapes and text accept the <code>normal</code>, <code>add</code>, <code>multiply</code>, and <code>screen</code> subset. Both families default to <code>normal</code>. The
+former token <code>over</code> is rejected. Every expression is evaluated in fp32 without clamping intermediate values, results,
+negative values, or values above 1.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th><code>B(Cb, Cs)</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>normal</code></td>
+<td><code>Cs</code></td>
+</tr>
+<tr>
+<td><code>lighten</code></td>
+<td><code>max(Cb, Cs)</code></td>
+</tr>
+<tr>
+<td><code>add</code></td>
+<td><code>Cb + Cs</code></td>
+</tr>
+<tr>
+<td><code>screen</code></td>
+<td><code>1 - (1 - Cb) × (1 - Cs)</code></td>
+</tr>
+<tr>
+<td><code>darken</code></td>
+<td><code>min(Cb, Cs)</code></td>
+</tr>
+<tr>
+<td><code>multiply</code></td>
+<td><code>Cb × Cs</code></td>
+</tr>
+<tr>
+<td><code>difference</code></td>
+<td><code>abs(Cb - Cs)</code></td>
+</tr>
+<tr>
+<td><code>overlay</code></td>
+<td><code>2 × Cb × Cs</code> when <code>Cb &lt;= 0.5</code>; otherwise <code>1 - 2 × (1 - Cb) × (1 - Cs)</code></td>
+</tr>
+<tr>
+<td><code>hardlight</code></td>
+<td><code>2 × Cb × Cs</code> when <code>Cs &lt;= 0.5</code>; otherwise <code>1 - 2 × (1 - Cb) × (1 - Cs)</code></td>
+</tr>
+<tr>
+<td><code>softlight</code></td>
+<td><code>Cb - (1 - 2 × Cs) × Cb × (1 - Cb)</code> when <code>Cs &lt;= 0.5</code>; otherwise <code>Cb + (2 × Cs - 1) × (D(Cb) - Cb)</code></td>
+</tr>
+</tbody>
+</table>
+<p>For softlight, <code>D(Cb) = ((16 × Cb - 12) × Cb + 4) × Cb</code> when <code>Cb &lt;= 0.25</code>, and <code>D(Cb) = sqrt(Cb)</code> otherwise.
+Drawing operations use coverage times opacity as <code>a</code> and evaluate
+<code>out = dst × (1 - a) + B(dst, color) × a</code>. <code>px.composite.merge</code> constructs <code>a</code> from source alpha, mask, and opacity,
+then passes the blend result into source-over composition.</p>
+<h2 id="alpha">alpha</h2>
+<p>Alpha tokens jointly declare stored color representation for the background and foreground of <code>px.composite.merge</code>
+and for output when the background has <code>A</code>. Default <code>premultiplied</code>. Frame metadata does not store alpha state. A
+foreground without <code>A</code> receives implicit alpha coverage of 1 inside its support and 0 outside. Alpha, mask, and
+composition results are not clamped.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>premultiplied</code></td>
+<td>Color channels have already been multiplied by the same pixel's <code>A</code>; unassociated color at alpha 0 is defined as 0</td>
+</tr>
+<tr>
+<td><code>straight</code></td>
+<td>Color channels have not been multiplied by <code>A</code>; foreground color is associated with <code>A</code> before interpolation</td>
+</tr>
+</tbody>
+</table>
+<h2 id="aa">aa</h2>
+<p>Antialiasing tokens for drawing shapes choose how geometric coverage is computed. Default <code>distance</code>. <code>softness</code> is a
+nonnegative edge-feather width that expands the transition around <code>distance</code> and <code>supersample</code> boundaries. Because
+<code>off</code> produces binary coverage, it cannot be combined with positive softness.</p>
+<p>Grid and checkerboard generation share the same three tokens and coverage definitions, also defaulting to <code>distance</code>.
+Generators expose no <code>softness</code> argument: <code>distance</code> transitions over about one pixel, <code>supersample</code> uses fixed 4×4
+samples, and <code>off</code> makes a binary pixel-center decision.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Coverage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>distance</code></td>
+<td>Continuous transition about one pixel wide from signed boundary distance, expanded by <code>softness</code></td>
+</tr>
+<tr>
+<td><code>supersample</code></td>
+<td>Average fixed 4×4 samples in each pixel; with <code>softness=0</code>, produces 17 values from 0/16 through 16/16</td>
+</tr>
+<tr>
+<td><code>off</code></td>
+<td>1 when the pixel center is inside, otherwise 0</td>
+</tr>
+</tbody>
+</table>
+<p><code>px.draw.text(supersample=True)</code> also averages fixed 4×4 samples in fp32, matching the shape <code>supersample</code> token.
+However, the public text API is <code>supersample: bool = False</code>; it accepts neither the aa token vocabulary nor an <code>aa</code>
+argument.</p>
+<h2 id="generator-kind">generator kind</h2>
+<p>Ramp kind tokens determine the interpolation coordinate between two colors. Default <code>linear</code>. Interpolation occurs
+directly in the declared gamma value space, with no linearization or value-range clamp.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>linear</code></td>
+<td>Use vector projection from start toward end as the interpolation factor, saturating regions beyond either endpoint to the endpoint color</td>
+</tr>
+<tr>
+<td><code>radial</code></td>
+<td>Use start as center, distance from start to end as radius, and distance from center as the interpolation factor</td>
+</tr>
+</tbody>
+</table>
+<h2 id="color-bars-standard">color bars standard</h2>
+<p>Standard tokens jointly select pattern geometry, 10-bit code values, colorspace, gamma, and normalization for the
+normalized output. Bar channels are always <code>RGB</code>, and region edges have no antialiasing.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Standard and pattern</th>
+<th>Colorspace</th>
+<th>Gamma</th>
+<th>Code range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>arib-std-b28</code></td>
+<td>ARIB STD-B28 multiformat color bar</td>
+<td><code>Rec.709</code></td>
+<td><code>rec709</code></td>
+<td>narrow</td>
+</tr>
+<tr>
+<td><code>smpte-rp219</code></td>
+<td>SMPTE RP 219-1 basic pattern; identical output to ARIB STD-B28</td>
+<td><code>Rec.709</code></td>
+<td><code>rec709</code></td>
+<td>narrow</td>
+</tr>
+<tr>
+<td><code>bt2111-hlg</code></td>
+<td>ITU-R BT.2111-2 HLG pattern</td>
+<td><code>Rec.2020</code></td>
+<td><code>hlg</code></td>
+<td>narrow</td>
+</tr>
+<tr>
+<td><code>bt2111-pq</code></td>
+<td>ITU-R BT.2111-2 PQ pattern</td>
+<td><code>Rec.2020</code></td>
+<td><code>pq</code></td>
+<td>narrow</td>
+</tr>
+<tr>
+<td><code>bt2111-pq-full</code></td>
+<td>ITU-R BT.2111-2 PQ full-range pattern</td>
+<td><code>Rec.2020</code></td>
+<td><code>pq</code></td>
+<td>full</td>
+</tr>
+<tr>
+<td><code>full-100</code></td>
+<td>ITU-R BT.471 100/0/100/0 full-field bars with BT.1729 BT.709 code values</td>
+<td><code>Rec.709</code></td>
+<td><code>rec709</code></td>
+<td>narrow</td>
+</tr>
+<tr>
+<td><code>full-75</code></td>
+<td>ITU-R BT.471 100/0/75/0 full-field bars, retaining 100% white</td>
+<td><code>Rec.709</code></td>
+<td><code>rec709</code></td>
+<td>narrow</td>
+</tr>
+</tbody>
+</table>
+<p>Normalized output for a narrow standard applies <code>(code - 64) / 876</code> to every RGB code and preserves negative
+sub-black regions such as PLUGE. <code>bt2111-pq-full</code> uses <code>code / 1023</code>. Region boundaries scale proportionally from the
+standard's reference-resolution ratios to output dimensions and round to nearest integer pixel boundaries. A region
+that rounds to zero pixels in a very small image may disappear.</p>
+<h2 id="color-bars-output">color bars output</h2>
+<p>Output tokens select storage scale and dtype for the same standard pattern. Default <code>normalized</code>. Frame metadata
+follows the standard-token table for either output; the Frame does not store code scale or bit depth as metadata.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>normalized</code></td>
+<td>Normalize standard codes to full-range <code>float32</code> with the formulas above</td>
+</tr>
+<tr>
+<td><code>code</code></td>
+<td>Store the standard's 10-bit code values directly in <code>uint16</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="morphology-shape">morphology shape</h2>
+<p>Morphology-shape tokens define structuring-element support as integer pixel offsets. <code>radius</code> is an integer at least 1,
+and support always contains the center pixel. Raw kernel arrays and iterations are not accepted. Tokens are
+case-sensitive.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Support set</th>
+<th>Width and height</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>disk</code></td>
+<td>Integer offsets <code>(dx, dy)</code> from center satisfying <code>dx² + dy² &lt;= radius²</code>; default</td>
+<td><code>2 × radius + 1</code></td>
+</tr>
+<tr>
+<td><code>square</code></td>
+<td>Integer offsets with Chebyshev distance <code>max(abs(dx), abs(dy)) &lt;= radius</code></td>
+<td><code>2 × radius + 1</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>px.morphology.erosion</code> takes the per-channel minimum over support; <code>px.morphology.dilation</code> takes the maximum.
+<code>px.morphology.opening</code> erodes then dilates, and <code>px.morphology.closing</code> dilates then erodes with the same element.
+<code>px.morphology.morphological_gradient</code> is dilation minus erosion. <code>px.morphology.white_tophat</code> subtracts opening from
+the input to extract small bright details. <code>px.morphology.black_tophat</code> subtracts the input from closing to extract
+small dark details.</p>
+<h2 id="border">border</h2>
+<p>Border tokens define virtual pixels when a neighborhood operation reads beyond an image. They do not change output
+dimensions and are case-sensitive. If an image dimension is one pixel, every border reference on that axis maps to
+the single pixel.</p>
+<p>Blur APIs default to <code>mirror</code> and include <code>px.filter.gaussian_blur</code>, <code>px.filter.unsharp_mask</code>, <code>px.filter.box_blur</code>,
+<code>px.filter.median_blur</code>, <code>px.filter.bilateral_blur</code>, <code>px.filter.convolve_box</code>, <code>px.filter.directional_blur</code>,
+<code>px.filter.zoom_blur</code>, <code>px.filter.spin_blur</code>, <code>px.filter.vector_blur</code>, and <code>px.filter.lens_blur</code>.
+Derivative, sharpening, and edge-detection filters (<code>px.filter.sobel</code>, <code>px.filter.laplacian</code>,
+<code>px.filter.difference_of_gaussians</code>, <code>px.filter.sharpen</code>, and <code>px.filter.canny</code>) also default to <code>mirror</code> and accept the
+same four tokens. Canny applies the same border and <code>border_value</code> to both source reads in Sobel and magnitude-neighbor
+reads in NMS. Hysteresis traverses eight-connectivity only within the real image, never virtual border pixels or
+opposite-edge connections. <code>px.feature.corner_harris</code> accepts the same four tokens with default <code>mirror</code>, applying one
+input-extension rule consistently to the Sobel gradient stage and structure-tensor aggregation window; it does not
+reapply a pixel <code>border_value</code> to an already derived tensor.</p>
+<p><code>px.transform.warp_affine</code> accepts the same four tokens with default <code>constant</code>. As a warp-specific exception,
+<code>border_value=None</code> resolves to effective 0.0 shared by all channels. Point kernels apply the infinite-plane extension
+to every support tap; <code>area</code> applies it to every input-pixel cell intersecting the parallelogram. Canvas dimensions do
+not change.</p>
+<p>Morphology operations default to <code>replicate</code>: <code>px.morphology.erosion</code>, <code>px.morphology.dilation</code>,
+<code>px.morphology.opening</code>, <code>px.morphology.closing</code>, <code>px.morphology.morphological_gradient</code>,
+<code>px.morphology.white_tophat</code>, and <code>px.morphology.black_tophat</code>. Unlike blur, replicate is the neutral boundary for a
+uniform surface under min and max.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Mathematical definition</th>
+<th><code>np.pad</code></th>
+<th><code>scipy.ndimage</code></th>
+<th><code>cv2</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mirror</code></td>
+<td>Reflection without repeating the edge pixel; reflected indices have period <code>2n - 2</code></td>
+<td><code>reflect</code></td>
+<td><code>mirror</code></td>
+<td><code>BORDER_REFLECT_101</code></td>
+</tr>
+<tr>
+<td><code>replicate</code></td>
+<td>Edge clamp that repeats the edge pixel</td>
+<td><code>edge</code></td>
+<td><code>nearest</code></td>
+<td><code>BORDER_REPLICATE</code></td>
+</tr>
+<tr>
+<td><code>wrap</code></td>
+<td>Periodic indices modulo image size, retaining the same modulo definition even when the kernel is wider than the image</td>
+<td><code>wrap</code></td>
+<td><code>grid-wrap</code></td>
+<td><code>BORDER_WRAP</code></td>
+</tr>
+<tr>
+<td><code>constant</code></td>
+<td>Every virtual pixel outside the image equals <code>border_value</code></td>
+<td><code>constant</code></td>
+<td><code>constant</code></td>
+<td><code>BORDER_CONSTANT</code></td>
+</tr>
+</tbody>
+</table>
+<p>Except for <code>px.transform.warp_affine</code>, <code>constant</code> requires a finite real <code>border_value</code>; negative values and values
+above 1 are valid, while <code>bool</code> is not treated as real. Every API rejects <code>border_value</code> with another border token.
+Both violations fail immediately. The rule corresponds to
+<code>np.pad(mode="constant", constant_values=border_value)</code>, with one value shared by all channels.</p>
+<p>The name <code>reflect</code> describes different behavior in <code>np.pad</code> and <code>scipy.ndimage</code>.
+<code>np.pad(mode="reflect")</code> does not repeat edge pixels and matches pixtreme <code>mirror</code>; <code>scipy.ndimage</code> <code>reflect</code> is
+half-sample symmetric and repeats edge pixels. The SciPy token corresponding to pixtreme <code>mirror</code> is <code>mirror</code>.</p>
+<h2 id="vector-blur-shutter">vector blur shutter</h2>
+<p>Vector-blur shutter tokens select the sampling interval along a motion vector. Default <code>centered</code>. Tokens are
+case-sensitive.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Sampling interval</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>centered</code></td>
+<td>From <code>-0.5</code> through <code>+0.5</code> of the motion vector, centered on the current position</td>
+</tr>
+<tr>
+<td><code>forward</code></td>
+<td>From <code>0</code> through <code>+1</code> of the motion vector, starting at the current position</td>
+</tr>
+<tr>
+<td><code>backward</code></td>
+<td>From <code>-1</code> through <code>0</code> of the motion vector, ending at the current position</td>
+</tr>
+</tbody>
+</table>
+<h2 id="from_-conventions">from_<format> conventions</h2>
+<p>The eight <code>px.io.from_&lt;format&gt;</code> functions resolve uint-code packing, subsampling, and range at input, returning a
+C-contiguous float32 YCbCr444 Frame (<code>px.io.from_yuva444p</code> alone returns YCbCrA4444). Only <code>buf</code> is positional; width
+and height are required keyword-only arguments. The following are specification defaults for a boundary whose input
+buffer contains no metadata, not guaranteed truths about the material.</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Specification default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>colorspace</td>
+<td><code>Rec.709</code></td>
+<td>Placeholder; an explicit per-call <code>colorspace=</code> token takes precedence</td>
+</tr>
+<tr>
+<td>gamma</td>
+<td><code>rec709</code></td>
+<td>Placeholder; an explicit per-call <code>gamma=</code> token takes precedence</td>
+</tr>
+<tr>
+<td>matrix</td>
+<td><code>None</code></td>
+<td>Unknown provenance; an explicit per-call <code>matrix=</code> token is stamped literally</td>
+</tr>
+<tr>
+<td>channels</td>
+<td><code>("Y", "Cb", "Cr")</code></td>
+<td>Fixed channel order after format resolution</td>
+</tr>
+<tr>
+<td>range</td>
+<td><code>legal</code></td>
+<td>Default assumption for video-family YCbCr input; override per call with <code>range="full"</code></td>
+</tr>
+<tr>
+<td>interpolation</td>
+<td><code>bilinear</code></td>
+<td>Default for the six subsampled formats; accepts the first eight interpolation tokens</td>
+</tr>
+<tr>
+<td>siting</td>
+<td><code>left</code></td>
+<td>Present only on the three 4:2:0 formats; accepts the three chroma-siting tokens</td>
+</tr>
+</tbody>
+</table>
+<p><code>colorspace=</code>, <code>gamma=</code>, and <code>matrix=</code> are per-call metadata claims. Colorspace and gamma priority is
+<strong>explicit per-call value &gt; placeholder</strong>; omitted matrix is <code>None</code>. If only colorspace or gamma is explicit, the other
+remains its placeholder. Passing <code>None</code> for either has the same effect as omission. Explicit correction by assigning an
+attribute on the returned Frame remains available. Both mechanisms correct metadata rather than transform pixel
+values.</p>
+<p>Planar formats accept these <code>bit_depth</code> values and container dtypes. Ten- and twelve-bit planar data is packed into the
+low bits of uint16; nonsignal high bits are ignored on read.</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>bit_depth</th>
+<th>Container dtype</th>
+<th>Plane order</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>yuv420p</code></td>
+<td>8 (default) / 10</td>
+<td>8 = uint8, 10 = uint16</td>
+<td>Y, then Cb, then Cr; each chroma plane is H/2 × W/2</td>
+</tr>
+<tr>
+<td><code>yuv422p</code></td>
+<td>8 (default) / 10 / 12</td>
+<td>8 = uint8, 10 / 12 = uint16</td>
+<td>Y, then Cb, then Cr; each chroma plane is H × W/2</td>
+</tr>
+<tr>
+<td><code>yuv444p</code></td>
+<td>10 (default) / 12</td>
+<td>uint16</td>
+<td>Y, then Cb, then Cr; each plane is H × W</td>
+</tr>
+<tr>
+<td><code>yuva444p</code></td>
+<td>12 (default)</td>
+<td>uint16</td>
+<td>Y, then Cb, then Cr, then A; each plane is H × W, and A is full-scale regardless of range</td>
+</tr>
+</tbody>
+</table>
+<p>Packed and semiplanar formats use these conventions:</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Container dtype</th>
+<th>C-contiguous 1D layout</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uyvy422</code></td>
+<td>uint8</td>
+<td>U0 Y0 V0 Y1; input also accepts NDI shape <code>(H, W, 2)</code>, which can reshape to 1D as a zero-copy view</td>
+</tr>
+<tr>
+<td><code>v210</code></td>
+<td>uint32</td>
+<td>Six pixels in four words, with three 10-bit samples from the low bits of each word; rows align to 128 bytes, or 48 pixels, with zero padding</td>
+</tr>
+<tr>
+<td><code>NV12</code></td>
+<td>uint8</td>
+<td>Y plane followed by an interleaved Cb Cr plane</td>
+</tr>
+<tr>
+<td><code>P010</code></td>
+<td>uint16</td>
+<td>Same arrangement as NV12; 10-bit codes are MSB-aligned and the lower six bits are zero</td>
+</tr>
+</tbody>
+</table>
+<p><code>range="legal"</code> maps Y, Cb, and Cr to full-range float using the general H.273 formula for the bit depth and does not
+clip code headroom. <code>range="full"</code> uses <code>code / (2^n - 1)</code>. YUVA alpha always uses <code>code / (2^n - 1)</code> independently
+of the range token.</p>
+<h2 id="to_-conventions">to_<format> conventions</h2>
+<p>The eight <code>px.io.to_&lt;format&gt;</code> functions derive output dimensions from the width and height of the Frame passed as the
+first positional argument, resolving packing, subsampling, and range in one CUDA pass. Input must be a float32 Frame
+with channels <code>("Y", "Cb", "Cr")</code>; only <code>px.io.to_yuva444p</code> accepts <code>("Y", "Cb", "Cr", "A")</code>. Convert RGB Frames
+explicitly with <code>px.color.rgb_to_ycbcr</code> before passing them.</p>
+<p>Every function returns a newly allocated C-contiguous 1D <code>cupy.ndarray</code>. There are no width or height arguments. 4:2:0
+requires even width and height; ordinary 4:2:2 requires even width. v210 alone accepts any positive width and aligns
+row storage to 128 bytes.</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Specification default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>range</td>
+<td><code>legal</code></td>
+<td>Also accepts <code>full</code>; legal placement preserves headroom codes without clipping to the legal interval</td>
+</tr>
+<tr>
+<td>interpolation</td>
+<td><code>area</code></td>
+<td>Default for the six subsampled formats; accepts nearest, bilinear, bicubic, and area</td>
+</tr>
+<tr>
+<td>siting</td>
+<td><code>left</code></td>
+<td>Present only on the three 4:2:0 formats; accepts the three chroma-siting tokens</td>
+</tr>
+<tr>
+<td>rounding</td>
+<td>Half away from zero</td>
+<td>Nearest rounding from fp32 to code</td>
+</tr>
+<tr>
+<td>clipping</td>
+<td>Container range only</td>
+<td>Do not clip to the legal interval; clip only to physical <code>[0, 2^n - 1]</code></td>
+</tr>
+</tbody>
+</table>
+<p>Planar <code>bit_depth</code>, container dtype, and plane order are symmetric with the input path.</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>bit_depth</th>
+<th>Container dtype</th>
+<th>C-contiguous 1D layout</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>yuv420p</code></td>
+<td>8 (default) / 10</td>
+<td>8 = uint8, 10 = uint16</td>
+<td>Y, then Cb, then Cr; each chroma plane is H/2 × W/2</td>
+</tr>
+<tr>
+<td><code>yuv422p</code></td>
+<td>8 (default) / 10 / 12</td>
+<td>8 = uint8, 10 / 12 = uint16</td>
+<td>Y, then Cb, then Cr; each chroma plane is H × W/2</td>
+</tr>
+<tr>
+<td><code>yuv444p</code></td>
+<td>10 (default) / 12</td>
+<td>uint16</td>
+<td>Y, then Cb, then Cr; each plane is H × W</td>
+</tr>
+<tr>
+<td><code>yuva444p</code></td>
+<td>12 (default)</td>
+<td>uint16</td>
+<td>Y, then Cb, then Cr, then A; A is full-scale regardless of range</td>
+</tr>
+<tr>
+<td><code>uyvy422</code></td>
+<td>Fixed 8</td>
+<td>uint8</td>
+<td>U0 Y0 V0 Y1; reshape to <code>(H, W, 2)</code> is a zero-copy view</td>
+</tr>
+<tr>
+<td><code>v210</code></td>
+<td>Fixed 10</td>
+<td>uint32</td>
+<td>Six pixels in four words; the function zero-fills 128-byte row padding</td>
+</tr>
+<tr>
+<td><code>NV12</code></td>
+<td>Fixed 8</td>
+<td>uint8</td>
+<td>Y plane followed by an interleaved Cb Cr plane</td>
+</tr>
+<tr>
+<td><code>P010</code></td>
+<td>Fixed 10</td>
+<td>uint16</td>
+<td>Same arrangement as NV12; MSB-aligned with the lower six bits zero</td>
+</tr>
+</tbody>
+</table>
+<p>Range mapping composes inversely with the input path. Legal range uses an extent of <code>219 × 2^(n-8)</code> for Y and
+<code>224 × 2^(n-8)</code> for Cb and Cr, with lower code <code>16 × 2^(n-8)</code>. Full range scales every component by <code>2^n - 1</code>.
+YUVA alpha is always full-scale independently of the range token.</p>
+<h2 id="dtype">dtype</h2>
+<p>Dtype tokens describe only the storage representation of Frame data. Never infer a pixel-value scale from dtype;
+state it with <code>bit_depth</code> on <code>px.values.quantize</code>, <code>px.values.dequantize</code>, or a general array boundary.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Definition</th>
+<th>Standard or convention</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>float32</code></td>
+<td>IEEE 754 binary32 working storage</td>
+<td>NumPy dtype name</td>
+<td>Baseline dtype for processing and transforms</td>
+</tr>
+<tr>
+<td><code>float16</code></td>
+<td>IEEE 754 binary16 transport and storage</td>
+<td>NumPy dtype name</td>
+<td>Permitted storage; cast explicitly to float32 before processing</td>
+</tr>
+<tr>
+<td><code>uint8</code></td>
+<td>8-bit unsigned integer code storage</td>
+<td>NumPy dtype name</td>
+<td>Full-range maximum 255</td>
+</tr>
+<tr>
+<td><code>uint16</code></td>
+<td>16-bit unsigned integer code storage</td>
+<td>NumPy dtype name</td>
+<td>Full-range maximum 65,535</td>
+</tr>
+<tr>
+<td><code>uint32</code></td>
+<td>32-bit unsigned integer code or ID storage</td>
+<td>NumPy dtype name</td>
+<td>Full-range maximum 4,294,967,295; permitted transport and storage</td>
+</tr>
+</tbody>
+</table>
+<p><code>uint32</code> can preserve and transport integer identities such as object IDs bit-exactly. Numeric conversion to float32,
+whether normalized or not, cannot represent every integer above <code>2^24</code> exactly and may round to the nearest binary32
+value; this is documented loss. Processing and transform operations accept only float32 and never promote uint32
+implicitly.</p>
+<h2 id="dtype-operation-comparison">dtype operation comparison</h2>
+<p><code>px.values.cast_dtype</code> is a literal cast selected by a dtype token. <code>px.values.recode_dtype</code> preserves meaning relative
+to container full scale. The quantization pair changes pixel-value scale according to bit depth. <code>recode_dtype</code> accepts
+the same five dtype tokens (<code>float32</code>, <code>float16</code>, <code>uint8</code>, <code>uint16</code>, <code>uint32</code>) and implements all 25 source/destination
+pairs, including identical dtype. All operations preserve metadata and always return a new GPU allocation.</p>
+<table>
+<thead>
+<tr>
+<th>API</th>
+<th>Preserved property</th>
+<th>uint↔float behavior</th>
+<th>Primary use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>px.values.cast_dtype</code></td>
+<td>Numeric value</td>
+<td>Faithful delegation to CuPy <code>astype</code>; no scaling, clipping, or explicit rounding</td>
+<td>Change the container of depth, label, or other raw values read unchanged</td>
+</tr>
+<tr>
+<td><code>px.values.recode_dtype</code></td>
+<td>Meaning</td>
+<td>Normalize uint by container maximum; clip float to <code>[0, 1]</code>, scale to full range, and round half away from zero for float to uint; literal cast between floats</td>
+<td>Convert between ordinary uint images and normalized float Frames</td>
+</tr>
+<tr>
+<td><code>px.values.quantize</code></td>
+<td>Pixel-value scale</td>
+<td>Clip and scale float32 to the uint full-scale grid at the declared bit depth, then round half away from zero</td>
+<td>Produce a code-value Frame from normalized values</td>
+</tr>
+<tr>
+<td><code>px.values.dequantize</code></td>
+<td>Pixel-value scale</td>
+<td>Normalize uint codes at the declared bit depth by maximum code without clipping</td>
+<td>Return a code-value Frame to float32 working values</td>
+</tr>
+</tbody>
+</table>
+<h2 id="image-read-conventions">image read conventions</h2>
+<p><code>px.io.read_image</code> identifies extensions case-insensitively and supports JPEG, PNG, TIFF, JPEG 2000, WebP, BMP, PNM,
+TGA, HDR, DPX, and EXR. <code>px.io.decode_image</code> detects JPEG, PNG, TIFF, JPEG 2000, WebP, BMP, and PNM from encoded-byte
+signatures; it does not support TGA, HDR, DPX, or EXR. Both APIs use the immutable specification defaults below.</p>
+<p>A standard read normalizes ordinary uint by container maximum and decodes EXR HALF and RGBE into float32 Frames. EXR
+UINT alone converts literal unnormalized integers numerically to float32 and permits documented loss above <code>2^24</code>.
+<code>unchanged=True</code> preserves the input's self-declared storage dtype (<code>uint8</code>, <code>uint16</code>, <code>uint32</code>, <code>float16</code>, or
+<code>float32</code>), including exact EXR UINT sample bits. HDR whose native representation is fp32-equivalent returns the same
+values and dtype as a default read. EXR and HDR are file-only boundaries.</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Default colorspace</th>
+<th>Default gamma</th>
+<th><code>channels=None</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PNG / JPEG / TIFF</td>
+<td><code>sRGB</code></td>
+<td><code>srgb</code></td>
+<td>RGB or RGBA; grayscale is one-channel <code>("Y",)</code></td>
+</tr>
+<tr>
+<td>JPEG 2000</td>
+<td><code>sRGB</code></td>
+<td><code>srgb</code></td>
+<td>Y, RGB, or RGBA</td>
+</tr>
+<tr>
+<td>WebP</td>
+<td><code>sRGB</code></td>
+<td><code>srgb</code></td>
+<td>RGB</td>
+</tr>
+<tr>
+<td>BMP / PNM</td>
+<td><code>sRGB</code></td>
+<td><code>srgb</code></td>
+<td>Y or RGB</td>
+</tr>
+<tr>
+<td>TGA</td>
+<td><code>sRGB</code></td>
+<td><code>srgb</code></td>
+<td>RGB or RGBA</td>
+</tr>
+<tr>
+<td>HDR</td>
+<td><code>Rec.709</code></td>
+<td><code>linear</code></td>
+<td>RGB</td>
+</tr>
+<tr>
+<td>DPX</td>
+<td><code>Rec.709</code></td>
+<td>Header transfer; unknown maps to <code>cineon</code> at 10 bit, <code>rec709</code> at 8 bit, and <code>linear</code> at 12 or 16 bit</td>
+<td>RGB or RGBA</td>
+</tr>
+<tr>
+<td>EXR</td>
+<td><code>ACES2065-1</code></td>
+<td><code>linear</code></td>
+<td>R, G, B, and A when present</td>
+</tr>
+</tbody>
+</table>
+<p>Metadata priority is <strong>explicit per-call value &gt; explicit file value &gt; specification default</strong>. Explicit file values
+also include metadata inside encoded bytes accepted by <code>px.io.decode_image</code>. Per-call <code>colorspace=</code> and <code>gamma=</code> are
+metadata claims and do not transform pixel values. File metadata is limited to PNG cICP, sRGB, and gAMA chunks, plus
+EXR chromaticities and the ACES container flag. HDR EXPOSURE, PRIMARIES, and COLORCORR can be inspected as raw header
+values but are applied to neither pixels nor metadata. DPX maps printing-density, logarithmic, and ADX transfer
+characteristics to <code>cineon</code>; linear to <code>linear</code>; and video-family characteristics to <code>rec709</code>. ICC profiles are not
+read. If a file value cannot map into the public vocabulary, pixtreme falls back to the specification default and emits
+a Python warning.</p>
+<p><code>px.io.read_header</code> performs no pixel decoding or GPU allocation. It returns an <code>ImageHeader</code> with format, dimensions,
+stored channel dtype per part, and raw values, mapped tokens, and mapping availability for the file color information
+above. Each <code>ImageHeader.parts[]</code> entry has a per-part <code>deep: bool</code>, allowing flat/deep classification before pixel
+decode.</p>
+<h2 id="image-write-dtype">image write dtype</h2>
+<p><code>px.io.write_image</code> and <code>px.io.encode_image</code> accept all five Frame storage dtypes (<code>uint8</code>, <code>uint16</code>, <code>uint32</code>,
+<code>float16</code>, <code>float32</code>) for every supported format. Native dtypes pass through unchanged; nonnative dtypes convert on the
+GPU to the default container below. Input data, dtype, and metadata are unchanged. Conversion matches
+<code>px.values.recode_dtype</code>: uint scales by container full range, uint-to-float normalizes by container maximum, and
+float-to-uint clips to <code>[0, 1]</code>, scales to full range, and rounds half away from zero.</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Native dtype</th>
+<th>Default container for nonnative input</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PNG / TIFF / JPEG 2000 / PNM</td>
+<td><code>uint8</code> / <code>uint16</code></td>
+<td><code>uint8</code></td>
+</tr>
+<tr>
+<td>JPEG / WebP / BMP</td>
+<td><code>uint8</code></td>
+<td><code>uint8</code></td>
+</tr>
+<tr>
+<td>EXR</td>
+<td><code>float16</code> / <code>float32</code> / <code>uint32</code></td>
+<td>Normally <code>float16</code>; <code>uint32</code> for a uint32 Frame</td>
+</tr>
+<tr>
+<td>TGA</td>
+<td><code>uint8</code></td>
+<td><code>uint8</code></td>
+</tr>
+<tr>
+<td>HDR</td>
+<td><code>float32</code></td>
+<td><code>float32</code></td>
+</tr>
+<tr>
+<td>DPX</td>
+<td><code>float32</code></td>
+<td><code>float32</code></td>
+</tr>
+</tbody>
+</table>
+<p>Dtype conversion does not expand each format's closed channel-layout or encode-parameter set. For EXR, <code>dtype=None</code>
+selects HALF (<code>float16</code>) normally and native UINT (<code>uint32</code>) only for a uint32 Frame. Explicit <code>dtype=</code> overrides the
+Frame-dependent default. Conversion among <code>float16</code>, <code>float32</code>, and <code>uint32</code> is numerically equivalent to
+<code>recode_dtype</code>. EXR, TGA, HDR, and DPX are file-only boundaries. TGA, HDR, and DPX convert every nonnative dtype,
+including uint32, to uint8, float32, and float32 respectively with <code>recode_dtype</code> full-scale semantics. HDR requires
+exactly one R, G, and B channel.</p>
+<h2 id="image-encode-kwargs">image encode kwargs</h2>
+<p><code>format</code> is a required keyword-only token for <code>px.io.encode_image</code>; <code>px.io.write_image</code> derives format from its file
+extension. Encode parameters are named keywords only, never a magic integer list. EXR is file-only, so EXR compression
+and <code>dwa_level</code> exist only on <code>px.io.write_image</code>. Omission (<code>None</code>) uses the specification or codec default below.</p>
+<table>
+<thead>
+<tr>
+<th>Kwarg</th>
+<th>API and target format</th>
+<th>Value domain</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>quality</code></td>
+<td>Both APIs; JPEG and WebP</td>
+<td>Integer <code>1</code> through <code>100</code></td>
+<td>Lossy quality; specifying it for JPEG 2000, PNG, TIFF, BMP, PNM, or EXR raises <code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>compression</code></td>
+<td>Both APIs; TIFF</td>
+<td>Token <code>none</code> or <code>lzw</code></td>
+<td>TIFF uncompressed or lossless LZW compression</td>
+</tr>
+<tr>
+<td><code>compression</code></td>
+<td><code>px.io.write_image</code>; EXR</td>
+<td>EXR compression token</td>
+<td>Default <code>zip</code>; distinct from TIFF tokens</td>
+</tr>
+<tr>
+<td><code>compression_level</code></td>
+<td>Both APIs; PNG</td>
+<td>Integer <code>0</code> through <code>9</code></td>
+<td>PNG zlib compression level; specifying it for another format raises <code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>lossless</code></td>
+<td>Both APIs; JPEG 2000 and WebP</td>
+<td>Exact <code>bool</code> or <code>None</code></td>
+<td><code>True</code> is lossless, <code>False</code> lossy, and <code>None</code> the codec default; WebP <code>quality</code> conflicts with <code>True</code></td>
+</tr>
+<tr>
+<td><code>dwa_level</code></td>
+<td><code>px.io.write_image</code>; EXR DWAA and DWAB</td>
+<td>Positive finite exact <code>float</code> or <code>None</code>, including as a header float</td>
+<td><code>None</code> means <code>45.0</code>; specifying it for non-DWA compression raises <code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>bit_depth</code></td>
+<td><code>px.io.write_image</code>; DPX</td>
+<td>Integer <code>8</code>, <code>10</code>, <code>12</code>, <code>16</code>, or <code>None</code></td>
+<td><code>None</code> means 10 bit; specifying it for non-DPX output raises <code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>dtype</code></td>
+<td><code>px.io.write_image</code>; EXR</td>
+<td><code>float16</code>, <code>float32</code>, <code>uint32</code>, or <code>None</code></td>
+<td>An explicit value overrides the Frame-dependent default; specifying it for non-EXR output raises <code>ValueError</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="image-format">image format</h2>
+<p>Case-sensitive closed tokens accepted by <code>px.io.encode_image(format=...)</code>. They are not file extensions.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>jpeg</code></td>
+<td>JPEG encoded bytes</td>
+</tr>
+<tr>
+<td><code>png</code></td>
+<td>PNG encoded bytes</td>
+</tr>
+<tr>
+<td><code>tiff</code></td>
+<td>TIFF encoded bytes</td>
+</tr>
+<tr>
+<td><code>jpeg2000</code></td>
+<td>JPEG 2000 encoded bytes in a JP2 container</td>
+</tr>
+<tr>
+<td><code>webp</code></td>
+<td>WebP encoded bytes</td>
+</tr>
+<tr>
+<td><code>bmp</code></td>
+<td>BMP encoded bytes</td>
+</tr>
+<tr>
+<td><code>pnm</code></td>
+<td>P5 or P6 encoded bytes according to channel layout</td>
+</tr>
+</tbody>
+</table>
+<p>TGA is file-only and is not part of this encoded-bytes token set. <code>px.io.read_image</code> accepts TGA image type 2
+(uncompressed true color) or 10 (RLE true color), 24-bit BGR or 32-bit BGRA, and bottom-left or top-left origin. It
+rejects right-to-left origin, colormapped or grayscale types, 16 bit, reserved descriptor bits, nonzero attribute bits
+in 24-bit input, and attribute bits other than 8 in 32-bit input. A default read normalizes to fp32 RGB or RGBA;
+<code>unchanged=True</code> preserves uint8.</p>
+<p><code>px.io.write_image</code> writes every RGB or RGBA Frame storage dtype to <code>.tga</code> as type-10 RLE, 24- or 32-bit TGA. uint8
+codes are unchanged. uint16 and uint32 use <code>recode_dtype</code> full-scale rescaling. Float input clips to <code>[0, 1]</code>,
+multiplies by 255, and quantizes half away from zero. Origin is top-left. RLE packets contain 1 through 128 pixels and
+never cross scanlines.</p>
+<p>Radiance HDR is also file-only. <code>px.io.read_image</code> accepts <code>.hdr</code> with <code>FORMAT=32-bit_rle_rgbe</code> and standard orientation
+<code>-Y H +X W</code>, decoding flat, old-style RLE, or new-style adaptive RLE into fp32 RGB. XYZE and other orientations are
+unsupported. E=0 yields 0; otherwise Radiance <code>colr_color</code> evaluates <code>(mantissa + 0.5) * 2 ** (E - 136)</code>. EXPOSURE,
+PRIMARIES, and COLORCORR are not applied to values.</p>
+<p><code>px.io.write_image</code> accepts every storage dtype on a Frame with exactly one R, G, and B channel for <code>.hdr</code>. It converts
+nonnative input, including uint32, to the native/default float32 container with <code>recode_dtype</code> full-scale semantics,
+generates RGBE with frexp semantics, and writes only new-style RLE in standard orientation. Writer width is 8 through
+32,767. No optional header variables are generated.</p>
+<p>DPX is also file-only. <code>px.io.read_image</code> accepts <code>.dpx</code> with <code>SDPX</code> or <code>XPDS</code>, orientation 0, one unsigned RGB or RGBA
+element, and uncompressed 8-, 10-, 12-, or 16-bit samples. Eight- and sixteen-bit samples require packing 0. Ten-bit
+input is limited to Method A filled, placing three samples from the high end of a 32-bit word. Twelve-bit input is
+limited to Method A filled, using the high 12 bits of a 16-bit word. The CPU handles only the header and packed byte
+range. One GPU pass resolves endian order, unpacks, normalizes, and selects channels. <code>unchanged=True</code> returns 8-bit
+input as uint8 and 10-, 12-, or 16-bit codes as uint16.</p>
+<p><code>px.io.write_image</code> accepts every Frame storage dtype with unique RGB or RGBA channels for <code>.dpx</code>. It converts
+nonnative input, including uint32, to the native/default float32 container with <code>recode_dtype</code> full-scale semantics,
+then clips to <code>[0, 1]</code>, scales by the depth maximum, rounds half away from zero, and packs big-endian <code>SDPX</code> raw bytes
+in one GPU pass. <code>bit_depth</code> defaults to 10 and accepts only 8, 10, 12, or 16. The writer fixes orientation 0, one
+unsigned element, no compression, and Method A filled for 10- and 12-bit output. Frame gamma records <code>cineon</code> as
+printing density, <code>linear</code> as linear, <code>s-log3</code> and <code>logc4</code> as logarithmic, and video or power families as the BT.709
+transfer characteristic.</p>
+<h2 id="tiff-compression">TIFF compression</h2>
+<p>Case-sensitive tokens accepted by <code>compression=</code> for TIFF output from <code>px.io.encode_image</code> or <code>px.io.write_image</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>none</code></td>
+<td>Uncompressed</td>
+</tr>
+<tr>
+<td><code>lzw</code></td>
+<td>Lossless LZW compression</td>
+</tr>
+</tbody>
+</table>
+<h2 id="exr-compression">EXR compression</h2>
+<p>Case-sensitive tokens accepted by <code>compression=</code> for EXR file output from <code>px.io.write_image</code>. <code>None</code> selects <code>zip</code>.
+PXR24 is lossless for HALF and rounds FLOAT to 24-bit precision. B44 and B44A lossily compress 4×4 blocks of HALF and
+do not compress FLOAT. DWAA and DWAB are lossy DCT compression; <code>dwa_level=None</code> resolves to <code>45.0</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>none</code></td>
+<td>Uncompressed</td>
+</tr>
+<tr>
+<td><code>rle</code></td>
+<td>Lossless RLE compression</td>
+</tr>
+<tr>
+<td><code>zip</code></td>
+<td>Lossless ZIP compression in 16-scanline blocks; specification default</td>
+</tr>
+<tr>
+<td><code>zips</code></td>
+<td>Lossless ZIP compression one scanline at a time</td>
+</tr>
+<tr>
+<td><code>piz</code></td>
+<td>Lossless wavelet plus Huffman compression</td>
+</tr>
+<tr>
+<td><code>pxr24</code></td>
+<td>Lossless for HALF and lossy 24-bit compression for FLOAT</td>
+</tr>
+<tr>
+<td><code>b44</code></td>
+<td>Fixed-ratio lossy compression of 4×4 HALF blocks</td>
+</tr>
+<tr>
+<td><code>b44a</code></td>
+<td>B44 with abbreviated encoding for uniform blocks</td>
+</tr>
+<tr>
+<td><code>dwaa</code></td>
+<td>Lossy DCT compression in 32-scanline blocks</td>
+</tr>
+<tr>
+<td><code>dwab</code></td>
+<td>Lossy DCT compression in 256-scanline blocks</td>
+</tr>
+</tbody>
+</table>
+<h2 id="frame-boundary-contract">Frame boundary contract</h2>
+<table>
+<thead>
+<tr>
+<th>Contract</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPU layout</td>
+<td><code>Frame.data</code> is HWC and C-contiguous; <code>px.io.from_array</code> selects a view or GPU copy under the three-state copy contract</td>
+</tr>
+<tr>
+<td>pointer lifetime</td>
+<td>Retain the allocation-owning Frame while using a raw pointer to <code>Frame.data</code></td>
+</tr>
+<tr>
+<td>stream</td>
+<td>Pass a DLPack consumer stream through unchanged to <code>Frame.data.__dlpack__</code></td>
+</tr>
+<tr>
+<td>device export</td>
+<td><code>px.io.to_array(frame)</code> returns <code>cupy.ndarray</code>; both the Frame and returned array are DLPack producers</td>
+</tr>
+<tr>
+<td>direct destination</td>
+<td><code>out=</code> accepts only a C-contiguous <code>cupy.ndarray</code> with matching shape and dtype, and returns that same object</td>
+</tr>
+<tr>
+<td>host transfer</td>
+<td>The canonical <code>to_array(...).get()</code> path is <code>px.io.to_array(frame, ...).get()</code>; alternatively call <code>cp.asnumpy(px.io.to_array(frame, ...))</code> explicitly</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
