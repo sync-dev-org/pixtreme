@@ -1,0 +1,2669 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="GPU-first image processing for Python, built on CUDA and CuPy">
+      
+      
+      
+      
+        <link rel="prev" href="../generate/">
+      
+      
+        <link rel="next" href="../metrics/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>pixtreme.io - pixtreme 1.1.0</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#pixtremeio" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="pixtreme 1.1.0" class="md-header__button md-logo" aria-label="pixtreme 1.1.0" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            pixtreme 1.1.0
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              pixtreme.io
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sync-dev-org/pixtreme" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sync-dev-org/pixtreme
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="pixtreme 1.1.0" class="md-nav__button md-logo" aria-label="pixtreme 1.1.0" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    pixtreme 1.1.0
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sync-dev-org/pixtreme" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sync-dev-org/pixtreme
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../channel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.channel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../color/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.color
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../composite/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.composite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../draw/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.draw
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feature/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.feature
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.filter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.generate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.io
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.io
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pixtreme.io" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        io
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="io">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.__all__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __all__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ImageHeader
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ImageHeader">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader.model_config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        model_config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader.format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader.width" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        width
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader.height" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        height
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader.parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        parts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader.color" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        color
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.read_lut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        read_lut
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.decode_image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        decode_image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.encode_image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        encode_image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.read_image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        read_image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.write_image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        write_image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.read_header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        read_header
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_array" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_array
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_array" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_array
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_nv12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_nv12
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_nv12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_nv12
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_p010" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_p010
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_p010" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_p010
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_uyvy422" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_uyvy422
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_uyvy422" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_uyvy422
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_v210" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_v210
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_v210" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_v210
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_yuv420p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_yuv420p
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuv420p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_yuv420p
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_yuv422p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_yuv422p
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuv422p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_yuv422p
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_yuv444p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_yuv444p
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuv444p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_yuv444p
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="to_yuv444p">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuv444p--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuv444p--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuv444p--raises" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raises
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_yuva444p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_yuva444p
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuva444p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_yuva444p
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="to_yuva444p">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuva444p--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuva444p--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuva444p--raises" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raises
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../morphology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.morphology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../transform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.transform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.values
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pixtreme.io" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        io
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="io">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.__all__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __all__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ImageHeader
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ImageHeader">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader.model_config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        model_config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader.format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader.width" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        width
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader.height" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        height
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader.parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        parts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.ImageHeader.color" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        color
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.read_lut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        read_lut
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.decode_image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        decode_image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.encode_image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        encode_image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.read_image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        read_image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.write_image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        write_image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.read_header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        read_header
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_array" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_array
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_array" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_array
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_nv12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_nv12
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_nv12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_nv12
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_p010" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_p010
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_p010" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_p010
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_uyvy422" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_uyvy422
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_uyvy422" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_uyvy422
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_v210" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_v210
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_v210" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_v210
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_yuv420p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_yuv420p
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuv420p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_yuv420p
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_yuv422p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_yuv422p
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuv422p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_yuv422p
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_yuv444p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_yuv444p
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuv444p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_yuv444p
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="to_yuv444p">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuv444p--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuv444p--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuv444p--raises" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raises
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.from_yuva444p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        from_yuva444p
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuva444p" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_yuva444p
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="to_yuva444p">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuva444p--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuva444p--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.io.to_yuva444p--raises" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raises
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="pixtremeio"><code>pixtreme.io</code></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="pixtreme.io" class="doc doc-heading">
+            <code>io</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>File, bytes, device-array, and wire-format boundaries.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.io.__all__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;read_image&#39;</span><span class="p">,</span> <span class="s1">&#39;write_image&#39;</span><span class="p">,</span> <span class="s1">&#39;read_header&#39;</span><span class="p">,</span> <span class="s1">&#39;read_lut&#39;</span><span class="p">,</span> <span class="s1">&#39;decode_image&#39;</span><span class="p">,</span> <span class="s1">&#39;encode_image&#39;</span><span class="p">,</span> <span class="s1">&#39;from_array&#39;</span><span class="p">,</span> <span class="s1">&#39;to_array&#39;</span><span class="p">,</span> <span class="s1">&#39;from_uyvy422&#39;</span><span class="p">,</span> <span class="s1">&#39;to_uyvy422&#39;</span><span class="p">,</span> <span class="s1">&#39;from_v210&#39;</span><span class="p">,</span> <span class="s1">&#39;to_v210&#39;</span><span class="p">,</span> <span class="s1">&#39;from_nv12&#39;</span><span class="p">,</span> <span class="s1">&#39;to_nv12&#39;</span><span class="p">,</span> <span class="s1">&#39;from_p010&#39;</span><span class="p">,</span> <span class="s1">&#39;to_p010&#39;</span><span class="p">,</span> <span class="s1">&#39;from_yuv420p&#39;</span><span class="p">,</span> <span class="s1">&#39;to_yuv420p&#39;</span><span class="p">,</span> <span class="s1">&#39;from_yuv422p&#39;</span><span class="p">,</span> <span class="s1">&#39;to_yuv422p&#39;</span><span class="p">,</span> <span class="s1">&#39;from_yuv444p&#39;</span><span class="p">,</span> <span class="s1">&#39;to_yuv444p&#39;</span><span class="p">,</span> <span class="s1">&#39;from_yuva444p&#39;</span><span class="p">,</span> <span class="s1">&#39;to_yuva444p&#39;</span><span class="p">,</span> <span class="s1">&#39;ImageHeader&#39;</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="pixtreme.io.ImageHeader" class="doc doc-heading">
+            <code>ImageHeader</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+
+
+
+        <p>Describe an image file without decoding its pixels.</p>
+<p>Headers produced by <code>read_header</code> carry a <code>format</code> of <code>"PNG"</code>,
+<code>"JPEG"</code>, <code>"TIFF"</code>, <code>"EXR"</code>, <code>"JPEG2000"</code>, <code>"WEBP"</code>,
+<code>"BMP"</code>, <code>"PNM"</code>, <code>"TGA"</code>, <code>"HDR"</code>, or <code>"DPX"</code>, with <code>width</code> and <code>height</code>
+describing the stored image dimensions. <code>parts</code> contains each part name, a mapping
+from channel label to stored dtype, and a per-part <code>deep</code> flag. Raster files have one unnamed part,
+while EXR files may expose multiple parts and use the first part's data
+window for the dimensions.</p>
+<p><code>color</code> retains the parsed raw color attributes together with any mapped
+<code>colorspace</code> and <code>gamma</code> tokens and a mappability result. Instances are
+frozen Pydantic models; validation enforces the field structure and types,
+not semantic value ranges — the constraints above describe what
+<code>read_header</code> produces, not what the constructor rejects.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.io.ImageHeader.model_config" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.io.ImageHeader.format" class="doc doc-heading">
+            <code class="highlight language-python"><span class="nb">format</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.io.ImageHeader.width" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">width</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.io.ImageHeader.height" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">height</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.io.ImageHeader.parts" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">parts</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.io.ImageHeader.color" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">color</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.read_lut" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">read_lut</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Read one .cube 3D LUT into GPU memory without caching.</p>
+<p>The file's red-fastest data order is normalized to <code>Lut.data[R, G, B]</code>.
+Parsing performs one bulk token conversion followed by one host-to-device
+transfer. <code>TITLE</code> metadata and <code>#</code> comments do not affect the result.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.decode_image" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">decode_image</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">channels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">unchanged</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">colorspace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Decode supported raster bytes into an HWC GPU Frame.</p>
+<p><code>data</code> accepts an encoded <code>bytes</code> payload in JPEG, PNG, TIFF, JPEG 2000,
+WebP, BMP, or PNM format and identifies it from its signature. EXR, TGA, HDR,
+and DPX are file-only formats. <code>channels</code> accepts a compact string or label
+sequence and preserves the requested order. <code>unchanged=True</code> preserves a
+supported native integer depth; the default normalizes ordinary integer
+storage to float32. Explicit <code>colorspace</code> and <code>gamma</code> metadata claims
+override embedded metadata and fixed raster defaults without transforming
+pixel values.</p>
+<p>Returns a new C-contiguous HWC GPU Frame with decoded pixels, selected channel
+labels, and resolved metadata. Unsupported or unidentifiable formats, malformed
+headers, invalid tokens, and invalid channel selections raise
+:class:<code>ValueError</code>; codec failures raise :class:<code>RuntimeError</code>.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.encode_image" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">encode_image</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="nb">format</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compression_level</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lossless</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Encode a Frame as a supported raster byte stream.</p>
+<p><code>format</code> is a case-sensitive image-format token. <code>quality</code> applies to
+JPEG and lossy WebP, <code>compression</code> is TIFF-only with <code>"none"</code>/<code>"lzw"</code>,
+<code>compression_level</code> is PNG-only from 0 through 9, and <code>lossless</code> applies
+to JPEG 2000 and WebP. JPEG 2000 bytes use a JP2 container. Every format
+accepts all five Frame storage dtypes; native uint dtypes are preserved and
+other inputs are meaning-preservingly converted to uint8 on the GPU.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.read_image" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">read_image</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">channels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">unchanged</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">colorspace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Decode a supported image file into an HWC GPU Frame.</p>
+<p><code>path</code> selects PNG, JPEG, TIFF, EXR, JPEG 2000, WebP, BMP, PNM, TGA, HDR, or DPX
+case-insensitively by extension.
+<code>channels</code> accepts a compact channel string or a sequence of labels and
+preserves the requested order. With no selection, raster files retain their
+RGB, RGBA, one-channel <code>Y</code>, or two-channel <code>YA</code> layout; EXR selects
+unique R, G, B, and an optional A across its parts. Ambiguous EXR labels
+require <code>part.channel</code> qualification.</p>
+<p>The default converts ordinary integer storage, including DPX code values, to
+normalized float32 and promotes EXR HALF to float32. EXR UINT is instead
+converted literally to float32 without normalization. <code>unchanged=True</code>
+preserves uint8, uint16, uint32, float16, or float32 storage where
+representable, including exact EXR UINT sample bits. HDR is natively decoded to float32,
+so <code>unchanged=True</code> returns the same values and dtype as its default read.
+Explicit <code>colorspace</code> and <code>gamma</code>
+tokens override mapped file metadata, which overrides the fixed sRGB/srgb
+raster, ACES2065-1/linear EXR, or Rec.709/linear HDR defaults; these are metadata claims and do not
+transform pixel values.</p>
+<p>Codec-backed raster pixels decode through nvImageCodec into CUDA memory. TGA
+structure and RLE decode on the CPU before a GPU kernel produces the Frame.
+HDR likewise parses and expands RGBE scanlines on the CPU, then transfers
+only flat uint8 RGBE bytes for one-pass GPU ldexp decoding. EXPOSURE,
+PRIMARIES, and COLORCORR header variables are retained for header inspection
+but are not applied to pixels or metadata.
+DPX transfers only raw packed bytes and performs endian resolution, filled
+unpacking, normalization, and channel selection in one GPU pass.
+EXR scanline and tiled parts use the source-fixed native, custom-CPU, or GPU
+codec lane for their compression; multipart and sampled selections are
+materialized from part-local self-owned decoder views. Encoded bytes use
+:func:<code>decode_image</code>; EXR, TGA, HDR, and DPX are file-only formats. Missing files raise
+:class:<code>FileNotFoundError</code>; unsupported extensions, invalid tokens, channel
+selection, or incompatible unchanged EXR channels raise :class:<code>ValueError</code>;
+header or codec failures raise :class:<code>RuntimeError</code>.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.write_image" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">write_image</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compression_level</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lossless</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dwa_level</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bit_depth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Write a Frame using the format selected from <code>path</code>'s extension.</p>
+<p>Every format accepts uint8, uint16, uint32, float16, and float32 Frame storage.
+Native uint raster dtypes are preserved; other raster inputs are
+meaning-preservingly converted to uint8 on the GPU. EXR defaults to HALF for
+every Frame dtype except uint32, which defaults to native UINT. EXR-only
+<code>dtype</code> may explicitly select <code>"float16"</code>, <code>"float32"</code>, or <code>"uint32"</code>;
+conversion follows :func:<code>pixtreme.values.recode_dtype</code>. TGA writes uint8 RLE
+under the same conversion meaning.
+HDR uses float32 as its native/default container and writes RGBE new-style RLE.
+DPX uses float32 as its native/default container and writes uncompressed big-endian data.
+No colorspace or gamma conversion is performed. Codec-backed raster output
+validates each format's channel layout and encodes through nvImageCodec from
+GPU data. EXR accepts unique channel
+labels, uses the source-fixed CPU/GPU backend table, writes chromaticities
+derived from <code>frame.colorspace</code>, and marks ACES2065-1 containers.</p>
+<p>Metadata persistence is format-bound: raster output writes no public color
+vocabulary metadata, so <code>frame.colorspace</code> and <code>frame.gamma</code> are not
+preserved there. EXR persists only the chromaticities and ACES container
+flag derived from <code>frame.colorspace</code>; <code>frame.gamma</code> is not stored there.
+HDR writes no EXPOSURE, PRIMARIES, COLORCORR, or public color-vocabulary metadata.
+DPX records a transfer characteristic derived from <code>frame.gamma</code>.</p>
+<p><code>quality</code> applies to JPEG and lossy WebP and accepts integers 1 through
+100. <code>compression</code> selects TIFF <code>"none"</code>/<code>"lzw"</code> or EXR <code>"none"</code>,
+<code>"rle"</code>, <code>"zip"</code>, <code>"zips"</code>, <code>"piz"</code>, <code>"pxr24"</code>, <code>"b44"</code>,
+<code>"b44a"</code>, <code>"dwaa"</code>, or <code>"dwab"</code> according to the output format.
+EXR defaults to <code>"zip"</code>. <code>dwa_level</code> applies only to DWAA/DWAB and
+defaults to 45.0 when omitted. <code>compression_level</code> is PNG-only and
+accepts integers 0 through 9. <code>lossless</code> applies to JPEG 2000 and WebP.
+<code>bit_depth</code> applies only to DPX, accepts 8, 10, 12, or 16, and defaults to 10.
+<code>dtype</code> applies only to EXR and accepts <code>"float16"</code>, <code>"float32"</code>,
+<code>"uint32"</code>, or <code>None</code>.
+Successful writes return <code>None</code>.</p>
+<p>Unsupported extensions, channel layouts, or encode options raise
+:class:<code>ValueError</code>. Codec failures and unwritable output paths
+raise :class:<code>RuntimeError</code>; parent directories are not created. Use
+:func:<code>encode_image</code> when encoded raster bytes rather than a file are needed.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.read_header" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">read_header</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Inspect image structure and color attributes without decoding pixels.</p>
+<p><code>path</code> is selected case-insensitively by its supported raster, EXR, HDR, or DPX
+extension. The returned :class:<code>ImageHeader</code> reports format, dimensions,
+part names, channel storage dtypes, per-part deep state, and raw plus vocabulary-mapped color
+metadata. EXR dimensions come from the first part's data window.
+HDR <code>EXPOSURE</code>, <code>PRIMARIES</code>, and <code>COLORCORR</code> assignments are exposed
+as raw attributes only; pixel reads do not apply their values.
+DPX reports its native bit depth, byte order, packing, and mapped transfer.</p>
+<p>Header probing imports no pixel codec and creates no CUDA context or GPU
+allocation. A missing file raises :class:<code>FileNotFoundError</code>, an unsupported
+extension raises :class:<code>ValueError</code>, and malformed or unreadable header data
+raises :class:<code>RuntimeError</code>.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.from_array" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">from_array</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">colorspace</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">channels</span><span class="p">,</span> <span class="n">matrix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bit_depth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Construct a Frame from a CuPy array or CUDA DLPack producer.</p>
+<p><code>layout</code> declares HWC, NHWC, CHW, or NCHW input. <code>dtype</code> selects one of
+    the five Frame storage dtypes. The inverse affine formula is
+<code>x = (y * std + mean) / scale</code>; it round-trips :func:<code>pixtreme.io.to_array</code>
+with the same scalar or per-channel constants and computes in fp32.</p>
+<p><code>bit_depth</code> selects the 8, 10, 12, 14, or 16-bit unsigned full-scale grid
+and normalizes a matching uint container by <code>2^bit_depth - 1</code> into fp32.
+It cannot be combined with affine constants; explicit <code>dtype</code> must be
+<code>"float32"</code>.</p>
+<p><code>copy=None</code> retains a zero-copy HWC/NHWC view when possible and otherwise
+performs one fused copy. <code>copy=False</code> strictly guarantees zero-copy and
+raises if contiguity, layout, dtype, or affine processing requires a write.
+<code>copy=True</code> always gives the Frame private storage. Host arrays and CPU
+DLPack producers are rejected rather than transferred implicitly.
+<code>matrix</code> stamps YCbCr basis provenance only; it never changes array
+values, ownership, layout, dtype, or affine processing.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.to_array" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_array</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">channels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bit_depth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Export this Frame to a CuPy device array, optionally in one fused affine pass.</p>
+<p><code>channels</code> selects and orders labels. <code>layout</code> is HWC, NHWC, CHW,
+or NCHW. The affine formula is <code>y = (x * scale - mean) / std</code> and is
+the inverse of :func:<code>from_array</code> when the same constants are used.
+Constants may be scalars or one value per exported channel; arithmetic
+is fp32 before the faithful <code>dtype</code> cast.</p>
+<p><code>bit_depth</code> selects the 8, 10, 12, 14, or 16-bit unsigned full-scale
+grid. It clips fp32 values to <code>[0, 1]</code>, scales by
+<code>2^bit_depth - 1</code>, and rounds half away from zero. The output dtype is
+uint8 for 8-bit codes and uint16 otherwise. It cannot be combined with
+affine constants. Use :func:<code>quantize</code> when the result should
+remain a metadata-bearing Frame.</p>
+<p><code>copy=None</code> uses a zero-copy view when possible and otherwise makes
+one fused copy. <code>copy=False</code> strictly requires zero-copy and raises
+when repacking is unavoidable. <code>copy=True</code> always returns private
+storage. With <code>out</code>, copy must be omitted and the destination must be
+an exactly shaped, exactly typed, C-contiguous <code>cupy.ndarray</code>; the
+fused pass writes there directly and returns that same object. A
+non-CuPy DLPack producer is intentionally rejected as a destination;
+explicitly create a writable view with <code>cp.from_dlpack(tensor)</code> and
+pass that CuPy array instead.</p>
+<p>The returned <code>cupy.ndarray</code> is itself a DLPack producer. Frame is also
+a DLPack producer through its protocol methods; no to_tensor or
+to_dlpack helper is needed.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.from_nv12" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">from_nv12</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">colorspace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">matrix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="n">siting</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Construct a full-range fp32 YCbCr444 Frame from uint8 NV12.</p>
+<p>The C-contiguous 1D layout is one Y plane followed by an interleaved
+<code>Cb Cr</code> plane. <code>siting</code> places 4:2:0 chroma at H.273 <code>left</code>,
+<code>center</code>, or <code>topleft</code> offsets; <code>interpolation</code> evaluates one of the
+eight resize-family point kernels at that phase with replicate edges.
+<code>range</code> expands legal code positions without clipping or maps full uint8.
+<code>colorspace</code> / <code>gamma</code> override placeholders and <code>matrix</code> stamps basis provenance only.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.to_nv12" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_nv12</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="n">siting</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;area&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Pack <code>frame</code> as an 8-bit Y plane followed by interleaved Cb/Cr.</p>
+<p><code>range</code> selects code-value mapping, <code>siting</code> selects the 4:2:0 chroma
+phase, and <code>interpolation</code> selects the chroma downsampling filter.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.from_p010" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">from_p010</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">colorspace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">matrix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="n">siting</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Construct a full-range fp32 YCbCr444 Frame from uint16 P010.</p>
+<p>The C-contiguous 1D layout is one Y plane followed by interleaved <code>Cb Cr</code>.
+Each 10-bit code is MSB aligned in uint16; the lower 6 bits are padding and
+are ignored. <code>siting</code> selects the H.273 4:2:0 phase, <code>interpolation</code>
+selects one of eight point filters, and <code>range</code> expands legal positions
+without clipping or maps the full 10-bit domain.
+<code>colorspace</code> / <code>gamma</code> override placeholders and <code>matrix</code> stamps basis provenance only.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.to_p010" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_p010</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="n">siting</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;area&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Pack <code>frame</code> as P010 with 10-bit codes in each uint16 word's MSB.</p>
+<p>The lower 6 bits are zero. <code>range</code> selects code-value mapping, <code>siting</code>
+selects the 4:2:0 chroma phase, and <code>interpolation</code> selects its filter.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.from_uyvy422" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">from_uyvy422</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">colorspace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">matrix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Construct a full-range fp32 YCbCr444 Frame from uint8 UYVY422.</p>
+<p>The packed order is <code>U0 Y0 V0 Y1</code>. A C-contiguous 1D buffer or NDI-style
+<code>(H, W, 2)</code> view is accepted; reshape the buffer without a copy when
+moving between those forms. Horizontal chroma is co-sited at even luma
+samples and <code>interpolation</code> selects one of the eight point filters.
+<code>range</code> expands H.273 legal code positions without clipping, or maps the
+full uint8 container when set to <code>"full"</code>. <code>colorspace</code> / <code>gamma</code>
+override placeholders and <code>matrix</code> stamps basis provenance without
+changing pixel values.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.to_uyvy422" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_uyvy422</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;area&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Pack <code>frame</code> as U0 Y0 V0 Y1 bytes in a private 1D array.</p>
+<p>The output is the flattened form of an <code>(H, W, 2)</code> uint8 image. <code>range</code>
+maps normalized YCbCr to full- or legal-range codes, while <code>interpolation</code>
+selects the horizontal chroma downsampling filter.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.from_v210" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">from_v210</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">colorspace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">matrix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Construct a full-range fp32 YCbCr444 Frame from v210 uint32 words.</p>
+<p>Each four-word group stores six horizontally co-sited 10-bit pixels. Every
+row occupies a 128-byte aligned word span (48-pixel storage units), including
+the zero-filled padding convention. The input is one C-contiguous 1D uint32
+buffer. <code>interpolation</code> upsamples horizontal chroma, and <code>range</code> expands
+H.273 legal code positions without clipping or maps the full 10-bit domain.
+<code>colorspace</code> / <code>gamma</code> override placeholders and <code>matrix</code> stamps basis provenance only.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.to_v210" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_v210</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;area&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Pack <code>frame</code> into little-endian v210 uint32 words.</p>
+<p>Each scanline is aligned to a 128-byte boundary and all padding words are
+zero. <code>range</code> controls code-value mapping and <code>interpolation</code> controls
+horizontal chroma downsampling.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.from_yuv420p" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">from_yuv420p</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">bit_depth</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">colorspace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">matrix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="n">siting</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Construct a full-range fp32 YCbCr444 Frame from planar YUV420.</p>
+<p>The C-contiguous 1D plane order is <code>Y, Cb, Cr</code>. <code>bit_depth</code> accepts 8
+(uint8) or 10 (lower-aligned uint16). <code>siting</code> selects the H.273 <code>left</code>,
+<code>center</code>, or <code>topleft</code> 4:2:0 phase, and <code>interpolation</code> selects one of
+eight resize-family point filters with replicate edges. <code>range</code> expands
+legal positions without clipping or maps the full code domain.
+<code>colorspace</code> / <code>gamma</code> override placeholders and <code>matrix</code> stamps basis provenance only.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.to_yuv420p" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_yuv420p</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">bit_depth</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="n">siting</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;area&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Pack <code>frame</code> as contiguous planar Y, Cb, Cr 4:2:0 samples.</p>
+<p><code>bit_depth</code> chooses the code container, <code>range</code> chooses code-value
+mapping, <code>siting</code> selects chroma phase, and <code>interpolation</code> selects the
+chroma downsampling filter.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.from_yuv422p" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">from_yuv422p</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">bit_depth</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">colorspace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">matrix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Construct a full-range fp32 YCbCr444 Frame from planar YUV422.</p>
+<p>The C-contiguous 1D plane order is <code>Y, Cb, Cr</code>. <code>bit_depth</code> accepts 8
+(uint8), 10, or 12 (lower-aligned uint16). Chroma is horizontally co-sited
+and vertically full; <code>interpolation</code> applies only on the horizontal axis.
+<code>range</code> expands H.273 legal positions without clipping or maps the full
+code domain.
+<code>colorspace</code> / <code>gamma</code> override placeholders and <code>matrix</code> stamps basis provenance only.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.to_yuv422p" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_yuv422p</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">bit_depth</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;area&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Pack <code>frame</code> as contiguous planar Y, Cb, Cr 4:2:2 samples.</p>
+<p><code>bit_depth</code> chooses the code container, <code>range</code> chooses code-value
+mapping, and <code>interpolation</code> selects horizontal chroma downsampling.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.from_yuv444p" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">from_yuv444p</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">bit_depth</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">colorspace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">matrix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Construct a full-range fp32 YCbCr444 Frame from planar YUV444.</p>
+<p>The C-contiguous 1D plane order is <code>Y, Cb, Cr</code>. <code>bit_depth</code> accepts 10
+or 12, stored lower-aligned in uint16. No chroma resampling is performed.
+<code>range</code> expands H.273 legal positions without clipping or maps the full
+code domain.
+<code>colorspace</code> / <code>gamma</code> override placeholders and <code>matrix</code> stamps basis provenance only.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.to_yuv444p" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_yuv444p</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">bit_depth</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Pack <code>frame</code> as planar Y, Cb, Cr 4:4:4 samples.</p>
+<h5 id="pixtreme.io.to_yuv444p--parameters">Parameters</h5>
+<p>frame:
+    A float32 Frame with exact <code>("Y", "Cb", "Cr")</code> channels and positive
+    geometry. No chroma resampling is performed.
+bit_depth:
+    Stored code depth, either 10 (default) or 12. Codes are lower-aligned in
+    a uint16 container.
+range:
+    <code>"full"</code> or <code>"legal"</code> YCbCr code mapping. Values are rounded half
+    away from zero and clipped only to the physical container domain, not
+    the legal interval.</p>
+<h5 id="pixtreme.io.to_yuv444p--returns">Returns</h5>
+<p>cupy.ndarray
+    A new privately owned C-contiguous 1D uint16 array with shape
+    <code>(H * W * 3,)</code> and plane order Y, Cb, Cr.</p>
+<h5 id="pixtreme.io.to_yuv444p--raises">Raises</h5>
+<p>ValueError
+    If <code>frame</code> has the wrong channels or dtype, geometry is invalid, or
+    <code>bit_depth</code> or <code>range</code> is outside its closed domain.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.from_yuva444p" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">from_yuva444p</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">bit_depth</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">colorspace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">matrix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Construct a full-range fp32 YCbCrA4444 Frame from planar YUVA444.</p>
+<p>The C-contiguous 1D plane order is <code>Y, Cb, Cr, A</code>. <code>bit_depth</code> is 12,
+stored lower-aligned in uint16. YCbCr follows the selected <code>range</code> without
+clipping, while A is always decoded against full scale <code>0...4095</code>.
+No chroma resampling is performed.
+<code>colorspace</code> / <code>gamma</code> override placeholders and <code>matrix</code> stamps basis provenance only.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.io.to_yuva444p" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">to_yuva444p</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">bit_depth</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="s1">&#39;legal&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Pack <code>frame</code> as planar Y, Cb, Cr, A 4:4:4:4 samples.</p>
+<h5 id="pixtreme.io.to_yuva444p--parameters">Parameters</h5>
+<p>frame:
+    A float32 Frame with exact <code>("Y", "Cb", "Cr", "A")</code> channels and
+    positive geometry. No chroma resampling is performed.
+bit_depth:
+    Stored code depth, fixed at 12. Codes are lower-aligned in a uint16
+    container.
+range:
+    <code>"full"</code> or <code>"legal"</code> YCbCr code mapping. Alpha always maps over
+    full scale. Values are rounded half away from zero and clipped only to
+    the physical container domain, not the legal interval.</p>
+<h5 id="pixtreme.io.to_yuva444p--returns">Returns</h5>
+<p>cupy.ndarray
+    A new privately owned C-contiguous 1D uint16 array with shape
+    <code>(H * W * 4,)</code> and plane order Y, Cb, Cr, A.</p>
+<h5 id="pixtreme.io.to_yuva444p--raises">Raises</h5>
+<p>ValueError
+    If <code>frame</code> has the wrong channels or dtype, geometry is invalid, or
+    <code>bit_depth</code> or <code>range</code> is outside its closed domain.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

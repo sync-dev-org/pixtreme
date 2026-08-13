@@ -1,0 +1,3203 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="GPU-first image processing for Python, built on CUDA and CuPy">
+      
+      
+      
+      
+        <link rel="prev" href="../composite/">
+      
+      
+        <link rel="next" href="../draw/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>pixtreme.core - pixtreme 1.1.0</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#pixtremecore" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="pixtreme 1.1.0" class="md-header__button md-logo" aria-label="pixtreme 1.1.0" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            pixtreme 1.1.0
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              pixtreme.core
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sync-dev-org/pixtreme" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sync-dev-org/pixtreme
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="pixtreme 1.1.0" class="md-nav__button md-logo" aria-label="pixtreme 1.1.0" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    pixtreme 1.1.0
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sync-dev-org/pixtreme" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sync-dev-org/pixtreme
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../channel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.channel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../color/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.color
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../composite/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.composite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.core
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pixtreme.core" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        core
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="core">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Alpha" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alpha
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Antialiasing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Antialiasing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Blend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Blend
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Border" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Border
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.ChromaSiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ChromaSiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.ColorBarsOutput" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ColorBarsOutput
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.ColorBarsStandard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ColorBarsStandard
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Colorspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Colorspace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Dtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dtype
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.ExrCompression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ExrCompression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Gamma" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gamma
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.GeneratorKind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GeneratorKind
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.ImageFormat" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ImageFormat
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Interpolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interpolation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.MorphologyShape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MorphologyShape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Range" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Range
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.SobelDirection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SobelDirection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.StackDirection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StackDirection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.TemplateMatchingMethod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TemplateMatchingMethod
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.TextAlign" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TextAlign
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.TextAnchor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TextAnchor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.TextFont" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TextFont
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.TextLanguage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TextLanguage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.TiffCompression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TiffCompression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Tonemap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tonemap
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.VectorBlurShutter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VectorBlurShutter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.__all__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __all__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frame
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Frame">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.model_config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        model_config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.colorspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        colorspace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.gamma" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gamma
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        channels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.width" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        width
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.height" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        height
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.dtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dtype
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.__dlpack__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __dlpack__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.__dlpack_device__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __dlpack_device__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.__repr__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __repr__
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lut
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lut">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut.data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut.domain_min" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        domain_min
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut.domain_max" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        domain_max
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut.__post_init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __post_init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        channels
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="channels">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.channels--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.channels--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.channels--raises" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raises
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../draw/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.draw
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feature/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.feature
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.filter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.generate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../io/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.io
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../morphology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.morphology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../transform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.transform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.values
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pixtreme.core" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        core
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="core">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Alpha" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alpha
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Antialiasing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Antialiasing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Blend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Blend
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Border" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Border
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.ChromaSiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ChromaSiting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.ColorBarsOutput" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ColorBarsOutput
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.ColorBarsStandard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ColorBarsStandard
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Colorspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Colorspace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Dtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dtype
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.ExrCompression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ExrCompression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Gamma" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gamma
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.GeneratorKind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GeneratorKind
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.ImageFormat" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ImageFormat
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Interpolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interpolation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.MorphologyShape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MorphologyShape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Range" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Range
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.SobelDirection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SobelDirection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.StackDirection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StackDirection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.TemplateMatchingMethod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TemplateMatchingMethod
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.TextAlign" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TextAlign
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.TextAnchor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TextAnchor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.TextFont" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TextFont
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.TextLanguage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TextLanguage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.TiffCompression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TiffCompression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Tonemap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tonemap
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.VectorBlurShutter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VectorBlurShutter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.__all__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __all__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frame
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Frame">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.model_config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        model_config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.colorspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        colorspace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.gamma" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gamma
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        channels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.width" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        width
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.height" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        height
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.dtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dtype
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.__dlpack__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __dlpack__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.__dlpack_device__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __dlpack_device__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Frame.__repr__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __repr__
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lut
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lut">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut.data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut.domain_min" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        domain_min
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut.domain_max" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        domain_max
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut.__post_init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __post_init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        channels
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="channels">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.channels--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.channels--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.channels--raises" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raises
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="pixtremecore"><code>pixtreme.core</code></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="pixtreme.core" class="doc doc-heading">
+            <code>core</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Core Frame, LUT, channel, and closed-vocabulary types.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.Alpha" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Alpha</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;premultiplied&#39;</span><span class="p">,</span> <span class="s1">&#39;straight&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.Antialiasing" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Antialiasing</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;distance&#39;</span><span class="p">,</span> <span class="s1">&#39;supersample&#39;</span><span class="p">,</span> <span class="s1">&#39;off&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.Blend" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Blend</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;normal&#39;</span><span class="p">,</span> <span class="s1">&#39;lighten&#39;</span><span class="p">,</span> <span class="s1">&#39;add&#39;</span><span class="p">,</span> <span class="s1">&#39;screen&#39;</span><span class="p">,</span> <span class="s1">&#39;darken&#39;</span><span class="p">,</span> <span class="s1">&#39;multiply&#39;</span><span class="p">,</span> <span class="s1">&#39;difference&#39;</span><span class="p">,</span> <span class="s1">&#39;overlay&#39;</span><span class="p">,</span> <span class="s1">&#39;hardlight&#39;</span><span class="p">,</span> <span class="s1">&#39;softlight&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.Border" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Border</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;mirror&#39;</span><span class="p">,</span> <span class="s1">&#39;replicate&#39;</span><span class="p">,</span> <span class="s1">&#39;wrap&#39;</span><span class="p">,</span> <span class="s1">&#39;constant&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.ChromaSiting" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">ChromaSiting</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="s1">&#39;topleft&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.ColorBarsOutput" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">ColorBarsOutput</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;normalized&#39;</span><span class="p">,</span> <span class="s1">&#39;code&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.ColorBarsStandard" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">ColorBarsStandard</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;arib-std-b28&#39;</span><span class="p">,</span> <span class="s1">&#39;smpte-rp219&#39;</span><span class="p">,</span> <span class="s1">&#39;bt2111-hlg&#39;</span><span class="p">,</span> <span class="s1">&#39;bt2111-pq&#39;</span><span class="p">,</span> <span class="s1">&#39;bt2111-pq-full&#39;</span><span class="p">,</span> <span class="s1">&#39;full-100&#39;</span><span class="p">,</span> <span class="s1">&#39;full-75&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.Colorspace" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Colorspace</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;sRGB&#39;</span><span class="p">,</span> <span class="s1">&#39;Rec.709&#39;</span><span class="p">,</span> <span class="s1">&#39;Rec.2020&#39;</span><span class="p">,</span> <span class="s1">&#39;ACES2065-1&#39;</span><span class="p">,</span> <span class="s1">&#39;ACEScg&#39;</span><span class="p">,</span> <span class="s1">&#39;S-Gamut3&#39;</span><span class="p">,</span> <span class="s1">&#39;S-Gamut3.Cine&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.Dtype" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Dtype</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;float32&#39;</span><span class="p">,</span> <span class="s1">&#39;float16&#39;</span><span class="p">,</span> <span class="s1">&#39;uint8&#39;</span><span class="p">,</span> <span class="s1">&#39;uint16&#39;</span><span class="p">,</span> <span class="s1">&#39;uint32&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.ExrCompression" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">ExrCompression</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="s1">&#39;rle&#39;</span><span class="p">,</span> <span class="s1">&#39;zip&#39;</span><span class="p">,</span> <span class="s1">&#39;zips&#39;</span><span class="p">,</span> <span class="s1">&#39;piz&#39;</span><span class="p">,</span> <span class="s1">&#39;pxr24&#39;</span><span class="p">,</span> <span class="s1">&#39;b44&#39;</span><span class="p">,</span> <span class="s1">&#39;b44a&#39;</span><span class="p">,</span> <span class="s1">&#39;dwaa&#39;</span><span class="p">,</span> <span class="s1">&#39;dwab&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.Gamma" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Gamma</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="s1">&#39;srgb&#39;</span><span class="p">,</span> <span class="s1">&#39;rec709&#39;</span><span class="p">,</span> <span class="s1">&#39;bt1886&#39;</span><span class="p">,</span> <span class="s1">&#39;pq&#39;</span><span class="p">,</span> <span class="s1">&#39;hlg&#39;</span><span class="p">,</span> <span class="s1">&#39;s-log3&#39;</span><span class="p">,</span> <span class="s1">&#39;logc4&#39;</span><span class="p">,</span> <span class="s1">&#39;cineon&#39;</span><span class="p">,</span> <span class="s1">&#39;2.2&#39;</span><span class="p">,</span> <span class="s1">&#39;2.4&#39;</span><span class="p">,</span> <span class="s1">&#39;2.6&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.GeneratorKind" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">GeneratorKind</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="s1">&#39;radial&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.ImageFormat" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">ImageFormat</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;jpeg&#39;</span><span class="p">,</span> <span class="s1">&#39;png&#39;</span><span class="p">,</span> <span class="s1">&#39;tiff&#39;</span><span class="p">,</span> <span class="s1">&#39;jpeg2000&#39;</span><span class="p">,</span> <span class="s1">&#39;webp&#39;</span><span class="p">,</span> <span class="s1">&#39;bmp&#39;</span><span class="p">,</span> <span class="s1">&#39;pnm&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.Interpolation" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Interpolation</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;nearest&#39;</span><span class="p">,</span> <span class="s1">&#39;bilinear&#39;</span><span class="p">,</span> <span class="s1">&#39;bicubic&#39;</span><span class="p">,</span> <span class="s1">&#39;b-spline&#39;</span><span class="p">,</span> <span class="s1">&#39;mitchell&#39;</span><span class="p">,</span> <span class="s1">&#39;lanczos2&#39;</span><span class="p">,</span> <span class="s1">&#39;lanczos3&#39;</span><span class="p">,</span> <span class="s1">&#39;lanczos4&#39;</span><span class="p">,</span> <span class="s1">&#39;area&#39;</span><span class="p">,</span> <span class="s1">&#39;trilinear&#39;</span><span class="p">,</span> <span class="s1">&#39;tetrahedral&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.Layout" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Layout</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;HWC&#39;</span><span class="p">,</span> <span class="s1">&#39;NHWC&#39;</span><span class="p">,</span> <span class="s1">&#39;CHW&#39;</span><span class="p">,</span> <span class="s1">&#39;NCHW&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.Matrix" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Matrix</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;bt601&#39;</span><span class="p">,</span> <span class="s1">&#39;bt709&#39;</span><span class="p">,</span> <span class="s1">&#39;bt2020&#39;</span><span class="p">,</span> <span class="s1">&#39;native&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.MorphologyShape" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">MorphologyShape</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;disk&#39;</span><span class="p">,</span> <span class="s1">&#39;square&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.Range" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Range</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;legal&#39;</span><span class="p">,</span> <span class="s1">&#39;full&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.SobelDirection" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">SobelDirection</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;magnitude&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.StackDirection" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">StackDirection</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;vertical&#39;</span><span class="p">,</span> <span class="s1">&#39;horizontal&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.TemplateMatchingMethod" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">TemplateMatchingMethod</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;sqdiff&#39;</span><span class="p">,</span> <span class="s1">&#39;sqdiff_normed&#39;</span><span class="p">,</span> <span class="s1">&#39;ccorr&#39;</span><span class="p">,</span> <span class="s1">&#39;ccorr_normed&#39;</span><span class="p">,</span> <span class="s1">&#39;ccoeff&#39;</span><span class="p">,</span> <span class="s1">&#39;ccoeff_normed&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.TextAlign" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">TextAlign</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;justify&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.TextAnchor" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">TextAnchor</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;top-left&#39;</span><span class="p">,</span> <span class="s1">&#39;top-center&#39;</span><span class="p">,</span> <span class="s1">&#39;top-right&#39;</span><span class="p">,</span> <span class="s1">&#39;center-left&#39;</span><span class="p">,</span> <span class="s1">&#39;center-center&#39;</span><span class="p">,</span> <span class="s1">&#39;center-right&#39;</span><span class="p">,</span> <span class="s1">&#39;baseline-left&#39;</span><span class="p">,</span> <span class="s1">&#39;baseline-center&#39;</span><span class="p">,</span> <span class="s1">&#39;baseline-right&#39;</span><span class="p">,</span> <span class="s1">&#39;bottom-left&#39;</span><span class="p">,</span> <span class="s1">&#39;bottom-center&#39;</span><span class="p">,</span> <span class="s1">&#39;bottom-right&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.TextFont" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">TextFont</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;sans&#39;</span><span class="p">,</span> <span class="s1">&#39;mono&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.TextLanguage" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">TextLanguage</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;ja&#39;</span><span class="p">,</span> <span class="s1">&#39;zh-hans&#39;</span><span class="p">,</span> <span class="s1">&#39;zh-hant&#39;</span><span class="p">,</span> <span class="s1">&#39;ko&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.TiffCompression" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">TiffCompression</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="s1">&#39;lzw&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.Tonemap" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">Tonemap</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;aces-1.3&#39;</span><span class="p">,</span> <span class="s1">&#39;aces-1.3-lut&#39;</span><span class="p">,</span> <span class="s1">&#39;aces-2.0&#39;</span><span class="p">,</span> <span class="s1">&#39;aces-2.0-lut&#39;</span><span class="p">,</span> <span class="s1">&#39;bt2408&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.VectorBlurShutter" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">VectorBlurShutter</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;centered&#39;</span><span class="p">,</span> <span class="s1">&#39;forward&#39;</span><span class="p">,</span> <span class="s1">&#39;backward&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="pixtreme.core.__all__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;Frame&#39;</span><span class="p">,</span> <span class="s1">&#39;Lut&#39;</span><span class="p">,</span> <span class="s1">&#39;channels&#39;</span><span class="p">,</span> <span class="s1">&#39;Colorspace&#39;</span><span class="p">,</span> <span class="s1">&#39;Gamma&#39;</span><span class="p">,</span> <span class="s1">&#39;Matrix&#39;</span><span class="p">,</span> <span class="s1">&#39;Dtype&#39;</span><span class="p">,</span> <span class="s1">&#39;Layout&#39;</span><span class="p">,</span> <span class="s1">&#39;Tonemap&#39;</span><span class="p">,</span> <span class="s1">&#39;Range&#39;</span><span class="p">,</span> <span class="s1">&#39;Interpolation&#39;</span><span class="p">,</span> <span class="s1">&#39;Border&#39;</span><span class="p">,</span> <span class="s1">&#39;ChromaSiting&#39;</span><span class="p">,</span> <span class="s1">&#39;StackDirection&#39;</span><span class="p">,</span> <span class="s1">&#39;SobelDirection&#39;</span><span class="p">,</span> <span class="s1">&#39;TemplateMatchingMethod&#39;</span><span class="p">,</span> <span class="s1">&#39;Blend&#39;</span><span class="p">,</span> <span class="s1">&#39;Alpha&#39;</span><span class="p">,</span> <span class="s1">&#39;Antialiasing&#39;</span><span class="p">,</span> <span class="s1">&#39;TextLanguage&#39;</span><span class="p">,</span> <span class="s1">&#39;TextAnchor&#39;</span><span class="p">,</span> <span class="s1">&#39;TextAlign&#39;</span><span class="p">,</span> <span class="s1">&#39;TextFont&#39;</span><span class="p">,</span> <span class="s1">&#39;GeneratorKind&#39;</span><span class="p">,</span> <span class="s1">&#39;ColorBarsStandard&#39;</span><span class="p">,</span> <span class="s1">&#39;ColorBarsOutput&#39;</span><span class="p">,</span> <span class="s1">&#39;MorphologyShape&#39;</span><span class="p">,</span> <span class="s1">&#39;ImageFormat&#39;</span><span class="p">,</span> <span class="s1">&#39;TiffCompression&#39;</span><span class="p">,</span> <span class="s1">&#39;ExrCompression&#39;</span><span class="p">,</span> <span class="s1">&#39;VectorBlurShutter&#39;</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="pixtreme.core.Frame" class="doc doc-heading">
+            <code>Frame</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+
+
+
+        <p>A mutable metadata-bearing HWC image stored on an NVIDIA GPU.</p>
+<p><code>data</code> is always a C-contiguous CuPy array. Keep this Frame alive for as
+long as a consumer uses a raw pointer obtained from its data. Frame is a
+DLPack producer: consumer arguments and stream information are passed
+through unchanged to the underlying CuPy array.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Frame.model_config" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">arbitrary_types_allowed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s1">&#39;forbid&#39;</span><span class="p">,</span> <span class="n">validate_assignment</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Frame.data" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">data</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Frame.colorspace" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">colorspace</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Frame.gamma" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">gamma</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Frame.channels" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">channels</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Frame.matrix" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">matrix</span> <span class="o">=</span> <span class="kc">None</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Frame.width" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">width</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Image width in pixels.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Frame.height" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">height</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Image height in pixels.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Frame.shape" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">shape</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>HWC data shape.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Frame.dtype" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">dtype</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Data storage dtype.</p>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="pixtreme.core.Frame.__dlpack__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">__dlpack__</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dl_device</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Delegate DLPack export to data, preserving consumer arguments.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="pixtreme.core.Frame.__dlpack_device__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">__dlpack_device__</span><span class="p">()</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Delegate the DLPack device query to data.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="pixtreme.core.Frame.__repr__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__repr__</span><span class="p">()</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Represent known channel labels compactly and preserve custom labels explicitly.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="pixtreme.core.Lut" class="doc doc-heading">
+            <code>Lut</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>A validated 3D RGB lookup grid stored on an NVIDIA GPU.</p>
+<p><code>data</code> has shape <code>(N, N, N, 3)</code> indexed by red, green, and blue,
+with float32 values and <code>N &gt;= 2</code>. The array is retained by reference,
+without a construction-time copy; callers are responsible for avoiding
+mutation while the LUT is in use. <code>domain_min</code> and <code>domain_max</code> map
+input RGB values onto the grid independently by channel.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Lut.data" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">data</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Lut.domain_min" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">domain_min</span> <span class="o">=</span> <span class="n">_DEFAULT_DOMAIN_MIN</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Lut.domain_max" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">domain_max</span> <span class="o">=</span> <span class="n">_DEFAULT_DOMAIN_MAX</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="pixtreme.core.Lut.__post_init__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">__post_init__</span><span class="p">()</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="pixtreme.core.Lut.__init__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">domain_min</span><span class="o">=</span><span class="n">_DEFAULT_DOMAIN_MIN</span><span class="p">,</span> <span class="n">domain_max</span><span class="o">=</span><span class="n">_DEFAULT_DOMAIN_MAX</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="pixtreme.core.channels" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">channels</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Normalize channel labels to their canonical tuple representation.</p>
+<h5 id="pixtreme.core.channels--parameters">Parameters</h5>
+<p>value:
+    A compact string of known, case-sensitive labels parsed by greedy
+    longest match, or a Sequence of non-empty strings. Sequence input also
+    permits application-defined labels unknown to the compact vocabulary.</p>
+<h5 id="pixtreme.core.channels--returns">Returns</h5>
+<p>tuple[str, ...]
+    A non-empty tuple preserving the normalized label order.</p>
+<h5 id="pixtreme.core.channels--raises">Raises</h5>
+<p>ValueError
+    If a compact string is empty or contains an unknown label, or if a
+    sequence is empty or contains a non-string or empty label.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
