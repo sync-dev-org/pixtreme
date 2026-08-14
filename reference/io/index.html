@@ -25,7 +25,7 @@
     
     
       
-        <title>pixtreme.io - pixtreme 1.1.0</title>
+        <title>pixtreme.io - pixtreme 1.1.1</title>
       
     
     
@@ -84,7 +84,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="pixtreme 1.1.0" class="md-header__button md-logo" aria-label="pixtreme 1.1.0" data-md-component="logo">
+    <a href="../.." title="pixtreme 1.1.1" class="md-header__button md-logo" aria-label="pixtreme 1.1.1" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -98,7 +98,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            pixtreme 1.1.0
+            pixtreme 1.1.1
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -194,13 +194,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="pixtreme 1.1.0" class="md-nav__button md-logo" aria-label="pixtreme 1.1.0" data-md-component="logo">
+    <a href="../.." title="pixtreme 1.1.1" class="md-nav__button md-logo" aria-label="pixtreme 1.1.1" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    pixtreme 1.1.0
+    pixtreme 1.1.1
   </label>
   
     <div class="md-nav__source">
@@ -2211,7 +2211,7 @@ values, ownership, layout, dtype, or affine processing.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Export this Frame to a CuPy device array, optionally in one fused affine pass.</p>
+        <p>Export a Frame to a CuPy device array, optionally in one fused affine pass.</p>
 <p><code>channels</code> selects and orders labels. <code>layout</code> is HWC, NHWC, CHW,
 or NCHW. The affine formula is <code>y = (x * scale - mean) / std</code> and is
 the inverse of :func:<code>from_array</code> when the same constants are used.
@@ -2221,7 +2221,7 @@ is fp32 before the faithful <code>dtype</code> cast.</p>
 grid. It clips fp32 values to <code>[0, 1]</code>, scales by
 <code>2^bit_depth - 1</code>, and rounds half away from zero. The output dtype is
 uint8 for 8-bit codes and uint16 otherwise. It cannot be combined with
-affine constants. Use :func:<code>quantize</code> when the result should
+affine constants. Use :func:<code>pixtreme.values.quantize</code> when the result should
 remain a metadata-bearing Frame.</p>
 <p><code>copy=None</code> uses a zero-copy view when possible and otherwise makes
 one fused copy. <code>copy=False</code> strictly requires zero-copy and raises
