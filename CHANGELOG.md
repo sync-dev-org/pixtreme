@@ -2,6 +2,25 @@
 
 Notable changes to pixtreme are documented in this file.
 
+## 1.1.1 - 2026-08-14
+
+pixtreme 1.1.1 hardens the public error contract. Out-of-contract inputs that previously leaked raw interpreter
+exceptions now raise the documented actionable `ValueError` diagnostics. Public signatures and successful-path
+behavior are unchanged.
+
+### Fixed
+
+- `px.io.to_array()` and the eight wire-format exporters now reject non-Frame inputs with actionable `ValueError`
+  diagnostics instead of leaking attribute errors.
+- `px.io.read_image()`, `write_image()`, `read_header()`, and `read_lut()` now translate invalid path types into
+  actionable `ValueError` diagnostics while retaining the underlying cause.
+- `px.transform.resize()` now rejects non-finite or unrepresentable factor-derived dimensions before rounding or
+  allocation and guides callers to a smaller factor or explicit dimensions.
+- `px.composite.merge()` now names its actual public path when guiding callers after a non-Frame input.
+- Shared finite-real validation now translates numeric conversion failures into the parameter's actionable
+  `ValueError` instead of leaking `OverflowError`.
+- The `px.io.to_array()` docstring now describes its function input and links to `px.values.quantize()` correctly.
+
 ## 1.1.0 - 2026-08-13
 
 pixtreme 1.1.0 reshapes the public namespace into 13 responsibility modules with a single canonical path per

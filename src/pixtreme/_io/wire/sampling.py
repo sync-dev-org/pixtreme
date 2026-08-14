@@ -9,7 +9,15 @@ import cupy as cp
 import numpy as np
 
 from pixtreme._core.errors import _actionable_error
-from pixtreme._core.frame import _COLORSPACE_TOKENS, _GAMMA_TOKENS, _MATRIX_TOKENS, Frame
+from pixtreme._core.frame import (
+    _COLORSPACE_TOKENS,
+    _GAMMA_TOKENS,
+    _MATRIX_TOKENS,
+    Frame,
+)
+from pixtreme._core.frame import (
+    _validate_frame as _validate_core_frame,
+)
 from pixtreme._core.interpolation import _POINT_INTERPOLATION_TOKENS, _specialized_point_weight_source
 from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._core.value_domain import _float32_conversion_guidance
@@ -1149,6 +1157,7 @@ def _to_planar_444_kernel_source(*, alpha: bool) -> str:
 
 
 def _validate_frame(frame: Frame, *, operation: str, alpha: bool = False) -> None:
+    frame = _validate_core_frame(frame, operation=f"io.{operation}")
     expected_channels = _YCBCRA_CHANNELS if alpha else _YCBCR_CHANNELS
     if frame.channels != expected_channels:
         raise ValueError(

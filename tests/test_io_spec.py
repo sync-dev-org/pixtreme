@@ -202,6 +202,24 @@ def test_read_image_errors_distinguish_missing_extension_and_decode_failure(tmp_
         px.io.read_image(corrupt)
 
 
+@pytest.mark.parametrize(
+    ("name", "args"),
+    (
+        ("read_image", (None,)),
+        ("write_image", (None, None)),
+        ("read_header", (None,)),
+    ),
+)
+def test_image_path_boundaries_translate_invalid_path_types_actionably(name: str, args: tuple[object, ...]) -> None:
+    """REQ-API-012: image path APIs translate pathlib type failures and retain their cause."""
+    with pytest.raises(ValueError, match=r"^why=.*; what=.*; how=.*") as error:
+        getattr(px.io, name)(*args)
+
+    assert "path" in str(error.value)
+    assert "str or os.PathLike" in str(error.value)
+    assert isinstance(error.value.__cause__, TypeError)
+
+
 def test_read_header_reports_jpeg_tiff_and_float_tiff_without_decoding_pixels(tmp_path: Path) -> None:
     """v1-io acceptance 17 and 18: pure header parsers expose raster dimensions, channels, and storage dtype."""
     jpeg = tmp_path / "sample.jpg"

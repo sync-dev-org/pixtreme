@@ -212,6 +212,31 @@ def test_resize_rejects_invalid_dimensions_and_factors(kwargs: dict[str, Any]) -
     _assert_actionable(error)
 
 
+def test_resize_rejects_unrepresentable_factor_derived_dimensions_actionably() -> None:
+    """REQ-API-012: factor-derived dimensions fail before rounding or allocation when they overflow."""
+    source = _frame(np.zeros((2, 2, 3), dtype=np.float32), channels=("R", "G", "B"))
+
+    with pytest.raises(ValueError) as error:
+        px.transform.resize(source, factor=1e308)
+
+    _assert_actionable(error)
+    assert "factor" in str(error.value)
+    assert "width" in str(error.value)
+    assert "height" in str(error.value)
+
+
+def test_resize_translates_factor_conversion_overflow_actionably() -> None:
+    """REQ-API-012: a valid Real factor whose float conversion overflows raises the actionable error."""
+    source = _frame(np.zeros((2, 2, 3), dtype=np.float32), channels=("R", "G", "B"))
+
+    with pytest.raises(ValueError) as error:
+        px.transform.resize(source, factor=10**1000)
+
+    _assert_actionable(error)
+    assert "factor" in str(error.value)
+    assert isinstance(error.value.__cause__, OverflowError)
+
+
 def test_resize_factor_uses_half_up_rounding_and_accepts_real_scalars() -> None:
     """v1-resize acceptance 3 and 4: factor uses floor(dim*factor+0.5), including the 1080 regression."""
     source = _frame(np.zeros((1080, 3, 1), dtype=np.float32), channels=["signal"])

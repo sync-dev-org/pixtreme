@@ -10,6 +10,7 @@ import numpy as np
 
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.lut import _DEFAULT_DOMAIN_MAX, _DEFAULT_DOMAIN_MIN, Lut
+from pixtreme._io.common import _coerce_path
 
 _DIRECTIVE_LINE = re.compile(
     r"(?mi)^[ \t]*(?:TITLE|LUT_3D_SIZE|LUT_1D_SIZE|DOMAIN_MIN|DOMAIN_MAX)\b[^\r\n]*(?:\r?\n|$)"
@@ -205,7 +206,7 @@ def read_lut(path: str | Path) -> Lut:
     Parsing performs one bulk token conversion followed by one host-to-device
     transfer. ``TITLE`` metadata and ``#`` comments do not affect the result.
     """
-    file_path = Path(path)
+    file_path = _coerce_path(path, kind=".cube LUT")
     if not file_path.is_file():
         raise FileNotFoundError(
             _actionable_error(

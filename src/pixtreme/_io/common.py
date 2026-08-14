@@ -76,8 +76,21 @@ _ENCODE_CODEC_EXTENSIONS = {
 }
 
 
+def _coerce_path(path: str | os.PathLike[str], *, kind: str) -> Path:
+    try:
+        return Path(path)
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            _actionable_error(
+                why=f"the {kind} path must be a str or os.PathLike value",
+                what=f"received {type(path).__module__}.{type(path).__qualname__} value {path!r}",
+                how=f"pass a str or os.PathLike filesystem path for the {kind}",
+            )
+        ) from error
+
+
 def _path_and_format(path: str | os.PathLike[str], *, require_exists: bool) -> tuple[Path, str]:
-    file_path = Path(path)
+    file_path = _coerce_path(path, kind="image")
     if require_exists and not file_path.is_file():
         raise FileNotFoundError(
             _actionable_error(

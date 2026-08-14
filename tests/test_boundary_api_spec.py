@@ -122,6 +122,25 @@ def test_array_channel_and_storage_errors_are_actionable() -> None:
         _assert_actionable(error)
 
 
+def test_to_array_rejects_non_frame_input_actionably() -> None:
+    """REQ-API-012: the generic Frame exit rejects non-Frame values at the public boundary with recovery."""
+    with pytest.raises(ValueError) as error:
+        px.io.to_array(None)  # type: ignore[arg-type]
+
+    _assert_actionable(error)
+    assert "builtins.NoneType" in str(error.value)
+    assert "px.io.to_array" in str(error.value)
+
+
+def test_to_array_docstring_names_the_function_boundary_and_public_quantize_path() -> None:
+    """REQ-API-012: to_array documentation identifies the function input and an existing recovery API."""
+    docstring = px.io.to_array.__doc__ or ""
+
+    assert "Export a Frame" in docstring
+    assert ":func:`pixtreme.values.quantize`" in docstring
+    assert "Export this Frame" not in docstring
+
+
 def test_array_bit_depth_option_errors_are_actionable() -> None:
     """REQ-API-012: import/export bit-depth conflicts identify the conflicting values and a valid recovery call."""
     import cupy as cp

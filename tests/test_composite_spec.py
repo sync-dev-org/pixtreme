@@ -560,6 +560,29 @@ def test_composite_control_axes_fail_fast_actionably(kwargs: dict[str, object], 
     assert axis in str(error.value)
 
 
+def test_composite_non_frame_guidance_names_the_public_merge_path_for_both_inputs() -> None:
+    """REQ-API-012: both merge Frame validators guide callers to the public composite path."""
+    frame = _frame(np.zeros((1, 1, 1), dtype=np.float32), channels=("matte",))
+
+    for background, foreground in ((None, None), (frame, None)):
+        with pytest.raises(ValueError) as error:
+            px.composite.merge(background, foreground)  # type: ignore[arg-type]
+        _assert_actionable(error)
+        assert "px.composite.merge" in str(error.value)
+
+
+def test_composite_opacity_float_overflow_is_translated_actionably() -> None:
+    """REQ-API-012: finite-Real conversion overflow becomes the opacity boundary's actionable ValueError."""
+    frame = _frame(np.zeros((1, 1, 1), dtype=np.float32), channels=("matte",))
+
+    with pytest.raises(ValueError) as error:
+        px.composite.merge(frame, frame, opacity=10**1000)
+
+    _assert_actionable(error)
+    assert "opacity" in str(error.value)
+    assert isinstance(error.value.__cause__, OverflowError)
+
+
 def test_composite_nearest_inverse_mapping_uses_center_anchor_scale_rotation_and_position() -> None:
     """v1-composite acceptance 7-8: nearest placement follows the specified inverse transform at pixel centers."""
     background_values = np.zeros((5, 6, 1), dtype=np.float32)

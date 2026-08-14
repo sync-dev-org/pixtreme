@@ -475,8 +475,8 @@ def merge(
     never adapted. Inputs must be float32 Frames. The result always has new
     storage and never shares its allocation with either input.
     """
-    checked_background = _validate_float32_frame(background, operation="merge")
-    checked_foreground = _validate_float32_frame(foreground, operation="merge")
+    checked_background = _validate_float32_frame(background, operation="composite.merge")
+    checked_foreground = _validate_float32_frame(foreground, operation="composite.merge")
     checked_adapt = _strict_bool(
         adapt,
         name="adapt",

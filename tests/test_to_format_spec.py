@@ -398,6 +398,29 @@ def test_to_formats_reject_wrong_channels_and_non_fp32_frames_actionably(
     assert "float32" in str(dtype_error.value)
 
 
+@pytest.mark.parametrize(
+    "name",
+    (
+        "to_uyvy422",
+        "to_v210",
+        "to_nv12",
+        "to_p010",
+        "to_yuv420p",
+        "to_yuv422p",
+        "to_yuv444p",
+        "to_yuva444p",
+    ),
+)
+def test_to_formats_reject_non_frame_input_actionably(name: str) -> None:
+    """REQ-API-012: every wire-format Frame exit rejects non-Frame values with its public recovery path."""
+    with pytest.raises(ValueError) as error:
+        getattr(px.io, name)(None)
+
+    _actionable(error)
+    assert "builtins.NoneType" in str(error.value)
+    assert f"px.io.{name}" in str(error.value)
+
+
 @pytest.mark.parametrize("name", ("to_nv12", "to_p010", "to_yuv420p"))
 def test_420_to_formats_reject_unknown_tokens_and_odd_dimensions(name: str) -> None:
     """v1-format-boundary acceptance 10, 11, 21, and 37: closed tokens and even 420 dimensions fail fast."""

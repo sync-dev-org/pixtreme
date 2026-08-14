@@ -20,6 +20,9 @@ from pixtreme._core.frame import (
     _normalize_channels,
     _validate_token,
 )
+from pixtreme._core.frame import (
+    _validate_frame as _validate_core_frame,
+)
 from pixtreme._core.value_domain import (
     _bit_depth_maximum,
     _bit_depth_scale,
@@ -54,7 +57,7 @@ def to_array(
     out: object | None = None,
     copy: bool | None = None,
 ) -> cp.ndarray:
-    """Export this Frame to a CuPy device array, optionally in one fused affine pass.
+    """Export a Frame to a CuPy device array, optionally in one fused affine pass.
 
     ``channels`` selects and orders labels. ``layout`` is HWC, NHWC, CHW,
     or NCHW. The affine formula is ``y = (x * scale - mean) / std`` and is
@@ -66,7 +69,7 @@ def to_array(
     grid. It clips fp32 values to ``[0, 1]``, scales by
     ``2^bit_depth - 1``, and rounds half away from zero. The output dtype is
     uint8 for 8-bit codes and uint16 otherwise. It cannot be combined with
-    affine constants. Use :func:`quantize` when the result should
+    affine constants. Use :func:`pixtreme.values.quantize` when the result should
     remain a metadata-bearing Frame.
 
     ``copy=None`` uses a zero-copy view when possible and otherwise makes
@@ -83,6 +86,7 @@ def to_array(
     a DLPack producer through its protocol methods; no to_tensor or
     to_dlpack helper is needed.
     """
+    frame = _validate_core_frame(frame, operation="io.to_array")
     _validate_copy(copy)
     layout_token = _validate_layout(layout)
     requested_channels, indices = _select_channel_indices(frame.channels, channels)

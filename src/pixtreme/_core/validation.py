@@ -23,7 +23,16 @@ def _finite_real(value: object, *, name: str) -> float:
                 how=f"pass a finite int or float for {name}",
             )
         )
-    resolved = float(value)
+    try:
+        resolved = float(value)
+    except (OverflowError, TypeError, ValueError) as error:
+        raise ValueError(
+            _actionable_error(
+                why=f"{name} must be a finite real number",
+                what=f"received {name}={value!r}",
+                how=f"pass a finite int or float for {name}",
+            )
+        ) from error
     if not math.isfinite(resolved):
         raise ValueError(
             _actionable_error(

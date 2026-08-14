@@ -412,7 +412,16 @@ def _resolve_output_size(
                 how="pass a finite int or float greater than 0",
             )
         )
-    resolved_factor = float(factor)
+    try:
+        resolved_factor = float(factor)
+    except (OverflowError, TypeError, ValueError) as conversion_error:
+        raise ValueError(
+            _actionable_error(
+                why="resize factor must be finite and greater than 0",
+                what=f"received factor={factor!r}",
+                how="pass a finite positive real number",
+            )
+        ) from conversion_error
     if not math.isfinite(resolved_factor) or resolved_factor <= 0.0:
         raise ValueError(
             _actionable_error(
@@ -421,8 +430,24 @@ def _resolve_output_size(
                 how="pass a finite positive real number",
             )
         )
-    output_width = math.floor(frame.width * resolved_factor + 0.5)
-    output_height = math.floor(frame.height * resolved_factor + 0.5)
+    scaled_width = frame.width * resolved_factor
+    scaled_height = frame.height * resolved_factor
+    maximum_dimension = np.iinfo(np.intp).max
+    if (
+        not math.isfinite(scaled_width)
+        or not math.isfinite(scaled_height)
+        or scaled_width > maximum_dimension
+        or scaled_height > maximum_dimension
+    ):
+        raise ValueError(
+            _actionable_error(
+                why="factor-derived resize dimensions must be finite and representable",
+                what=(f"factor={factor!r} produces scaled width={scaled_width!r}, scaled height={scaled_height!r}"),
+                how="pass a smaller factor or explicit positive width and height",
+            )
+        )
+    output_width = math.floor(scaled_width + 0.5)
+    output_height = math.floor(scaled_height + 0.5)
     if output_width < 1 or output_height < 1:
         raise ValueError(
             _actionable_error(

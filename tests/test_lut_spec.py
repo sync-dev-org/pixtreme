@@ -221,6 +221,17 @@ def test_read_lut_accepts_str_paths_and_default_domain(tmp_path: Path) -> None:
     assert lut.domain_max == (1.0, 1.0, 1.0)
 
 
+def test_read_lut_translates_invalid_path_types_actionably() -> None:
+    """REQ-API-012: the LUT path boundary translates pathlib type failures and retains their cause."""
+    with pytest.raises(ValueError) as error:
+        px.io.read_lut(None)  # type: ignore[arg-type]
+
+    _assert_actionable(error)
+    assert "path" in str(error.value)
+    assert "str or os.PathLike" in str(error.value)
+    assert isinstance(error.value.__cause__, TypeError)
+
+
 def test_read_lut_rejects_one_dimensional_cube_actionably(tmp_path: Path) -> None:
     """v1-lut acceptance 4: LUT_1D_SIZE is an explicit future-feature error."""
     path = tmp_path / "one-dimensional.cube"

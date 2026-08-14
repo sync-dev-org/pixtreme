@@ -1,4 +1,4 @@
-site_name: pixtreme 1.1.0
+site_name: pixtreme 1.1.1
 site_description: GPU-first image processing for Python, built on CUDA and CuPy
 docs_dir: docs_site
 repo_url: https://github.com/sync-dev-org/pixtreme
