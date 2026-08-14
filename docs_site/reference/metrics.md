@@ -1,0 +1,3 @@
+# `pixtreme.metrics`
+
+::: pixtreme.metrics

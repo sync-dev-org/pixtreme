@@ -1,0 +1,1 @@
+"""Private pixel-value implementations."""

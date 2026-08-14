@@ -1,0 +1,126 @@
+[project]
+name = "pixtreme"
+dynamic = ["version"]
+description = "GPU-first image processing library for Python, built on CUDA and CuPy"
+authors = [
+    { name = "minamik", email = "mia@sync.dev" },
+]
+readme = "README.md"
+license = "MIT"
+license-files = [
+    "LICENSE",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: GPU :: NVIDIA CUDA :: 12",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Software Development :: Libraries",
+]
+requires-python = ">=3.12"
+dependencies = [
+    "cupy-cuda12x[ctk]>=13.4.1",
+    "freetype-py>=2.5.1",
+    "numpy",
+    "nvidia-nvcomp-cu12>=5.3.0.16",
+    "nvidia-nvimgcodec-cu12>=0.8",
+    "nvidia-nvjpeg-cu12>=12.4.0.76",
+    "nvidia-nvjpeg2k-cu12>=0.11.0.51",
+    "nvidia-nvtiff-cu12>=0.8.0.82",
+    "pydantic>=2.9",
+    "uharfbuzz>=0.55.0",
+]
+
+[project.urls]
+repository = "https://github.com/sync-dev-org/pixtreme"
+issues = "https://github.com/sync-dev-org/pixtreme/issues"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "ruff>=0.15.22",
+    "mypy>=1.0.0",
+    # DLPack interop E2E (v1-frame-core acceptance 12). Not a runtime dependency.
+    "torch>=2.8",
+    "opencolorio>=2.3",
+    "pillow>=12.3.0",
+    # EXR dev oracle: fixture generation and independent decode only. Not a runtime dependency.
+    "openexr>=3.4",
+    "mkdocs-material>=9.7.7",
+    "mkdocstrings[python]>=1.0.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["--strict-markers", "-m", "not performance"]
+markers = [
+    "performance: opt-in performance/timing tests (excluded by default)",
+]
+
+[tool.uv]
+constraint-dependencies = [
+    "cuda-toolkit==12.9.1",
+    "nvidia-cublas-cu12==12.9.1.4",
+]
+index = [
+    { name = "pytorch-cuda", url = "https://download.pytorch.org/whl/cu129", explicit = true },
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cuda" }
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+warn_unused_configs = true
+files = [
+    "src/pixtreme",
+]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/pixtreme",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+]
+exclude = [
+    "/__pycache__",
+]
+
+[build-system]
+requires = [
+    "hatchling",
+    "hatch-vcs",
+]
+build-backend = "hatchling.build"

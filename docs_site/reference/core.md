@@ -1,0 +1,3 @@
+# `pixtreme.core`
+
+::: pixtreme.core
