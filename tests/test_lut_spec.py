@@ -461,14 +461,14 @@ def test_lut_transform_rejects_non_frame_and_non_lut_inputs() -> None:
 
 def test_lut_documentation_contracts_are_present() -> None:
     """v1-lut acceptance 15-16: vocabulary and boundary canon contain the incremental LUT contracts."""
-    vocabulary_path = ROOT / "docs" / "vocabulary.md"
+    vocabulary_path = ROOT / "docs_site" / "tokens.md"
     requirements_path = ROOT / "docs" / "requirements.md"
     if not vocabulary_path.is_file() or not requirements_path.is_file():
         pytest.skip("repo-only documentation contract: canonical docs are absent from this distribution")
 
     vocabulary = vocabulary_path.read_text(encoding="utf-8")
     interpolation = vocabulary.split("## interpolation\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    for required in ("apply_lut", "trilinear", "tetrahedral", "既定", "domain", "clamp", "clip"):
+    for required in ("apply_lut", "trilinear", "tetrahedral", "default", "domain", "clamp", "clip"):
         assert required in interpolation
 
     requirements = requirements_path.read_text(encoding="utf-8")

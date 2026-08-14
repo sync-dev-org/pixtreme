@@ -37,6 +37,7 @@ dependencies = [
 ]
 
 [project.urls]
+documentation = "https://sync-dev-org.github.io/pixtreme/"
 repository = "https://github.com/sync-dev-org/pixtreme"
 issues = "https://github.com/sync-dev-org/pixtreme/issues"
 

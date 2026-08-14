@@ -818,7 +818,7 @@ def test_draw_text_vocabulary_and_docstring_fix_the_full_layout_contract(vocabul
         "em",
         "pixel",
         "kerning",
-        "justify",
+        "Justification",
         "anchor",
         "width",
         "overflow",

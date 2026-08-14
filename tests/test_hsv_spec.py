@@ -341,8 +341,8 @@ def test_hsv_channel_vocabulary_and_documentation_are_self_contained(vocabulary_
         "modulo 1",
         "[0, 1)",
         "[0, 1]",
-        "上限なし",
-        "負値",
+        "unbounded",
+        "Negative",
         "clip",
     ):
         assert required in section

@@ -449,7 +449,7 @@ def test_vocabulary_defines_border_tokens_defaults_and_cross_library_corresponde
 
     for required in (
         *BORDERS,
-        "既定",
+        "default",
         "np.pad",
         "scipy.ndimage",
         "cv2",
@@ -457,9 +457,9 @@ def test_vocabulary_defines_border_tokens_defaults_and_cross_library_corresponde
         "REFLECT_101",
         "edge",
         "REPLICATE",
-        "周期",
-        "同名",
-        "別挙動",
+        "period",
+        "name",
+        "different behavior",
         "border_value",
     ):
         assert required in section

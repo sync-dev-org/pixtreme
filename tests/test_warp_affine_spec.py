@@ -782,10 +782,10 @@ def test_warp_affine_docstring_and_vocabulary_are_self_contained(vocabulary_mark
         "px.transform.warp_affine",
         "column norm",
         "pixel center",
-        "inverse mapping",
+        "inverse-maps",
         "parallelogram",
         "Lanczos",
     ):
         assert required in interpolation_section
-    for required in ("px.transform.warp_affine", "0.0", "point", "area", "border_value=None"):
+    for required in ("px.transform.warp_affine", "0.0", "Point", "area", "border_value=None"):
         assert required in border_section

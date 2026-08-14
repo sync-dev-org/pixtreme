@@ -432,8 +432,8 @@ def test_vocabulary_defines_resize_tokens_subsets_geometry_and_area(vocabulary_m
         "floor(dim × factor + 0.5)",
         "replicate",
         "pixel center",
-        "scale-aware AA",
-        "source 領域",
+        "scale-aware antialiasing",
+        "source region",
     ):
         assert required in section
 

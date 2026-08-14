@@ -7,6 +7,8 @@
 
 GPU-first image processing for Python, built on CUDA and CuPy.
 
+**[API reference and documentation](https://sync-dev-org.github.io/pixtreme/)** — the complete public API (13 modules, 89 operations) with per-function contracts, plus the full performance report.
+
 ## Why pixtreme
 
 pixtreme keeps image data on the NVIDIA GPU and makes a metadata-bearing `Frame` the common value passed between
@@ -46,7 +48,7 @@ The test system used an NVIDIA RTX A6000, CUDA 12.9, CuPy 14.1.1, and Python 3.1
 | `write_image` | FHD fp32 RGB to EXR ZIP/HALF, dtype omitted, temporary-file I/O included | 37.042 | 27.0 | 1.0 |
 
 These figures describe this system and workload, not a hardware-independent guarantee. File and encoded-byte
-boundaries have different I/O-inclusive conditions. See [the full performance report](https://github.com/sync-dev-org/pixtreme/blob/v1/docs/performance.md) for every
+boundaries have different I/O-inclusive conditions. See [the full performance report](https://sync-dev-org.github.io/pixtreme/performance/) for every
 case, distribution statistics, and the complete methodology.
 
 EXR reads support scanline and tiled, single- and multipart files across all ten compression tokens; writes produce
@@ -157,7 +159,7 @@ captioned = px.draw.text(
 
 ## Full performance
 
-[docs/performance.md](https://github.com/sync-dev-org/pixtreme/blob/v1/docs/performance.md) contains all 190 measured cases, including mean, median, FPS, p5, p95,
+[the full performance report](https://sync-dev-org.github.io/pixtreme/performance/) contains all 190 measured cases, including mean, median, FPS, p5, p95,
 effective bandwidth, parameters, and the 90 cases whose median exceeds 1 ms. It also separates GPU-device throughput
 from temporary-file and encoded-byte I/O measurements.
 

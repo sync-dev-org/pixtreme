@@ -436,9 +436,16 @@ def test_derivative_vocabulary_defines_sobel_direction_and_shared_border_default
     border_section = vocabulary_markdown.split("## border\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
     for token in DIRECTIONS:
         assert f"`{token}`" in direction_section
-    for required in ("水平", "垂直 edge", "垂直方向", "水平 edge", "sqrt", "既定"):
+    for required in (
+        "horizontal direction",
+        "vertical edges",
+        "vertical direction",
+        "horizontal edges",
+        "sqrt",
+        "default",
+    ):
         assert required in direction_section
     for name in ("sobel", "laplacian", "difference_of_gaussians"):
         assert name in border_section
     assert "mirror" in border_section
-    assert "既定" in border_section
+    assert "default" in border_section

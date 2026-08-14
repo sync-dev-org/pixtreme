@@ -12,10 +12,10 @@ _PERFORMANCE_RESULTS: list[PerformanceResult] = []
 
 @pytest.fixture(scope="session")
 def vocabulary_markdown() -> str:
-    """REQ-TEST-008: load repo-only vocabulary canon or skip in a docs-free distribution."""
-    vocabulary_path = Path(__file__).resolve().parents[1] / "docs" / "vocabulary.md"
+    """REQ-TEST-008: load the repo-only token reference or skip in a docs-free distribution."""
+    vocabulary_path = Path(__file__).resolve().parents[1] / "docs_site" / "tokens.md"
     if not vocabulary_path.is_file():
-        pytest.skip("repo-only documentation contract: docs/vocabulary.md is absent from this distribution")
+        pytest.skip("repo-only documentation contract: docs_site/tokens.md is absent from this distribution")
     return vocabulary_path.read_text(encoding="utf-8")
 
 

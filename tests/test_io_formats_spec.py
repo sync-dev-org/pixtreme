@@ -503,10 +503,15 @@ assert "OpenEXR" not in sys.modules
 
 def test_canonical_docs_and_vocabulary_match_the_extended_format_contract() -> None:
     """v1-io-formats acceptance 20: requirements, feature sheets, and vocabulary share the implementation tokens."""
-    requirements = (ROOT / "docs" / "requirements.md").read_text(encoding="utf-8")
-    vocabulary = (ROOT / "docs" / "vocabulary.md").read_text(encoding="utf-8")
-    io_feature = (ROOT / "docs" / "features" / "v1-io.md").read_text(encoding="utf-8")
-    bytes_feature = (ROOT / "docs" / "features" / "v1-bytes-boundary.md").read_text(encoding="utf-8")
+    requirements_path = ROOT / "docs" / "requirements.md"
+    io_feature_path = ROOT / "docs" / "features" / "v1-io.md"
+    bytes_feature_path = ROOT / "docs" / "features" / "v1-bytes-boundary.md"
+    if not (requirements_path.is_file() and io_feature_path.is_file() and bytes_feature_path.is_file()):
+        pytest.skip("repo-only documentation contract: docs canon is absent from this distribution")
+    requirements = requirements_path.read_text(encoding="utf-8")
+    vocabulary = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
+    io_feature = io_feature_path.read_text(encoding="utf-8")
+    bytes_feature = bytes_feature_path.read_text(encoding="utf-8")
 
     for format_name in ("JPEG 2000", "WebP", "BMP", "PNM"):
         assert format_name in requirements

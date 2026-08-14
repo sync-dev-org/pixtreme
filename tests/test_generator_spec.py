@@ -777,7 +777,7 @@ def test_generator_vocabulary_tables_equal_implementation_token_sets(vocabulary_
     assert _table_tokens(markdown, "color bars standard") == STANDARDS == _STANDARD_TOKENS
     assert _table_tokens(markdown, "color bars output") == OUTPUTS == _OUTPUT_TOKENS
     assert _AA_TOKENS == AAS
-    assert "grid" in markdown and "checkerboard" in markdown and "共用" in markdown
+    assert "grid" in markdown and "checkerboard" in markdown and "share the same three tokens" in markdown
 
 
 def test_generator_docstrings_state_llm_readable_geometry_metadata_and_output_contracts() -> None:

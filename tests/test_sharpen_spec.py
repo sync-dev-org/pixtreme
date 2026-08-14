@@ -350,6 +350,6 @@ def test_border_vocabulary_lists_sharpen_as_an_accepting_api(vocabulary_markdown
     section = vocabulary_markdown.split("## border\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
 
     assert "px.filter.sharpen" in section
-    assert "mirror` を既定" in section
+    assert "default to `mirror`" in section
     for token in BORDERS:
         assert f"`{token}`" in section

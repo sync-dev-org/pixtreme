@@ -628,9 +628,9 @@ def test_analysis_vocabulary_defines_methods_and_harris_border(vocabulary_markdo
     border_section = vocabulary_markdown.split("## border\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
     for token in METHODS:
         assert f"`{token}`" in method_section
-    for required in ("ccoeff_normed", "既定", "小さい", "大きい", "mean", "sqrt"):
+    for required in ("ccoeff_normed", "default", "Lower", "Higher", "mean", "sqrt"):
         assert required in method_section
-    for required in ("px.feature.corner_harris", "mirror", "勾配", "集約窓"):
+    for required in ("px.feature.corner_harris", "mirror", "gradient stage", "aggregation window"):
         assert required in border_section
 
 

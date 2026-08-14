@@ -8,6 +8,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -67,8 +69,12 @@ def test_current_public_names_follow_the_documented_naming_rules_and_reservation
     """v1-public-namespace acceptance 11: current docs and leaves retain the naming grammar."""
     import pixtreme as px
 
-    requirements = (ROOT / "docs" / "requirements.md").read_text(encoding="utf-8")
-    feature = (ROOT / "docs" / "features" / "v1-public-namespace.md").read_text(encoding="utf-8")
+    requirements_path = ROOT / "docs" / "requirements.md"
+    feature_path = ROOT / "docs" / "features" / "v1-public-namespace.md"
+    if not requirements_path.is_file() or not feature_path.is_file():
+        pytest.skip("repo-only documentation contract: docs canon is absent from this distribution")
+    requirements = requirements_path.read_text(encoding="utf-8")
+    feature = feature_path.read_text(encoding="utf-8")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     rules = (
         "葉名は短縮せず機構まで含む自己記述名",

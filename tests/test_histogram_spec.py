@@ -537,5 +537,5 @@ def test_histogram_docstrings_are_self_contained_and_vocabulary_adds_no_token_ax
     ):
         assert required in clahe_docstring
 
-    vocabulary = (Path(__file__).resolve().parents[1] / "docs" / "vocabulary.md").read_text(encoding="utf-8")
+    vocabulary = (Path(__file__).resolve().parents[1] / "docs_site" / "tokens.md").read_text(encoding="utf-8")
     assert all(f"\n## {name}\n" not in vocabulary for name in ("domain", "bins", "clip_limit", "tiles_y", "tiles_x"))

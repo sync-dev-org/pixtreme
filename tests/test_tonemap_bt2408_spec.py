@@ -481,7 +481,7 @@ def test_bt2408_uses_one_fused_analytic_pass_without_touching_the_aces_lut_path(
 def test_bt2408_docs_and_public_docstring_are_self_contained_and_list_the_ten_rows() -> None:
     """v1-tonemap-aces20-analytic acceptance 18-19: requirements, vocabulary, and docstring expose the contract."""
     requirements_path = ROOT / "docs" / "requirements.md"
-    vocabulary_path = ROOT / "docs" / "vocabulary.md"
+    vocabulary_path = ROOT / "docs_site" / "tokens.md"
     if not requirements_path.exists() or not vocabulary_path.exists():
         pytest.skip("docs canon is intentionally absent from this distribution tree")
     requirements = requirements_path.read_text(encoding="utf-8")
@@ -494,7 +494,7 @@ def test_bt2408_docs_and_public_docstring_are_self_contained_and_list_the_ten_ro
             assert required in text
     for required in ("direct mapping", "inverse tone mapping", "0.75", "203 / 10000", "approximately 58%"):
         assert required in vocabulary
-    supply_table = vocabulary.split("## tonemap 供給組合せ", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
+    supply_table = vocabulary.split("## tonemap combinations", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
     assert supply_table.count("| `aces-1.3` |") == 2
     assert supply_table.count("| `aces-1.3-lut` |") == 2
     assert supply_table.count("| `aces-2.0` |") == 2

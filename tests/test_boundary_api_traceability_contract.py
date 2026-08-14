@@ -17,7 +17,7 @@ def test_frame_has_no_numpy_exit_and_vocabulary_names_explicit_host_transfers(
     """v1-boundary-api acceptance 18: Frame has no NumPy method and docs name explicit host exits."""
     assert not hasattr(px.core.Frame, "to_numpy")
 
-    boundary = _section(vocabulary_markdown, "Frame 境界契約")
+    boundary = _section(vocabulary_markdown, "Frame boundary contract")
     assert "`px.io.to_array(frame, ...).get()`" in boundary
     assert "`cp.asnumpy(px.io.to_array(frame, ...))`" in boundary
 

@@ -1135,15 +1135,15 @@ def test_draw_text_vocabulary_documents_language_anchor_and_placement_contracts(
     assert _table_tokens(markdown, "anchor") == ANCHORS == _ANCHOR_TOKENS
     for required in (
         "locl",
-        "既定",
+        "default",
         "`ja`",
         "`baseline-left`",
         "ascender",
         "descender",
         "advance",
         "pen",
-        "単一行",
-        "改行",
+        "single-line",
+        "newlines",
         "subpixel",
     ):
         assert required in markdown
@@ -1183,7 +1183,7 @@ def test_draw_text_supersample_vocabulary_and_docstring_state_the_opt_in_contrac
         "bool",
         "token",
         "4×4",
-        "平均",
+        "averages",
     ):
         assert required in aa_section
 

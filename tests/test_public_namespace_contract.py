@@ -377,11 +377,11 @@ def test_literal_aliases_and_vocabulary_tables_are_identical() -> None:
     """v1-public-namespace acceptance 9 and 12: aliases, runtime tokens, and parsed docs tables stay identical."""
     from pixtreme._core import vocabulary as runtime_vocabulary
 
-    vocabulary_path = Path(__file__).resolve().parents[1] / "docs" / "vocabulary.md"
+    vocabulary_path = Path(__file__).resolve().parents[1] / "docs_site" / "tokens.md"
     if not vocabulary_path.is_file():
         import pytest
 
-        pytest.skip("repo-only documentation contract: docs/vocabulary.md is absent from this distribution")
+        pytest.skip("repo-only documentation contract: docs_site/tokens.md is absent from this distribution")
     markdown = vocabulary_path.read_text(encoding="utf-8")
 
     for alias_name, expected_tokens in ALIAS_TOKENS.items():

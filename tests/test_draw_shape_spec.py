@@ -978,7 +978,7 @@ def test_draw_vocabulary_documents_blend_aa_softness_and_continuous_coordinates(
         "`add`",
         "`multiply`",
         "`screen`",
-        "既定",
+        "default",
         "## aa",
         "`distance`",
         "`supersample`",

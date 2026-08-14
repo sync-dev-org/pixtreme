@@ -327,15 +327,15 @@ def test_morphology_vocabulary_defines_shape_composites_and_border_default(vocab
     for required in (
         "disk",
         "square",
-        "dx² + dy² ≤ radius²",
+        "dx² + dy² <= radius²",
         "Chebyshev",
         "px.morphology.white_tophat",
         "px.morphology.black_tophat",
-        "明部",
-        "暗部",
+        "small bright details",
+        "small dark details",
     ):
         assert required in shape_section
     for name in MORPHOLOGY_NAMES:
         assert name in border_section
-    for required in ("replicate", "既定", "min", "max", "中立"):
+    for required in ("replicate", "default", "min", "max", "neutral"):
         assert required in border_section

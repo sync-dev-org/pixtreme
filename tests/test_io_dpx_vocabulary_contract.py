@@ -12,23 +12,25 @@ def test_vocabulary_documents_dpx_tokens_layout_storage_and_transfer_contracts(
     vocabulary_markdown: str,
 ) -> None:
     """v1-dpx acceptance 11: vocabulary and implementation agree on the complete DPX boundary."""
-    dpx_boundary = vocabulary_markdown.split("DPX も file-only format", maxsplit=1)[1].split(
-        "\n## TIFF compression", maxsplit=1
-    )[0]
+    dpx_boundary = " ".join(
+        vocabulary_markdown.split("DPX is also file-only", maxsplit=1)[1]
+        .split("\n## TIFF compression", maxsplit=1)[0]
+        .split()
+    )
 
     for fragment in (
-        "`SDPX` / `XPDS`",
-        "8 / 10 / 12 / 16-bit",
-        "8 / 16-bit は packing 0",
-        "10-bit は 32-bit word",
-        "12-bit は 16-bit word",
+        "`SDPX` or `XPDS`",
+        "8-, 10-, 12-, or 16-bit",
+        "Eight- and sixteen-bit samples require packing 0",
+        "high end of a 32-bit word",
+        "high 12 bits of a 16-bit word",
         "Method A filled",
-        "GPU 1 pass で endian 解決",
-        "`unchanged=True` は 8-bit を uint8、10 / 12 / 16-bit code を uint16",
-        "unique RGB / RGBA Frame",
+        "One GPU pass resolves endian order",
+        "`unchanged=True` returns 8-bit",
+        "unique RGB or RGBA channels",
         "big-endian `SDPX`",
-        "`bit_depth` の既定は 10",
-        "Frame gamma は `cineon`→printing density",
+        "`bit_depth` defaults to 10",
+        "records `cineon` as printing density",
     ):
         assert fragment in dpx_boundary
 

@@ -388,7 +388,7 @@ def test_quality_metric_requirements_preserve_module_and_vocabulary_boundaries()
     """v1-quality-metrics acceptance 22 / v1-public-namespace acceptance 1 and 8: boundaries stay exact."""
     repository = Path(__file__).resolve().parents[1]
     requirements_path = repository / "docs" / "requirements.md"
-    vocabulary_path = repository / "docs" / "vocabulary.md"
+    vocabulary_path = repository / "docs_site" / "tokens.md"
     if not requirements_path.is_file() or not vocabulary_path.is_file():
         pytest.skip("repo-only documentation contract: canonical docs are absent from this distribution")
     requirements = requirements_path.read_text(encoding="utf-8")
