@@ -37,6 +37,8 @@ IO_FUNCTIONS = (
     "write_image",
     "read_header",
     "read_lut",
+    "decode_lut",
+    "write_lut",
     "decode_image",
     "encode_image",
     "from_array",
@@ -74,6 +76,9 @@ FUNCTION_MODULES = {
         "ycbcr_to_ycbcr",
         "equalize_histogram",
         "clahe",
+        "chromatic_adaptation",
+        "white_balance",
+        "white_point_simulation",
     ),
     "filter": (
         "gaussian_blur",
@@ -158,6 +163,8 @@ _ERROR_PATH_CASES = (
 )
 
 ALIAS_TOKENS = {
+    "ChromaticAdaptation": ("bradford", "cat02", "cat16", "von-kries"),
+    "ReferenceWhite": ("d65", "d93", "d50", "aces"),
     "Colorspace": ("sRGB", "Rec.709", "Rec.2020", "ACES2065-1", "ACEScg", "S-Gamut3", "S-Gamut3.Cine"),
     "Gamma": ("linear", "srgb", "rec709", "bt1886", "pq", "hlg", "s-log3", "logc4", "cineon", "2.2", "2.4", "2.6"),
     "Matrix": ("bt601", "bt709", "bt2020", "native"),
@@ -177,6 +184,7 @@ ALIAS_TOKENS = {
         "area",
         "trilinear",
         "tetrahedral",
+        "linear",
     ),
     "Border": ("mirror", "replicate", "wrap", "constant"),
     "ChromaSiting": ("left", "center", "topleft"),
@@ -233,6 +241,8 @@ ALIAS_TOKENS = {
 }
 
 ALIAS_SECTIONS = {
+    "ChromaticAdaptation": "chromatic adaptation",
+    "ReferenceWhite": "reference white",
     "Layout": "layout",
     "Gamma": "gamma",
     "Colorspace": "colorspace",
@@ -288,23 +298,30 @@ def test_root_surface_is_exact_and_version_matches_distribution() -> None:
 
 
 def test_public_modules_expose_the_exact_function_type_helper_and_alias_contract() -> None:
-    """v1-public-namespace acceptance 3 and 7-8: every leaf has one exact module owner."""
-    assert sum(len(leaves) for leaves in FUNCTION_MODULES.values()) == 89
+    """v1-public-namespace acceptance 3 and 7-8; v1-white-balance acceptance 1;
+    v1-white-point-simulation acceptance 1; v1-draw-text-user-font acceptance 1;
+    v1-lut-extensions acceptance 1, 4, and 26:
+    every leaf and public type has one exact module owner.
+    """
+    assert sum(len(leaves) for leaves in FUNCTION_MODULES.values()) == 94
     for module_name, leaves in FUNCTION_MODULES.items():
         module = getattr(px, module_name)
-        expected_all = (*leaves, *(("ImageHeader",) if module_name == "io" else ()))
+        public_types = ("ImageHeader",) if module_name == "io" else (("Font",) if module_name == "draw" else ())
+        expected_all = (*leaves, *public_types)
         expected_public = set(expected_all)
         assert module.__all__ == expected_all
         assert _public_names(module) == expected_public
         assert all(inspect.isfunction(getattr(module, leaf)) for leaf in leaves)
 
-    expected_core_all = ("Frame", "Lut", "channels", *ALIAS_TOKENS)
+    expected_core_all = ("Frame", "Lut", "Lut1D", "channels", *ALIAS_TOKENS)
     expected_core = set(expected_core_all)
     assert px.core.__all__ == expected_core_all
     assert _public_names(px.core) == expected_core
     assert inspect.isclass(px.core.Frame)
     assert inspect.isclass(px.core.Lut)
+    assert inspect.isclass(px.core.Lut1D)
     assert inspect.isclass(px.io.ImageHeader)
+    assert inspect.isclass(px.draw.Font)
     assert inspect.isfunction(px.core.channels)
 
 
@@ -319,6 +336,8 @@ def test_legacy_root_and_module_imports_fail_in_fresh_processes() -> None:
         "write_image",
         "read_header",
         "read_lut",
+        "decode_lut",
+        "write_lut",
         "decode_image",
         "encode_image",
         "from_array",

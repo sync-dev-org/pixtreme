@@ -2,6 +2,34 @@
 
 Notable changes to pixtreme are documented in this file.
 
+## 1.2.0 - 2026-08-16
+
+pixtreme 1.2.0 adds user-supplied fonts for text drawing, expands LUT support with 1D LUTs, new file formats, and
+bytes/write entry points, and introduces a white-management trio: chromatic adaptation, temperature/tint white
+balance, and physical white point simulation with named reference whites. The release is purely additive; public
+signatures and existing behavior are unchanged.
+
+### Added
+
+- `px.draw.Font` and `Font.from_file(path, face_index=0)` load user OpenType/TrueType fonts (static faces,
+  variable fonts, and collections). `px.draw.text()` accepts a `Font` in place of the bundled font tokens, maps
+  `weight` to the font's real `wght` axis and `variations` to its other axes, and renders missing glyphs with the
+  selected face's `.notdef` glyph without fallback lookup.
+- `px.core.Lut1D` is a public 1D LUT type with per-channel domains. `px.color.apply_lut()` accepts `Lut | Lut1D`
+  and a new `linear` interpolation token; interpolation defaults stay `tetrahedral` for 3D and `linear` for 1D.
+- `px.io.read_lut()` additionally reads `.cube` 1D, `.3dl` (Lustre and headerless dialects), `.spi1d`, and
+  `.spi3d` files. `px.io.decode_lut()` parses LUT bytes with signature sniffing, and `px.io.write_lut()` writes
+  deterministic `.cube` text for both LUT types with full `float32` round-trip preservation.
+- `px.color.chromatic_adaptation()` adapts a `float32` RGB Frame between CIE 1931 xy white points using
+  `px.core.ChromaticAdaptation` CAT tokens (`bradford`, `cat02`, `cat16`, `von-kries`; default `cat02`).
+- `px.color.white_balance()` corrects a source illuminant described by temperature (Kelvin on the Planckian
+  locus) and tint (signed Duv offset, positive toward green).
+- `px.color.white_point_simulation()` physically re-encodes absolute colorimetry between display device whites
+  (the ICC absolute-colorimetric-intent analogue) without chromatic adaptation, reducing to per-channel gain for
+  same-primaries device pairs.
+- `px.core.ReferenceWhite` names the reference-white tokens `d65`, `d93`, `d50`, and `aces`, accepted by
+  `white_point_simulation()` and `chromatic_adaptation()` alongside direct CIE 1931 xy pairs.
+
 ## 1.1.1 - 2026-08-14
 
 pixtreme 1.1.1 hardens the public error contract. Out-of-contract inputs that previously leaked raw interpreter

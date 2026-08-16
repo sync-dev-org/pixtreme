@@ -172,13 +172,13 @@ def test_parse_cube_accepts_untranslated_crlf_directives_and_data_rows() -> None
         "1 1 1\r\n"
     )
 
-    data, domain_min, domain_max = implementation._parse_cube(body, source="crlf fixture")
+    parsed = implementation._parse_cube(body, source="crlf fixture")
 
     indices = np.indices((2, 2, 2), dtype=np.float32)
     expected = np.stack((indices[0], indices[1], indices[2]), axis=-1)
-    np.testing.assert_array_equal(data, expected)
-    assert domain_min == (-1.0, -2.0, -3.0)
-    assert domain_max == (1.0, 2.0, 3.0)
+    np.testing.assert_array_equal(parsed.data, expected)
+    assert parsed.domain_min == (-1.0, -2.0, -3.0)
+    assert parsed.domain_max == (1.0, 2.0, 3.0)
 
 
 def test_read_lut_accepts_crlf_files_at_the_public_boundary(tmp_path: Path) -> None:
@@ -230,17 +230,6 @@ def test_read_lut_translates_invalid_path_types_actionably() -> None:
     assert "path" in str(error.value)
     assert "str or os.PathLike" in str(error.value)
     assert isinstance(error.value.__cause__, TypeError)
-
-
-def test_read_lut_rejects_one_dimensional_cube_actionably(tmp_path: Path) -> None:
-    """v1-lut acceptance 4: LUT_1D_SIZE is an explicit future-feature error."""
-    path = tmp_path / "one-dimensional.cube"
-    path.write_text("LUT_1D_SIZE 2\n0 0 0\n1 1 1\n", encoding="utf-8")
-
-    with pytest.raises(ValueError) as error:
-        px.io.read_lut(path)
-    _assert_actionable(error)
-    assert "1D" in str(error.value)
 
 
 @pytest.mark.parametrize(
@@ -297,7 +286,7 @@ def test_read_lut_parser_is_bulk_vectorized_uncached_and_pure(tmp_path: Path) ->
 
 
 def test_lut_transform_signature_is_keyword_only_after_frame() -> None:
-    """v1-lut acceptance 8 and 10: lut and interpolation form the exact keyword-only transform grammar."""
+    """v1-lut acceptance 8 and 10; v1-lut-extensions acceptance 4-5: the transform grammar stays exact."""
     signature = inspect.signature(px.color.apply_lut)
 
     assert tuple(signature.parameters) == ("frame", "lut", "interpolation")
@@ -305,7 +294,7 @@ def test_lut_transform_signature_is_keyword_only_after_frame() -> None:
     assert signature.parameters["lut"].kind is inspect.Parameter.KEYWORD_ONLY
     assert signature.parameters["lut"].default is inspect.Parameter.empty
     assert signature.parameters["interpolation"].kind is inspect.Parameter.KEYWORD_ONLY
-    assert signature.parameters["interpolation"].default == "tetrahedral"
+    assert signature.parameters["interpolation"].default is None
 
 
 @pytest.mark.parametrize(
@@ -363,6 +352,23 @@ def test_lut_transform_selects_the_correct_cell_in_a_three_cube(interpolation: s
 
     expected = 16.25 / 28.0
     np.testing.assert_allclose(cp.asnumpy(result.data)[0, 0], (expected, expected, expected), rtol=0.0, atol=2e-7)
+
+
+@pytest.mark.parametrize("interpolation", ("trilinear", "tetrahedral"))
+def test_lut_transform_preserves_wide_finite_domain_affine_mapping(interpolation: str) -> None:
+    """v1-lut acceptance 13; GitHub issue #10: wide finite domains retain their affine midpoint."""
+    axis = np.asarray((0.0, 1.0), dtype=np.float32)
+    table = np.stack(np.meshgrid(axis, axis, axis, indexing="ij"), axis=-1)
+    lut = px.core.Lut(
+        cp.asarray(table),
+        domain_min=(-1e300, -1e300, -1e300),
+        domain_max=(1e300, 1e300, 1e300),
+    )
+
+    with np.errstate(over="raise"):
+        result = px.color.apply_lut(_frame(np.zeros(3, dtype=np.float32)), lut=lut, interpolation=interpolation)
+
+    np.testing.assert_allclose(cp.asnumpy(result.data)[0, 0], (0.5, 0.5, 0.5), rtol=0.0, atol=1e-7)
 
 
 @pytest.mark.parametrize("interpolation", ("trilinear", "tetrahedral"))
@@ -447,9 +453,9 @@ def test_lut_transform_rejects_non_float32_with_dtype_specific_guidance(
     assert tuple(message.index(route) for route in routes) == tuple(sorted(message.index(route) for route in routes))
 
 
-@pytest.mark.parametrize("interpolation", ("linear", "Tetrahedral", None))
+@pytest.mark.parametrize("interpolation", ("linear", "Tetrahedral"))
 def test_lut_transform_rejects_unknown_interpolation_tokens(interpolation: object) -> None:
-    """v1-lut acceptance 10: interpolation is a closed, case-sensitive two-token axis."""
+    """v1-lut acceptance 10; v1-lut-extensions acceptance 5: 3D keeps its case-sensitive two-token subset."""
     source = _frame(np.zeros(3, dtype=np.float32))
 
     with pytest.raises(ValueError) as error:
@@ -471,7 +477,7 @@ def test_lut_transform_rejects_non_frame_and_non_lut_inputs() -> None:
 
 
 def test_lut_documentation_contracts_are_present() -> None:
-    """v1-lut acceptance 15-16: vocabulary and boundary canon contain the incremental LUT contracts."""
+    """v1-lut acceptance 15-16; v1-lut-extensions acceptance 26: LUT boundary canon stays current."""
     vocabulary_path = ROOT / "docs_site" / "tokens.md"
     requirements_path = ROOT / "docs" / "requirements.md"
     if not vocabulary_path.is_file() or not requirements_path.is_file():
@@ -484,7 +490,8 @@ def test_lut_documentation_contracts_are_present() -> None:
 
     requirements = requirements_path.read_text(encoding="utf-8")
     boundary_table = requirements.split("**REQ-API-010", maxsplit=1)[1].split("\n\n統一則", maxsplit=1)[0]
-    lut_boundary_row = next(line for line in boundary_table.splitlines() if "Lut" in line)
-    assert "`px.io.read_lut`" in lut_boundary_row
-    assert ".cube 3D LUT" in lut_boundary_row
-    assert "—" in lut_boundary_row
+    lut_boundary_rows = tuple(line for line in boundary_table.splitlines() if "LUT" in line)
+    assert any(
+        "LUT file" in line and "`px.io.read_lut`" in line and "`px.io.write_lut`" in line for line in lut_boundary_rows
+    )
+    assert any("LUT bytes" in line and "`px.io.decode_lut`" in line for line in lut_boundary_rows)

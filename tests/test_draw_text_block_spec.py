@@ -352,7 +352,9 @@ def _table_tokens(markdown: str, heading: str) -> tuple[str, ...]:
 
 
 def test_draw_text_unification_public_signature_is_the_complete_layout_contract() -> None:
-    """v1-draw-text-unification acceptance 1; v1-draw-text-supersample acceptance 1: complete signature."""
+    """v1-draw-text-unification acceptance 1; v1-draw-text-supersample acceptance 1;
+    v1-draw-text-user-font acceptance 5: complete signature.
+    """
     signature = inspect.signature(px.draw.text)
     assert tuple(signature.parameters) == (
         "frame",
@@ -371,6 +373,7 @@ def test_draw_text_unification_public_signature_is_the_complete_layout_contract(
         "tracking",
         "kerning",
         "font",
+        "variations",
         "width",
         "supersample",
     )
@@ -380,13 +383,14 @@ def test_draw_text_unification_public_signature_is_the_complete_layout_contract(
     )
     assert {
         name: signature.parameters[name].default
-        for name in ("align", "line_spacing", "tracking", "kerning", "font", "width", "supersample")
+        for name in ("align", "line_spacing", "tracking", "kerning", "font", "variations", "width", "supersample")
     } == {
         "align": "left",
         "line_spacing": 1.0,
         "tracking": 0.0,
         "kerning": True,
         "font": "sans",
+        "variations": None,
         "width": None,
         "supersample": False,
     }
@@ -394,13 +398,22 @@ def test_draw_text_unification_public_signature_is_the_complete_layout_contract(
 
 
 def test_draw_text_unification_removes_draw_text_block_from_the_public_surface() -> None:
-    """v1-draw-text-unification acceptance 2; v1-derivative-filters acceptance 17:
+    """v1-draw-text-unification acceptance 2; v1-derivative-filters acceptance 17;
+    v1-draw-text-user-font acceptance 1:
     the public surface exports text once and exposes no draw_text_block name.
     """
     assert not hasattr(px.draw, "draw_text_block")
     assert "draw_text_block" not in px.draw.__all__
     assert px.draw.__all__.count("text") == 1
-    assert len(px.draw.__all__) == 7
+    assert tuple(name for name in px.draw.__all__ if inspect.isfunction(getattr(px.draw, name))) == (
+        "line",
+        "polyline",
+        "rectangle",
+        "circle",
+        "ellipse",
+        "polygon",
+        "text",
+    )
 
     performance_tree = ast.parse((ROOT / "tests" / "test_performance_spec.py").read_text(encoding="utf-8"))
 

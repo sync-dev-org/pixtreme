@@ -352,6 +352,96 @@ def test_fixed_seed_calls_are_bit_deterministic(name: str) -> None:
     assert np.array_equal(_host(getattr(px.generate, name)(**kwargs)), _host(getattr(px.generate, name)(**kwargs)))
 
 
+@pytest.mark.parametrize(
+    ("scale", "lacunarity", "octaves"),
+    (
+        (1e-308, 2.0, 4),
+        (5.5, 1e300, 4),
+        (1e-308, 1e300, 4),
+        (5.5, 10.0, 64),
+        (math.ulp(0.0), math.ulp(0.0), 4),
+    ),
+)
+def test_fractal_noise_extreme_positive_finite_inputs_remain_finite_and_deterministic(
+    scale: float,
+    lacunarity: float,
+    octaves: int,
+) -> None:
+    """REQ-TEST-001; issue #8 acceptance 1 and 3: extreme accepted inputs stay finite and deterministic."""
+    kwargs = {
+        "width": 2,
+        "height": 2,
+        "scale": scale,
+        "octaves": octaves,
+        "lacunarity": lacunarity,
+        "gain": 0.5,
+        "seed": 17,
+        "evolution": 0.375,
+        "colorspace": "ACEScg",
+    }
+    first = _host(px.generate.fractal_noise(**kwargs))
+    second = _host(px.generate.fractal_noise(**kwargs))
+    assert np.all(np.isfinite(first))
+    assert np.array_equal(first, second)
+
+
+def test_fractal_noise_extreme_xy_uses_documented_lattice_origin_limit() -> None:
+    """REQ-TEST-003; issue #8 acceptance 1 and 4: overflowed xy evaluates the independent origin oracle."""
+    seed = 17
+    evolution = 0.375
+    octaves = 4
+    gain = 0.5
+    actual = _host(
+        px.generate.fractal_noise(
+            width=3,
+            height=2,
+            scale=1e-308,
+            octaves=octaves,
+            lacunarity=2.0,
+            gain=gain,
+            seed=seed,
+            evolution=evolution,
+            colorspace="ACEScg",
+        )
+    )
+    weights = np.asarray([gain**octave for octave in range(octaves)], dtype=np.float64)
+    samples = np.asarray(
+        [_gradient_noise(0.0, 0.0, evolution, _stream(seed, octave=octave)) for octave in range(octaves)],
+        dtype=np.float64,
+    )
+    expected = np.float32(
+        np.clip(0.5 + 0.5 * float(np.dot(weights, samples) / weights.sum()) / _NORMALIZATION_C, 0.0, 1.0)
+    )
+    assert np.array_equal(actual, np.full_like(actual, actual[0, 0, 0]))
+    np.testing.assert_allclose(actual, expected, rtol=0.0, atol=_INTERPOLATED_ATOL)
+
+
+def test_fractal_noise_regular_domain_remains_bit_identical_characterization() -> None:
+    """characterization: issue #8 acceptance 2 freezes regular-domain bits while overflow handling is repaired.
+
+    The independent v1-noise oracle establishes correctness to its documented fp32 tolerance; this exact snapshot
+    separately freezes the current CUDA operation order and is replaced only if that public normal-domain behavior changes.
+    """
+    actual = _host(
+        px.generate.fractal_noise(
+            width=3,
+            height=2,
+            scale=5.5,
+            octaves=3,
+            lacunarity=1.75,
+            gain=0.4,
+            seed=17,
+            evolution=0.375,
+            colorspace="ACEScg",
+        )
+    )
+    expected_bits = np.asarray(
+        (1057036128, 1055642634, 1055343856, 1057247706, 1055098936, 1053423683),
+        dtype=np.uint32,
+    ).reshape(2, 3, 1)
+    assert np.array_equal(actual.view(np.uint32), expected_bits)
+
+
 def test_none_seed_uses_local_entropy_without_process_global_rng_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     """v1-noise acceptance 18 and REQ-TEST-004: entropy realization is local and two calls differ."""
     import cupy as cp
@@ -534,7 +624,7 @@ def test_color_grain_channels_and_integer_evolution_steps_are_uncorrelated() -> 
 
 
 def test_noise_docstrings_are_self_contained_llm_readable_contracts() -> None:
-    """v1-noise acceptance 31: docstrings state coordinates, phase, realization, normalization, metadata, and ownership."""
+    """v1-noise acceptance 31 / REQ-TEST-001; issue #8 acceptance 4: docstrings state the full numeric contract."""
     combined = "\n".join(inspect.getdoc(getattr(px.generate, name)) or "" for name in NOISE_NAMES).lower()
     for required in (
         "i + 0.5",
@@ -556,6 +646,9 @@ def test_noise_docstrings_are_self_contained_llm_readable_contracts() -> None:
         "c-contiguous",
     ):
         assert required in combined
+    fractal_contract = (inspect.getdoc(px.generate.fractal_noise) or "").lower()
+    for required in ("non-finite", "lattice origin", "0.0", "axis", "octave", "evolution"):
+        assert required in fractal_contract
 
 
 def test_noise_generators_use_rawkernel_per_pixel_evaluation() -> None:

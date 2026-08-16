@@ -1,6 +1,6 @@
 """File, bytes, device-array, and wire-format boundaries."""
 
-from pixtreme._io.formats.lut import read_lut
+from pixtreme._io.formats.lut import decode_lut, read_lut, write_lut
 from pixtreme._io.frontend import decode_image, encode_image, read_image, write_image
 from pixtreme._io.header import read_header
 from pixtreme._io.models import ImageHeader
@@ -19,6 +19,8 @@ __all__ = (
     "write_image",
     "read_header",
     "read_lut",
+    "decode_lut",
+    "write_lut",
     "decode_image",
     "encode_image",
     "from_array",

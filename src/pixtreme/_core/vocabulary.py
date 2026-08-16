@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Literal, TypeAlias, cast, get_args
 
+ChromaticAdaptation: TypeAlias = Literal["bradford", "cat02", "cat16", "von-kries"]
+ReferenceWhite: TypeAlias = Literal["d65", "d93", "d50", "aces"]
 Colorspace: TypeAlias = Literal["sRGB", "Rec.709", "Rec.2020", "ACES2065-1", "ACEScg", "S-Gamut3", "S-Gamut3.Cine"]
 Gamma: TypeAlias = Literal[
     "linear", "srgb", "rec709", "bt1886", "pq", "hlg", "s-log3", "logc4", "cineon", "2.2", "2.4", "2.6"
@@ -25,6 +27,7 @@ Interpolation: TypeAlias = Literal[
     "area",
     "trilinear",
     "tetrahedral",
+    "linear",
 ]
 Border: TypeAlias = Literal["mirror", "replicate", "wrap", "constant"]
 ChromaSiting: TypeAlias = Literal["left", "center", "topleft"]
@@ -72,6 +75,8 @@ def _tokens(alias: object) -> tuple[str, ...]:
     return cast(tuple[str, ...], get_args(alias))
 
 
+_CHROMATIC_ADAPTATION_TOKENS = _tokens(ChromaticAdaptation)
+_REFERENCE_WHITE_TOKENS = _tokens(ReferenceWhite)
 _COLORSPACE_TOKENS = _tokens(Colorspace)
 _GAMMA_TOKENS = _tokens(Gamma)
 _MATRIX_TOKENS = _tokens(Matrix)

@@ -369,7 +369,9 @@ def _base_kwargs() -> dict[str, object]:
 
 
 def test_draw_text_public_signature_frame_entry_empty_text_and_defaults() -> None:
-    """v1-draw-text-unification acceptance 5; v1-draw-text-supersample acceptance 1: add one final bool."""
+    """v1-draw-text-unification acceptance 5; v1-draw-text-supersample acceptance 1;
+    v1-draw-text-user-font acceptance 5: add the final font extension before existing layout controls.
+    """
     import cupy as cp
 
     signature = inspect.signature(px.draw.text)
@@ -390,6 +392,7 @@ def test_draw_text_public_signature_frame_entry_empty_text_and_defaults() -> Non
         "tracking",
         "kerning",
         "font",
+        "variations",
         "width",
         "supersample",
     )
@@ -410,6 +413,7 @@ def test_draw_text_public_signature_frame_entry_empty_text_and_defaults() -> Non
             "tracking",
             "kerning",
             "font",
+            "variations",
             "width",
             "supersample",
         )
@@ -425,6 +429,7 @@ def test_draw_text_public_signature_frame_entry_empty_text_and_defaults() -> Non
         "tracking": 0.0,
         "kerning": True,
         "font": "sans",
+        "variations": None,
         "width": None,
         "supersample": False,
     }

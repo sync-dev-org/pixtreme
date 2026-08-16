@@ -12,6 +12,8 @@ from pixtreme._color.semantics import (
     ycbcr_to_ycbcr,
 )
 from pixtreme._color.transform import rgb_to_rgb
+from pixtreme._color.white_balance import chromatic_adaptation, white_balance
+from pixtreme._color.white_point import white_point_simulation
 
 __all__ = (
     "apply_lut",
@@ -26,4 +28,7 @@ __all__ = (
     "ycbcr_to_ycbcr",
     "equalize_histogram",
     "clahe",
+    "chromatic_adaptation",
+    "white_balance",
+    "white_point_simulation",
 )

@@ -113,7 +113,9 @@ def test_from_format_entry_points_accept_matrix_none_by_default() -> None:
 
 
 def test_color_public_surface_uses_semantic_operation_names_only() -> None:
-    """v1-color-semantics acceptance 9, 15, 20, 24-25, 33, 40 and v1-hsv acceptance 12: names are exact."""
+    """Color semantics and HSV namespace acceptances, v1-white-balance acceptance 1, and
+    v1-white-point-simulation acceptance 1: names are exact.
+    """
     assert px.color.__all__ == (
         "apply_lut",
         "gamma_to_linear",
@@ -127,6 +129,9 @@ def test_color_public_surface_uses_semantic_operation_names_only() -> None:
         "ycbcr_to_ycbcr",
         "equalize_histogram",
         "clahe",
+        "chromatic_adaptation",
+        "white_balance",
+        "white_point_simulation",
     )
     assert not hasattr(px.color, "view_transform")
     assert not hasattr(px.color, "channel_transform")

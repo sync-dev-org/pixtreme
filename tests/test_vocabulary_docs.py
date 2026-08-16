@@ -69,13 +69,16 @@ def test_token_reference_is_the_english_canon_characterization() -> None:
 
 
 def test_documented_tokens_equal_the_validator_token_sets(vocabulary_markdown: str) -> None:
-    """v1-format-boundary acceptance 39; v1-frame-core acceptance 16; v1-recode-dtype acceptance 8.
+    """v1-format-boundary acceptance 39; v1-frame-core acceptance 16; v1-recode-dtype acceptance 8;
+    v1-white-balance acceptance 1.
 
-    Boundary/resizing/blurring docs, including v1-blur-vector acceptance 14, match code token sets.
+    Boundary/resizing/blurring docs, including v1-blur-vector acceptance 14 and
+    v1-lut-extensions acceptance 27, match code token sets.
     """
     from pixtreme._color.lut import _LUT_INTERPOLATION_TOKENS
     from pixtreme._core.frame import _CHANNEL_LABELS, _COLORSPACE_TOKENS, _GAMMA_TOKENS, _LAYOUT_TOKENS, _MATRIX_TOKENS
     from pixtreme._core.value_domain import _RANGE_TOKENS
+    from pixtreme._core.vocabulary import _CHROMATIC_ADAPTATION_TOKENS
     from pixtreme._filter.common import _BORDER_TOKENS
     from pixtreme._io.wire.sampling import _INTERPOLATION_TOKENS, _SITING_TOKENS, _TO_INTERPOLATION_TOKENS
     from pixtreme._transform.resize import _INTERPOLATION_TOKENS as _RESIZE_INTERPOLATION_TOKENS
@@ -95,6 +98,7 @@ def test_documented_tokens_equal_the_validator_token_sets(vocabulary_markdown: s
         "area",
         "trilinear",
         "tetrahedral",
+        "linear",
     )
     assert (
         _table_tokens(vocabulary_markdown, "channels")
@@ -115,6 +119,7 @@ def test_documented_tokens_equal_the_validator_token_sets(vocabulary_markdown: s
     )
     assert _table_tokens(vocabulary_markdown, "gamma") == _GAMMA_TOKENS
     assert _table_tokens(vocabulary_markdown, "colorspace") == _COLORSPACE_TOKENS
+    assert _table_tokens(vocabulary_markdown, "chromatic adaptation") == _CHROMATIC_ADAPTATION_TOKENS
     assert _table_tokens(vocabulary_markdown, "matrix") == _MATRIX_TOKENS
     assert _table_tokens(vocabulary_markdown, "range") == _RANGE_TOKENS
     assert _table_tokens(vocabulary_markdown, "dtype") == _DTYPE_TOKENS

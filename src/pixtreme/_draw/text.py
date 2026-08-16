@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
+import io
 import math
-from collections.abc import Sequence
+import os
+import stat
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 from functools import lru_cache
@@ -30,6 +34,7 @@ from pixtreme._core.vocabulary import (
     _TEXT_ANCHOR_TOKENS,
     _TEXT_FONT_TOKENS,
     _TEXT_LANGUAGE_TOKENS,
+    TextFont,
 )
 from pixtreme._draw.shapes import _device_values
 
@@ -48,6 +53,212 @@ _TEXT_BLOCK = (16, 16)
 _HOST_ARRAY_WHY = "draw text color and outline inputs must be convertible to a regular host array"
 _HOST_ARRAY_HOW = "pass a sequence, NumPy array, or CuPy array with a regular numeric shape"
 _BLEND_TOKENS = _DRAW_BLEND_TOKENS
+
+
+@dataclass(frozen=True, slots=True)
+class _VariationAxis:
+    tag: str
+    minimum: float
+    default: float
+    maximum: float
+
+
+def _open_freetype_face(data: bytes, face_index: int) -> Any:
+    import freetype
+
+    return freetype.Face(io.BytesIO(data), index=face_index)
+
+
+def _open_harfbuzz_face(data: bytes, face_index: int) -> Any:
+    import uharfbuzz as hb
+
+    return hb.Face(data, face_index)
+
+
+def _axis_record(tag: object, minimum: object, default: object, maximum: object) -> _VariationAxis:
+    if (
+        not isinstance(tag, str)
+        or len(tag) != 4
+        or not tag.isascii()
+        or not all(0x20 <= ord(item) <= 0x7E for item in tag)
+    ):
+        raise ValueError(f"invalid OpenType variation axis tag {tag!r}")
+    values = tuple(float(cast(Any, value)) for value in (minimum, default, maximum))
+    if not all(math.isfinite(value) for value in values) or not values[0] <= values[1] <= values[2]:
+        raise ValueError(
+            f"invalid OpenType variation axis range tag={tag!r}, minimum={values[0]!r}, "
+            f"default={values[1]!r}, maximum={values[2]!r}"
+        )
+    return _VariationAxis(tag=tag, minimum=values[0], default=values[1], maximum=values[2])
+
+
+def _measure_font_axes(freetype_face: Any, harfbuzz_face: Any) -> tuple[_VariationAxis, ...]:
+    harfbuzz_axes = tuple(
+        _axis_record(axis.tag, axis.min_value, axis.default_value, axis.max_value) for axis in harfbuzz_face.axis_infos
+    )
+    if harfbuzz_axes or freetype_face.has_multiple_masters:
+        freetype_info = freetype_face.get_variation_info()
+        freetype_axes = tuple(
+            _axis_record(axis.tag, axis.minimum, axis.default, axis.maximum) for axis in freetype_info.axes
+        )
+    else:
+        freetype_axes = ()
+    tags = tuple(axis.tag for axis in harfbuzz_axes)
+    if len(tags) != len(set(tags)):
+        raise ValueError(f"duplicate OpenType variation axis tags {tags!r}")
+    if freetype_axes != harfbuzz_axes:
+        raise ValueError(
+            f"FreeType and HarfBuzz variation axis tables differ: "
+            f"freetype={freetype_axes!r}, harfbuzz={harfbuzz_axes!r}"
+        )
+    return harfbuzz_axes
+
+
+@dataclass(frozen=True, slots=True, init=False, repr=False, eq=False)
+class Font:
+    """Immutable draw-text font asset built from a construction-time file snapshot."""
+
+    _data: bytes
+    _content_hash: bytes
+    _face_index: int
+    _diagnostic_path: str
+    _axes: tuple[_VariationAxis, ...]
+
+    def __init__(self) -> None:
+        raise TypeError("Font objects are constructed with Font.from_file(path, face_index=...)")
+
+    @classmethod
+    def from_file(cls, path: str | os.PathLike[str], *, face_index: int = 0) -> Font:
+        """Snapshot one font file face after validating both backends and its variation axes.
+
+        ``path`` is read completely during this call; later file changes do not
+        affect the asset. ``face_index`` selects a face in a single-face file or
+        collection. Equality, hashing, and private caches use content bytes plus
+        face index, never the diagnostic path. Invalid files, face indices, or
+        axis tables fail during construction with actionable ``ValueError``.
+        """
+        try:
+            file_path = os.fspath(path)
+        except (TypeError, ValueError, OSError) as error:
+            raise ValueError(
+                _actionable_error(
+                    why="font file path must be one str or string-valued path-like object",
+                    what=f"received path={path!r} with state={type(error).__name__}",
+                    how="pass an existing readable regular font file as str or os.PathLike[str]",
+                )
+            ) from error
+        if not isinstance(file_path, str):
+            raise ValueError(
+                _actionable_error(
+                    why="font file path must resolve to one str path",
+                    what=f"received path={path!r} resolving to {type(file_path).__module__}.{type(file_path).__qualname__}",
+                    how="pass an existing readable regular font file as str or os.PathLike[str]",
+                )
+            )
+
+        resolved_path = os.path.abspath(file_path)
+        try:
+            file_state = os.stat(resolved_path)
+        except (OSError, ValueError) as error:
+            raise ValueError(
+                _actionable_error(
+                    why="font file cannot be assetized because its file-system state is unavailable",
+                    what=f"path={file_path!r}, state={type(error).__name__}: {error}",
+                    how="pass an existing readable regular font file path",
+                )
+            ) from error
+        if not stat.S_ISREG(file_state.st_mode):
+            raise ValueError(
+                _actionable_error(
+                    why="font file must be a readable regular file",
+                    what=f"path={file_path!r}, state=not-a-regular-file",
+                    how="pass a path to an existing readable regular font file",
+                )
+            )
+        try:
+            with open(resolved_path, "rb") as stream:
+                data = stream.read()
+        except (OSError, UnicodeError, ValueError) as error:
+            raise ValueError(
+                _actionable_error(
+                    why="font file bytes could not be read completely",
+                    what=f"path={file_path!r}, state={type(error).__name__}: {error}",
+                    how="make the regular font file readable and pass its path again",
+                )
+            ) from error
+
+        try:
+            first_freetype_face = _open_freetype_face(data, 0)
+        except Exception as error:
+            raise ValueError(
+                _actionable_error(
+                    why="FreeType could not open the font file bytes",
+                    what=f"path={file_path!r}, face_index={face_index!r}, state={type(error).__name__}: {error}",
+                    how="pass a font file whose first face FreeType can open",
+                )
+            ) from error
+        face_count = int(first_freetype_face.num_faces)
+        if isinstance(face_index, bool) or not isinstance(face_index, int) or not 0 <= face_index < face_count:
+            raise ValueError(
+                _actionable_error(
+                    why="face_index must identify one measured font face with a non-bool integer",
+                    what=f"face_index={face_index!r}, face_count={face_count}",
+                    how="pass a non-bool int satisfying 0 <= face_index < face_count",
+                )
+            )
+        try:
+            freetype_face = first_freetype_face if face_index == 0 else _open_freetype_face(data, face_index)
+        except Exception as error:
+            raise ValueError(
+                _actionable_error(
+                    why="FreeType could not open the selected font face",
+                    what=f"path={file_path!r}, face_index={face_index}, face_count={face_count}, state={type(error).__name__}: {error}",
+                    how="pass a face index that FreeType can open from this font file",
+                )
+            ) from error
+        try:
+            harfbuzz_face = _open_harfbuzz_face(data, face_index)
+        except Exception as error:
+            raise ValueError(
+                _actionable_error(
+                    why="HarfBuzz could not construct the selected font face",
+                    what=f"path={file_path!r}, face_index={face_index}, state={type(error).__name__}: {error}",
+                    how="pass a font file and face index that both FreeType and HarfBuzz can open",
+                )
+            ) from error
+        try:
+            axes = _measure_font_axes(freetype_face, harfbuzz_face)
+        except Exception as error:
+            raise ValueError(
+                _actionable_error(
+                    why="font variation axes could not be measured as valid OpenType axes",
+                    what=f"path={file_path!r}, face_index={face_index}, state={type(error).__name__}: {error}",
+                    how="pass a static font or a variable font with valid tag and minimum/default/maximum axis records",
+                )
+            ) from error
+
+        instance = object.__new__(cls)
+        object.__setattr__(instance, "_data", data)
+        object.__setattr__(instance, "_content_hash", hashlib.sha256(data).digest())
+        object.__setattr__(instance, "_face_index", face_index)
+        object.__setattr__(instance, "_diagnostic_path", resolved_path)
+        object.__setattr__(instance, "_axes", axes)
+        return instance
+
+    def __hash__(self) -> int:
+        return hash((self._content_hash, self._face_index))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Font):
+            return NotImplemented
+        return self._content_hash == other._content_hash and self._face_index == other._face_index
+
+    def __repr__(self) -> str:
+        return f"Font.from_file({self._diagnostic_path!r}, face_index={self._face_index})"
+
+
+_FontReference = TextFont | Font
+_AxisCoordinates = tuple[tuple[str, float], ...]
 
 _TEXT_COMPOSITE_KERNEL_SOURCE = (
     _BLEND_DEVICE_SOURCE
@@ -162,25 +373,50 @@ def _font_bytes(font: str = "sans") -> bytes:
     return _FONT_PATHS[font].read_bytes()
 
 
+def _font_data(font: _FontReference) -> bytes:
+    return font._data if isinstance(font, Font) else _font_bytes(font)
+
+
+def _font_description(font: _FontReference) -> str:
+    if isinstance(font, Font):
+        return f"path={font._diagnostic_path!r}, face_index={font._face_index}"
+    return f"font={font!r}"
+
+
+def _effective_axis_coordinates(
+    font: _FontReference,
+    weight: float,
+    axis_coordinates: _AxisCoordinates,
+) -> _AxisCoordinates:
+    if axis_coordinates:
+        return axis_coordinates
+    if isinstance(font, Font):
+        return ()
+    return (("wght", weight),)
+
+
 @lru_cache(maxsize=512)
 def _shape_text(
     text: str,
     size_26_6: int,
     weight: float,
     language: str,
-    font: str = "sans",
+    font: _FontReference = "sans",
     kerning: bool = True,
+    axis_coordinates: _AxisCoordinates = (),
 ) -> _ShapedText:
     if text == "":
         return _ShapedText(glyphs=(), advance_26_6=0)
 
     import uharfbuzz as hb
 
-    face = hb.Face(_font_bytes(font))
+    face = hb.Face(_font_data(font), font._face_index if isinstance(font, Font) else 0)
     shaped_font = hb.Font(face)
     shaped_font.scale = (size_26_6, size_26_6)
     hb.ot_font_set_funcs(shaped_font)
-    shaped_font.set_variations({"wght": weight})
+    coordinates = _effective_axis_coordinates(font, weight, axis_coordinates)
+    if coordinates:
+        shaped_font.set_variations(dict(coordinates))
     buffer = hb.Buffer()
     buffer.add_str(text)
     buffer.guess_segment_properties()
@@ -205,18 +441,34 @@ def _shape_text(
 
 
 @lru_cache(maxsize=128)
-def _freetype_face(size_26_6: int, weight: float, font: str = "sans") -> Any:
+def _freetype_face(
+    size_26_6: int,
+    weight: float,
+    font: _FontReference = "sans",
+    axis_coordinates: _AxisCoordinates = (),
+) -> Any:
     import freetype
 
-    face = freetype.Face(str(_FONT_PATHS[font]))
+    face = (
+        _open_freetype_face(font._data, font._face_index)
+        if isinstance(font, Font)
+        else freetype.Face(str(_FONT_PATHS[font]))
+    )
     face.set_char_size(0, size_26_6, 72, 72)
-    face.set_var_design_coords((weight,))
+    coordinates = _effective_axis_coordinates(font, weight, axis_coordinates)
+    if coordinates:
+        face.set_var_design_coords(tuple(value for _tag, value in coordinates))
     return face
 
 
 @lru_cache(maxsize=128)
-def _font_metrics_26_6(size_26_6: int, weight: float, font: str = "sans") -> tuple[int, int]:
-    face = _freetype_face(size_26_6, weight, font)
+def _font_metrics_26_6(
+    size_26_6: int,
+    weight: float,
+    font: _FontReference = "sans",
+    axis_coordinates: _AxisCoordinates = (),
+) -> tuple[int, int]:
+    face = _freetype_face(size_26_6, weight, font, axis_coordinates)
     return (
         round(int(face.ascender) * size_26_6 / int(face.units_per_EM)),
         round(int(face.descender) * size_26_6 / int(face.units_per_EM)),
@@ -224,8 +476,14 @@ def _font_metrics_26_6(size_26_6: int, weight: float, font: str = "sans") -> tup
 
 
 @lru_cache(maxsize=256)
-def _font_line_advance_26_6(size_26_6: int, weight: float, font: str, line_spacing: float) -> int:
-    face = _freetype_face(size_26_6, weight, font)
+def _font_line_advance_26_6(
+    size_26_6: int,
+    weight: float,
+    font: _FontReference,
+    line_spacing: float,
+    axis_coordinates: _AxisCoordinates = (),
+) -> int:
+    face = _freetype_face(size_26_6, weight, font, axis_coordinates)
     return _round_finite_scaled(
         line_spacing,
         int(face.height) * size_26_6,
@@ -241,13 +499,14 @@ def _glyph_bitmap(
     stroke_radius_26_6: int,
     phase_x_26_6: int,
     phase_y_down_26_6: int,
-    font: str = "sans",
+    font: _FontReference = "sans",
     supersample: bool = False,
+    axis_coordinates: _AxisCoordinates = (),
 ) -> _GlyphBitmap:
     import freetype
 
     def load(scale: int) -> Any:
-        face = _freetype_face(size_26_6 * scale, weight, font)
+        face = _freetype_face(size_26_6 * scale, weight, font, axis_coordinates)
         face.load_glyph(glyph_id, freetype.FT_LOAD_DEFAULT | freetype.FT_LOAD_NO_BITMAP)
         glyph = face.glyph.get_glyph()
         if stroke_radius_26_6 > 0:
@@ -278,13 +537,11 @@ def _glyph_bitmap(
                     _actionable_error(
                         why="FreeType returned a bitmap layout that cannot be read as grayscale coverage",
                         what=(
-                            f"glyph_id={glyph_id}, rows={int(bitmap.rows)}, width={int(bitmap.width)}, "
+                            f"{_font_description(font)}, glyph_id={glyph_id}, rows={int(bitmap.rows)}, "
+                            f"width={int(bitmap.width)}, "
                             f"pitch={int(bitmap.pitch)}, pixel_mode={int(bitmap.pixel_mode)}"
                         ),
-                        how=(
-                            "restore the bundled font or rebuild it to emit 8-bit grayscale bitmaps "
-                            "whose absolute pitch is at least their width"
-                        ),
+                        how="use a font whose selected face emits 8-bit grayscale bitmaps with absolute pitch at least width",
                     )
                 )
             byte_count = int(bitmap.rows) * pitch
@@ -475,7 +732,67 @@ def _weight(value: object) -> float:
     )
 
 
-def _font_weight(value: object, *, font: str) -> float:
+_TOKEN_FONT_AXES = {
+    "sans": (_VariationAxis("wght", 100.0, 100.0, 900.0),),
+    "mono": (_VariationAxis("wght", _MONO_WEIGHT_MINIMUM, _MONO_WEIGHT_MINIMUM, _MONO_WEIGHT_MAXIMUM),),
+}
+
+
+def _font_reference(value: object) -> _FontReference:
+    if isinstance(value, Font):
+        return value
+    return cast(TextFont, _normalized_closed_token(value, axis="font", accepted=_FONT_TOKENS))
+
+
+def _font_axes(font: _FontReference) -> tuple[_VariationAxis, ...]:
+    return font._axes if isinstance(font, Font) else _TOKEN_FONT_AXES[font]
+
+
+def _font_weight(value: object, *, font: _FontReference) -> float:
+    if isinstance(font, Font):
+        weight_axis = next((axis for axis in font._axes if axis.tag == "wght"), None)
+        try:
+            resolved = _finite_real(value, name="weight")
+        except ValueError as error:
+            if weight_axis is None:
+                why = "weight must be the finite real value 400.0 for a static user font without a wght axis"
+                range_description = "static font requires weight=400.0"
+                how = "pass weight=400.0 or select a variable Font with a wght axis"
+            else:
+                why = "weight must be a finite real within the selected user font wght axis"
+                range_description = f"wght=[{weight_axis.minimum}, {weight_axis.maximum}]"
+                how = f"pass a finite real weight in the closed interval [{weight_axis.minimum}, {weight_axis.maximum}]"
+            raise ValueError(
+                _actionable_error(
+                    why=why,
+                    what=(
+                        f"{_font_description(font)}, weight={value!r}, "
+                        f"type={type(value).__module__}.{type(value).__qualname__}, {range_description}"
+                    ),
+                    how=how,
+                )
+            ) from error
+        if weight_axis is None:
+            if resolved == 400.0:
+                return resolved
+            raise ValueError(
+                _actionable_error(
+                    why="weight must remain 400.0 when the selected user font is a static font without a wght axis",
+                    what=f"{_font_description(font)}, static font, weight={value!r}",
+                    how="keep weight=400.0 or pass a variable Font whose selected face has a wght axis",
+                )
+            )
+        if weight_axis.minimum <= resolved <= weight_axis.maximum:
+            return resolved
+        raise ValueError(
+            _actionable_error(
+                why="weight must lie within the selected user font wght axis",
+                what=(
+                    f"{_font_description(font)}, weight={value!r}, wght=[{weight_axis.minimum}, {weight_axis.maximum}]"
+                ),
+                how=f"pass a finite real weight in the closed interval [{weight_axis.minimum}, {weight_axis.maximum}]",
+            )
+        )
     if font == "sans":
         return _weight(value)
     resolved = _finite_real(value, name="weight")
@@ -487,6 +804,98 @@ def _font_weight(value: object, *, font: str) -> float:
             what=f"received weight={value!r} for font='mono'",
             how="pass a finite real weight in the closed interval from 400.0 through 700.0",
         )
+    )
+
+
+def _variation_values(value: object, *, font: _FontReference) -> dict[str, float]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ValueError(
+            _actionable_error(
+                why="variations must be None or a mapping from axis tag str to finite real value",
+                what=f"received variations={value!r} of type {type(value).__module__}.{type(value).__qualname__}",
+                how="pass variations=None, an empty mapping, or a partial mapping such as {'wdth': 100.0}",
+            )
+        )
+    try:
+        items = tuple(value.items())
+    except Exception as error:
+        raise ValueError(
+            _actionable_error(
+                why="variations mapping items could not be read",
+                what=f"received variations={value!r}, state={type(error).__name__}: {error}",
+                how="pass a readable mapping from axis tag str to finite real value",
+            )
+        ) from error
+
+    axes = _font_axes(font)
+    axis_by_tag = {axis.tag: axis for axis in axes}
+    resolved: dict[str, float] = {}
+    for key, item in items:
+        if not isinstance(key, str):
+            raise ValueError(
+                _actionable_error(
+                    why="each variations key must be one case-sensitive OpenType axis tag str",
+                    what=f"received key={key!r} of type {type(key).__module__}.{type(key).__qualname__}",
+                    how=f"pass one of the measured axis tags {tuple(axis_by_tag)!r} as each mapping key",
+                )
+            )
+        if key == "wght":
+            raise ValueError(
+                _actionable_error(
+                    why="variations cannot contain wght because weight has one unambiguous public argument",
+                    what="received variations key 'wght'",
+                    how=f"remove 'wght' from variations and pass the same value as weight={item!r}",
+                )
+            )
+        axis = axis_by_tag.get(key)
+        if axis is None:
+            raise ValueError(
+                _actionable_error(
+                    why="variations key must name an axis measured from the selected font",
+                    what=f"received axis={key!r}, measured_axes={tuple(axis_by_tag)!r}",
+                    how=f"pass only case-sensitive axis tags from {tuple(axis_by_tag)!r}",
+                )
+            )
+        try:
+            number = _finite_real(item, name=f"variations[{key!r}]")
+        except ValueError as error:
+            raise ValueError(
+                _actionable_error(
+                    why=f"variations[{key!r}] must be a finite real excluding bool",
+                    what=(
+                        f"received value={item!r}, type={type(item).__module__}.{type(item).__qualname__}, "
+                        f"axis={key!r}, range=[{axis.minimum}, {axis.maximum}]"
+                    ),
+                    how=f"pass a non-bool finite real in the closed interval [{axis.minimum}, {axis.maximum}]",
+                )
+            ) from error
+        if not axis.minimum <= number <= axis.maximum:
+            raise ValueError(
+                _actionable_error(
+                    why=f"variations[{key!r}] must lie within the measured axis range",
+                    what=f"received value={item!r}, axis={key!r}, range=[{axis.minimum}, {axis.maximum}]",
+                    how=f"pass a finite real value in the closed interval [{axis.minimum}, {axis.maximum}]",
+                )
+            )
+        resolved[key] = number
+    return resolved
+
+
+def _resolve_axis_coordinates(
+    font: _FontReference,
+    *,
+    weight: float,
+    variations: object,
+) -> _AxisCoordinates:
+    specified = _variation_values(variations, font=font)
+    return tuple(
+        (
+            axis.tag,
+            weight if axis.tag == "wght" else specified.get(axis.tag, axis.default),
+        )
+        for axis in _font_axes(font)
     )
 
 
@@ -567,19 +976,22 @@ def _block_layout(
     kerning: bool,
     tracking: float,
     line_spacing: float,
-    font: str,
+    font: _FontReference,
     width: float | None,
+    axis_coordinates: _AxisCoordinates = (),
 ) -> _BlockLayout:
-    lines = tuple(_shape_text(line, size_26_6, weight, language, font, kerning) for line in text.split("\n"))
+    lines = tuple(
+        _shape_text(line, size_26_6, weight, language, font, kerning, axis_coordinates) for line in text.split("\n")
+    )
     tracking_26_6 = _round_finite_scaled(tracking, size_26_6)
     line_advances_26_6 = tuple(line.advance_26_6 + tracking_26_6 * max(0, len(line.glyphs) - 1) for line in lines)
     block_width_26_6 = _round_finite_scaled(width, 64) if width is not None else max((0, *line_advances_26_6))
-    ascender_26_6, descender_26_6 = _font_metrics_26_6(size_26_6, weight, font)
+    ascender_26_6, descender_26_6 = _font_metrics_26_6(size_26_6, weight, font, axis_coordinates)
     return _BlockLayout(
         lines=lines,
         line_advances_26_6=line_advances_26_6,
         block_width_26_6=block_width_26_6,
-        line_step_26_6=_font_line_advance_26_6(size_26_6, weight, font, line_spacing),
+        line_step_26_6=_font_line_advance_26_6(size_26_6, weight, font, line_spacing, axis_coordinates),
         ascender_26_6=ascender_26_6,
         descender_26_6=descender_26_6,
         tracking_26_6=tracking_26_6,
@@ -631,7 +1043,7 @@ def _build_block_atlas(
     tracking: float,
     line_spacing: float,
     align: str,
-    font: str,
+    font: _FontReference,
     width: float | None,
     phase_x_26_6: int,
     phase_y_down_26_6: int,
@@ -641,8 +1053,20 @@ def _build_block_atlas(
     clip_right: int,
     clip_bottom: int,
     supersample: bool = False,
+    axis_coordinates: _AxisCoordinates = (),
 ) -> _Atlas:
-    layout = _block_layout(text, size_26_6, weight, language, kerning, tracking, line_spacing, font, width)
+    layout = _block_layout(
+        text,
+        size_26_6,
+        weight,
+        language,
+        kerning,
+        tracking,
+        line_spacing,
+        font,
+        width,
+        axis_coordinates,
+    )
     radii = (0, *outline_widths_26_6)
     placed_layers: list[list[tuple[_GlyphBitmap, int, int]]] = [[] for _ in radii]
     minimum_x: int | None = None
@@ -682,6 +1106,7 @@ def _build_block_atlas(
                     glyph_phase_y_down_26_6,
                     font,
                     supersample,
+                    axis_coordinates,
                 )
                 if bitmap.coverage.size == 0:
                     continue
@@ -744,20 +1169,31 @@ def text(
     line_spacing: float = 1.0,
     tracking: float = 0.0,
     kerning: bool = True,
-    font: str = "sans",
+    font: TextFont | Font = "sans",
+    variations: Mapping[str, float] | None = None,
     width: float | None = None,
     supersample: bool = False,
 ) -> Frame:
-    r"""Draw explicitly line-broken text with bundled sans or mono fonts.
+    r"""Draw explicitly line-broken text with a bundled token or immutable ``Font``.
 
     Text is split literally on ``\n``; any ``\r`` is rejected. ``line_spacing``
     multiplies the font line advance, while ``tracking`` is an em ratio added
     after shaping. ``kerning`` toggles only the OpenType kern feature. ``font``
-    selects bundled sans (weight 100.0 through 900.0) or mono (400.0 through 700.0).
+    selects bundled sans (weight 100.0 through 900.0), bundled mono (400.0
+    through 700.0), or a ``Font.from_file`` bytes snapshot. For a user
+    ``Font``, ``weight`` controls its measured ``wght`` axis and otherwise must
+    remain 400.0. ``variations`` partially overrides any other measured axes;
+    unspecified axes use their font defaults and invalid tags or ranges fail
+    before drawing. The same resolved coordinates select HarfBuzz shaping,
+    FreeType metrics, and glyph rasterization.
+    Bundled mono accepts 400.0 through 700.0 without saturation.
     ``width`` is a pixel block width used by ``align``; ``justify``
     adds positive remaining width to shaped-glyph gaps. ``anchor`` identifies
-    the block box at ``position``. Missing code points use ``.notdef``. Shaping,
-    glyph rasters, and block atlases use private caches. ``supersample=False``
+    the block box at ``position``. Shaping, glyph rasters, and block atlases use
+    private caches keyed by content bytes,
+    face index, and resolved axis coordinates. Missing code points use the
+    selected face's ``.notdef`` glyph without system, bundled, user, or network
+    fallback. ``supersample=False``
     keeps the standard FreeType 8-bit coverage path. ``supersample=True`` is an
     opt-in internal precision path that rasterizes glyph bodies and outlines at
     4x size, phase, and stroke radius, then takes an fp32 4x4 box average on the
@@ -769,8 +1205,13 @@ def text(
     checked_text = _text(text)
     checked_position = _finite_pair(position, name="position")
     checked_size = _positive_real(size, name="size")
-    checked_font = _normalized_closed_token(font, axis="font", accepted=_FONT_TOKENS)
+    checked_font = _font_reference(font)
     checked_weight = _font_weight(weight, font=checked_font)
+    checked_axis_coordinates = _resolve_axis_coordinates(
+        checked_font,
+        weight=checked_weight,
+        variations=variations,
+    )
     checked_color = _color(color, channel_count=len(checked_frame.channels), name="color")
     checked_language = _normalized_closed_token(language, axis="language", accepted=_LANGUAGE_TOKENS)
     checked_anchor = _normalized_closed_token(anchor, axis="anchor", accepted=_ANCHOR_TOKENS)
@@ -816,6 +1257,7 @@ def text(
         checked_line_spacing,
         checked_font,
         checked_width,
+        checked_axis_coordinates,
     )
     block_left_26_6, first_baseline_26_6 = _block_origin_26_6(
         checked_position,
@@ -849,6 +1291,7 @@ def text(
         checked_frame.width - block_left_integer,
         checked_frame.height - first_baseline_integer,
         checked_supersample,
+        checked_axis_coordinates,
     )
     atlas_left = block_left_integer + atlas.left
     atlas_top = first_baseline_integer + atlas.top

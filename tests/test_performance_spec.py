@@ -63,6 +63,9 @@ _FHD_FP32_RGB_READ_WRITE_BYTES = _FHD_FP32_RGB_BYTES * 2
 _FHD_FP32_TO_FP16_RGB_BYTES = _FHD_FP32_RGB_BYTES + _FHD_FP16_RGB_BYTES
 _LUT_65_FP32_RGB_BYTES = _LUT_SIZE**3 * _CHANNELS * np.dtype(np.float32).itemsize
 _LUT_65_FP32_RGBA_BYTES = _LUT_SIZE**3 * 4 * np.dtype(np.float32).itemsize
+_LUT_1D_FP32_RGB_BYTES = _LUT_SIZE * _CHANNELS * np.dtype(np.float32).itemsize
+_LUT_17_FP32_RGB_BYTES = 17**3 * _CHANNELS * np.dtype(np.float32).itemsize
+_LUT_17_FP32_RGBA_BYTES = 17**3 * 4 * np.dtype(np.float32).itemsize
 
 _COPY_KERNEL_SOURCE = r"""
 extern "C" __global__ void pixtreme_performance_copy(
@@ -97,6 +100,9 @@ _PUBLIC_GPU_PIXEL_FUNCTIONS = frozenset(
         "rgb_to_hsv",
         "rgb_to_rgb",
         "rgb_to_ycbcr",
+        "chromatic_adaptation",
+        "white_balance",
+        "white_point_simulation",
         "ycbcr_to_rgb",
         "ycbcr_to_ycbcr",
         "apply_lut",
@@ -165,7 +171,7 @@ _PUBLIC_GPU_PIXEL_FUNCTIONS = frozenset(
     }
 )
 _PERFORMANCE_BOUNDARY_FUNCTIONS = frozenset(
-    {"read_image", "write_image", "read_header", "read_lut", "decode_image", "encode_image"}
+    {"read_image", "write_image", "read_header", "read_lut", "decode_lut", "write_lut", "decode_image", "encode_image"}
 )
 # ``channels`` only normalizes named channel tokens; it touches neither pixels nor a file/bytes boundary.
 _NON_PIXEL_PUBLIC_FUNCTIONS = frozenset({"channels"})
@@ -195,6 +201,7 @@ class _Inputs:
     exr_phase4: Phase4PerformanceInputs
     analysis_template: px.core.Frame
     lut: px.core.Lut
+    lut1d: px.core.Lut1D
     stack_frames: tuple[px.core.Frame, ...]
     shuffle_reorder_outputs: dict[str, tuple[px.core.Frame, str] | float]
     shuffle_multi_outputs: dict[str, tuple[px.core.Frame, str] | float]
@@ -215,6 +222,11 @@ class _Inputs:
     encoded_webp: bytes
     encoded_bmp: bytes
     encoded_pnm: bytes
+    decode_lut_cube1d: bytes
+    decode_lut_cube3d: bytes
+    decode_lut_3dl: bytes
+    decode_lut_spi1d: bytes
+    decode_lut_spi3d: bytes
     read_png_path: Path
     read_jpeg_path: Path
     read_tiff_path: Path
@@ -232,6 +244,12 @@ class _Inputs:
     read_hdr_path: Path
     read_dpx_path: Path
     read_lut_path: Path
+    read_lut_cube1d_path: Path
+    read_lut_3dl_path: Path
+    read_lut_spi1d_path: Path
+    read_lut_spi3d_path: Path
+    write_lut1d_path: Path
+    write_lut3d_path: Path
     write_png_path: Path
     write_jpeg_path: Path
     write_tiff_path: Path
@@ -1171,6 +1189,27 @@ _TRANSFORM_BOUNDARY_CASES = (
         kwargs={"output_colorspace": "Rec.2020", "output_gamma": "pq", "tonemap": "bt2408"},
     ),
     _case(
+        "color-chromatic-adaptation",
+        "chromatic_adaptation",
+        "FHD fp32 RGB, D50 input -> D60 output, CAT02",
+        px.color.chromatic_adaptation,
+        kwargs={"input_white": (0.34567, 0.35850), "output_white": (0.32168, 0.33767)},
+    ),
+    _case(
+        "color-white-balance",
+        "white_balance",
+        "FHD fp32 RGB, Temperature=5000 K, Tint=0 Duv, CAT02",
+        px.color.white_balance,
+        kwargs={"temperature": 5000.0},
+    ),
+    _case(
+        "color-white-point-simulation",
+        "white_point_simulation",
+        "FHD fp32 RGB, D65 input display -> D93 output display",
+        px.color.white_point_simulation,
+        kwargs={"input_white": "d65", "output_white": "d93"},
+    ),
+    _case(
         "color-rgb-ycbcr",
         "rgb_to_ycbcr",
         "RGB -> YCbCr, matrix=native",
@@ -1378,6 +1417,14 @@ _LUT_CASES = (
         kwargs={"interpolation": "tetrahedral"},
         fixture_kwargs={"lut": "lut"},
     ),
+    _case(
+        "lut-transform-linear-1d",
+        "apply_lut",
+        "FHD fp32 RGB, 65-sample 1D LUT, interpolation=linear",
+        px.color.apply_lut,
+        kwargs={"interpolation": "linear"},
+        fixture_kwargs={"lut": "lut1d"},
+    ),
 )
 
 _TO_FORMAT_CASES = (
@@ -1466,6 +1513,56 @@ _FILE_BOUNDARY_CASES = (
         px.io.read_lut,
         input_attribute="read_lut_path",
         transferred_bytes=_LUT_65_FP32_RGB_BYTES + _LUT_65_FP32_RGBA_BYTES,
+    ),
+    _boundary_case(
+        "file-read-lut-cube-1d",
+        "read_lut",
+        "65-sample RGB Cube 1D file, parse and host-to-device transfer included",
+        px.io.read_lut,
+        input_attribute="read_lut_cube1d_path",
+        transferred_bytes=_LUT_1D_FP32_RGB_BYTES * 2,
+    ),
+    _boundary_case(
+        "file-read-lut-3dl",
+        "read_lut",
+        "17^3 RGB headerless 3DL file, parse, packing, and host-to-device transfer included",
+        px.io.read_lut,
+        input_attribute="read_lut_3dl_path",
+        transferred_bytes=_LUT_17_FP32_RGB_BYTES + _LUT_17_FP32_RGBA_BYTES,
+    ),
+    _boundary_case(
+        "file-read-lut-spi1d",
+        "read_lut",
+        "65-sample RGB SPI1D file, parse and host-to-device transfer included",
+        px.io.read_lut,
+        input_attribute="read_lut_spi1d_path",
+        transferred_bytes=_LUT_1D_FP32_RGB_BYTES * 2,
+    ),
+    _boundary_case(
+        "file-read-lut-spi3d",
+        "read_lut",
+        "17^3 RGB SPI3D file, explicit-index parse, packing, and host-to-device transfer included",
+        px.io.read_lut,
+        input_attribute="read_lut_spi3d_path",
+        transferred_bytes=_LUT_17_FP32_RGB_BYTES + _LUT_17_FP32_RGBA_BYTES,
+    ),
+    _boundary_case(
+        "file-write-lut-1d",
+        "write_lut",
+        "65-sample RGB Lut1D, device-to-host transfer and Cube file write included",
+        px.io.write_lut,
+        input_attribute="write_lut1d_path",
+        fixture_kwargs={"lut": "lut1d"},
+        transferred_bytes=_LUT_1D_FP32_RGB_BYTES * 2,
+    ),
+    _boundary_case(
+        "file-write-lut-3d",
+        "write_lut",
+        "65^3 RGB Lut, device-to-host transfer and Cube file write included",
+        px.io.write_lut,
+        input_attribute="write_lut3d_path",
+        fixture_kwargs={"lut": "lut"},
+        transferred_bytes=_LUT_65_FP32_RGB_BYTES * 2,
     ),
     _boundary_case(
         "file-read-png",
@@ -1863,6 +1960,46 @@ _FILE_BOUNDARY_CASES = (
 
 _BYTES_BOUNDARY_CASES = (
     _boundary_case(
+        "bytes-decode-lut-cube-1d",
+        "decode_lut",
+        "65-sample RGB Cube 1D UTF-8 bytes, sniff, parse, and host-to-device transfer included",
+        px.io.decode_lut,
+        input_attribute="decode_lut_cube1d",
+        transferred_bytes=_LUT_1D_FP32_RGB_BYTES * 2,
+    ),
+    _boundary_case(
+        "bytes-decode-lut-cube-3d",
+        "decode_lut",
+        "65^3 RGB Cube 3D UTF-8 bytes, sniff, parse, packing, and host-to-device transfer included",
+        px.io.decode_lut,
+        input_attribute="decode_lut_cube3d",
+        transferred_bytes=_LUT_65_FP32_RGB_BYTES + _LUT_65_FP32_RGBA_BYTES,
+    ),
+    _boundary_case(
+        "bytes-decode-lut-3dl",
+        "decode_lut",
+        "17^3 RGB headerless 3DL UTF-8 bytes, sniff, parse, packing, and host-to-device transfer included",
+        px.io.decode_lut,
+        input_attribute="decode_lut_3dl",
+        transferred_bytes=_LUT_17_FP32_RGB_BYTES + _LUT_17_FP32_RGBA_BYTES,
+    ),
+    _boundary_case(
+        "bytes-decode-lut-spi1d",
+        "decode_lut",
+        "65-sample RGB SPI1D UTF-8 bytes, sniff, parse, and host-to-device transfer included",
+        px.io.decode_lut,
+        input_attribute="decode_lut_spi1d",
+        transferred_bytes=_LUT_1D_FP32_RGB_BYTES * 2,
+    ),
+    _boundary_case(
+        "bytes-decode-lut-spi3d",
+        "decode_lut",
+        "17^3 RGB SPI3D UTF-8 bytes, sniff, explicit-index parse, and host-to-device transfer included",
+        px.io.decode_lut,
+        input_attribute="decode_lut_spi3d",
+        transferred_bytes=_LUT_17_FP32_RGB_BYTES + _LUT_17_FP32_RGBA_BYTES,
+    ),
+    _boundary_case(
         "bytes-decode-png",
         "decode_image",
         "FHD uint8 RGB PNG, unchanged, host bytes exchange included",
@@ -2134,6 +2271,12 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
     read_hdr_path = io_directory / "read.hdr"
     read_dpx_path = io_directory / "read.dpx"
     read_lut_path = io_directory / "read.cube"
+    read_lut_cube1d_path = io_directory / "read-1d.cube"
+    read_lut_3dl_path = io_directory / "read.3dl"
+    read_lut_spi1d_path = io_directory / "read.spi1d"
+    read_lut_spi3d_path = io_directory / "read.spi3d"
+    write_lut1d_path = io_directory / "write-1d.cube"
+    write_lut3d_path = io_directory / "write-3d.cube"
     px.io.write_image(read_png_path, code8_frame, compression_level=4)
     px.io.write_image(read_jpeg_path, code8_frame, quality=95)
     px.io.write_image(read_tiff_path, code8_frame)
@@ -2159,7 +2302,44 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
     with read_lut_path.open("w", encoding="utf-8") as stream:
         stream.write(f"LUT_3D_SIZE {_LUT_SIZE}\n")
         np.savetxt(stream, cube_rows, fmt="%.8g")
+    lut_axis = np.linspace(0.0, 1.0, _LUT_SIZE, dtype=np.float32)
+    lut1d_rows = np.stack((lut_axis, lut_axis**2, 1.0 - lut_axis), axis=-1)
+    with read_lut_cube1d_path.open("w", encoding="utf-8") as stream:
+        stream.write(f"LUT_1D_SIZE {_LUT_SIZE}\n")
+        np.savetxt(stream, lut1d_rows, fmt="%.8g")
+
+    three_dl_edge = 17
+    three_dl_spacing = np.rint(np.linspace(0.0, 4095.0, three_dl_edge)).astype(np.int64)
+    three_dl_red, three_dl_green, three_dl_blue = np.indices(
+        (three_dl_edge, three_dl_edge, three_dl_edge), dtype=np.float64
+    )
+    three_dl_rows = np.rint(
+        np.stack((three_dl_red, three_dl_green, three_dl_blue), axis=-1).reshape(-1, 3) * (4095.0 / (three_dl_edge - 1))
+    ).astype(np.int64)
+    with read_lut_3dl_path.open("w", encoding="utf-8") as stream:
+        np.savetxt(stream, three_dl_spacing[None, :], fmt="%d")
+        np.savetxt(stream, three_dl_rows, fmt="%d")
+
+    with read_lut_spi1d_path.open("w", encoding="utf-8") as stream:
+        stream.write(f"Version 1\nFrom 0 1\nLength {_LUT_SIZE}\nComponents 3\n{{\n")
+        np.savetxt(stream, lut1d_rows, fmt="%.8g")
+        stream.write("}\n")
+
+    spi3d_indices = np.stack((three_dl_red, three_dl_green, three_dl_blue), axis=-1).reshape(-1, 3)
+    spi3d_outputs = spi3d_indices / (three_dl_edge - 1)
+    spi3d_rows = np.concatenate((spi3d_indices, spi3d_outputs), axis=1)
+    with read_lut_spi3d_path.open("w", encoding="utf-8") as stream:
+        stream.write(f"SPILUT 1.0\n3 3\n{three_dl_edge} {three_dl_edge} {three_dl_edge}\n")
+        np.savetxt(stream, spi3d_rows, fmt=("%d", "%d", "%d", "%.8g", "%.8g", "%.8g"))
     lut = px.io.read_lut(read_lut_path)
+    assert isinstance(lut, px.core.Lut)
+    lut1d = px.io.read_lut(read_lut_cube1d_path)
+    assert isinstance(lut1d, px.core.Lut1D)
+    decode_lut_cube1d = read_lut_cube1d_path.read_bytes()
+    decode_lut_cube3d = read_lut_path.read_bytes()
+    decode_lut_3dl = read_lut_3dl_path.read_bytes()
+    decode_lut_spi1d = read_lut_spi1d_path.read_bytes()
+    decode_lut_spi3d = read_lut_spi3d_path.read_bytes()
     encoded_png = px.io.encode_image(code8_frame, format="png", compression_level=4)
     encoded_jpeg = px.io.encode_image(code8_frame, format="jpeg", quality=95)
     encoded_tiff = px.io.encode_image(code8_frame, format="tiff")
@@ -2178,6 +2358,7 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
         exr_phase4=exr_phase4,
         analysis_template=analysis_template,
         lut=lut,
+        lut1d=lut1d,
         stack_frames=(frame, assemble_source),
         shuffle_reorder_outputs=shuffle_reorder_outputs,
         shuffle_multi_outputs=shuffle_multi_outputs,
@@ -2198,6 +2379,11 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
         encoded_webp=encoded_webp,
         encoded_bmp=encoded_bmp,
         encoded_pnm=encoded_pnm,
+        decode_lut_cube1d=decode_lut_cube1d,
+        decode_lut_cube3d=decode_lut_cube3d,
+        decode_lut_3dl=decode_lut_3dl,
+        decode_lut_spi1d=decode_lut_spi1d,
+        decode_lut_spi3d=decode_lut_spi3d,
         read_png_path=read_png_path,
         read_jpeg_path=read_jpeg_path,
         read_tiff_path=read_tiff_path,
@@ -2215,6 +2401,12 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
         read_hdr_path=read_hdr_path,
         read_dpx_path=read_dpx_path,
         read_lut_path=read_lut_path,
+        read_lut_cube1d_path=read_lut_cube1d_path,
+        read_lut_3dl_path=read_lut_3dl_path,
+        read_lut_spi1d_path=read_lut_spi1d_path,
+        read_lut_spi3d_path=read_lut_spi3d_path,
+        write_lut1d_path=write_lut1d_path,
+        write_lut3d_path=write_lut3d_path,
         write_png_path=io_directory / "write.png",
         write_jpeg_path=io_directory / "write.jpg",
         write_tiff_path=io_directory / "write.tiff",
@@ -2248,7 +2440,10 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
 
 @pytest.mark.performance
 def test_performance_registry_covers_every_public_gpu_pixel_operation() -> None:
-    """REQ-TEST-010; v1-color-semantics acceptance 37: registry classifies every public GPU pixel and boundary operation."""
+    """REQ-TEST-010; v1-color-semantics acceptance 37; v1-white-balance acceptance 14;
+    v1-white-point-simulation acceptance 14:
+    registry classifies every public GPU pixel and boundary operation.
+    """
     exported_functions = {
         name
         for module in _PUBLIC_OPERATION_MODULES
@@ -2268,6 +2463,8 @@ def test_performance_registry_covers_every_public_gpu_pixel_operation() -> None:
         "write_image",
         "read_header",
         "read_lut",
+        "decode_lut",
+        "write_lut",
         "decode_image",
         "encode_image",
     }
@@ -2288,6 +2485,7 @@ def test_performance_registry_covers_each_color_semantics_path() -> None:
     """
     color_cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.startswith("color-"))
     assert {case.target for case in color_cases} == {
+        "chromatic_adaptation",
         "gamma_to_linear",
         "hsv_to_rgb",
         "linear_to_gamma",
@@ -2297,6 +2495,8 @@ def test_performance_registry_covers_each_color_semantics_path() -> None:
         "rgb_to_ycbcr",
         "ycbcr_to_rgb",
         "ycbcr_to_ycbcr",
+        "white_balance",
+        "white_point_simulation",
     }
     rgb_to_rgb_cases = tuple(case for case in color_cases if case.target == "rgb_to_rgb")
     assert tuple((case.case_id, dict(case.kwargs)) for case in rgb_to_rgb_cases) == (
@@ -2316,6 +2516,33 @@ def test_performance_registry_covers_each_color_semantics_path() -> None:
         (
             "color-bt2408-rec2020-pq",
             {"output_colorspace": "Rec.2020", "output_gamma": "pq", "tonemap": "bt2408"},
+        ),
+    )
+
+
+@pytest.mark.performance
+def test_performance_registry_includes_both_white_balance_public_calls() -> None:
+    """v1-white-balance acceptance 14: registry has one FHD low-level and one FHD convenience call."""
+    cases = tuple(case for case in _PERFORMANCE_CASES if case.target in {"chromatic_adaptation", "white_balance"})
+    assert tuple((case.case_id, case.target, dict(case.kwargs)) for case in cases) == (
+        (
+            "color-chromatic-adaptation",
+            "chromatic_adaptation",
+            {"input_white": (0.34567, 0.35850), "output_white": (0.32168, 0.33767)},
+        ),
+        ("color-white-balance", "white_balance", {"temperature": 5000.0}),
+    )
+
+
+@pytest.mark.performance
+def test_performance_registry_includes_one_white_point_simulation_case() -> None:
+    """v1-white-point-simulation acceptance 14: registry adds one FHD RGB float32 public-call case."""
+    cases = tuple(case for case in _PERFORMANCE_CASES if case.target == "white_point_simulation")
+    assert tuple((case.case_id, case.input_attribute, dict(case.kwargs)) for case in cases) == (
+        (
+            "color-white-point-simulation",
+            "frame",
+            {"input_white": "d65", "output_white": "d93"},
         ),
     )
 
@@ -2580,6 +2807,10 @@ def test_performance_registry_includes_representative_file_boundary_cases() -> N
         "file-write-dpx",
         "file-read-header-png",
         "file-read-lut-cube-65",
+        "file-read-lut-cube-1d",
+        "file-read-lut-3dl",
+        "file-read-lut-spi1d",
+        "file-read-lut-spi3d",
     }
 
 
@@ -3226,11 +3457,40 @@ def test_performance_registry_includes_dpx_file_boundary_cases() -> None:
 
 @pytest.mark.performance
 def test_performance_registry_includes_both_lut_interpolation_tokens() -> None:
-    """v1-lut acceptance 18: FHD LUT transform cases cover trilinear and tetrahedral independently."""
+    """v1-lut acceptance 18; v1-lut-extensions acceptance 29: registry covers 3D and 1D LUT application."""
     assert [(case.case_id, case.target, dict(case.kwargs), dict(case.fixture_kwargs)) for case in _LUT_CASES] == [
         ("lut-transform-trilinear", "apply_lut", {"interpolation": "trilinear"}, {"lut": "lut"}),
         ("lut-transform-tetrahedral", "apply_lut", {"interpolation": "tetrahedral"}, {"lut": "lut"}),
+        ("lut-transform-linear-1d", "apply_lut", {"interpolation": "linear"}, {"lut": "lut1d"}),
     ]
+
+
+@pytest.mark.performance
+def test_performance_registry_includes_every_lut_boundary_format() -> None:
+    """v1-lut-extensions acceptance 29: registry covers every required LUT file, byte, and Cube write path."""
+    lut_boundaries = tuple(
+        case for case in _PERFORMANCE_CASES if case.target in {"read_lut", "decode_lut", "write_lut"}
+    )
+
+    assert {
+        case.target: {item.case_id for item in lut_boundaries if item.target == case.target} for case in lut_boundaries
+    } == {
+        "read_lut": {
+            "file-read-lut-cube-65",
+            "file-read-lut-cube-1d",
+            "file-read-lut-3dl",
+            "file-read-lut-spi1d",
+            "file-read-lut-spi3d",
+        },
+        "decode_lut": {
+            "bytes-decode-lut-cube-1d",
+            "bytes-decode-lut-cube-3d",
+            "bytes-decode-lut-3dl",
+            "bytes-decode-lut-spi1d",
+            "bytes-decode-lut-spi3d",
+        },
+        "write_lut": {"file-write-lut-1d", "file-write-lut-3d"},
+    }
 
 
 @pytest.mark.performance

@@ -183,6 +183,60 @@ Gamma tokens describe the transfer characteristic applied to pixel values.
 | `2.4` | Power transfer with exponent 2.4 | Conventional value | **Pure power**, reflected with preserved sign; not BT.1886 |
 | `2.6` | Power transfer with exponent 2.6 | Conventional value | Decode with `sign(x) * abs(x) ** 2.6` and encode with `sign(x) * abs(x) ** (1 / 2.6)`; no offset, piecewise branch, or clipping |
 
+## reference white
+
+`ReferenceWhite` is the case-sensitive display-white axis accepted by
+`px.color.white_point_simulation` and `px.color.chromatic_adaptation`. A white
+without a token is supplied directly as a two-element CIE 1931 xy sequence.
+
+| Token | CIE 1931 xy | Standard or convention | Notes |
+|---|---|---|---|
+| `d65` | `(0.3127, 0.3290)` | CIE D65; ITU / SMPTE signal and display white | Identical to the D65 coordinate in the named colorspace definitions |
+| `d93` | `(0.2831, 0.2971)` | SMPTE ST 2080-1 regional 9300 K display white | The four-decimal D93 / 9300 K + 8 MPCD broadcast-monitor convention |
+| `d50` | `(0.3457, 0.3585)` | CIE D50; ISO 12646 / ICC PCS print and proofing white | Four-decimal soft-proof monitor calibration white |
+| `aces` | `(0.32168, 0.33767)` | Academy-published ACES white point | Bit-identical to the ACES2065-1 and ACEScg nominal white coordinate |
+
+`d93` does not denote a separate illuminant standardized by ISO/CIE 11664-2.
+It does not normalize the unrounded CIE daylight-formula coordinate, 9300 K +
+27 MPCD, a manufacturing target, or a tolerance. Alternate spellings such as
+`d93-8mpcd`, `d93-27mpcd`, and `cie-d93` are not tokens.
+
+The three white-related operations have separate responsibilities:
+
+| Operation | Responsibility | White description | Matrix model |
+|---|---|---|---|
+| chromatic_adaptation | Perceptual adaptation between a pair of white points | `ReferenceWhite` or CIE 1931 xy | Selected CAT cone-response adaptation |
+| white_balance | Source-illuminant correction | Temperature / Tint (Kelvin and signed raw Duv) | Black-body-locus white pair and selected CAT |
+| white_point_simulation | Physical re-encoding between displays with the same RGB primaries | `ReferenceWhite` or CIE 1931 xy | Input and output normalized device matrices |
+
+`white_point_simulation` preserves absolute XYZ rather than adapting media
+white. Its meaning is equivalent to ICC absolute colorimetric intent: it does
+not perform perceptual chromatic adaptation, gamut mapping, tone mapping, or
+implicit clipping.
+
+## chromatic adaptation
+
+`ChromaticAdaptation` is the case-sensitive CAT axis used by
+`px.color.chromatic_adaptation` and `px.color.white_balance`. Both functions
+default to `cat02`; `None`, alternate spelling, and case variants are invalid.
+`chromatic_adaptation` accepts either `ReferenceWhite` tokens or direct CIE
+1931 xy sequences for both white points. `white_point_simulation` does not
+accept or apply a CAT.
+
+| Token | Definition | Standard or convention | Notes |
+|---|---|---|---|
+| `bradford` | Bradford cone-response transform | Bradford chromatic adaptation | Explicit opt-in |
+| `cat02` | CIECAM02 chromatic adaptation transform | CAT02 | Default for both public functions |
+| `cat16` | CAM16 chromatic adaptation transform | CAT16 | Explicit opt-in |
+| `von-kries` | von Kries cone-response transform | von Kries | Explicit opt-in |
+
+`white_balance` describes its source illuminant with Kelvin Temperature and a
+signed raw Duv Tint in CIE 1960 UCS. Positive Tint is the green side and its
+correction moves the output toward magenta; negative Tint is the magenta side.
+For UI explanation only, the Adobe-style display scale is approximately
+`adobe_tint = -3000 * Duv`. The public calculation accepts raw Duv without a
+vendor slider range or clamp.
+
 ## colorspace
 
 Colorspace tokens identify a set of RGB primaries and a white point. Gamma tokens independently describe transfer
@@ -374,9 +428,12 @@ subset and coordinate rules.
   pixel center maps inversely into foreground coordinates.
 - Outside foreground support, merge samples transparent zero. It does not replicate edges or renormalize weights after
   discarding taps outside support.
-- `px.color.apply_lut` accepts `trilinear` and `tetrahedral`; default `tetrahedral`. Input RGB maps through the Lut's
-  per-channel declared `domain` to grid coordinates. Lookup coordinates outside the domain are clamped to its edge.
-  Lut output is not clipped; negative values and values above 1 are returned unchanged.
+- `px.color.apply_lut` chooses a subset by LUT type. A `Lut` accepts `trilinear` and `tetrahedral`, with default
+  `tetrahedral`. A `Lut1D` accepts only `linear`, with default `linear`. `None` selects that type-specific default and
+  never converts a token from the other subset.
+- Input RGB maps through the LUT's per-channel declared `domain` to grid or curve coordinates. Lookup coordinates
+  outside the domain are clamped to its edge. LUT output is not clipped; negative values and values above 1 are
+  returned unchanged.
 
 Point-sampled `px.transform.resize` kernels share pixel-center alignment
 `src = (dst + 0.5) × (input / output) - 0.5` and edge replication. Channels are independent, and neither scene values
@@ -402,6 +459,7 @@ Neither point nor area renormalizes only in-canvas taps; both apply the border s
 | `area` | Box average over the source region covered by each output pixel | Area or box resampling | The same definition also applies to enlargement |
 | `trilinear` | Linear interpolation along three axes over the eight vertices of a 3D grid cell | Trilinear interpolation | Subset exclusive to `px.color.apply_lut` |
 | `tetrahedral` | Linear interpolation after splitting a 3D grid cell into six tetrahedra | Tetrahedral interpolation | Subset exclusive to `px.color.apply_lut`; default |
+| `linear` | Linear interpolation between adjacent samples of each independent RGB curve | One-dimensional LUT interpolation | Subset exclusive to `px.color.apply_lut` with `Lut1D`; default for that type |
 
 The cubic and Lanczos support widths in `px.transform.resize` do not expand on the source side during reduction; these
 kernels provide no scale-aware antialiasing. Use `area` for antialiased reduction.
@@ -525,13 +583,28 @@ Tokens are case-sensitive.
 
 ## text font
 
-Text-font tokens select the bundled font that `px.draw.text` reads from package data. Default `sans`. There is no
-system-font discovery, network access, or font-path argument.
+`px.draw.text` accepts either a text-font token or an immutable `px.draw.Font`. Default `sans`. Tokens select bundled
+package data and retain their string cache identities. `px.draw.Font.from_file(path, face_index=0)` accepts a regular
+font file without an extension whitelist, reads its bytes completely during construction, and validates the selected
+face with both FreeType and HarfBuzz. The resulting asset remains usable after the source file is changed or removed.
+Its shaping, FreeType face, glyph, layout, and atlas cache identity is the content bytes plus face index, not the path
+or Python object identity.
 
 | Token | Bundled font | Accepted `wght` range |
 |---|---|---:|
 | `sans` | Noto Sans CJK JP variable | 100.0 through 900.0 |
 | `mono` | Noto Sans Mono CJK JP variable | Measured 400.0 through 700.0 |
+
+For a user `Font` with a measured `wght` axis, `weight` accepts finite values in that axis's closed range. A static
+font has no `wght` axis and therefore accepts only the effective default `weight=400.0`. `variations` is `None` or a
+partial mapping from case-sensitive OpenType axis tags to finite values in each measured closed range. Unspecified
+axes use their measured defaults. The `wght` key is rejected in `variations`; pass that value through `weight`
+instead. Unknown axes, non-real or non-finite values, and out-of-range values fail before shaping without saturation.
+The complete resolved axis coordinates are applied identically to HarfBuzz shaping and FreeType metrics and raster.
+
+Missing code points use glyph 0 (`.notdef`) from the selected face. There is no fallback search across bundled fonts,
+other user fonts, system-font registries, or the network. `Font.from_file` never performs system-font discovery or
+network access.
 
 ## text block layout
 

@@ -260,13 +260,13 @@ _RGB_TO_XYZ: Mapping[str, _Float64Matrix] = {
 }
 
 
-def _bradford_adaptation(source_white: tuple[float, float], output_white: tuple[float, float]) -> _Float64Matrix:
-    if source_white == output_white:
+def _bradford_adaptation(input_white: tuple[float, float], output_white: tuple[float, float]) -> _Float64Matrix:
+    if input_white == output_white:
         return np.eye(3, dtype=np.float64)
-    source_cones = _BRADFORD @ _xy_to_xyz(source_white)
+    input_cones = _BRADFORD @ _xy_to_xyz(input_white)
     output_cones = _BRADFORD @ _xy_to_xyz(output_white)
     return np.asarray(
-        np.linalg.inv(_BRADFORD) @ np.diag(output_cones / source_cones) @ _BRADFORD,
+        np.linalg.inv(_BRADFORD) @ np.diag(output_cones / input_cones) @ _BRADFORD,
         dtype=np.float64,
     )
 

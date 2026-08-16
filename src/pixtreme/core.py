@@ -1,13 +1,14 @@
 """Core Frame, LUT, channel, and closed-vocabulary types."""
 
 from pixtreme._core.frame import Frame, channels
-from pixtreme._core.lut import Lut
+from pixtreme._core.lut import Lut, Lut1D
 from pixtreme._core.vocabulary import (
     Alpha,
     Antialiasing,
     Blend,
     Border,
     ChromaSiting,
+    ChromaticAdaptation,
     ColorBarsOutput,
     ColorBarsStandard,
     Colorspace,
@@ -21,6 +22,7 @@ from pixtreme._core.vocabulary import (
     Matrix,
     MorphologyShape,
     Range,
+    ReferenceWhite,
     SobelDirection,
     StackDirection,
     TemplateMatchingMethod,
@@ -36,7 +38,10 @@ from pixtreme._core.vocabulary import (
 __all__ = (
     "Frame",
     "Lut",
+    "Lut1D",
     "channels",
+    "ChromaticAdaptation",
+    "ReferenceWhite",
     "Colorspace",
     "Gamma",
     "Matrix",

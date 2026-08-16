@@ -103,20 +103,29 @@ __device__ float pixtreme_gradient_dot(
     );
 }
 
+__device__ double pixtreme_representable_lattice_coordinate(const double value) {
+    if (!isfinite(value) || fabs(value) >= 9007199254740992.0) {
+        return 0.0;
+    }
+    return value;
+}
+
 __device__ float pixtreme_gradient_noise(
     const double x,
     const double y,
     const double z,
     const unsigned int stream
 ) {
-    const double floor_x = floor(x);
-    const double floor_y = floor(y);
+    const double finite_x = pixtreme_representable_lattice_coordinate(x);
+    const double finite_y = pixtreme_representable_lattice_coordinate(y);
+    const double floor_x = floor(finite_x);
+    const double floor_y = floor(finite_y);
     const double floor_z = floor(z);
     const unsigned int ix = pixtreme_wrapped_floor(floor_x);
     const unsigned int iy = pixtreme_wrapped_floor(floor_y);
     const unsigned int iz = pixtreme_wrapped_floor(floor_z);
-    const float fx = (float)(x - floor_x);
-    const float fy = (float)(y - floor_y);
+    const float fx = (float)(finite_x - floor_x);
+    const float fy = (float)(finite_y - floor_y);
     const float fz = (float)(z - floor_z);
     float values[8];
 
@@ -413,6 +422,14 @@ def fractal_noise(
     amplitudes use ``gain``. The weighted result is centered at 0.5 and
     normalized to ``[0, 1]`` with ``C = sqrt(3) / 2``.
 
+    Each octave uses the ordinary xy coordinate while both axes remain finite
+    and below ``2**53``, the largest double value with unit lattice precision.
+    If frequency growth or division by ``scale`` makes an axis non-finite or
+    reaches that limit, that axis evaluates at lattice origin ``0.0`` for the
+    octave. The seed-derived octave stream and finite ``evolution`` phase stay
+    active, giving a deterministic finite limit that may be constant along one
+    or both image axes.
+
     The returned fp32 Frame reports the requested colorspace and gamma,
     declares channels ``("Y",)``, and owns a new C-contiguous allocation.
     """
@@ -467,6 +484,14 @@ def turbulent_noise(
     phase shared by every octave. Absolute octave values are weighted by
     ``gain``, with frequencies set by ``lacunarity``, then normalized to
     ``[0, 1]`` with ``C = sqrt(3) / 2``.
+
+    Each octave uses the ordinary xy coordinate while both axes remain finite
+    and below ``2**53``, the largest double value with unit lattice precision.
+    If frequency growth or division by ``scale`` makes an axis non-finite or
+    reaches that limit, that axis evaluates at lattice origin ``0.0`` for the
+    octave. The seed-derived octave stream and finite ``evolution`` phase stay
+    active, giving a deterministic finite limit that may be constant along one
+    or both image axes.
 
     The returned fp32 Frame reports the requested colorspace and gamma,
     declares channels ``("Y",)``, and owns a new C-contiguous allocation.

@@ -52,8 +52,11 @@ dev = [
     "pillow>=12.3.0",
     # EXR dev oracle: fixture generation and independent decode only. Not a runtime dependency.
     "openexr>=3.4",
+    # Font fixture generation (v1-draw-text-user-font): static instancing / collection build only. Not a runtime dependency.
+    "fonttools>=4.60",
     "mkdocs-material>=9.7.7",
     "mkdocstrings[python]>=1.0.6",
+    "colour-science==0.4.7",
 ]
 
 [tool.pytest.ini_options]

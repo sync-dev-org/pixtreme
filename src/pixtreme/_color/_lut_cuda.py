@@ -1,6 +1,23 @@
-"""Shared CUDA source for three-dimensional LUT lookup."""
+"""Shared CUDA source for one- and three-dimensional LUT lookup."""
 
 from __future__ import annotations
+
+_LUT_COORDINATE_CUDA_SOURCE = r"""
+__device__ __forceinline__ void pixtreme_lut_coordinate(
+    const float value,
+    const float domain_min,
+    const float domain_max,
+    const int size,
+    int* lower,
+    float* fraction
+) {
+    float position = (value - domain_min) / (domain_max - domain_min) * (size - 1);
+    position = fminf(fmaxf(position, 0.0f), (float)(size - 1));
+    *lower = min((int)floorf(position), size - 2);
+    *fraction = position - *lower;
+}
+"""
+
 
 _LUT_TETRAHEDRAL_CUDA_SOURCE = r"""
 __device__ __forceinline__ float3 pixtreme_lut_load(
@@ -99,17 +116,5 @@ __device__ __forceinline__ float3 pixtreme_lut_tetrahedral(
     );
 }
 
-__device__ __forceinline__ void pixtreme_lut_coordinate(
-    const float value,
-    const float domain_min,
-    const float domain_max,
-    const int size,
-    int* lower,
-    float* fraction
-) {
-    float position = (value - domain_min) / (domain_max - domain_min) * (size - 1);
-    position = fminf(fmaxf(position, 0.0f), (float)(size - 1));
-    *lower = min((int)floorf(position), size - 2);
-    *fraction = position - *lower;
-}
 """
+_LUT_TETRAHEDRAL_CUDA_SOURCE += _LUT_COORDINATE_CUDA_SOURCE
