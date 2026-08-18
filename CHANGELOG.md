@@ -2,6 +2,57 @@
 
 Notable changes to pixtreme are documented in this file.
 
+## 1.2.1 - 2026-08-17
+
+pixtreme 1.2.1 shortens seven morphology operations by 25 to 48 times, cuts `match_template`
+FFT-path runtime nearly in half, and reduces long-path blur, procedural noise, LUT text
+serialization, and white-management host composition times by 22 to 71 percent. Public
+signatures, observable behavior, and output bits are unchanged; measured outputs are
+byte-identical to 1.2.0 across independent verification. Absolute figures below were
+remeasured on an NVIDIA RTX A6000 (WSL2, CUDA runtime 12.9, CuPy 14.1.1) with GPU 0
+dedicated to a single full-suite `uv run pytest -m performance` run at commit `5f71032`.
+
+### Changed
+
+- `px.morphology.erosion()`, `dilation()`, `opening()`, `closing()`, `morphological_gradient()`,
+  `white_tophat()`, and `black_tophat()` now load an output tile with radius halo into shared
+  memory once per block, reduce from that shared substrate, and select disk membership from an
+  integer row-limit cache keyed on `(device, radius)`. `morphological_gradient()` fuses the
+  min/max into a single pass and the tophat pair fuses the trailing subtraction. FHD RGB
+  radius-5 disk cases shorten by 25 to 48 times (`morphological_gradient` from 17.16 ms to
+  0.36 ms; `erosion` and `dilation` from 8.65 ms to 0.34 ms). Channel counts above 4 or tiles
+  exceeding 48 KiB fall back to the original global kernel unchanged.
+- `px.feature.match_template()` fuses the FFT-path response reduction, centering, denominator
+  construction, zero-variance handling, square root, and division into one RawKernel for
+  channel counts 1 through 3. FHD RGB with a 64x64 template at `ccoeff_normed` shortens from
+  24.72 ms to 13.10 ms (47.0%). Channel counts 4 and above retain the original composition
+  path.
+- `px.generate.grain()` at `size=1` uses a lattice-aligned kernel that evaluates only the two
+  contributing z-layer lattice values per channel. `px.generate.fractal_noise()` and
+  `px.generate.turbulent_noise()` at `scale >= 16` use a per-block shared gradient kernel that
+  reuses at most 32 lattice gradients across each 16x16 output block. FHD RGB grain at
+  `intensity=0.1` shortens from 12.35 ms to 3.60 ms (70.9%); FHD `scale=64`, `octaves=4`
+  fractal and turbulent cases each shorten from about 4.4 ms to 2.16 ms (roughly 50%).
+- `px.filter.directional_blur()`, `zoom_blur()`, `spin_blur()`, and `vector_blur()` use a
+  noinline global fast-gather for path sample counts of 65 and above; shorter paths retain
+  the shared-memory loop with the original gather via macro separation. Representative
+  long-path FHD RGB cases shorten by 22 to 32% (`vector_blur` uniform |v|=128 from 10.78 ms
+  to 7.30 ms; `directional_blur` length=128 from 11.00 ms to 7.52 ms; `zoom_blur` amount=0.2
+  from 12.29 ms to 9.14 ms; `spin_blur` angle=10 from 10.38 ms to 8.07 ms).
+- `px.color.chromatic_adaptation()`, `px.color.white_balance()`, and
+  `px.color.white_point_simulation()` memoize their pure host matrix composition in a bounded
+  LRU (128 identities per operation) keyed on the resolved binary64 x/y values, Frame
+  colorspace, and CAT token. FHD RGB cases shorten by 27 to 49%
+  (`white_point_simulation` from 0.266 ms to 0.137 ms, `white_balance` from 0.281 ms to
+  0.157 ms, `chromatic_adaptation` from 0.238 ms to 0.148 ms), reaching the effective
+  bandwidth of the same-shape `px.color.rgb_to_rgb` operation.
+- `px.io.write_lut()`, `px.io.read_lut()`, and `px.io.decode_lut()` avoid full data-row
+  materialization during Cube sniffing, replace repeated directive scans with a single
+  `finditer` pass, and serialize Cube rows through a bulk zipped `%s` operation that
+  preserves the `str(numpy.float32)` shortest round-trip spelling. FHD RGB 65^3 Cube write
+  shortens from 918.76 ms to 323.92 ms (64.7%), decode from 452.96 ms to 154.03 ms (66.0%),
+  and read from 294.87 ms to 138.60 ms (53.0%).
+
 ## 1.2.0 - 2026-08-16
 
 pixtreme 1.2.0 adds user-supplied fonts for text drawing, expands LUT support with 1D LUTs, new file formats, and

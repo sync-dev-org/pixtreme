@@ -545,6 +545,132 @@ def test_calls_are_bit_deterministic_across_order_and_environment(monkeypatch: p
     assert first == second
 
 
+def test_adaptation_host_memoization_is_bounded_lru_and_recomputes_bit_exactly() -> None:
+    """v1-white-balance acceptance 18: resolved adaptation matrices use a 128-entry LRU with bit-exact eviction."""
+    import pixtreme._color.white_balance as implementation
+
+    cached = implementation._compose_adaptation_rgb_matrix
+    cached.cache_clear()
+    key = ("sRGB", (0.3127, 0.3290), (0.3457, 0.3585), "cat02")
+    cold = cached(*key).tobytes()
+    assert cached.cache_info().maxsize == 128
+    assert cached(*key).tobytes() == cold
+    assert cached.cache_info().hits == 1
+
+    for index in range(128):
+        input_white = (float(np.float64(0.29) + np.float64(index) * np.float64(1e-5)), 0.33)
+        cached("sRGB", input_white, (0.3457, 0.3585), "cat02")
+
+    assert cached.cache_info().currsize == 128
+    misses_before_revisit = cached.cache_info().misses
+    recomputed = cached(*key)
+    assert cached.cache_info().misses == misses_before_revisit + 1
+    assert recomputed.tobytes() == cold == cached.__wrapped__(*key).tobytes()
+
+
+def test_adaptation_memoization_identity_uses_every_resolved_binary64_value() -> None:
+    """v1-white-balance acceptance 19: tokens and Temperature/Tint normalize to exact resolved binary64 cache keys."""
+    import pixtreme._color.white_balance as implementation
+
+    cached = implementation._compose_adaptation_rgb_matrix
+    cached.cache_clear()
+    source = _frame((0.2, 0.3, 0.4), colorspace="sRGB")
+    px.color.chromatic_adaptation(source, input_white="d65", output_white="d50", cat="cat02")
+    token_stats = cached.cache_info()
+    px.color.chromatic_adaptation(source, input_white=(0.3127, 0.3290), output_white=(0.3457, 0.3585), cat="cat02")
+    direct_stats = cached.cache_info()
+    assert direct_stats.hits == token_stats.hits + 1
+    assert direct_stats.misses == token_stats.misses
+
+    temperature = 7312.5
+    tint = -0.00625
+    resolved_input = implementation._temperature_to_xy(temperature, tint)
+    px.color.white_balance(source, temperature=temperature, tint=tint, cat="von-kries")
+    balance_stats = cached.cache_info()
+    px.color.chromatic_adaptation(
+        source,
+        input_white=resolved_input,
+        output_white="d65",
+        cat="von-kries",
+    )
+    assert cached.cache_info().hits == balance_stats.hits + 1
+
+    input_white = (0.3127, 0.3290)
+    output_white = (0.3457, 0.3585)
+    cached.cache_clear()
+    cached("sRGB", input_white, output_white, "cat02")
+    misses = cached.cache_info().misses
+    variants = (
+        ("ACEScg", input_white, output_white, "cat02"),
+        ("sRGB", (float(np.nextafter(input_white[0], np.inf)), input_white[1]), output_white, "cat02"),
+        ("sRGB", (input_white[0], float(np.nextafter(input_white[1], np.inf))), output_white, "cat02"),
+        ("sRGB", input_white, (float(np.nextafter(output_white[0], np.inf)), output_white[1]), "cat02"),
+        ("sRGB", input_white, (output_white[0], float(np.nextafter(output_white[1], np.inf))), "cat02"),
+        ("sRGB", input_white, output_white, "cat16"),
+    )
+    for variant in variants:
+        cached(*variant)
+    assert cached.cache_info().misses == misses + len(variants)
+
+
+def test_adaptation_cache_states_and_uncached_composition_are_publicly_bit_identical(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """v1-white-balance acceptance 20: miss, hit, interposition, eviction, and uncached calls are bit identical."""
+    import pixtreme._color.white_balance as implementation
+
+    cached = implementation._compose_adaptation_rgb_matrix
+    cached.cache_clear()
+    source = _frame(
+        np.asarray([[[-0.2, 0.3, 1.5], [0.8, 0.1, 0.6]]], dtype=np.float32),
+        colorspace="ACEScg",
+        gamma="linear",
+    )
+    temperature = 7312.5
+    tint = -0.00625
+    cat = "von-kries"
+    input_white = implementation._temperature_to_xy(temperature, tint)
+    output_white = (0.32168, 0.33767)
+
+    def balance_bits() -> bytes:
+        return (
+            px.io.to_array(px.color.white_balance(source, temperature=temperature, tint=tint, cat=cat)).get().tobytes()
+        )
+
+    def direct_bits() -> bytes:
+        return (
+            px.io.to_array(
+                px.color.chromatic_adaptation(
+                    source,
+                    input_white=input_white,
+                    output_white=output_white,
+                    cat=cat,
+                )
+            )
+            .get()
+            .tobytes()
+        )
+
+    cold = balance_bits()
+    hit = balance_bits()
+    direct = direct_bits()
+    monkeypatch.setenv("PIXTREME_WHITE_BALANCE_CACHE_SENTINEL", "ignored")
+    px.color.chromatic_adaptation(source, input_white="d50", output_white="aces", cat="bradford")
+    interposed = balance_bits()
+    for index in range(128):
+        other_input = (float(np.float64(0.29) + np.float64(index) * np.float64(1e-5)), 0.33)
+        cached("ACEScg", other_input, output_white, cat)
+    evicted = balance_bits()
+    cached_matrix = cached("ACEScg", input_white, output_white, cat).tobytes()
+    uncached_matrix = cached.__wrapped__("ACEScg", input_white, output_white, cat).tobytes()
+
+    monkeypatch.setattr(implementation, "_compose_adaptation_rgb_matrix", cached.__wrapped__)
+    uncached_balance = balance_bits()
+    uncached_direct = direct_bits()
+    assert cold == hit == direct == interposed == evicted == uncached_balance == uncached_direct
+    assert cached_matrix == uncached_matrix
+
+
 def test_colour_science_is_exact_pinned_test_only_and_absent_from_runtime_metadata() -> None:
     """v1-white-balance acceptance 13: colour-science 0.4.7 is an exact-pinned development-only oracle."""
     root = Path(__file__).resolve().parents[1]

@@ -442,6 +442,115 @@ def test_fractal_noise_regular_domain_remains_bit_identical_characterization() -
     assert np.array_equal(actual.view(np.uint32), expected_bits)
 
 
+def test_turbulent_noise_regular_domain_remains_bit_identical_characterization() -> None:
+    """characterization: the current turbulent-noise CUDA operation order stays bit-identical.
+
+    The independent v1-noise oracle establishes correctness to its documented fp32 tolerance; this exact snapshot
+    separately freezes the public regular-domain bits while the kernel evaluation strategy is optimized.
+    """
+    actual = _host(
+        px.generate.turbulent_noise(
+            width=3,
+            height=2,
+            scale=5.5,
+            octaves=3,
+            lacunarity=1.75,
+            gain=0.4,
+            seed=17,
+            evolution=0.375,
+            colorspace="ACEScg",
+        )
+    )
+    expected_bits = np.asarray(
+        (1035864337, 1037207217, 1042751870, 1033789575, 1038335555, 1045962483),
+        dtype=np.uint32,
+    ).reshape(2, 3, 1)
+    assert np.array_equal(actual.view(np.uint32), expected_bits)
+
+
+@pytest.mark.parametrize(
+    ("name", "expected_values"),
+    (
+        (
+            "fractal_noise",
+            (1057158808, 1057127417, 1057058467, 1057242783, 1057208144, 1057129380),
+        ),
+        (
+            "turbulent_noise",
+            (1042839283, 1042564057, 1042030801, 1042620985, 1042317180, 1041697454),
+        ),
+    ),
+)
+def test_tiled_gradient_noise_output_remains_bit_identical_characterization(
+    name: str,
+    expected_values: tuple[int, ...],
+) -> None:
+    """characterization: the tiled scale-64 CUDA path stays bit-identical to the public operation order.
+
+    The independent v1-noise oracle establishes correctness to its documented fp32 tolerance; this exact snapshot
+    separately freezes the shared-lattice path for both signed and absolute-value accumulation.
+    """
+    actual = _host(
+        getattr(px.generate, name)(
+            width=3,
+            height=2,
+            scale=64.0,
+            octaves=4,
+            lacunarity=2.0,
+            gain=0.5,
+            seed=17,
+            evolution=0.375,
+            colorspace="ACEScg",
+        )
+    )
+    expected_bits = np.asarray(expected_values, dtype=np.uint32).reshape(2, 3, 1)
+    assert np.array_equal(actual.view(np.uint32), expected_bits)
+
+
+def test_color_grain_lattice_aligned_output_remains_bit_identical_characterization() -> None:
+    """characterization: the current RGB grain bits stay fixed at the size-one lattice-aligned fast-path domain.
+
+    The independent v1-noise oracle establishes correctness to its documented fp32 tolerance; this exact snapshot
+    separately freezes every channel's current Box-Muller and interpolation operation order during optimization.
+    """
+    actual = _host(
+        px.generate.grain(
+            width=3,
+            height=2,
+            intensity=0.37,
+            size=1.0,
+            monochromatic=False,
+            seed=17,
+            evolution=0.375,
+            colorspace="ACEScg",
+        )
+    )
+    expected_bits = np.asarray(
+        (
+            1056549594,
+            1055809679,
+            1057291404,
+            1056167636,
+            1057133042,
+            1056965549,
+            1056146083,
+            1058016404,
+            1057361045,
+            1057755079,
+            1053431044,
+            1055930865,
+            1057335909,
+            1057507141,
+            1058367003,
+            1058204314,
+            1057979738,
+            1058215725,
+        ),
+        dtype=np.uint32,
+    ).reshape(2, 3, 3)
+    assert np.array_equal(actual.view(np.uint32), expected_bits)
+
+
 def test_none_seed_uses_local_entropy_without_process_global_rng_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     """v1-noise acceptance 18 and REQ-TEST-004: entropy realization is local and two calls differ."""
     import cupy as cp
@@ -660,3 +769,17 @@ def test_noise_generators_use_rawkernel_per_pixel_evaluation() -> None:
     assert "cp.empty" in source
     assert "cp.asnumpy" not in source
     assert "cp.random" not in source
+
+
+def test_noise_kernels_reuse_redundant_lattice_work() -> None:
+    """REQ-TEST-003: structural contract requires tiled gradients and an aligned-grain lattice bypass."""
+    import pixtreme._generate.noise as noise_module
+
+    source = inspect.getsource(noise_module)
+    assert "pixtreme_gradient_noise_tiled" in source
+    assert "pixtreme_grain_noise_lattice_aligned" in source
+    assert not noise_module._uses_tiled_gradient_kernel(scale=8.0, octaves=4, lacunarity=2.0, gain=0.5)
+    assert noise_module._uses_tiled_gradient_kernel(scale=16.0, octaves=4, lacunarity=2.0, gain=0.5)
+    assert not noise_module._uses_tiled_gradient_kernel(scale=16.0, octaves=4, lacunarity=4.0, gain=0.5)
+    assert noise_module._uses_tiled_gradient_kernel(scale=16.0, octaves=1, lacunarity=4.0, gain=0.5)
+    assert not noise_module._uses_tiled_gradient_kernel(scale=64.0, octaves=32, lacunarity=2.0, gain=0.5)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from functools import lru_cache
 
 import cupy as cp
@@ -15,6 +16,13 @@ from pixtreme._core.vocabulary import _MORPHOLOGY_SHAPE_TOKENS
 
 _SHAPE_TOKENS = _MORPHOLOGY_SHAPE_TOKENS
 _THREADS_PER_BLOCK = 256
+_MORPHOLOGY_BLOCK = (32, 16)
+_MORPHOLOGY_SHARED_LIMIT = 48 * 1024
+_MORPHOLOGY_TILED_MAX_CHANNELS = 4
+_MORPHOLOGY_ROW_LIMIT_CACHE_SIZE = 32
+_DIFFERENCE_NONE = 0
+_DIFFERENCE_SOURCE_MINUS_RESULT = 1
+_DIFFERENCE_RESULT_MINUS_SOURCE = 2
 
 _MORPHOLOGY_KERNEL_SOURCE = (
     _BORDER_PREAMBLE
@@ -77,6 +85,143 @@ def _morphology_kernel() -> cp.RawKernel:
     return cp.RawKernel(_MORPHOLOGY_KERNEL_SOURCE, "pixtreme_morphology")
 
 
+def _morphology_tiled_kernel_source(channel_count: int, shape: str, operation: str) -> str:
+    kernel_name = f"pixtreme_morphology_tiled_{channel_count}_{shape}_{operation}"
+    disk_parameter = "    const int* __restrict__ disk_row_limits,\n" if shape == "disk" else ""
+    horizontal_limit = "disk_row_limits[offset_y + radius]" if shape == "disk" else "radius"
+    lines = [
+        _BORDER_PREAMBLE,
+        f"""
+extern "C" __global__ void {kernel_name}(
+    const float* __restrict__ source,
+    float* __restrict__ output,
+    const float* __restrict__ difference_source,
+{disk_parameter}    const long long width,
+    const long long height,
+    const int radius,
+    const int border,
+    const float border_value,
+    const int difference_mode
+) {{
+    extern __shared__ float tile[];
+    const int channel_count = {channel_count};
+    const int tile_width = blockDim.x + 2 * radius;
+    const int tile_height = blockDim.y + 2 * radius;
+    const int tile_pixel_count = tile_width * tile_height;
+    const int tile_count = tile_pixel_count * channel_count;
+    const int thread_index = threadIdx.y * blockDim.x + threadIdx.x;
+    const int thread_count = blockDim.x * blockDim.y;
+    const long long block_x = (long long)blockIdx.x * blockDim.x;
+    const long long block_y = (long long)blockIdx.y * blockDim.y;
+    const bool tile_is_interior =
+        block_x >= radius && block_y >= radius
+        && block_x + blockDim.x + radius <= width
+        && block_y + blockDim.y + radius <= height;
+
+    for (int tile_index = thread_index; tile_index < tile_count; tile_index += thread_count) {{
+        const int channel = tile_index % channel_count;
+        const int tile_pixel = tile_index / channel_count;
+        const int local_x = tile_pixel % tile_width;
+        const int local_y = tile_pixel / tile_width;
+        const long long source_x = block_x + local_x - radius;
+        const long long source_y = block_y + local_y - radius;
+        if (tile_is_interior) {{
+            tile[tile_index] = source[(source_y * width + source_x) * channel_count + channel];
+        }} else {{
+            tile[tile_index] = pixtreme_border_sample(
+                source,
+                source_x,
+                source_y,
+                width,
+                height,
+                channel_count,
+                channel,
+                border,
+                border_value
+            );
+        }}
+    }}
+    __syncthreads();
+
+    const long long output_x = block_x + threadIdx.x;
+    const long long output_y = block_y + threadIdx.y;
+    if (output_x >= width || output_y >= height) {{
+        return;
+    }}
+    const int center_index =
+        ((threadIdx.y + radius) * tile_width + threadIdx.x + radius) * channel_count;
+""",
+    ]
+    if operation == "gradient":
+        for channel in range(channel_count):
+            lines.append(f"    float minimum_{channel} = tile[center_index + {channel}];\n")
+            lines.append(f"    float maximum_{channel} = tile[center_index + {channel}];\n")
+    else:
+        for channel in range(channel_count):
+            lines.append(f"    float value_{channel} = tile[center_index + {channel}];\n")
+    lines.extend(
+        (
+            "    for (int offset_y = -radius; offset_y <= radius; ++offset_y) {\n",
+            f"        const int horizontal_limit = {horizontal_limit};\n",
+            "        for (int offset_x = -horizontal_limit; offset_x <= horizontal_limit; ++offset_x) {\n",
+            "            const int neighbor_index =\n",
+            "                ((threadIdx.y + radius + offset_y) * tile_width + threadIdx.x + radius + offset_x)\n",
+            "                * channel_count;\n",
+        )
+    )
+    if operation == "gradient":
+        for channel in range(channel_count):
+            lines.append(
+                f"            minimum_{channel} = fminf(minimum_{channel}, tile[neighbor_index + {channel}]);\n"
+            )
+            lines.append(
+                f"            maximum_{channel} = fmaxf(maximum_{channel}, tile[neighbor_index + {channel}]);\n"
+            )
+    else:
+        extremum = "fmaxf" if operation == "dilate" else "fminf"
+        for channel in range(channel_count):
+            lines.append(
+                f"            value_{channel} = {extremum}(value_{channel}, tile[neighbor_index + {channel}]);\n"
+            )
+    lines.extend(
+        (
+            "        }\n",
+            "    }\n",
+            "    const long long output_index = (output_y * width + output_x) * channel_count;\n",
+        )
+    )
+    for channel in range(channel_count):
+        result = f"maximum_{channel} - minimum_{channel}" if operation == "gradient" else f"value_{channel}"
+        lines.append(f"    float result_{channel} = {result};\n")
+        lines.append(
+            f"    if (difference_mode == 1) result_{channel} = difference_source[output_index + {channel}] - result_{channel};\n"
+        )
+        lines.append(
+            f"    if (difference_mode == 2) result_{channel} = result_{channel} - difference_source[output_index + {channel}];\n"
+        )
+        lines.append(f"    output[output_index + {channel}] = result_{channel};\n")
+    lines.append("}\n")
+    return "".join(lines)
+
+
+@lru_cache(maxsize=6 * _MORPHOLOGY_TILED_MAX_CHANNELS)
+def _morphology_tiled_kernel(channel_count: int, shape: str, operation: str) -> cp.RawKernel:
+    return cp.RawKernel(
+        _morphology_tiled_kernel_source(channel_count, shape, operation),
+        f"pixtreme_morphology_tiled_{channel_count}_{shape}_{operation}",
+    )
+
+
+@lru_cache(maxsize=_MORPHOLOGY_ROW_LIMIT_CACHE_SIZE)
+def _disk_row_limits(device_id: int, radius: int) -> cp.ndarray:
+    limits = np.asarray(
+        [math.isqrt(radius * radius - offset_y * offset_y) for offset_y in range(-radius, radius + 1)],
+        dtype=np.int32,
+    )
+    with cp.cuda.Device(device_id):
+        return cp.asarray(limits)
+
+
 def _validate_radius(radius: object, *, operation: str) -> int:
     if type(radius) is not int or radius < 1:
         raise ValueError(
@@ -126,6 +271,45 @@ def _validate_arguments(
     return checked_frame, checked_radius, checked_shape, checked_border, checked_border_value
 
 
+def _launch_tiled(
+    frame: Frame,
+    output: cp.ndarray,
+    *,
+    radius: int,
+    shape: str,
+    border: str,
+    border_value: float,
+    operation: str,
+    difference_source: cp.ndarray,
+    difference_mode: int,
+) -> bool:
+    channel_count = len(frame.channels)
+    block_x, block_y = _MORPHOLOGY_BLOCK
+    shared_elements = (block_x + 2 * radius) * (block_y + 2 * radius) * channel_count
+    shared_bytes = shared_elements * np.dtype(np.float32).itemsize
+    if channel_count > _MORPHOLOGY_TILED_MAX_CHANNELS or shared_bytes > _MORPHOLOGY_SHARED_LIMIT:
+        return False
+    grid = ((frame.width + block_x - 1) // block_x, (frame.height + block_y - 1) // block_y)
+    kernel_arguments: tuple[object, ...] = (frame.data, output, difference_source)
+    if shape == "disk":
+        kernel_arguments += (_disk_row_limits(int(cp.cuda.runtime.getDevice()), radius),)
+    kernel_arguments += (
+        np.int64(frame.width),
+        np.int64(frame.height),
+        np.int32(radius),
+        _border_argument(border),
+        np.float32(border_value),
+        np.int32(difference_mode),
+    )
+    _morphology_tiled_kernel(channel_count, shape, operation)(
+        grid,
+        _MORPHOLOGY_BLOCK,
+        kernel_arguments,
+        shared_mem=shared_bytes,
+    )
+    return True
+
+
 def _primitive(
     frame: Frame,
     *,
@@ -134,27 +318,87 @@ def _primitive(
     border: str,
     border_value: float,
     dilate: bool,
+    difference_source: cp.ndarray | None = None,
+    difference_mode: int = _DIFFERENCE_NONE,
 ) -> Frame:
     output = cp.empty(frame.shape, dtype=cp.float32)
-    element_count = int(frame.data.size)
-    blocks = (element_count + _THREADS_PER_BLOCK - 1) // _THREADS_PER_BLOCK
-    _morphology_kernel()(
-        (blocks,),
-        (_THREADS_PER_BLOCK,),
-        (
-            frame.data,
-            output,
-            np.int64(frame.width),
-            np.int64(frame.height),
-            np.int64(len(frame.channels)),
-            np.int64(radius),
-            np.int32(_SHAPE_TOKENS.index(shape)),
-            _border_argument(border),
-            np.float32(border_value),
-            np.int32(dilate),
-        ),
-    )
+    resolved_difference_source = frame.data if difference_source is None else difference_source
+    operation = "dilate" if dilate else "erode"
+    if not _launch_tiled(
+        frame,
+        output,
+        radius=radius,
+        shape=shape,
+        border=border,
+        border_value=border_value,
+        operation=operation,
+        difference_source=resolved_difference_source,
+        difference_mode=difference_mode,
+    ):
+        channel_count = len(frame.channels)
+        element_count = int(frame.data.size)
+        blocks = (element_count + _THREADS_PER_BLOCK - 1) // _THREADS_PER_BLOCK
+        _morphology_kernel()(
+            (blocks,),
+            (_THREADS_PER_BLOCK,),
+            (
+                frame.data,
+                output,
+                np.int64(frame.width),
+                np.int64(frame.height),
+                np.int64(channel_count),
+                np.int64(radius),
+                np.int32(_SHAPE_TOKENS.index(shape)),
+                _border_argument(border),
+                np.float32(border_value),
+                np.int32(dilate),
+            ),
+        )
+        if difference_mode == _DIFFERENCE_SOURCE_MINUS_RESULT:
+            output = resolved_difference_source - output
+        elif difference_mode == _DIFFERENCE_RESULT_MINUS_SOURCE:
+            output = output - resolved_difference_source
     return _new_frame(frame, output)
+
+
+def _gradient_primitive(
+    frame: Frame,
+    *,
+    radius: int,
+    shape: str,
+    border: str,
+    border_value: float,
+) -> Frame:
+    output = cp.empty(frame.shape, dtype=cp.float32)
+    if _launch_tiled(
+        frame,
+        output,
+        radius=radius,
+        shape=shape,
+        border=border,
+        border_value=border_value,
+        operation="gradient",
+        difference_source=frame.data,
+        difference_mode=_DIFFERENCE_NONE,
+    ):
+        return _new_frame(frame, output)
+    eroded = _primitive(
+        frame,
+        radius=radius,
+        shape=shape,
+        border=border,
+        border_value=border_value,
+        dilate=False,
+    )
+    dilated = _primitive(
+        frame,
+        radius=radius,
+        shape=shape,
+        border=border,
+        border_value=border_value,
+        dilate=True,
+    )
+    return _new_frame(frame, dilated.data - eroded.data)
 
 
 def _validated_primitive(
@@ -346,23 +590,13 @@ def morphological_gradient(
         border=border,
         border_value=border_value,
     )
-    eroded = _primitive(
+    return _gradient_primitive(
         checked_frame,
         radius=checked_radius,
         shape=checked_shape,
         border=checked_border,
         border_value=checked_border_value,
-        dilate=False,
     )
-    dilated = _primitive(
-        checked_frame,
-        radius=checked_radius,
-        shape=checked_shape,
-        border=checked_border,
-        border_value=checked_border_value,
-        dilate=True,
-    )
-    return _new_frame(checked_frame, dilated.data - eroded.data)
 
 
 def white_tophat(
@@ -396,15 +630,16 @@ def white_tophat(
         border_value=checked_border_value,
         dilate=False,
     )
-    opened = _primitive(
+    return _primitive(
         eroded,
         radius=checked_radius,
         shape=checked_shape,
         border=checked_border,
         border_value=checked_border_value,
         dilate=True,
+        difference_source=checked_frame.data,
+        difference_mode=_DIFFERENCE_SOURCE_MINUS_RESULT,
     )
-    return _new_frame(checked_frame, checked_frame.data - opened.data)
 
 
 def black_tophat(
@@ -438,12 +673,13 @@ def black_tophat(
         border_value=checked_border_value,
         dilate=True,
     )
-    closed = _primitive(
+    return _primitive(
         dilated,
         radius=checked_radius,
         shape=checked_shape,
         border=checked_border,
         border_value=checked_border_value,
         dilate=False,
+        difference_source=checked_frame.data,
+        difference_mode=_DIFFERENCE_RESULT_MINUS_SOURCE,
     )
-    return _new_frame(checked_frame, closed.data - checked_frame.data)

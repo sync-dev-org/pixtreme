@@ -173,7 +173,122 @@ __device__ __forceinline__ float pixtreme_path_bicubic_channel(
     return interpolated;
 }
 
+__device__ __forceinline__ bool pixtreme_path_rgb_footprint_in_bounds(
+    const long long base_x,
+    const long long base_y,
+    const long long width,
+    const long long height
+) {
+    return base_x >= 1 && base_x + 2 < width && base_y >= 1 && base_y + 2 < height;
+}
+
+__device__ __forceinline__ float3 pixtreme_path_bicubic_rgb_precomputed(
+    const float* __restrict__ source,
+    const long long base_x,
+    const long long base_y,
+    const float weight_x[4],
+    const float weight_y[4],
+    const long long width,
+    const long long height,
+    const int border,
+    const float border_value
+) {
+    float3 interpolated = make_float3(0.0f, 0.0f, 0.0f);
+
+    if (pixtreme_path_rgb_footprint_in_bounds(base_x, base_y, width, height)) {
+        #pragma unroll
+        for (int y_offset = 0; y_offset < 4; ++y_offset) {
+            const long long row_index = ((base_y + y_offset - 1) * width + base_x - 1) * 3;
+            float3 row = make_float3(0.0f, 0.0f, 0.0f);
+            #pragma unroll
+            for (int x_offset = 0; x_offset < 4; ++x_offset) {
+                const long long index = row_index + x_offset * 3;
+                const float weight = weight_x[x_offset];
+                row.x += source[index] * weight;
+                row.y += source[index + 1] * weight;
+                row.z += source[index + 2] * weight;
+            }
+            const float weight = weight_y[y_offset];
+            interpolated.x += row.x * weight;
+            interpolated.y += row.y * weight;
+            interpolated.z += row.z * weight;
+        }
+        return interpolated;
+    }
+
+    #pragma unroll
+    for (int y_offset = 0; y_offset < 4; ++y_offset) {
+        const long long tap_y = base_y + y_offset - 1;
+        float3 row = make_float3(0.0f, 0.0f, 0.0f);
+        #pragma unroll
+        for (int x_offset = 0; x_offset < 4; ++x_offset) {
+            const float3 tap = pixtreme_path_sample_rgb(
+                source,
+                base_x + x_offset - 1,
+                tap_y,
+                width,
+                height,
+                border,
+                border_value
+            );
+            const float weight = weight_x[x_offset];
+            row.x += tap.x * weight;
+            row.y += tap.y * weight;
+            row.z += tap.z * weight;
+        }
+        const float weight = weight_y[y_offset];
+        interpolated.x += row.x * weight;
+        interpolated.y += row.y * weight;
+        interpolated.z += row.z * weight;
+    }
+    return interpolated;
+}
+
+__device__ __forceinline__ float3 pixtreme_path_bicubic_rgb_border(
+    const float* __restrict__ source,
+    const float sample_x,
+    const float sample_y,
+    const long long width,
+    const long long height,
+    const int border,
+    const float border_value
+);
+
 __device__ __forceinline__ float3 pixtreme_path_bicubic_rgb(
+    const float* __restrict__ source,
+    const float sample_x,
+    const float sample_y,
+    const long long width,
+    const long long height,
+    const int border,
+    const float border_value
+) {
+    #ifdef PIXTREME_PATH_SHARED
+    return pixtreme_path_bicubic_rgb_border(
+        source, sample_x, sample_y, width, height, border, border_value
+    );
+    #else
+    long long base_x;
+    long long base_y;
+    float weight_x[4];
+    float weight_y[4];
+    pixtreme_path_keys_weights(sample_x, &base_x, weight_x);
+    pixtreme_path_keys_weights(sample_y, &base_y, weight_y);
+    return pixtreme_path_bicubic_rgb_precomputed(
+        source,
+        base_x,
+        base_y,
+        weight_x,
+        weight_y,
+        width,
+        height,
+        border,
+        border_value
+    );
+    #endif
+}
+
+__device__ __forceinline__ float3 pixtreme_path_bicubic_rgb_border(
     const float* __restrict__ source,
     const float sample_x,
     const float sample_y,
@@ -241,7 +356,7 @@ __device__ __forceinline__ float3 pixtreme_path_bicubic_rgb_tile(
     const long long local_x = base_x - 1 - tile_origin_x;
     const long long local_y = base_y - 1 - tile_origin_y;
     if (local_x < 0 || local_x + 3 >= tile_width || local_y < 0 || local_y + 3 >= tile_height) {
-        return pixtreme_path_bicubic_rgb(source, sample_x, sample_y, width, height, border, border_value);
+        return pixtreme_path_bicubic_rgb_border(source, sample_x, sample_y, width, height, border, border_value);
     }
     float3 interpolated = make_float3(0.0f, 0.0f, 0.0f);
 
@@ -667,7 +782,11 @@ def _path_blur_rgb_kernel() -> cp.RawKernel:
 
 @lru_cache(maxsize=1)
 def _path_blur_rgb_shared_kernel() -> cp.RawKernel:
-    return cp.RawKernel(_PATH_BLUR_KERNEL_SOURCE, "pixtreme_path_blur_rgb_shared")
+    return cp.RawKernel(
+        _PATH_BLUR_KERNEL_SOURCE,
+        "pixtreme_path_blur_rgb_shared",
+        options=("-DPIXTREME_PATH_SHARED",),
+    )
 
 
 @lru_cache(maxsize=1)

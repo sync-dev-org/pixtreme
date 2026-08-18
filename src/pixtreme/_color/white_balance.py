@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from functools import lru_cache
 from typing import cast
 
 import numpy as np
@@ -162,6 +163,30 @@ def _chromatic_adaptation_matrix(
     return np.asarray(matrix, dtype=np.float64)
 
 
+@lru_cache(maxsize=128)
+def _compose_adaptation_rgb_matrix(
+    colorspace: str,
+    input_white: tuple[float, float],
+    output_white: tuple[float, float],
+    cat: str,
+) -> NDArray[np.float32]:
+    adaptation = _chromatic_adaptation_matrix(input_white, output_white, cat)
+    if input_white == output_white:
+        return np.eye(3, dtype=np.float32)
+    rgb_to_xyz = _RGB_TO_XYZ[colorspace]
+    rgb_matrix = np.linalg.inv(rgb_to_xyz) @ adaptation @ rgb_to_xyz
+    if not np.isfinite(rgb_matrix).all():
+        raise _error(
+            why="white points, CAT, and Frame colorspace must compose a finite RGB matrix",
+            what=(
+                f"received input_white={input_white!r}, output_white={output_white!r}, "
+                f"cat={cat!r}, colorspace={colorspace!r}"
+            ),
+            how="choose a valid input/output xy pair and documented CAT for the Frame colorspace",
+        )
+    return np.asarray(rgb_matrix, dtype=np.float32)
+
+
 def _temperature_to_xy(temperature: object, tint: object = 0.0) -> tuple[float, float]:
     """Map Kelvin and signed raw Duv to CIE 1931 xy in host float64."""
     resolved_temperature = _finite_real(temperature, name="temperature")
@@ -212,28 +237,17 @@ def _apply_adaptation(
     cat: ChromaticAdaptation,
     operation: str,
 ) -> Frame:
-    adaptation = _chromatic_adaptation_matrix(input_white, output_white, cat)
+    rgb_matrix = _compose_adaptation_rgb_matrix(frame.colorspace, input_white, output_white, cat)
     if input_white == output_white:
         output_data = frame.data.copy()
     else:
-        rgb_to_xyz = _RGB_TO_XYZ[frame.colorspace]
-        rgb_matrix = np.linalg.inv(rgb_to_xyz) @ adaptation @ rgb_to_xyz
-        if not np.isfinite(rgb_matrix).all():
-            raise _error(
-                why="white points, CAT, and Frame colorspace must compose a finite RGB matrix",
-                what=(
-                    f"received input_white={input_white!r}, output_white={output_white!r}, "
-                    f"cat={cat!r}, colorspace={frame.colorspace!r}"
-                ),
-                how="choose a valid input/output xy pair and documented CAT for the Frame colorspace",
-            )
         try:
             output_data = _transform_data(
                 frame.data,
                 frame.channels,
                 input_gamma=frame.gamma,
                 output_gamma=frame.gamma,
-                matrix=np.asarray(rgb_matrix, dtype=np.float32),
+                matrix=rgb_matrix,
             )
         except Exception as error:
             raise _error(

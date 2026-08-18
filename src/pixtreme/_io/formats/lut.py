@@ -19,7 +19,7 @@ _CUBE_MARKER = re.compile(r"(?mi)^[ \t]*LUT_(?:1D|3D)_SIZE\b")
 _SPI3D_MARKER = re.compile(r"(?m)^[ \t]*SPILUT\b")
 _THREE_DL_MARKER = re.compile(r"(?m)^[ \t]*(?:3DMESH|Mesh)\b")
 _CUBE_DIRECTIVE_LINE = re.compile(
-    r"(?mi)^[ \t]*(?:TITLE|LUT_1D_SIZE|LUT_3D_SIZE|DOMAIN_MIN|DOMAIN_MAX)\b[^\r\n]*(?:\r?\n|$)"
+    r"(?mi)^[ \t]*(TITLE|LUT_1D_SIZE|LUT_3D_SIZE|DOMAIN_MIN|DOMAIN_MAX)\b([^\r\n]*)(?:\r?\n|$)"
 )
 _SUPPORTED_EXTENSIONS = frozenset({".cube", ".3dl", ".spi1d", ".spi3d"})
 
@@ -123,13 +123,18 @@ def _single_declaration(
     return matches[0]
 
 
-def _cube_declarations(text: str) -> dict[str, list[tuple[str, ...]]]:
+def _cube_directives(text: str) -> tuple[dict[str, list[tuple[str, ...]]], str]:
     declarations: dict[str, list[tuple[str, ...]]] = {}
-    for name in ("LUT_1D_SIZE", "LUT_3D_SIZE", "DOMAIN_MIN", "DOMAIN_MAX"):
-        matches = re.findall(rf"(?mi)^[ \t]*{name}\b([^\r\n]*)\r?$", text)
-        if matches:
-            declarations[name] = [tuple(match.split()) for match in matches]
-    return declarations
+    data_parts: list[str] = []
+    cursor = 0
+    for match in _CUBE_DIRECTIVE_LINE.finditer(text):
+        data_parts.append(text[cursor : match.start()])
+        cursor = match.end()
+        name = match.group(1).upper()
+        if name != "TITLE":
+            declarations.setdefault(name, []).append(tuple(match.group(2).split()))
+    data_parts.append(text[cursor:])
+    return declarations, "".join(data_parts)
 
 
 def _data_row_widths(data_text: str) -> np.ndarray:
@@ -147,8 +152,7 @@ def _data_row_widths(data_text: str) -> np.ndarray:
 
 def _cube_parts(text: str, *, source: str) -> _CubeParts:
     without_comments = _without_comments(text)
-    declarations = _cube_declarations(without_comments)
-    data_text = _CUBE_DIRECTIVE_LINE.sub("", without_comments)
+    declarations, data_text = _cube_directives(without_comments)
 
     one_d = _single_declaration(declarations, "LUT_1D_SIZE", required=False, source=source)
     three_d = _single_declaration(declarations, "LUT_3D_SIZE", required=False, source=source)
@@ -695,12 +699,17 @@ def _looks_like_headerless_3dl(text: str) -> bool:
 
 
 def _sniff_parser(text: str) -> Literal[".cube", ".3dl", ".spi1d", ".spi3d"]:
-    spi3d = _SPI3D_MARKER.search(_without_comments(text)) is not None
-    spi1d_lines = _active_lines(text)
-    spi1d_names = {line.split()[0] for line in spi1d_lines if line not in {"{", "}"}}
-    spi1d = {"Version", "Length", "Components"}.issubset(spi1d_names) and "{" in spi1d_lines and "}" in spi1d_lines
-    cube = _CUBE_MARKER.search(_without_comments(text)) is not None
-    three_dl = _THREE_DL_MARKER.search(_without_comments(text)) is not None
+    without_comments = _without_comments(text)
+    spi3d = "SPILUT" in without_comments and _SPI3D_MARKER.search(without_comments) is not None
+    cube = _CUBE_MARKER.search(without_comments) is not None
+    three_dl = ("3DMESH" in without_comments or "Mesh" in without_comments) and (
+        _THREE_DL_MARKER.search(without_comments) is not None
+    )
+    spi1d = False
+    if all(name in without_comments for name in ("Version", "Length", "Components")):
+        spi1d_lines = _active_lines(without_comments)
+        spi1d_names = {line.split()[0] for line in spi1d_lines if line not in {"{", "}"}}
+        spi1d = {"Version", "Length", "Components"}.issubset(spi1d_names) and "{" in spi1d_lines and "}" in spi1d_lines
     markers = [
         name for name, present in (("SPI3D", spi3d), ("SPI1D", spi1d), ("Cube", cube), ("3DL", three_dl)) if present
     ]
@@ -806,12 +815,13 @@ def decode_lut(data: bytes) -> Lut | Lut1D:
     return _to_device_lut(_parse_text(text, format_name=format_name, source="LUT bytes"))
 
 
-def _format_float32(value: np.float32) -> str:
-    return str(np.float32(value))
-
-
 def _format_domain(domain: tuple[float, float, float]) -> str:
     return " ".join(repr(value) for value in domain)
+
+
+def _format_cube_rows(rows: np.ndarray) -> str:
+    row_format = "%s %s %s\n".__mod__
+    return "".join(map(row_format, zip(rows[:, 0], rows[:, 1], rows[:, 2])))
 
 
 def write_lut(path: str | os.PathLike[str], lut: Lut | Lut1D) -> None:
@@ -847,13 +857,12 @@ def write_lut(path: str | os.PathLike[str], lut: Lut | Lut1D) -> None:
     else:
         header = f"LUT_3D_SIZE {host_data.shape[0]}"
         rows = host_data.transpose(2, 1, 0, 3).reshape(-1, 3)
-    lines = [
-        header,
-        f"DOMAIN_MIN {_format_domain(lut.domain_min)}",
-        f"DOMAIN_MAX {_format_domain(lut.domain_max)}",
-    ]
-    lines.extend(" ".join(_format_float32(value) for value in row) for row in rows)
-    text = "\n".join(lines) + "\n"
+    text = (
+        f"{header}\n"
+        f"DOMAIN_MIN {_format_domain(lut.domain_min)}\n"
+        f"DOMAIN_MAX {_format_domain(lut.domain_max)}\n"
+        f"{_format_cube_rows(rows)}"
+    )
     try:
         file_path.write_text(text, encoding="utf-8", newline="\n")
     except OSError as error:

@@ -417,8 +417,7 @@ def test_match_template_zero_denominators_follow_the_exact_method_rules() -> Non
 
 
 def test_window_sums_accumulator_dtype_is_explicit_and_preserves_integer_exactness() -> None:
-    """REQ-TEST-001: keep float32 policy explicit and exact
-    constant-window detection on an int64 accumulator."""
+    """REQ-TEST-001: keep float32 and explicitly requested integer accumulator policies exact."""
     import cupy as cp
 
     exact_value = 2**24 + 1
@@ -432,6 +431,112 @@ def test_window_sums_accumulator_dtype_is_explicit_and_preserves_integer_exactne
     host_source = source.get()
     host_integral = np.cumsum(np.cumsum(host_source, axis=0, dtype=np.float32), axis=1, dtype=np.float32)
     assert float(floating[0, 0, 0]) == float(host_integral[-1, -1, 0])
+
+
+def test_change_window_sums_uses_int32_through_signed_accumulator_limit_and_int64_above() -> None:
+    """REQ-TEST-001: constant-window change counts use int32 through INT32_MAX and int64 above."""
+    import cupy as cp
+
+    from pixtreme._feature.features import _change_window_sums
+
+    source = cp.zeros((1, 1, 1), dtype=cp.bool_)
+    int32_max = int(np.iinfo(np.int32).max)
+
+    at_limit = _change_window_sums(source, height=1, width=int32_max)
+    above_limit = _change_window_sums(source, height=1, width=int32_max + 1)
+
+    assert at_limit.size == above_limit.size == 0
+    assert at_limit.dtype == cp.int32
+    assert above_limit.dtype == cp.int64
+
+
+@pytest.mark.parametrize(("height", "width"), ((1, 1), (1, 3), (3, 1), (2, 3), (4, 4)))
+def test_match_template_constant_window_mask_matches_exact_host_property(height: int, width: int) -> None:
+    """REQ-TEST-003: an independent host equality oracle fixes exact multi-channel constant-window detection."""
+    import cupy as cp
+
+    from pixtreme._feature.features import _constant_window_mask
+
+    generator = np.random.default_rng(20260831 + height * 10 + width)
+    source = generator.integers(-2, 3, size=(6, 7, 4), dtype=np.int16).astype(np.float32)
+    source[1:5, 2:6, :] = np.asarray([0.125, -0.5, 1.25, 2.0], dtype=np.float32)
+    expected = np.empty((source.shape[0] - height + 1, source.shape[1] - width + 1), dtype=np.bool_)
+    for y in range(expected.shape[0]):
+        for x in range(expected.shape[1]):
+            window = source[y : y + height, x : x + width, :]
+            expected[y, x] = np.all(window == window[0, 0, :])
+
+    actual = _constant_window_mask(cp.asarray(source), height=height, width=width).get()
+
+    np.testing.assert_array_equal(actual, expected)
+
+
+@pytest.mark.parametrize("method", ("ccorr_normed", "ccoeff", "ccoeff_normed"))
+@pytest.mark.parametrize("channel_count", (1, 2, 3, 4, 7, 16, 33))
+def test_match_template_fft_fused_response_preserves_compositional_bits_characterization(
+    method: str, channel_count: int
+) -> None:
+    """characterization: REQ-TEST-003 freezes the existing fp32 FFT post-processing bits across kernel fusion.
+
+    The public formula is independently covered above, but its accepted optimization must also retain the current
+    CuPy operation ordering exactly. Retire this snapshot-relative oracle if that explicit bit-identity requirement is
+    replaced by a numeric tolerance contract.
+    """
+    import cupy as cp
+
+    from pixtreme._feature import features
+
+    generator = np.random.default_rng(20260817 + channel_count)
+    correlation = cp.asarray([[2.0, -1.5], [0.75, 4.0]], dtype=cp.float32)
+    window_sums = cp.asarray(generator.uniform(-2.0, 2.0, size=(2, 2, channel_count)), dtype=cp.float32)
+    squared_window_sums = cp.asarray(generator.uniform(4.0, 8.0, size=(2, 2, channel_count)), dtype=cp.float32)
+    template_sums = cp.asarray(generator.uniform(-1.0, 1.0, size=channel_count), dtype=cp.float32)
+    template_energy = cp.asarray(np.float32(10.0 * channel_count), dtype=cp.float32)
+    zero_variance = cp.asarray([[False, True], [False, False]], dtype=cp.bool_)
+    spatial_count = np.float32(8.0)
+
+    source_energy = cp.sum(squared_window_sums, axis=2, dtype=cp.float32)
+    if method == "ccorr_normed":
+        numerator = correlation
+        denominator_squared = source_energy * template_energy
+        expected = features._normalized_response(numerator, denominator_squared, sqdiff=False)
+    else:
+        numerator = correlation - cp.sum(
+            window_sums * template_sums[None, None, :] / spatial_count,
+            axis=2,
+            dtype=cp.float32,
+        )
+        if method == "ccoeff":
+            expected = cp.where(zero_variance, np.float32(0.0), numerator)
+        else:
+            centered_source_energy = source_energy - cp.sum(
+                window_sums * window_sums / spatial_count,
+                axis=2,
+                dtype=cp.float32,
+            )
+            centered_template_energy = template_energy - cp.sum(
+                template_sums * template_sums / spatial_count,
+                dtype=cp.float32,
+            )
+            denominator_squared = cp.where(
+                zero_variance,
+                np.float32(0.0),
+                centered_source_energy * centered_template_energy,
+            )
+            expected = features._normalized_response(numerator, denominator_squared, sqdiff=False)
+
+    actual = features._fused_match_template_fft_response(
+        correlation,
+        window_sums,
+        squared_window_sums,
+        template_sums,
+        template_energy,
+        zero_variance,
+        spatial_count=spatial_count,
+        method=method,
+    )
+
+    np.testing.assert_array_equal(actual.get().view(np.uint32), expected.get().view(np.uint32))
 
 
 @pytest.mark.parametrize(

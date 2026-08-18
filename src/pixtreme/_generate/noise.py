@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from functools import lru_cache
 
 import cupy as cp
@@ -103,6 +104,19 @@ __device__ float pixtreme_gradient_dot(
     );
 }
 
+__device__ float pixtreme_gradient_dot_precomputed(
+    const float3 gradient,
+    const float offset_x,
+    const float offset_y,
+    const float offset_z
+) {
+    return (
+        gradient.x * offset_x +
+        gradient.y * offset_y +
+        gradient.z * offset_z
+    );
+}
+
 __device__ double pixtreme_representable_lattice_coordinate(const double value) {
     if (!isfinite(value) || fabs(value) >= 9007199254740992.0) {
         return 0.0;
@@ -140,6 +154,56 @@ __device__ float pixtreme_gradient_noise(
                     iy + (unsigned int)dy,
                     iz + (unsigned int)dz,
                     stream,
+                    fx - (float)dx,
+                    fy - (float)dy,
+                    fz - (float)dz
+                );
+            }
+        }
+    }
+
+    const float u = pixtreme_fade(fx);
+    const float v = pixtreme_fade(fy);
+    const float t = pixtreme_fade(fz);
+    const float x00 = pixtreme_lerp(values[0], values[1], u);
+    const float x10 = pixtreme_lerp(values[2], values[3], u);
+    const float x01 = pixtreme_lerp(values[4], values[5], u);
+    const float x11 = pixtreme_lerp(values[6], values[7], u);
+    const float y0 = pixtreme_lerp(x00, x10, v);
+    const float y1 = pixtreme_lerp(x01, x11, v);
+    return pixtreme_lerp(y0, y1, t);
+}
+
+__device__ float pixtreme_gradient_noise_tiled(
+    const double x,
+    const double y,
+    const double z,
+    const float3* gradients,
+    const double tile_floor_x,
+    const double tile_floor_y,
+    const int tile_width,
+    const int tile_height
+) {
+    const double floor_x = floor(x);
+    const double floor_y = floor(y);
+    const double floor_z = floor(z);
+    const float fx = (float)(x - floor_x);
+    const float fy = (float)(y - floor_y);
+    const float fz = (float)(z - floor_z);
+    const int cell_x = (int)(floor_x - tile_floor_x);
+    const int cell_y = (int)(floor_y - tile_floor_y);
+    float values[8];
+
+    #pragma unroll
+    for (int dz = 0; dz < 2; ++dz) {
+        #pragma unroll
+        for (int dy = 0; dy < 2; ++dy) {
+            #pragma unroll
+            for (int dx = 0; dx < 2; ++dx) {
+                const int gradient_index =
+                    ((dz * tile_height + cell_y + dy) * tile_width) + cell_x + dx;
+                values[(dz * 2 + dy) * 2 + dx] = pixtreme_gradient_dot_precomputed(
+                    gradients[gradient_index],
                     fx - (float)dx,
                     fy - (float)dy,
                     fz - (float)dz
@@ -217,6 +281,24 @@ __device__ float pixtreme_grain_noise(
     return pixtreme_lerp(y0, y1, fz);
 }
 
+__device__ float pixtreme_grain_noise_lattice_aligned(
+    const double x,
+    const double y,
+    const double z,
+    const unsigned int stream
+) {
+    const double floor_x = floor(x);
+    const double floor_y = floor(y);
+    const double floor_z = floor(z);
+    const unsigned int ix = pixtreme_wrapped_floor(floor_x);
+    const unsigned int iy = pixtreme_wrapped_floor(floor_y);
+    const unsigned int iz = pixtreme_wrapped_floor(floor_z);
+    const float fz = (float)(z - floor_z);
+    const float first = pixtreme_gaussian_lattice(ix, iy, iz, stream);
+    const float second = pixtreme_gaussian_lattice(ix, iy, iz + 1u, stream);
+    return pixtreme_lerp(first, second, fz);
+}
+
 __device__ float pixtreme_clamp01(const float value) {
     return value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value);
 }
@@ -289,6 +371,104 @@ extern "C" __global__ void pixtreme_generate_gradient_noise(
     );
 }
 
+extern "C" __global__ void pixtreme_generate_gradient_noise_tiled(
+    float* __restrict__ output,
+    const long long width,
+    const long long height,
+    const double scale,
+    const long long octaves,
+    const double lacunarity,
+    const double gain,
+    const unsigned int seed,
+    const double evolution,
+    const int turbulent
+) {
+    const long long x = (long long)blockIdx.x * blockDim.x + threadIdx.x;
+    const long long y = (long long)blockIdx.y * blockDim.y + threadIdx.y;
+    const bool active = x < width && y < height;
+    __shared__ float3 gradients[32];
+
+    double frequency = 1.0;
+    double previous_weight_over_current = 0.0;
+    float average = 0.0f;
+    for (long long octave = 0; octave < octaves; ++octave) {
+        const unsigned int stream = pixtreme_stream(seed, (unsigned long long)octave, 0u);
+        const long long tile_x = (long long)blockIdx.x * blockDim.x;
+        const long long tile_y = (long long)blockIdx.y * blockDim.y;
+        const double tile_last_x = (((double)(tile_x + blockDim.x - 1) + 0.5) / scale) * frequency;
+        const double tile_last_y = (((double)(tile_y + blockDim.y - 1) + 0.5) / scale) * frequency;
+        const bool use_tiled = (
+            scale >= frequency * 8.0 &&
+            isfinite(tile_last_x) &&
+            isfinite(tile_last_y) &&
+            tile_last_x < 9007199254740992.0 &&
+            tile_last_y < 9007199254740992.0
+        );
+        float sample = 0.0f;
+        if (use_tiled) {
+            const double tile_first_x = (((double)tile_x + 0.5) / scale) * frequency;
+            const double tile_first_y = (((double)tile_y + 0.5) / scale) * frequency;
+            const double tile_floor_x = floor(tile_first_x);
+            const double tile_floor_y = floor(tile_first_y);
+            const int tile_width = (int)(floor(tile_last_x) - tile_floor_x) + 2;
+            const int tile_height = (int)(floor(tile_last_y) - tile_floor_y) + 2;
+            const int gradient_count = tile_width * tile_height * 2;
+            const int thread_index = threadIdx.y * blockDim.x + threadIdx.x;
+            if (thread_index < gradient_count) {
+                const int gradient_x = thread_index % tile_width;
+                const int gradient_y = (thread_index / tile_width) % tile_height;
+                const int gradient_z = thread_index / (tile_width * tile_height);
+                gradients[thread_index] = pixtreme_gradient(
+                    pixtreme_wrapped_floor(tile_floor_x) + (unsigned int)gradient_x,
+                    pixtreme_wrapped_floor(tile_floor_y) + (unsigned int)gradient_y,
+                    pixtreme_wrapped_floor(floor(evolution)) + (unsigned int)gradient_z,
+                    stream
+                );
+            }
+            __syncthreads();
+            if (active) {
+                sample = pixtreme_gradient_noise_tiled(
+                    (((double)x + 0.5) / scale) * frequency,
+                    (((double)y + 0.5) / scale) * frequency,
+                    evolution,
+                    gradients,
+                    tile_floor_x,
+                    tile_floor_y,
+                    tile_width,
+                    tile_height
+                );
+            }
+            __syncthreads();
+        } else if (active) {
+            sample = pixtreme_gradient_noise(
+                (((double)x + 0.5) / scale) * frequency,
+                (((double)y + 0.5) / scale) * frequency,
+                evolution,
+                stream
+            );
+        }
+        if (active) {
+            if (turbulent != 0) {
+                sample = fabsf(sample);
+            }
+            const double contribution = 1.0 / (previous_weight_over_current + 1.0);
+            average += (float)contribution * (sample - average);
+        }
+        if (gain == 0.0) {
+            break;
+        }
+        previous_weight_over_current = (previous_weight_over_current + 1.0) / gain;
+        frequency *= lacunarity;
+    }
+
+    if (active) {
+        const float normalized = average * (2.0f / 1.7320508075688772935f);
+        output[y * width + x] = pixtreme_clamp01(
+            turbulent != 0 ? normalized : 0.5f + 0.5f * normalized
+        );
+    }
+}
+
 extern "C" __global__ void pixtreme_generate_grain(
     float* __restrict__ output,
     const long long width,
@@ -320,6 +500,38 @@ extern "C" __global__ void pixtreme_generate_grain(
         );
     }
 }
+
+extern "C" __global__ void pixtreme_generate_grain_lattice_aligned(
+    float* __restrict__ output,
+    const long long width,
+    const long long height,
+    const int channel_count,
+    const double intensity,
+    const double size,
+    const unsigned int seed,
+    const double evolution
+) {
+    const long long x = (long long)blockIdx.x * blockDim.x + threadIdx.x;
+    const long long y = (long long)blockIdx.y * blockDim.y + threadIdx.y;
+    if (x >= width || y >= height) {
+        return;
+    }
+
+    const double noise_x = ((double)x + 0.5) / size - 0.5;
+    const double noise_y = ((double)y + 0.5) / size - 0.5;
+    const long long offset = (y * width + x) * (long long)channel_count;
+    for (int channel = 0; channel < channel_count; ++channel) {
+        const float gaussian = pixtreme_grain_noise_lattice_aligned(
+            noise_x,
+            noise_y,
+            evolution,
+            pixtreme_stream(seed, 0u, (unsigned int)channel)
+        );
+        output[offset + channel] = pixtreme_clamp01(
+            0.5f + (float)(intensity * 0.5 / 3.0) * gaussian
+        );
+    }
+}
 """
 
 
@@ -329,8 +541,18 @@ def _gradient_noise_kernel() -> cp.RawKernel:
 
 
 @lru_cache(maxsize=1)
+def _gradient_noise_tiled_kernel() -> cp.RawKernel:
+    return cp.RawKernel(_NOISE_KERNEL_SOURCE, "pixtreme_generate_gradient_noise_tiled")
+
+
+@lru_cache(maxsize=1)
 def _grain_kernel() -> cp.RawKernel:
     return cp.RawKernel(_NOISE_KERNEL_SOURCE, "pixtreme_generate_grain")
+
+
+@lru_cache(maxsize=1)
+def _grain_lattice_aligned_kernel() -> cp.RawKernel:
+    return cp.RawKernel(_NOISE_KERNEL_SOURCE, "pixtreme_generate_grain_lattice_aligned")
 
 
 def _octaves(value: object) -> int:
@@ -366,6 +588,17 @@ def _grid(width: int, height: int) -> tuple[int, int]:
     )
 
 
+def _uses_tiled_gradient_kernel(*, scale: float, octaves: int, lacunarity: float, gain: float) -> bool:
+    if scale < 16.0:
+        return False
+    effective_octaves = 1 if gain == 0.0 else octaves
+    if lacunarity <= 1.0:
+        return True
+    ratio = math.log(scale / 8.0) / math.log(lacunarity)
+    tiled_octaves = min(effective_octaves, math.floor(math.nextafter(ratio, math.inf)) + 1)
+    return (effective_octaves == 1 or tiled_octaves >= 2) and tiled_octaves * 4 >= effective_octaves
+
+
 def _generate_gradient_noise(
     *,
     width: int,
@@ -381,7 +614,12 @@ def _generate_gradient_noise(
     turbulent: bool,
 ) -> Frame:
     output = cp.empty((height, width, 1), dtype=cp.float32)
-    _gradient_noise_kernel()(
+    kernel = (
+        _gradient_noise_tiled_kernel()
+        if _uses_tiled_gradient_kernel(scale=scale, octaves=octaves, lacunarity=lacunarity, gain=gain)
+        else _gradient_noise_kernel()
+    )
+    kernel(
         _grid(width, height),
         _NOISE_BLOCK,
         (
@@ -574,7 +812,8 @@ def grain(
     checked_colorspace, checked_gamma = _metadata(colorspace, gamma)
     channel_count = 1 if checked_monochromatic else 3
     output = cp.empty((checked_height, checked_width, channel_count), dtype=cp.float32)
-    _grain_kernel()(
+    kernel = _grain_lattice_aligned_kernel() if checked_size == 1.0 else _grain_kernel()
+    kernel(
         _grid(checked_width, checked_height),
         _NOISE_BLOCK,
         (

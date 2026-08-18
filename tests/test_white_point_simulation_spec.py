@@ -500,3 +500,97 @@ def test_calls_are_bit_deterministic_and_do_not_stamp_implicit_metadata(
         source.channels,
         None,
     )
+
+
+def test_simulation_host_memoization_is_bounded_lru_and_recomputes_bit_exactly() -> None:
+    """v1-white-point-simulation acceptance 18: resolved simulation matrices use a 128-entry bit-exact LRU."""
+    import pixtreme._color.white_point as implementation
+
+    cached = implementation._white_point_simulation_matrix
+    cached.cache_clear()
+    key = ("sRGB", _D65, _D93)
+    cold = cached(*key).tobytes()
+    assert cached.cache_info().maxsize == 128
+    assert cached(*key).tobytes() == cold
+    assert cached.cache_info().hits == 1
+
+    for index in range(128):
+        input_white = (float(np.float64(0.29) + np.float64(index) * np.float64(1e-5)), 0.33)
+        cached("sRGB", input_white, _D93)
+
+    assert cached.cache_info().currsize == 128
+    misses_before_revisit = cached.cache_info().misses
+    recomputed = cached(*key)
+    assert cached.cache_info().misses == misses_before_revisit + 1
+    assert recomputed.tobytes() == cold == cached.__wrapped__(*key).tobytes()
+
+
+def test_simulation_memoization_identity_uses_every_resolved_binary64_value() -> None:
+    """v1-white-point-simulation acceptance 19: None, tokens, and xy share exact resolved binary64 cache keys."""
+    import pixtreme._color.white_point as implementation
+
+    cached = implementation._white_point_simulation_matrix
+    cached.cache_clear()
+    source = _frame((0.2, 0.3, 0.4), colorspace="sRGB")
+    px.color.white_point_simulation(source, input_white=None, output_white="d93")
+    implicit_stats = cached.cache_info()
+    px.color.white_point_simulation(source, input_white=_D65, output_white=_D93)
+    direct_stats = cached.cache_info()
+    px.color.white_point_simulation(source, input_white="d65", output_white="d93")
+    token_stats = cached.cache_info()
+    assert direct_stats.hits == implicit_stats.hits + 1
+    assert token_stats.hits == direct_stats.hits + 1
+    assert token_stats.misses == implicit_stats.misses
+
+    cached.cache_clear()
+    cached("sRGB", _D65, _D93)
+    misses = cached.cache_info().misses
+    variants = (
+        ("ACES2065-1", _D65, _D93),
+        ("sRGB", (float(np.nextafter(_D65[0], np.inf)), _D65[1]), _D93),
+        ("sRGB", (_D65[0], float(np.nextafter(_D65[1], np.inf))), _D93),
+        ("sRGB", _D65, (float(np.nextafter(_D93[0], np.inf)), _D93[1])),
+        ("sRGB", _D65, (_D93[0], float(np.nextafter(_D93[1], np.inf)))),
+    )
+    for variant in variants:
+        cached(*variant)
+    assert cached.cache_info().misses == misses + len(variants)
+
+
+def test_simulation_cache_states_and_uncached_composition_are_publicly_bit_identical(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """v1-white-point-simulation acceptance 20: every cache state and uncached composition is bit identical."""
+    import pixtreme._color.white_point as implementation
+
+    cached = implementation._white_point_simulation_matrix
+    cached.cache_clear()
+    source = _frame(
+        np.asarray([[[-0.2, 0.3, 1.5], [0.8, 0.1, 0.6]]], dtype=np.float32),
+        colorspace="sRGB",
+        gamma="linear",
+    )
+
+    def output_bits() -> bytes:
+        return (
+            px.io.to_array(px.color.white_point_simulation(source, input_white="d65", output_white="d93"))
+            .get()
+            .tobytes()
+        )
+
+    cold = output_bits()
+    hit = output_bits()
+    monkeypatch.setenv("PIXTREME_WHITE_POINT_CACHE_SENTINEL", "ignored")
+    px.color.white_point_simulation(source, input_white="d93", output_white="d50")
+    interposed = output_bits()
+    for index in range(128):
+        other_input = (float(np.float64(0.29) + np.float64(index) * np.float64(1e-5)), 0.33)
+        cached("sRGB", other_input, _D93)
+    evicted = output_bits()
+    cached_matrix = cached("sRGB", _D65, _D93).tobytes()
+    uncached_matrix = cached.__wrapped__("sRGB", _D65, _D93).tobytes()
+
+    monkeypatch.setattr(implementation, "_white_point_simulation_matrix", cached.__wrapped__)
+    uncached_output = output_bits()
+    assert cold == hit == interposed == evicted == uncached_output
+    assert cached_matrix == uncached_matrix

@@ -479,6 +479,42 @@ def test_decode_lut_sniffs_headerless_3dl_after_ignoring_vendor_metadata() -> No
     assert decoded.data.shape == (4, 4, 4, 3)
 
 
+def test_decode_lut_marked_cube_sniff_avoids_active_line_materialization(monkeypatch: pytest.MonkeyPatch) -> None:
+    """v1-lut-extensions acceptance 19-20: structural contract keeps marked Cube sniffing off the all-lines path."""
+    import pixtreme._io.formats.lut as implementation
+
+    def rejected(_text: str) -> list[str]:
+        raise AssertionError("marked Cube sniffing must not materialize every active data row")
+
+    monkeypatch.setattr(implementation, "_active_lines", rejected)
+
+    decoded = px.io.decode_lut(_cube_3d_text().encode("utf-8"))
+
+    assert isinstance(decoded, px.core.Lut)
+    np.testing.assert_array_equal(
+        cp.asnumpy(decoded.data),
+        np.indices((2, 2, 2), dtype=np.float32).transpose(1, 2, 3, 0),
+    )
+
+
+def test_read_lut_cube_extracts_directives_in_one_structural_scan(tmp_path: Path) -> None:
+    """v1-lut-extensions acceptance 18 and 20: source-inspection contract extracts Cube directives in one scan."""
+    import pixtreme._io.formats.lut as implementation
+
+    source = inspect.getsource(implementation._cube_directives)
+    assert source.count("_CUBE_DIRECTIVE_LINE.finditer(") == 1
+    assert "findall(" not in source
+    path = _write_lut_fixture(tmp_path, ".cube", _cube_1d_text())
+
+    decoded = px.io.read_lut(path)
+
+    assert isinstance(decoded, px.core.Lut1D)
+    np.testing.assert_array_equal(
+        cp.asnumpy(decoded.data),
+        np.asarray(((-0.25, 1.25, 0.75), (2.0, -1.0, 0.5), (0.125, 3.0, -2.0)), dtype=np.float32),
+    )
+
+
 def test_write_lut_emits_deterministic_cube_text_for_1d_and_3d(tmp_path: Path) -> None:
     """v1-lut-extensions acceptance 21-22: Cube output is deterministic, self-contained, ordered UTF-8 text."""
     one_d = px.core.Lut1D(
@@ -514,6 +550,41 @@ def test_write_lut_emits_deterministic_cube_text_for_1d_and_3d(tmp_path: Path) -
         "111.0 1.0 1.0",
     ]
     assert three_path.read_bytes().endswith(b"\n")
+
+
+def test_write_lut_bulk_serialization_keeps_shortest_float32_bytes_without_python_row_iteration(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """v1-lut-extensions acceptance 21-23: structural contract keeps bulk serialization byte-exact."""
+    import pixtreme._io.formats.lut as implementation
+
+    values = np.asarray(
+        (
+            -0.0,
+            np.nextafter(np.float32(0.0), np.float32(1.0)),
+            np.nextafter(np.float32(1.0), np.float32(0.0)),
+            np.float32(1.0e20),
+            np.float32(-1.25),
+            np.float32(3.5),
+        ),
+        dtype=np.float32,
+    ).reshape(2, 3)
+
+    class NoPythonRowIteration(np.ndarray):
+        def __iter__(self):  # type: ignore[no-untyped-def]
+            if self.ndim > 1:
+                raise AssertionError("Cube row serialization must not iterate row arrays in Python")
+            return super().__iter__()
+
+    host_values = values.view(NoPythonRowIteration)
+    monkeypatch.setattr(implementation.cp, "asnumpy", lambda _value: host_values)
+    path = tmp_path / "bulk.cube"
+
+    px.io.write_lut(path, px.core.Lut1D(cp.asarray(values)))
+
+    assert path.read_bytes() == (
+        b"LUT_1D_SIZE 2\nDOMAIN_MIN 0.0 0.0 0.0\nDOMAIN_MAX 1.0 1.0 1.0\n-0.0 1e-45 0.99999994\n1e+20 -1.25 3.5\n"
+    )
 
 
 @pytest.mark.parametrize("kind", ("1d", "3d"))

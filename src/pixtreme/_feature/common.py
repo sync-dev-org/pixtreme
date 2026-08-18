@@ -198,6 +198,69 @@ extern "C" __global__ void pixtreme_match_template(
     }
 }
 
+extern "C" __global__ void pixtreme_match_template_fft_response(
+    const float* __restrict__ correlation,
+    const float* __restrict__ window_sums,
+    const float* __restrict__ squared_window_sums,
+    const float* __restrict__ template_sums,
+    const float* __restrict__ template_energy,
+    const float* __restrict__ centered_template_energy,
+    const bool* __restrict__ zero_variance,
+    float* __restrict__ output,
+    const long long element_count,
+    const long long channel_count,
+    const float spatial_count,
+    const int method
+) {
+    const long long index = (long long)blockDim.x * blockIdx.x + threadIdx.x;
+    if (index >= element_count) {
+        return;
+    }
+    const long long channel_base = index * channel_count;
+    float source_energy = 0.0f;
+    float centered_sum = 0.0f;
+    float centered_source_sum = 0.0f;
+    for (long long channel = 0; channel < channel_count; ++channel) {
+        if (method == 3 || method == 5) {
+            source_energy = __fadd_rn(source_energy, squared_window_sums[channel_base + channel]);
+        }
+        if (method == 4 || method == 5) {
+            const float window_sum = window_sums[channel_base + channel];
+            const float weighted_sum = __fdiv_rn(
+                __fmul_rn(window_sum, template_sums[channel]),
+                spatial_count
+            );
+            centered_sum = __fadd_rn(centered_sum, weighted_sum);
+            if (method == 5) {
+                const float squared_sum = __fdiv_rn(__fmul_rn(window_sum, window_sum), spatial_count);
+                centered_source_sum = __fadd_rn(centered_source_sum, squared_sum);
+            }
+        }
+    }
+
+    float numerator = correlation[index];
+    if (method == 4 || method == 5) {
+        numerator = __fsub_rn(numerator, centered_sum);
+        if (zero_variance[index]) {
+            output[index] = 0.0f;
+            return;
+        }
+    }
+    if (method == 4) {
+        output[index] = numerator;
+        return;
+    }
+
+    float denominator_squared;
+    if (method == 3) {
+        denominator_squared = __fmul_rn(source_energy, template_energy[0]);
+    } else {
+        const float centered_source_energy = __fsub_rn(source_energy, centered_source_sum);
+        denominator_squared = __fmul_rn(centered_source_energy, centered_template_energy[0]);
+    }
+    output[index] = denominator_squared > 0.0f ? numerator / sqrtf(denominator_squared) : 0.0f;
+}
+
 """
 )
 

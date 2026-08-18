@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from functools import lru_cache
 from typing import cast
 
 import numpy as np
@@ -96,6 +97,7 @@ def _device_matrix(colorspace: str, white: tuple[float, float]) -> _Float64Matri
     return matrix
 
 
+@lru_cache(maxsize=128)
 def _white_point_simulation_matrix(
     colorspace: str,
     input_white: tuple[float, float],
@@ -140,16 +142,14 @@ def white_point_simulation(
         else _resolve_reference_white(input_white, name="input_white")
     )
     resolved_output = _resolve_reference_white(output_white, name="output_white")
+    matrix = _white_point_simulation_matrix(
+        validated_frame.colorspace,
+        resolved_input,
+        resolved_output,
+    )
     if resolved_input == resolved_output:
-        # Equal whites still must construct a finite nonsingular device matrix.
-        _device_matrix(validated_frame.colorspace, resolved_input)
         output_data = validated_frame.data.copy()
     else:
-        matrix = _white_point_simulation_matrix(
-            validated_frame.colorspace,
-            resolved_input,
-            resolved_output,
-        )
         try:
             output_data = _transform_data(
                 validated_frame.data,

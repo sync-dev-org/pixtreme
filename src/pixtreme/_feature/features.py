@@ -38,6 +38,11 @@ def _match_template_kernel() -> cp.RawKernel:
     return cp.RawKernel(_ANALYZE_KERNEL_SOURCE, "pixtreme_match_template")
 
 
+@lru_cache(maxsize=1)
+def _match_template_fft_response_kernel() -> cp.RawKernel:
+    return cp.RawKernel(_ANALYZE_KERNEL_SOURCE, "pixtreme_match_template_fft_response")
+
+
 def _validate_block_size(value: object) -> int:
     if type(value) is not int or value < 1 or value % 2 == 0:
         raise ValueError(
@@ -154,7 +159,7 @@ def _window_sums(
     *,
     height: int,
     width: int,
-    dtype: type[np.float32] | type[np.int64],
+    dtype: type[np.float32] | type[np.int32] | type[np.int64],
 ) -> cp.ndarray:
     integral = cp.cumsum(cp.cumsum(source, axis=0, dtype=dtype), axis=1, dtype=dtype)
     padded = cp.zeros((source.shape[0] + 1, source.shape[1] + 1, source.shape[2]), dtype=dtype)
@@ -171,19 +176,20 @@ def _floating_window_sums(source: cp.ndarray, *, height: int, width: int) -> cp.
     return _window_sums(source, height=height, width=width, dtype=cp.float32)
 
 
-def _integer_window_sums(source: cp.ndarray, *, height: int, width: int) -> cp.ndarray:
-    return _window_sums(source, height=height, width=width, dtype=cp.int64)
+def _change_window_sums(source: cp.ndarray, *, height: int, width: int) -> cp.ndarray:
+    dtype = cp.int32 if height * width <= np.iinfo(np.int32).max else cp.int64
+    return _window_sums(source, height=height, width=width, dtype=dtype)
 
 
 def _constant_window_mask(source: cp.ndarray, *, height: int, width: int) -> cp.ndarray:
     """Identify exact per-channel constants without a numeric threshold."""
     constant = cp.ones((source.shape[0] - height + 1, source.shape[1] - width + 1), dtype=cp.bool_)
     if height > 1:
-        vertical_changes = source[1:, :, :] != source[:-1, :, :]
-        constant &= cp.all(_integer_window_sums(vertical_changes, height=height - 1, width=width) == 0, axis=2)
+        vertical_changes = cp.any(source[1:, :, :] != source[:-1, :, :], axis=2, keepdims=True)
+        constant &= _change_window_sums(vertical_changes, height=height - 1, width=width)[..., 0] == 0
     if width > 1:
-        horizontal_changes = source[:, 1:, :] != source[:, :-1, :]
-        constant &= cp.all(_integer_window_sums(horizontal_changes, height=height, width=width - 1) == 0, axis=2)
+        horizontal_changes = cp.any(source[:, 1:, :] != source[:, :-1, :], axis=2, keepdims=True)
+        constant &= _change_window_sums(horizontal_changes, height=height, width=width - 1)[..., 0] == 0
 
     return constant
 
@@ -195,6 +201,80 @@ def _normalized_response(numerator: cp.ndarray, denominator_squared: cp.ndarray,
         zero_denominator = cp.where(numerator > np.float32(0.0), np.float32(np.inf), np.float32(0.0))
         return cp.where(positive, quotient, zero_denominator)
     return cp.where(positive, quotient, np.float32(0.0))
+
+
+def _fused_match_template_fft_response(
+    correlation: cp.ndarray,
+    window_sums: cp.ndarray,
+    squared_window_sums: cp.ndarray,
+    template_sums: cp.ndarray,
+    template_energy: cp.ndarray,
+    zero_variance: cp.ndarray,
+    *,
+    spatial_count: np.float32,
+    method: str,
+) -> cp.ndarray:
+    if window_sums.shape[2] > 3:
+        if method == "ccorr_normed":
+            source_energy = cp.sum(squared_window_sums, axis=2, dtype=cp.float32)
+            denominator_squared = source_energy * template_energy
+            return cp.ascontiguousarray(
+                _normalized_response(correlation, denominator_squared, sqdiff=False),
+                dtype=cp.float32,
+            )
+        numerator = correlation - cp.sum(
+            window_sums * template_sums[None, None, :] / spatial_count,
+            axis=2,
+            dtype=cp.float32,
+        )
+        if method == "ccoeff":
+            return cp.ascontiguousarray(cp.where(zero_variance, np.float32(0.0), numerator), dtype=cp.float32)
+        source_energy = cp.sum(squared_window_sums, axis=2, dtype=cp.float32)
+        centered_source_energy = source_energy - cp.sum(
+            window_sums * window_sums / spatial_count,
+            axis=2,
+            dtype=cp.float32,
+        )
+        centered_template_energy = template_energy - cp.sum(
+            template_sums * template_sums / spatial_count,
+            dtype=cp.float32,
+        )
+        denominator_squared = cp.where(
+            zero_variance,
+            np.float32(0.0),
+            centered_source_energy * centered_template_energy,
+        )
+        return cp.ascontiguousarray(
+            _normalized_response(numerator, denominator_squared, sqdiff=False),
+            dtype=cp.float32,
+        )
+
+    centered_template_energy = template_energy
+    if method == "ccoeff_normed":
+        centered_template_energy = template_energy - cp.sum(
+            template_sums * template_sums / spatial_count,
+            dtype=cp.float32,
+        )
+    output = cp.empty(correlation.shape, dtype=cp.float32)
+    _match_template_fft_response_kernel()(
+        (_block_count(output.size),),
+        (_THREADS_PER_BLOCK,),
+        (
+            correlation,
+            window_sums,
+            squared_window_sums,
+            template_sums,
+            template_energy,
+            centered_template_energy,
+            zero_variance,
+            output,
+            np.int64(output.size),
+            np.int64(window_sums.shape[2]),
+            spatial_count,
+            np.int32(_METHOD_TOKENS.index(method)),
+        ),
+    )
+    return output
 
 
 def _match_template_fft(frame: Frame, template: Frame, *, method: str) -> cp.ndarray:
@@ -215,51 +295,57 @@ def _match_template_fft(frame: Frame, template: Frame, *, method: str) -> cp.nda
     if method == "ccorr":
         return cp.ascontiguousarray(correlation, dtype=cp.float32)
 
-    window_sums = _floating_window_sums(frame.data, height=template_height, width=template_width)
-    squared_window_sums = _floating_window_sums(
-        frame.data * frame.data,
-        height=template_height,
-        width=template_width,
-    )
-    source_energy = cp.sum(squared_window_sums, axis=2, dtype=cp.float32)
-    template_sums = cp.sum(template.data, axis=(0, 1), dtype=cp.float32)
-    template_energy = cp.sum(template.data * template.data, dtype=cp.float32)
     if method == "ccorr_normed":
-        denominator_squared = source_energy * template_energy
-        return cp.ascontiguousarray(
-            _normalized_response(correlation, denominator_squared, sqdiff=False),
-            dtype=cp.float32,
+        squared_window_sums = _floating_window_sums(
+            frame.data * frame.data,
+            height=template_height,
+            width=template_width,
+        )
+        template_energy = cp.sum(template.data * template.data, dtype=cp.float32)
+        return _fused_match_template_fft_response(
+            correlation,
+            squared_window_sums,
+            squared_window_sums,
+            squared_window_sums,
+            template_energy,
+            correlation,
+            spatial_count=spatial_count,
+            method=method,
         )
 
-    numerator = correlation - cp.sum(
-        window_sums * template_sums[None, None, :] / spatial_count,
-        axis=2,
-        dtype=cp.float32,
-    )
+    window_sums = _floating_window_sums(frame.data, height=template_height, width=template_width)
+    template_sums = cp.sum(template.data, axis=(0, 1), dtype=cp.float32)
     zero_variance = _constant_window_mask(
         frame.data,
         height=template_height,
         width=template_width,
     ) | cp.all(template.data == template.data[0, 0, :])
     if method == "ccoeff":
-        return cp.ascontiguousarray(cp.where(zero_variance, np.float32(0.0), numerator), dtype=cp.float32)
-    centered_source_energy = source_energy - cp.sum(
-        window_sums * window_sums / spatial_count,
-        axis=2,
-        dtype=cp.float32,
+        return _fused_match_template_fft_response(
+            correlation,
+            window_sums,
+            window_sums,
+            template_sums,
+            template_sums,
+            zero_variance,
+            spatial_count=spatial_count,
+            method=method,
+        )
+    squared_window_sums = _floating_window_sums(
+        frame.data * frame.data,
+        height=template_height,
+        width=template_width,
     )
-    centered_template_energy = template_energy - cp.sum(
-        template_sums * template_sums / spatial_count,
-        dtype=cp.float32,
-    )
-    denominator_squared = cp.where(
+    template_energy = cp.sum(template.data * template.data, dtype=cp.float32)
+    return _fused_match_template_fft_response(
+        correlation,
+        window_sums,
+        squared_window_sums,
+        template_sums,
+        template_energy,
         zero_variance,
-        np.float32(0.0),
-        centered_source_energy * centered_template_energy,
-    )
-    return cp.ascontiguousarray(
-        _normalized_response(numerator, denominator_squared, sqdiff=False),
-        dtype=cp.float32,
+        spatial_count=spatial_count,
+        method=method,
     )
 
 

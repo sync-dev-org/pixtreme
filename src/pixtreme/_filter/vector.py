@@ -25,6 +25,46 @@ __device__ __forceinline__ long long pixtreme_vector_sample_count(const float ve
     return count < 2 ? 2 : count;
 }
 
+__device__ __noinline__ float3 pixtreme_vector_blur_rgb_global_path(
+    const float* __restrict__ source,
+    const long long width,
+    const long long height,
+    const long long sample_count,
+    float sample_x,
+    float sample_y,
+    const float step_x,
+    const float step_y,
+    const int border,
+    const float border_value
+) {
+    float3 total = make_float3(0.0f, 0.0f, 0.0f);
+    for (long long sample = 0; sample < sample_count; ++sample) {
+        long long base_x;
+        long long base_y;
+        float weight_x[4];
+        float weight_y[4];
+        pixtreme_path_keys_weights(sample_x, &base_x, weight_x);
+        pixtreme_path_keys_weights(sample_y, &base_y, weight_y);
+        const float3 interpolated = pixtreme_path_bicubic_rgb_precomputed(
+            source,
+            base_x,
+            base_y,
+            weight_x,
+            weight_y,
+            width,
+            height,
+            border,
+            border_value
+        );
+        total.x += interpolated.x;
+        total.y += interpolated.y;
+        total.z += interpolated.z;
+        sample_x += step_x;
+        sample_y += step_y;
+    }
+    return total;
+}
+
 extern "C" __global__ void pixtreme_vector_blur_rgb_shared(
     const float* __restrict__ source,
     const float* __restrict__ vector_field,
@@ -69,26 +109,41 @@ extern "C" __global__ void pixtreme_vector_blur_rgb_shared(
     const float step_y = vector_y * inverse_intervals;
     float3 total = make_float3(0.0f, 0.0f, 0.0f);
 
-    for (long long sample = 0; sample < sample_count; ++sample) {
-        const float3 interpolated = pixtreme_path_bicubic_rgb_tile(
+    if (sample_count >= 65) {
+        total = pixtreme_vector_blur_rgb_global_path(
             source,
-            tile,
-            sample_x,
-            sample_y,
             width,
             height,
-            tile_geometry.origin_x,
-            tile_geometry.origin_y,
-            tile_geometry.width,
-            tile_geometry.height,
+            sample_count,
+            sample_x,
+            sample_y,
+            step_x,
+            step_y,
             border,
             border_value
         );
-        total.x += interpolated.x;
-        total.y += interpolated.y;
-        total.z += interpolated.z;
-        sample_x += step_x;
-        sample_y += step_y;
+    } else {
+        for (long long sample = 0; sample < sample_count; ++sample) {
+            const float3 interpolated = pixtreme_path_bicubic_rgb_tile(
+                source,
+                tile,
+                sample_x,
+                sample_y,
+                width,
+                height,
+                tile_geometry.origin_x,
+                tile_geometry.origin_y,
+                tile_geometry.width,
+                tile_geometry.height,
+                border,
+                border_value
+            );
+            total.x += interpolated.x;
+            total.y += interpolated.y;
+            total.z += interpolated.z;
+            sample_x += step_x;
+            sample_y += step_y;
+        }
     }
     const float scale = 1.0f / (float)sample_count;
     const long long output_index = pixel * 3;
@@ -152,7 +207,11 @@ extern "C" __global__ void pixtreme_vector_blur_generic(
 
 @lru_cache(maxsize=1)
 def _vector_blur_rgb_shared_kernel() -> cp.RawKernel:
-    return cp.RawKernel(_VECTOR_BLUR_KERNEL_SOURCE, "pixtreme_vector_blur_rgb_shared")
+    return cp.RawKernel(
+        _VECTOR_BLUR_KERNEL_SOURCE,
+        "pixtreme_vector_blur_rgb_shared",
+        options=("-DPIXTREME_PATH_SHARED",),
+    )
 
 
 @lru_cache(maxsize=1)

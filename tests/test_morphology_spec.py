@@ -249,6 +249,63 @@ def test_morphology_compounds_match_the_defined_primitive_compositions(name: str
     )
 
 
+@pytest.mark.parametrize("name", MORPHOLOGY_NAMES)
+@pytest.mark.parametrize("channel_count", (2, 5))
+def test_morphology_all_operations_are_bit_exact_across_radius_shape_and_border(name: str, channel_count: int) -> None:
+    """v1-morphology acceptance 2, 4, 7, and 8: every optimized path stays bit exact to the scalar oracle."""
+    rng = np.random.default_rng(20260817)
+    values = rng.uniform(-1.7, 2.3, size=(4, 5, channel_count)).astype(np.float32)
+    source = _frame(values, colorspace="ACEScg", channels=[f"channel-{index}" for index in range(channel_count)])
+    border_value = 0.375
+
+    for radius in (1, 3, 6):
+        for shape in SHAPES:
+            for border in BORDERS:
+                arguments = {
+                    "radius": radius,
+                    "shape": shape,
+                    "border": border,
+                    "border_value": border_value,
+                }
+                if name == "erosion":
+                    expected = _primitive_reference(values, dilate=False, **arguments)
+                elif name == "dilation":
+                    expected = _primitive_reference(values, dilate=True, **arguments)
+                else:
+                    expected = _compound_reference(values, operation=name, **arguments)
+                border_kwargs = {"border_value": border_value} if border == "constant" else {}
+                result = getattr(px.morphology, name)(
+                    source,
+                    radius=radius,
+                    shape=shape,
+                    border=border,
+                    **border_kwargs,
+                )
+                actual = px.io.to_array(result).get()
+                np.testing.assert_array_equal(actual.view(np.uint32), expected.view(np.uint32))
+
+
+@pytest.mark.parametrize("name", MORPHOLOGY_NAMES)
+@pytest.mark.parametrize("shape", SHAPES)
+@pytest.mark.parametrize("border", BORDERS)
+def test_morphology_large_radius_fallback_is_bit_exact(name: str, shape: str, border: str) -> None:
+    """v1-morphology acceptance 2, 4, 7, and 8: radii beyond the tiled budget retain exact behavior."""
+    values = np.asarray([[[0.625]]], dtype=np.float32)
+    source = _frame(values, colorspace="ACEScg", channels=["matte"])
+    border_value = -0.375
+    arguments = {"radius": 48, "shape": shape, "border": border, "border_value": border_value}
+    if name == "erosion":
+        expected = _primitive_reference(values, dilate=False, **arguments)
+    elif name == "dilation":
+        expected = _primitive_reference(values, dilate=True, **arguments)
+    else:
+        expected = _compound_reference(values, operation=name, **arguments)
+    border_kwargs = {"border_value": border_value} if border == "constant" else {}
+    result = getattr(px.morphology, name)(source, radius=48, shape=shape, border=border, **border_kwargs)
+    actual = px.io.to_array(result).get()
+    np.testing.assert_array_equal(actual.view(np.uint32), expected.view(np.uint32))
+
+
 def test_replicate_default_is_neutral_for_uniform_frames() -> None:
     """v1-morphology acceptance 4 and 9: default replicate preserves uniform values at every edge."""
     values = np.full((2, 3, 2), (-0.5, 1.75), dtype=np.float32)
