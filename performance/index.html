@@ -25,7 +25,7 @@
     
     
       
-        <title>Performance - pixtreme 1.2.0</title>
+        <title>Performance - pixtreme 1.2.1</title>
       
     
     
@@ -84,7 +84,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="pixtreme 1.2.0" class="md-header__button md-logo" aria-label="pixtreme 1.2.0" data-md-component="logo">
+    <a href=".." title="pixtreme 1.2.1" class="md-header__button md-logo" aria-label="pixtreme 1.2.1" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -98,7 +98,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            pixtreme 1.2.0
+            pixtreme 1.2.1
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -194,13 +194,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="pixtreme 1.2.0" class="md-nav__button md-logo" aria-label="pixtreme 1.2.0" data-md-component="logo">
+    <a href=".." title="pixtreme 1.2.1" class="md-nav__button md-logo" aria-label="pixtreme 1.2.1" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    pixtreme 1.2.0
+    pixtreme 1.2.1
   </label>
   
     <div class="md-nav__source">
@@ -329,23 +329,6 @@
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="EXR source-fixed routing">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#registry-coverage-decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Registry coverage decision
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -864,23 +847,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="EXR source-fixed routing">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#registry-coverage-decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Registry coverage decision
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -915,18 +881,14 @@
 
 
 <h1 id="performance">Performance</h1>
-<p>This is the complete 190-case FHD measurement report. The original 162 non-EXR values are copied without numerical
-changes from the fresh full-suite run at pixtreme commit <code>9bc236d</code>; the two TGA file-boundary values were measured with
-the same harness and conditions at commit <code>17ba4a5</code>, the two HDR file-boundary values at commit <code>2c5a54e</code>, and the two
-DPX file-boundary values at commit <code>9d1c25e</code>. The 18 unchanged EXR public-boundary values were measured with the same
-harness and conditions at commit <code>713edde</code>, after the final source-fixed routing and HALF write default were in place.
-The DWAA, DWAB, RLE, and PXR24 read values were remeasured at commit <code>18c5ffa</code> after every EXR registry read fixture was
-standardized on HALF storage. They characterize this hardware and workload; they are not performance guarantees for
-other systems.</p>
+<p>This is the complete 205-case FHD measurement report from a single full-suite <code>uv run pytest -m performance</code> run
+at pixtreme commit <code>5f71032</code>. The run completed with 259 passed and 4,023 deselected in 3,534.01 seconds (58:54).
+These measurements characterize this hardware and workload; they are not performance guarantees for other systems.</p>
 <h2 id="measurement-conditions">Measurement conditions</h2>
 <ul>
 <li><strong>GPU:</strong> NVIDIA RTX A6000, driver 596.72. GPU 0 was dedicated to the run.</li>
-<li><strong>Environment:</strong> WSL2 on Linux 6.18, CUDA runtime 12.9, CuPy 14.1.1, and Python 3.12.</li>
+<li><strong>Environment:</strong> WSL2 on Linux 6.18, CUDA runtime 12.9 (<code>nvidia-cuda-runtime-cu12</code> 12.9.79), CuPy 14.1.1,
+  and Python 3.12.</li>
 <li><strong>Default input:</strong> 1920x1080, fp32, three-channel RGB. A row's <code>representative parameters</code> are authoritative when
   the case uses a different shape, dtype, channel layout, format, or auxiliary input.</li>
 <li><strong>Sampling:</strong> GPU-device cases use at least 1,000 consecutive frame executions and 3 seconds. Slow file/byte boundary
@@ -960,81 +922,77 @@ routes. Write cases use the current HALF default unless the fp16 input is alread
 <td>NONE</td>
 <td>native</td>
 <td>GPU</td>
-<td style="text-align: right;">30.507</td>
-<td style="text-align: right;">7.546</td>
+<td style="text-align: right;">30.418</td>
+<td style="text-align: right;">8.605</td>
 </tr>
 <tr>
 <td>RLE</td>
 <td>GPU</td>
 <td>GPU</td>
-<td style="text-align: right;">171.123</td>
-<td style="text-align: right;">17.213</td>
+<td style="text-align: right;">162.049</td>
+<td style="text-align: right;">17.822</td>
 </tr>
 <tr>
 <td>ZIPS</td>
 <td>custom CPU</td>
 <td>GPU</td>
-<td style="text-align: right;">63.145</td>
-<td style="text-align: right;">88.328</td>
+<td style="text-align: right;">64.289</td>
+<td style="text-align: right;">89.132</td>
 </tr>
 <tr>
 <td>ZIP</td>
 <td>custom CPU</td>
 <td>GPU</td>
-<td style="text-align: right;">32.826</td>
-<td style="text-align: right;">31.036</td>
+<td style="text-align: right;">33.472</td>
+<td style="text-align: right;">32.234</td>
 </tr>
 <tr>
 <td>PIZ</td>
 <td>GPU</td>
 <td>GPU</td>
-<td style="text-align: right;">33.598</td>
-<td style="text-align: right;">71.584</td>
+<td style="text-align: right;">35.055</td>
+<td style="text-align: right;">80.759</td>
 </tr>
 <tr>
 <td>PXR24</td>
 <td>custom CPU</td>
 <td>GPU</td>
-<td style="text-align: right;">305.966</td>
-<td style="text-align: right;">41.802</td>
+<td style="text-align: right;">330.448</td>
+<td style="text-align: right;">42.980</td>
 </tr>
 <tr>
 <td>B44</td>
 <td>GPU</td>
 <td>GPU</td>
-<td style="text-align: right;">70.301</td>
-<td style="text-align: right;">5.175</td>
+<td style="text-align: right;">71.782</td>
+<td style="text-align: right;">6.336</td>
 </tr>
 <tr>
 <td>B44A</td>
 <td>GPU</td>
 <td>GPU</td>
-<td style="text-align: right;">91.025</td>
-<td style="text-align: right;">5.050</td>
+<td style="text-align: right;">102.995</td>
+<td style="text-align: right;">7.812</td>
 </tr>
 <tr>
 <td>DWAA</td>
 <td>GPU</td>
 <td>GPU</td>
-<td style="text-align: right;">25.249</td>
-<td style="text-align: right;">92.127</td>
+<td style="text-align: right;">24.606</td>
+<td style="text-align: right;">87.287</td>
 </tr>
 <tr>
 <td>DWAB</td>
 <td>GPU</td>
 <td>GPU</td>
-<td style="text-align: right;">28.637</td>
-<td style="text-align: right;">36.316</td>
+<td style="text-align: right;">26.185</td>
+<td style="text-align: right;">33.830</td>
 </tr>
 </tbody>
 </table>
-<p>The default float32-frame write case omits <code>dtype</code>, stores ZIP-compressed HALF, and measured 37.042 ms. Reading that
-HALF fixture unchanged through the fixed custom CPU ZIP lane measured 30.925 ms. These general default-path cases use
+<p>The default float32-frame write case omits <code>dtype</code>, stores ZIP-compressed HALF, and measured 38.921 ms. Reading that
+HALF fixture unchanged through the fixed custom CPU ZIP lane measured 39.981 ms. These general default-path cases use
 a different deterministic corpus from the compression rows above.</p>
-<h3 id="registry-coverage-decision">Registry coverage decision</h3>
-<p>This feature adds no public GPU pixel operation or boundary operation. The existing registry already covers
-<code>read_image</code> and <code>write_image</code>, including a read/write pair for every EXR compression token, so no case was added. The
-existing EXR cases were remeasured to follow the final routing and HALF default.</p>
 <h2 id="full-results">Full results</h2>
 <table>
 <thead>
@@ -1054,2096 +1012,2260 @@ existing EXR cases were remeasured to follow the final routing and HALF default.
 <tr>
 <td>copy</td>
 <td>FHD fp32 RGB read+write</td>
-<td style="text-align: right;">0.101</td>
-<td style="text-align: right;">0.098</td>
-<td style="text-align: right;">10240.3</td>
-<td style="text-align: right;">0.092</td>
-<td style="text-align: right;">0.117</td>
-<td style="text-align: right;">509.6</td>
+<td style="text-align: right;">0.116</td>
+<td style="text-align: right;">0.112</td>
+<td style="text-align: right;">8932.0</td>
+<td style="text-align: right;">0.094</td>
+<td style="text-align: right;">0.147</td>
+<td style="text-align: right;">444.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 960x540, interpolation=nearest</td>
-<td style="text-align: right;">0.069</td>
-<td style="text-align: right;">0.067</td>
-<td style="text-align: right;">15027.1</td>
-<td style="text-align: right;">0.065</td>
-<td style="text-align: right;">0.083</td>
-<td style="text-align: right;">467.4</td>
+<td style="text-align: right;">0.092</td>
+<td style="text-align: right;">0.090</td>
+<td style="text-align: right;">11112.2</td>
+<td style="text-align: right;">0.068</td>
+<td style="text-align: right;">0.127</td>
+<td style="text-align: right;">345.6</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 960x540, interpolation=bilinear</td>
-<td style="text-align: right;">0.090</td>
-<td style="text-align: right;">0.085</td>
-<td style="text-align: right;">11781.6</td>
-<td style="text-align: right;">0.082</td>
-<td style="text-align: right;">0.107</td>
-<td style="text-align: right;">366.5</td>
+<td style="text-align: right;">0.103</td>
+<td style="text-align: right;">0.101</td>
+<td style="text-align: right;">9909.3</td>
+<td style="text-align: right;">0.088</td>
+<td style="text-align: right;">0.133</td>
+<td style="text-align: right;">308.2</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 960x540, interpolation=bicubic</td>
-<td style="text-align: right;">0.133</td>
-<td style="text-align: right;">0.129</td>
-<td style="text-align: right;">7722.2</td>
-<td style="text-align: right;">0.127</td>
-<td style="text-align: right;">0.149</td>
-<td style="text-align: right;">240.2</td>
+<td style="text-align: right;">0.178</td>
+<td style="text-align: right;">0.172</td>
+<td style="text-align: right;">5824.1</td>
+<td style="text-align: right;">0.134</td>
+<td style="text-align: right;">0.242</td>
+<td style="text-align: right;">181.2</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 960x540, interpolation=b-spline</td>
-<td style="text-align: right;">0.133</td>
-<td style="text-align: right;">0.130</td>
-<td style="text-align: right;">7671.0</td>
-<td style="text-align: right;">0.128</td>
+<td style="text-align: right;">0.154</td>
 <td style="text-align: right;">0.148</td>
-<td style="text-align: right;">238.6</td>
+<td style="text-align: right;">6748.2</td>
+<td style="text-align: right;">0.135</td>
+<td style="text-align: right;">0.195</td>
+<td style="text-align: right;">209.9</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 960x540, interpolation=mitchell</td>
-<td style="text-align: right;">0.133</td>
-<td style="text-align: right;">0.130</td>
-<td style="text-align: right;">7679.3</td>
-<td style="text-align: right;">0.128</td>
-<td style="text-align: right;">0.147</td>
-<td style="text-align: right;">238.9</td>
+<td style="text-align: right;">0.152</td>
+<td style="text-align: right;">0.149</td>
+<td style="text-align: right;">6710.7</td>
+<td style="text-align: right;">0.134</td>
+<td style="text-align: right;">0.184</td>
+<td style="text-align: right;">208.7</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 960x540, interpolation=lanczos2</td>
-<td style="text-align: right;">0.133</td>
-<td style="text-align: right;">0.131</td>
-<td style="text-align: right;">7654.6</td>
-<td style="text-align: right;">0.128</td>
-<td style="text-align: right;">0.148</td>
-<td style="text-align: right;">238.1</td>
+<td style="text-align: right;">0.158</td>
+<td style="text-align: right;">0.152</td>
+<td style="text-align: right;">6566.7</td>
+<td style="text-align: right;">0.139</td>
+<td style="text-align: right;">0.189</td>
+<td style="text-align: right;">204.3</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 960x540, interpolation=lanczos3</td>
-<td style="text-align: right;">0.136</td>
-<td style="text-align: right;">0.133</td>
-<td style="text-align: right;">7505.1</td>
-<td style="text-align: right;">0.131</td>
-<td style="text-align: right;">0.151</td>
-<td style="text-align: right;">233.4</td>
+<td style="text-align: right;">0.160</td>
+<td style="text-align: right;">0.155</td>
+<td style="text-align: right;">6447.3</td>
+<td style="text-align: right;">0.138</td>
+<td style="text-align: right;">0.195</td>
+<td style="text-align: right;">200.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 960x540, interpolation=lanczos4</td>
-<td style="text-align: right;">0.215</td>
-<td style="text-align: right;">0.209</td>
-<td style="text-align: right;">4791.4</td>
-<td style="text-align: right;">0.205</td>
-<td style="text-align: right;">0.235</td>
-<td style="text-align: right;">149.0</td>
+<td style="text-align: right;">0.243</td>
+<td style="text-align: right;">0.236</td>
+<td style="text-align: right;">4235.7</td>
+<td style="text-align: right;">0.222</td>
+<td style="text-align: right;">0.276</td>
+<td style="text-align: right;">131.7</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 960x540, interpolation=area</td>
-<td style="text-align: right;">0.159</td>
-<td style="text-align: right;">0.152</td>
-<td style="text-align: right;">6594.4</td>
-<td style="text-align: right;">0.146</td>
-<td style="text-align: right;">0.187</td>
-<td style="text-align: right;">205.1</td>
+<td style="text-align: right;">0.171</td>
+<td style="text-align: right;">0.168</td>
+<td style="text-align: right;">5943.8</td>
+<td style="text-align: right;">0.153</td>
+<td style="text-align: right;">0.202</td>
+<td style="text-align: right;">184.9</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 3840x2160, interpolation=nearest</td>
-<td style="text-align: right;">0.280</td>
-<td style="text-align: right;">0.279</td>
-<td style="text-align: right;">3588.8</td>
-<td style="text-align: right;">0.276</td>
-<td style="text-align: right;">0.290</td>
-<td style="text-align: right;">446.5</td>
+<td style="text-align: right;">0.308</td>
+<td style="text-align: right;">0.306</td>
+<td style="text-align: right;">3271.9</td>
+<td style="text-align: right;">0.289</td>
+<td style="text-align: right;">0.335</td>
+<td style="text-align: right;">407.1</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 3840x2160, interpolation=bilinear</td>
-<td style="text-align: right;">0.245</td>
-<td style="text-align: right;">0.243</td>
-<td style="text-align: right;">4111.2</td>
-<td style="text-align: right;">0.240</td>
-<td style="text-align: right;">0.254</td>
-<td style="text-align: right;">511.5</td>
+<td style="text-align: right;">0.266</td>
+<td style="text-align: right;">0.265</td>
+<td style="text-align: right;">3778.0</td>
+<td style="text-align: right;">0.251</td>
+<td style="text-align: right;">0.291</td>
+<td style="text-align: right;">470.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 3840x2160, interpolation=bicubic</td>
-<td style="text-align: right;">0.444</td>
-<td style="text-align: right;">0.442</td>
-<td style="text-align: right;">2262.2</td>
-<td style="text-align: right;">0.439</td>
+<td style="text-align: right;">0.480</td>
+<td style="text-align: right;">0.476</td>
+<td style="text-align: right;">2099.2</td>
 <td style="text-align: right;">0.455</td>
-<td style="text-align: right;">281.4</td>
+<td style="text-align: right;">0.512</td>
+<td style="text-align: right;">261.2</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 3840x2160, interpolation=b-spline</td>
-<td style="text-align: right;">0.450</td>
-<td style="text-align: right;">0.444</td>
-<td style="text-align: right;">2252.9</td>
-<td style="text-align: right;">0.439</td>
-<td style="text-align: right;">0.485</td>
-<td style="text-align: right;">280.3</td>
+<td style="text-align: right;">0.481</td>
+<td style="text-align: right;">0.478</td>
+<td style="text-align: right;">2090.0</td>
+<td style="text-align: right;">0.456</td>
+<td style="text-align: right;">0.513</td>
+<td style="text-align: right;">260.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 3840x2160, interpolation=mitchell</td>
-<td style="text-align: right;">0.457</td>
-<td style="text-align: right;">0.444</td>
-<td style="text-align: right;">2251.7</td>
-<td style="text-align: right;">0.439</td>
-<td style="text-align: right;">0.491</td>
-<td style="text-align: right;">280.1</td>
+<td style="text-align: right;">0.477</td>
+<td style="text-align: right;">0.474</td>
+<td style="text-align: right;">2108.0</td>
+<td style="text-align: right;">0.462</td>
+<td style="text-align: right;">0.501</td>
+<td style="text-align: right;">262.3</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 3840x2160, interpolation=lanczos2</td>
-<td style="text-align: right;">0.451</td>
-<td style="text-align: right;">0.445</td>
-<td style="text-align: right;">2245.4</td>
-<td style="text-align: right;">0.441</td>
-<td style="text-align: right;">0.484</td>
-<td style="text-align: right;">279.4</td>
+<td style="text-align: right;">0.482</td>
+<td style="text-align: right;">0.474</td>
+<td style="text-align: right;">2108.3</td>
+<td style="text-align: right;">0.458</td>
+<td style="text-align: right;">0.524</td>
+<td style="text-align: right;">262.3</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 3840x2160, interpolation=lanczos3</td>
+<td style="text-align: right;">0.572</td>
+<td style="text-align: right;">0.569</td>
+<td style="text-align: right;">1757.7</td>
 <td style="text-align: right;">0.546</td>
-<td style="text-align: right;">0.536</td>
-<td style="text-align: right;">1864.3</td>
-<td style="text-align: right;">0.530</td>
-<td style="text-align: right;">0.581</td>
-<td style="text-align: right;">231.9</td>
+<td style="text-align: right;">0.606</td>
+<td style="text-align: right;">218.7</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 3840x2160, interpolation=lanczos4</td>
-<td style="text-align: right;">0.924</td>
-<td style="text-align: right;">0.914</td>
-<td style="text-align: right;">1093.7</td>
-<td style="text-align: right;">0.904</td>
 <td style="text-align: right;">0.960</td>
-<td style="text-align: right;">136.1</td>
+<td style="text-align: right;">0.954</td>
+<td style="text-align: right;">1047.8</td>
+<td style="text-align: right;">0.933</td>
+<td style="text-align: right;">1.000</td>
+<td style="text-align: right;">130.4</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>resize</td>
 <td>1920x1080 -&gt; 3840x2160, interpolation=area</td>
-<td style="text-align: right;">0.650</td>
-<td style="text-align: right;">0.650</td>
-<td style="text-align: right;">1539.5</td>
-<td style="text-align: right;">0.637</td>
-<td style="text-align: right;">0.679</td>
-<td style="text-align: right;">191.5</td>
+<td style="text-align: right;">0.678</td>
+<td style="text-align: right;">0.675</td>
+<td style="text-align: right;">1482.1</td>
+<td style="text-align: right;">0.665</td>
+<td style="text-align: right;">0.700</td>
+<td style="text-align: right;">184.4</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>warp_affine</td>
 <td>FHD fp32 RGB, centered 1.01x scale + 5deg rotation, auto lanczos4, constant 0</td>
-<td style="text-align: right;">3.063</td>
-<td style="text-align: right;">3.043</td>
-<td style="text-align: right;">328.7</td>
-<td style="text-align: right;">3.023</td>
-<td style="text-align: right;">3.144</td>
-<td style="text-align: right;">16.4</td>
+<td style="text-align: right;">3.128</td>
+<td style="text-align: right;">3.125</td>
+<td style="text-align: right;">320.0</td>
+<td style="text-align: right;">3.096</td>
+<td style="text-align: right;">3.182</td>
+<td style="text-align: right;">15.9</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>stack</td>
 <td>2x FHD fp32 RGB, direction=vertical, adapt=False</td>
-<td style="text-align: right;">0.197</td>
-<td style="text-align: right;">0.193</td>
-<td style="text-align: right;">5191.1</td>
-<td style="text-align: right;">0.190</td>
-<td style="text-align: right;">0.215</td>
-<td style="text-align: right;">516.7</td>
+<td style="text-align: right;">0.220</td>
+<td style="text-align: right;">0.217</td>
+<td style="text-align: right;">4614.1</td>
+<td style="text-align: right;">0.201</td>
+<td style="text-align: right;">0.251</td>
+<td style="text-align: right;">459.3</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>shuffle</td>
 <td>single FHD fp32 Frame BGR reorder, adapt=False</td>
-<td style="text-align: right;">0.303</td>
-<td style="text-align: right;">0.302</td>
-<td style="text-align: right;">3306.9</td>
-<td style="text-align: right;">0.288</td>
-<td style="text-align: right;">0.313</td>
-<td style="text-align: right;">164.6</td>
+<td style="text-align: right;">0.330</td>
+<td style="text-align: right;">0.328</td>
+<td style="text-align: right;">3047.9</td>
+<td style="text-align: right;">0.311</td>
+<td style="text-align: right;">0.354</td>
+<td style="text-align: right;">151.7</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>shuffle</td>
 <td>FHD fp32 RGBA from 2 Frames + constant, adapt=False</td>
-<td style="text-align: right;">0.407</td>
-<td style="text-align: right;">0.404</td>
-<td style="text-align: right;">2476.2</td>
-<td style="text-align: right;">0.399</td>
-<td style="text-align: right;">0.418</td>
-<td style="text-align: right;">143.8</td>
+<td style="text-align: right;">0.442</td>
+<td style="text-align: right;">0.437</td>
+<td style="text-align: right;">2287.8</td>
+<td style="text-align: right;">0.416</td>
+<td style="text-align: right;">0.479</td>
+<td style="text-align: right;">132.8</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>shuffle</td>
 <td>2 FHD fp32 RGB Frames, sRGB/srgb source adapted to ACEScg/linear</td>
-<td style="text-align: right;">0.409</td>
-<td style="text-align: right;">0.392</td>
-<td style="text-align: right;">2554.1</td>
-<td style="text-align: right;">0.380</td>
-<td style="text-align: right;">0.453</td>
-<td style="text-align: right;">254.2</td>
+<td style="text-align: right;">0.440</td>
+<td style="text-align: right;">0.431</td>
+<td style="text-align: right;">2320.2</td>
+<td style="text-align: right;">0.401</td>
+<td style="text-align: right;">0.506</td>
+<td style="text-align: right;">230.9</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>merge</td>
 <td>FHD background + transformed 960x540 foreground, bilinear, normal</td>
-<td style="text-align: right;">0.475</td>
-<td style="text-align: right;">0.466</td>
-<td style="text-align: right;">2146.6</td>
-<td style="text-align: right;">0.454</td>
-<td style="text-align: right;">0.515</td>
-<td style="text-align: right;">120.2</td>
+<td style="text-align: right;">0.598</td>
+<td style="text-align: right;">0.578</td>
+<td style="text-align: right;">1729.6</td>
+<td style="text-align: right;">0.498</td>
+<td style="text-align: right;">0.769</td>
+<td style="text-align: right;">96.8</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>gaussian_blur</td>
 <td>sigma=1</td>
-<td style="text-align: right;">0.547</td>
-<td style="text-align: right;">0.540</td>
-<td style="text-align: right;">1851.4</td>
-<td style="text-align: right;">0.533</td>
-<td style="text-align: right;">0.581</td>
-<td style="text-align: right;">92.1</td>
+<td style="text-align: right;">0.579</td>
+<td style="text-align: right;">0.575</td>
+<td style="text-align: right;">1740.5</td>
+<td style="text-align: right;">0.552</td>
+<td style="text-align: right;">0.614</td>
+<td style="text-align: right;">86.6</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>gaussian_blur</td>
 <td>sigma=2</td>
-<td style="text-align: right;">0.638</td>
-<td style="text-align: right;">0.634</td>
-<td style="text-align: right;">1577.4</td>
-<td style="text-align: right;">0.623</td>
-<td style="text-align: right;">0.668</td>
-<td style="text-align: right;">78.5</td>
+<td style="text-align: right;">0.672</td>
+<td style="text-align: right;">0.667</td>
+<td style="text-align: right;">1499.1</td>
+<td style="text-align: right;">0.646</td>
+<td style="text-align: right;">0.706</td>
+<td style="text-align: right;">74.6</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>gaussian_blur</td>
 <td>sigma=4</td>
-<td style="text-align: right;">0.873</td>
-<td style="text-align: right;">0.868</td>
-<td style="text-align: right;">1151.5</td>
-<td style="text-align: right;">0.865</td>
+<td style="text-align: right;">0.901</td>
+<td style="text-align: right;">0.899</td>
+<td style="text-align: right;">1112.0</td>
 <td style="text-align: right;">0.888</td>
-<td style="text-align: right;">57.3</td>
+<td style="text-align: right;">0.917</td>
+<td style="text-align: right;">55.3</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>unsharp_mask</td>
 <td>sigma=2, amount=1</td>
-<td style="text-align: right;">0.743</td>
-<td style="text-align: right;">0.738</td>
-<td style="text-align: right;">1354.3</td>
-<td style="text-align: right;">0.733</td>
-<td style="text-align: right;">0.760</td>
-<td style="text-align: right;">67.4</td>
+<td style="text-align: right;">0.767</td>
+<td style="text-align: right;">0.766</td>
+<td style="text-align: right;">1305.7</td>
+<td style="text-align: right;">0.754</td>
+<td style="text-align: right;">0.784</td>
+<td style="text-align: right;">65.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>box_blur</td>
 <td>size=3</td>
-<td style="text-align: right;">0.460</td>
-<td style="text-align: right;">0.457</td>
-<td style="text-align: right;">2190.2</td>
-<td style="text-align: right;">0.447</td>
-<td style="text-align: right;">0.495</td>
-<td style="text-align: right;">109.0</td>
+<td style="text-align: right;">0.481</td>
+<td style="text-align: right;">0.478</td>
+<td style="text-align: right;">2090.3</td>
+<td style="text-align: right;">0.465</td>
+<td style="text-align: right;">0.507</td>
+<td style="text-align: right;">104.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>box_blur</td>
 <td>size=9</td>
-<td style="text-align: right;">0.528</td>
-<td style="text-align: right;">0.522</td>
-<td style="text-align: right;">1914.6</td>
-<td style="text-align: right;">0.504</td>
-<td style="text-align: right;">0.568</td>
-<td style="text-align: right;">95.3</td>
+<td style="text-align: right;">0.538</td>
+<td style="text-align: right;">0.537</td>
+<td style="text-align: right;">1863.1</td>
+<td style="text-align: right;">0.523</td>
+<td style="text-align: right;">0.555</td>
+<td style="text-align: right;">92.7</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>median_blur</td>
 <td>size=3</td>
-<td style="text-align: right;">0.331</td>
-<td style="text-align: right;">0.327</td>
-<td style="text-align: right;">3058.0</td>
-<td style="text-align: right;">0.320</td>
-<td style="text-align: right;">0.352</td>
-<td style="text-align: right;">152.2</td>
+<td style="text-align: right;">0.353</td>
+<td style="text-align: right;">0.350</td>
+<td style="text-align: right;">2857.1</td>
+<td style="text-align: right;">0.334</td>
+<td style="text-align: right;">0.378</td>
+<td style="text-align: right;">142.2</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>median_blur</td>
 <td>size=5</td>
-<td style="text-align: right;">0.720</td>
-<td style="text-align: right;">0.717</td>
-<td style="text-align: right;">1395.4</td>
-<td style="text-align: right;">0.701</td>
-<td style="text-align: right;">0.753</td>
-<td style="text-align: right;">69.4</td>
+<td style="text-align: right;">0.739</td>
+<td style="text-align: right;">0.739</td>
+<td style="text-align: right;">1352.6</td>
+<td style="text-align: right;">0.722</td>
+<td style="text-align: right;">0.759</td>
+<td style="text-align: right;">67.3</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>median_blur</td>
 <td>size=7</td>
-<td style="text-align: right;">0.988</td>
-<td style="text-align: right;">0.985</td>
-<td style="text-align: right;">1015.6</td>
-<td style="text-align: right;">0.959</td>
-<td style="text-align: right;">1.029</td>
-<td style="text-align: right;">50.5</td>
-<td style="text-align: center;"></td>
+<td style="text-align: right;">1.005</td>
+<td style="text-align: right;">1.005</td>
+<td style="text-align: right;">994.8</td>
+<td style="text-align: right;">0.983</td>
+<td style="text-align: right;">1.031</td>
+<td style="text-align: right;">49.5</td>
+<td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>bilateral_blur</td>
 <td>sigma_space=1, sigma_value=0.1</td>
-<td style="text-align: right;">0.383</td>
-<td style="text-align: right;">0.381</td>
-<td style="text-align: right;">2626.1</td>
-<td style="text-align: right;">0.378</td>
-<td style="text-align: right;">0.396</td>
-<td style="text-align: right;">130.7</td>
+<td style="text-align: right;">0.401</td>
+<td style="text-align: right;">0.400</td>
+<td style="text-align: right;">2498.4</td>
+<td style="text-align: right;">0.387</td>
+<td style="text-align: right;">0.417</td>
+<td style="text-align: right;">124.3</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>bilateral_blur</td>
 <td>sigma_space=2, sigma_value=0.1</td>
-<td style="text-align: right;">0.847</td>
-<td style="text-align: right;">0.845</td>
-<td style="text-align: right;">1182.8</td>
-<td style="text-align: right;">0.837</td>
-<td style="text-align: right;">0.861</td>
-<td style="text-align: right;">58.9</td>
+<td style="text-align: right;">0.877</td>
+<td style="text-align: right;">0.874</td>
+<td style="text-align: right;">1144.5</td>
+<td style="text-align: right;">0.860</td>
+<td style="text-align: right;">0.903</td>
+<td style="text-align: right;">57.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>convolve_box</td>
 <td>size=(1,31), normalize=True</td>
-<td style="text-align: right;">0.545</td>
-<td style="text-align: right;">0.543</td>
-<td style="text-align: right;">1840.5</td>
-<td style="text-align: right;">0.540</td>
-<td style="text-align: right;">0.556</td>
-<td style="text-align: right;">91.6</td>
+<td style="text-align: right;">0.567</td>
+<td style="text-align: right;">0.563</td>
+<td style="text-align: right;">1775.8</td>
+<td style="text-align: right;">0.550</td>
+<td style="text-align: right;">0.592</td>
+<td style="text-align: right;">88.4</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>erosion</td>
 <td>radius=5, shape=disk</td>
-<td style="text-align: right;">8.423</td>
-<td style="text-align: right;">8.376</td>
-<td style="text-align: right;">119.4</td>
-<td style="text-align: right;">8.341</td>
-<td style="text-align: right;">8.665</td>
-<td style="text-align: right;">5.9</td>
-<td style="text-align: center;">yes</td>
+<td style="text-align: right;">0.345</td>
+<td style="text-align: right;">0.340</td>
+<td style="text-align: right;">2937.4</td>
+<td style="text-align: right;">0.327</td>
+<td style="text-align: right;">0.369</td>
+<td style="text-align: right;">146.2</td>
+<td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>dilation</td>
 <td>radius=5, shape=disk</td>
-<td style="text-align: right;">8.357</td>
-<td style="text-align: right;">8.350</td>
-<td style="text-align: right;">119.8</td>
-<td style="text-align: right;">8.340</td>
-<td style="text-align: right;">8.404</td>
-<td style="text-align: right;">6.0</td>
-<td style="text-align: center;">yes</td>
+<td style="text-align: right;">0.339</td>
+<td style="text-align: right;">0.337</td>
+<td style="text-align: right;">2971.7</td>
+<td style="text-align: right;">0.322</td>
+<td style="text-align: right;">0.368</td>
+<td style="text-align: right;">147.9</td>
+<td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>opening</td>
 <td>radius=5, shape=disk</td>
-<td style="text-align: right;">16.720</td>
-<td style="text-align: right;">16.668</td>
-<td style="text-align: right;">60.0</td>
-<td style="text-align: right;">16.499</td>
-<td style="text-align: right;">16.887</td>
-<td style="text-align: right;">3.0</td>
-<td style="text-align: center;">yes</td>
+<td style="text-align: right;">0.616</td>
+<td style="text-align: right;">0.613</td>
+<td style="text-align: right;">1631.9</td>
+<td style="text-align: right;">0.591</td>
+<td style="text-align: right;">0.646</td>
+<td style="text-align: right;">81.2</td>
+<td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>closing</td>
 <td>radius=5, shape=disk</td>
-<td style="text-align: right;">16.481</td>
-<td style="text-align: right;">16.627</td>
-<td style="text-align: right;">60.1</td>
-<td style="text-align: right;">16.190</td>
-<td style="text-align: right;">16.786</td>
-<td style="text-align: right;">3.0</td>
-<td style="text-align: center;">yes</td>
+<td style="text-align: right;">0.603</td>
+<td style="text-align: right;">0.602</td>
+<td style="text-align: right;">1660.9</td>
+<td style="text-align: right;">0.589</td>
+<td style="text-align: right;">0.619</td>
+<td style="text-align: right;">82.7</td>
+<td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>morphological_gradient</td>
 <td>radius=5, shape=disk</td>
-<td style="text-align: right;">16.899</td>
-<td style="text-align: right;">16.877</td>
-<td style="text-align: right;">59.3</td>
-<td style="text-align: right;">16.008</td>
-<td style="text-align: right;">17.140</td>
-<td style="text-align: right;">2.9</td>
-<td style="text-align: center;">yes</td>
+<td style="text-align: right;">0.360</td>
+<td style="text-align: right;">0.359</td>
+<td style="text-align: right;">2789.0</td>
+<td style="text-align: right;">0.344</td>
+<td style="text-align: right;">0.381</td>
+<td style="text-align: right;">138.8</td>
+<td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>white_tophat</td>
 <td>radius=5, shape=disk</td>
-<td style="text-align: right;">16.470</td>
-<td style="text-align: right;">16.607</td>
-<td style="text-align: right;">60.2</td>
-<td style="text-align: right;">15.996</td>
-<td style="text-align: right;">16.697</td>
-<td style="text-align: right;">3.0</td>
-<td style="text-align: center;">yes</td>
+<td style="text-align: right;">0.614</td>
+<td style="text-align: right;">0.612</td>
+<td style="text-align: right;">1635.0</td>
+<td style="text-align: right;">0.596</td>
+<td style="text-align: right;">0.640</td>
+<td style="text-align: right;">81.4</td>
+<td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>black_tophat</td>
 <td>radius=5, shape=disk</td>
-<td style="text-align: right;">16.667</td>
-<td style="text-align: right;">16.646</td>
-<td style="text-align: right;">60.1</td>
-<td style="text-align: right;">15.865</td>
-<td style="text-align: right;">17.040</td>
-<td style="text-align: right;">3.0</td>
-<td style="text-align: center;">yes</td>
+<td style="text-align: right;">0.616</td>
+<td style="text-align: right;">0.612</td>
+<td style="text-align: right;">1635.2</td>
+<td style="text-align: right;">0.594</td>
+<td style="text-align: right;">0.648</td>
+<td style="text-align: right;">81.4</td>
+<td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>sobel</td>
 <td>direction=x</td>
-<td style="text-align: right;">0.442</td>
-<td style="text-align: right;">0.436</td>
-<td style="text-align: right;">2294.4</td>
-<td style="text-align: right;">0.430</td>
-<td style="text-align: right;">0.461</td>
-<td style="text-align: right;">114.2</td>
+<td style="text-align: right;">0.516</td>
+<td style="text-align: right;">0.512</td>
+<td style="text-align: right;">1953.5</td>
+<td style="text-align: right;">0.486</td>
+<td style="text-align: right;">0.558</td>
+<td style="text-align: right;">97.2</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>sobel</td>
 <td>direction=y</td>
-<td style="text-align: right;">0.460</td>
-<td style="text-align: right;">0.458</td>
-<td style="text-align: right;">2185.2</td>
-<td style="text-align: right;">0.455</td>
-<td style="text-align: right;">0.471</td>
-<td style="text-align: right;">108.8</td>
+<td style="text-align: right;">0.494</td>
+<td style="text-align: right;">0.493</td>
+<td style="text-align: right;">2028.4</td>
+<td style="text-align: right;">0.479</td>
+<td style="text-align: right;">0.514</td>
+<td style="text-align: right;">100.9</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>sobel</td>
 <td>direction=magnitude</td>
-<td style="text-align: right;">0.477</td>
-<td style="text-align: right;">0.481</td>
-<td style="text-align: right;">2079.7</td>
-<td style="text-align: right;">0.462</td>
-<td style="text-align: right;">0.486</td>
-<td style="text-align: right;">103.5</td>
+<td style="text-align: right;">0.507</td>
+<td style="text-align: right;">0.504</td>
+<td style="text-align: right;">1984.1</td>
+<td style="text-align: right;">0.489</td>
+<td style="text-align: right;">0.528</td>
+<td style="text-align: right;">98.7</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>laplacian</td>
 <td>kernel=3x3</td>
-<td style="text-align: right;">0.276</td>
-<td style="text-align: right;">0.271</td>
-<td style="text-align: right;">3686.7</td>
-<td style="text-align: right;">0.266</td>
-<td style="text-align: right;">0.288</td>
-<td style="text-align: right;">183.5</td>
+<td style="text-align: right;">0.300</td>
+<td style="text-align: right;">0.297</td>
+<td style="text-align: right;">3366.2</td>
+<td style="text-align: right;">0.283</td>
+<td style="text-align: right;">0.322</td>
+<td style="text-align: right;">167.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>canny</td>
 <td>threshold_low=0.5, threshold_high=1.0, border=mirror</td>
-<td style="text-align: right;">2.264</td>
-<td style="text-align: right;">2.244</td>
-<td style="text-align: right;">445.7</td>
-<td style="text-align: right;">2.067</td>
-<td style="text-align: right;">2.461</td>
-<td style="text-align: right;">22.2</td>
+<td style="text-align: right;">2.388</td>
+<td style="text-align: right;">2.365</td>
+<td style="text-align: right;">422.8</td>
+<td style="text-align: right;">2.228</td>
+<td style="text-align: right;">2.605</td>
+<td style="text-align: right;">21.0</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>sharpen</td>
 <td>amount=1, border=mirror</td>
+<td style="text-align: right;">0.482</td>
+<td style="text-align: right;">0.480</td>
+<td style="text-align: right;">2085.0</td>
 <td style="text-align: right;">0.465</td>
-<td style="text-align: right;">0.457</td>
-<td style="text-align: right;">2188.5</td>
-<td style="text-align: right;">0.444</td>
-<td style="text-align: right;">0.506</td>
-<td style="text-align: right;">108.9</td>
+<td style="text-align: right;">0.505</td>
+<td style="text-align: right;">103.8</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>difference_of_gaussians</td>
 <td>sigma1=1, sigma2=2</td>
-<td style="text-align: right;">1.265</td>
-<td style="text-align: right;">1.261</td>
-<td style="text-align: right;">792.9</td>
-<td style="text-align: right;">1.250</td>
-<td style="text-align: right;">1.284</td>
-<td style="text-align: right;">39.5</td>
+<td style="text-align: right;">1.277</td>
+<td style="text-align: right;">1.271</td>
+<td style="text-align: right;">786.9</td>
+<td style="text-align: right;">1.252</td>
+<td style="text-align: right;">1.310</td>
+<td style="text-align: right;">39.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>corner_harris</td>
 <td>FHD fp32 RGB, block_size=3, k=0.04, border=mirror</td>
-<td style="text-align: right;">0.563</td>
-<td style="text-align: right;">0.559</td>
-<td style="text-align: right;">1788.0</td>
-<td style="text-align: right;">0.554</td>
-<td style="text-align: right;">0.581</td>
-<td style="text-align: right;">59.3</td>
+<td style="text-align: right;">0.587</td>
+<td style="text-align: right;">0.584</td>
+<td style="text-align: right;">1712.1</td>
+<td style="text-align: right;">0.565</td>
+<td style="text-align: right;">0.616</td>
+<td style="text-align: right;">56.8</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>match_template</td>
 <td>FHD fp32 RGB + 64x64 fp32 RGB, method=ccoeff_normed</td>
-<td style="text-align: right;">24.131</td>
-<td style="text-align: right;">24.280</td>
-<td style="text-align: right;">41.2</td>
-<td style="text-align: right;">23.519</td>
-<td style="text-align: right;">24.421</td>
-<td style="text-align: right;">1.3</td>
+<td style="text-align: right;">13.133</td>
+<td style="text-align: right;">13.104</td>
+<td style="text-align: right;">76.3</td>
+<td style="text-align: right;">13.035</td>
+<td style="text-align: right;">13.328</td>
+<td style="text-align: right;">2.5</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>psnr</td>
 <td>FHD fp32 RGB reference/candidate, data_range=1.0 default</td>
-<td style="text-align: right;">0.333</td>
-<td style="text-align: right;">0.294</td>
-<td style="text-align: right;">3403.0</td>
-<td style="text-align: right;">0.277</td>
-<td style="text-align: right;">0.575</td>
-<td style="text-align: right;">169.4</td>
+<td style="text-align: right;">0.341</td>
+<td style="text-align: right;">0.320</td>
+<td style="text-align: right;">3122.7</td>
+<td style="text-align: right;">0.297</td>
+<td style="text-align: right;">0.451</td>
+<td style="text-align: right;">155.4</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>ssim</td>
 <td>FHD fp32 RGB reference/candidate, data_range=1.0 default</td>
-<td style="text-align: right;">2.052</td>
-<td style="text-align: right;">2.041</td>
-<td style="text-align: right;">490.1</td>
-<td style="text-align: right;">2.027</td>
-<td style="text-align: right;">2.097</td>
-<td style="text-align: right;">24.4</td>
+<td style="text-align: right;">2.072</td>
+<td style="text-align: right;">2.068</td>
+<td style="text-align: right;">483.7</td>
+<td style="text-align: right;">2.057</td>
+<td style="text-align: right;">2.098</td>
+<td style="text-align: right;">24.1</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>ssim_map</td>
 <td>FHD fp32 RGB reference/candidate, data_range=1.0 default</td>
-<td style="text-align: right;">2.007</td>
-<td style="text-align: right;">1.998</td>
-<td style="text-align: right;">500.6</td>
-<td style="text-align: right;">1.990</td>
-<td style="text-align: right;">2.042</td>
-<td style="text-align: right;">29.0</td>
+<td style="text-align: right;">2.055</td>
+<td style="text-align: right;">2.052</td>
+<td style="text-align: right;">487.3</td>
+<td style="text-align: right;">2.044</td>
+<td style="text-align: right;">2.077</td>
+<td style="text-align: right;">28.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>equalize_histogram</td>
 <td>domain=(0,1), bins=1024</td>
-<td style="text-align: right;">0.857</td>
-<td style="text-align: right;">0.848</td>
-<td style="text-align: right;">1178.9</td>
-<td style="text-align: right;">0.844</td>
-<td style="text-align: right;">0.901</td>
-<td style="text-align: right;">58.7</td>
+<td style="text-align: right;">0.889</td>
+<td style="text-align: right;">0.879</td>
+<td style="text-align: right;">1138.2</td>
+<td style="text-align: right;">0.869</td>
+<td style="text-align: right;">0.939</td>
+<td style="text-align: right;">56.6</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>clahe</td>
 <td>clip_limit=2, tiles_y=8, tiles_x=8, domain=(0,1), bins=1024</td>
-<td style="text-align: right;">2.858</td>
-<td style="text-align: right;">2.860</td>
-<td style="text-align: right;">349.7</td>
-<td style="text-align: right;">2.844</td>
-<td style="text-align: right;">2.872</td>
-<td style="text-align: right;">17.4</td>
+<td style="text-align: right;">2.949</td>
+<td style="text-align: right;">2.943</td>
+<td style="text-align: right;">339.8</td>
+<td style="text-align: right;">2.934</td>
+<td style="text-align: right;">2.984</td>
+<td style="text-align: right;">16.9</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>directional_blur</td>
 <td>angle=30, length=8</td>
-<td style="text-align: right;">0.495</td>
-<td style="text-align: right;">0.493</td>
-<td style="text-align: right;">2029.7</td>
-<td style="text-align: right;">0.488</td>
+<td style="text-align: right;">0.521</td>
+<td style="text-align: right;">0.521</td>
+<td style="text-align: right;">1920.4</td>
 <td style="text-align: right;">0.508</td>
-<td style="text-align: right;">101.0</td>
+<td style="text-align: right;">0.537</td>
+<td style="text-align: right;">95.6</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>directional_blur</td>
 <td>angle=30, length=32</td>
-<td style="text-align: right;">1.544</td>
-<td style="text-align: right;">1.538</td>
-<td style="text-align: right;">650.3</td>
-<td style="text-align: right;">1.524</td>
-<td style="text-align: right;">1.569</td>
-<td style="text-align: right;">32.4</td>
+<td style="text-align: right;">1.589</td>
+<td style="text-align: right;">1.585</td>
+<td style="text-align: right;">630.8</td>
+<td style="text-align: right;">1.574</td>
+<td style="text-align: right;">1.617</td>
+<td style="text-align: right;">31.4</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>directional_blur</td>
 <td>angle=30, length=128</td>
-<td style="text-align: right;">10.876</td>
-<td style="text-align: right;">10.769</td>
-<td style="text-align: right;">92.9</td>
-<td style="text-align: right;">10.610</td>
-<td style="text-align: right;">11.266</td>
-<td style="text-align: right;">4.6</td>
+<td style="text-align: right;">7.532</td>
+<td style="text-align: right;">7.523</td>
+<td style="text-align: right;">132.9</td>
+<td style="text-align: right;">7.418</td>
+<td style="text-align: right;">7.677</td>
+<td style="text-align: right;">6.6</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>zoom_blur</td>
 <td>amount=0.05</td>
-<td style="text-align: right;">1.900</td>
-<td style="text-align: right;">1.896</td>
-<td style="text-align: right;">527.4</td>
-<td style="text-align: right;">1.854</td>
-<td style="text-align: right;">1.967</td>
-<td style="text-align: right;">26.2</td>
+<td style="text-align: right;">1.895</td>
+<td style="text-align: right;">1.892</td>
+<td style="text-align: right;">528.4</td>
+<td style="text-align: right;">1.883</td>
+<td style="text-align: right;">1.913</td>
+<td style="text-align: right;">26.3</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>zoom_blur</td>
 <td>amount=0.2</td>
-<td style="text-align: right;">12.024</td>
-<td style="text-align: right;">12.023</td>
-<td style="text-align: right;">83.2</td>
-<td style="text-align: right;">11.768</td>
-<td style="text-align: right;">12.280</td>
-<td style="text-align: right;">4.1</td>
+<td style="text-align: right;">9.149</td>
+<td style="text-align: right;">9.137</td>
+<td style="text-align: right;">109.4</td>
+<td style="text-align: right;">9.006</td>
+<td style="text-align: right;">9.339</td>
+<td style="text-align: right;">5.4</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>spin_blur</td>
 <td>angle=2</td>
-<td style="text-align: right;">1.201</td>
-<td style="text-align: right;">1.203</td>
-<td style="text-align: right;">831.2</td>
-<td style="text-align: right;">1.184</td>
-<td style="text-align: right;">1.217</td>
-<td style="text-align: right;">41.4</td>
+<td style="text-align: right;">1.245</td>
+<td style="text-align: right;">1.239</td>
+<td style="text-align: right;">807.1</td>
+<td style="text-align: right;">1.228</td>
+<td style="text-align: right;">1.261</td>
+<td style="text-align: right;">40.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>spin_blur</td>
 <td>angle=10</td>
-<td style="text-align: right;">10.330</td>
-<td style="text-align: right;">10.307</td>
-<td style="text-align: right;">97.0</td>
-<td style="text-align: right;">10.012</td>
-<td style="text-align: right;">10.770</td>
-<td style="text-align: right;">4.8</td>
+<td style="text-align: right;">8.095</td>
+<td style="text-align: right;">8.073</td>
+<td style="text-align: right;">123.9</td>
+<td style="text-align: right;">7.949</td>
+<td style="text-align: right;">8.310</td>
+<td style="text-align: right;">6.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>vector_blur</td>
 <td>uniform |v|=8, shutter=centered</td>
-<td style="text-align: right;">0.816</td>
-<td style="text-align: right;">0.811</td>
-<td style="text-align: right;">1233.7</td>
-<td style="text-align: right;">0.791</td>
-<td style="text-align: right;">0.841</td>
-<td style="text-align: right;">81.9</td>
+<td style="text-align: right;">0.804</td>
+<td style="text-align: right;">0.801</td>
+<td style="text-align: right;">1247.7</td>
+<td style="text-align: right;">0.792</td>
+<td style="text-align: right;">0.825</td>
+<td style="text-align: right;">82.8</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>vector_blur</td>
 <td>uniform |v|=32, shutter=centered</td>
-<td style="text-align: right;">1.747</td>
-<td style="text-align: right;">1.758</td>
-<td style="text-align: right;">568.7</td>
-<td style="text-align: right;">1.713</td>
-<td style="text-align: right;">1.776</td>
-<td style="text-align: right;">37.7</td>
+<td style="text-align: right;">1.804</td>
+<td style="text-align: right;">1.801</td>
+<td style="text-align: right;">555.1</td>
+<td style="text-align: right;">1.789</td>
+<td style="text-align: right;">1.825</td>
+<td style="text-align: right;">36.8</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>vector_blur</td>
 <td>uniform |v|=128, shutter=centered</td>
-<td style="text-align: right;">10.330</td>
-<td style="text-align: right;">10.326</td>
-<td style="text-align: right;">96.8</td>
-<td style="text-align: right;">10.227</td>
-<td style="text-align: right;">10.430</td>
-<td style="text-align: right;">6.4</td>
+<td style="text-align: right;">7.382</td>
+<td style="text-align: right;">7.373</td>
+<td style="text-align: right;">135.6</td>
+<td style="text-align: right;">7.299</td>
+<td style="text-align: right;">7.524</td>
+<td style="text-align: right;">9.0</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>vector_blur</td>
 <td>rotation field, corner |v|=32, shutter=centered</td>
-<td style="text-align: right;">1.109</td>
-<td style="text-align: right;">1.110</td>
-<td style="text-align: right;">900.8</td>
-<td style="text-align: right;">1.093</td>
-<td style="text-align: right;">1.128</td>
-<td style="text-align: right;">59.8</td>
+<td style="text-align: right;">1.145</td>
+<td style="text-align: right;">1.143</td>
+<td style="text-align: right;">874.8</td>
+<td style="text-align: right;">1.132</td>
+<td style="text-align: right;">1.161</td>
+<td style="text-align: right;">58.0</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>lens_blur</td>
 <td>circle radius=4</td>
-<td style="text-align: right;">0.707</td>
-<td style="text-align: right;">0.707</td>
-<td style="text-align: right;">1414.3</td>
-<td style="text-align: right;">0.692</td>
-<td style="text-align: right;">0.720</td>
-<td style="text-align: right;">70.4</td>
+<td style="text-align: right;">0.713</td>
+<td style="text-align: right;">0.710</td>
+<td style="text-align: right;">1407.6</td>
+<td style="text-align: right;">0.702</td>
+<td style="text-align: right;">0.731</td>
+<td style="text-align: right;">70.1</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>lens_blur</td>
 <td>circle radius=8</td>
-<td style="text-align: right;">1.542</td>
-<td style="text-align: right;">1.538</td>
-<td style="text-align: right;">650.3</td>
-<td style="text-align: right;">1.527</td>
 <td style="text-align: right;">1.565</td>
-<td style="text-align: right;">32.4</td>
+<td style="text-align: right;">1.559</td>
+<td style="text-align: right;">641.5</td>
+<td style="text-align: right;">1.550</td>
+<td style="text-align: right;">1.597</td>
+<td style="text-align: right;">31.9</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>lens_blur</td>
 <td>circle radius=16</td>
-<td style="text-align: right;">1.588</td>
-<td style="text-align: right;">1.594</td>
-<td style="text-align: right;">627.2</td>
-<td style="text-align: right;">1.538</td>
-<td style="text-align: right;">1.615</td>
-<td style="text-align: right;">31.2</td>
+<td style="text-align: right;">1.570</td>
+<td style="text-align: right;">1.568</td>
+<td style="text-align: right;">637.8</td>
+<td style="text-align: right;">1.560</td>
+<td style="text-align: right;">1.586</td>
+<td style="text-align: right;">31.7</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>lens_blur</td>
 <td>circle radius=32</td>
-<td style="text-align: right;">1.365</td>
-<td style="text-align: right;">1.382</td>
-<td style="text-align: right;">723.8</td>
-<td style="text-align: right;">1.326</td>
-<td style="text-align: right;">1.393</td>
-<td style="text-align: right;">36.0</td>
+<td style="text-align: right;">1.367</td>
+<td style="text-align: right;">1.364</td>
+<td style="text-align: right;">733.4</td>
+<td style="text-align: right;">1.354</td>
+<td style="text-align: right;">1.390</td>
+<td style="text-align: right;">36.5</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>lens_blur</td>
 <td>blades=6, radius=16</td>
-<td style="text-align: right;">1.531</td>
-<td style="text-align: right;">1.531</td>
-<td style="text-align: right;">653.0</td>
-<td style="text-align: right;">1.493</td>
-<td style="text-align: right;">1.577</td>
-<td style="text-align: right;">32.5</td>
+<td style="text-align: right;">1.579</td>
+<td style="text-align: right;">1.574</td>
+<td style="text-align: right;">635.4</td>
+<td style="text-align: right;">1.562</td>
+<td style="text-align: right;">1.615</td>
+<td style="text-align: right;">31.6</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>lens_blur</td>
 <td>blades=6, radius=32</td>
-<td style="text-align: right;">1.320</td>
-<td style="text-align: right;">1.308</td>
-<td style="text-align: right;">764.5</td>
-<td style="text-align: right;">1.294</td>
-<td style="text-align: right;">1.352</td>
-<td style="text-align: right;">38.0</td>
+<td style="text-align: right;">1.372</td>
+<td style="text-align: right;">1.365</td>
+<td style="text-align: right;">732.8</td>
+<td style="text-align: right;">1.354</td>
+<td style="text-align: right;">1.418</td>
+<td style="text-align: right;">36.5</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>line</td>
 <td>diagonal thickness=4, aa=distance</td>
-<td style="text-align: right;">0.165</td>
-<td style="text-align: right;">0.167</td>
-<td style="text-align: right;">5991.2</td>
-<td style="text-align: right;">0.146</td>
-<td style="text-align: right;">0.201</td>
-<td style="text-align: right;">298.2</td>
+<td style="text-align: right;">0.179</td>
+<td style="text-align: right;">0.176</td>
+<td style="text-align: right;">5689.0</td>
+<td style="text-align: right;">0.161</td>
+<td style="text-align: right;">0.212</td>
+<td style="text-align: right;">283.1</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>polyline</td>
 <td>5 points, closed, thickness=6, aa=distance</td>
-<td style="text-align: right;">0.196</td>
-<td style="text-align: right;">0.198</td>
-<td style="text-align: right;">5055.9</td>
-<td style="text-align: right;">0.174</td>
-<td style="text-align: right;">0.225</td>
-<td style="text-align: right;">251.6</td>
+<td style="text-align: right;">0.200</td>
+<td style="text-align: right;">0.192</td>
+<td style="text-align: right;">5215.1</td>
+<td style="text-align: right;">0.188</td>
+<td style="text-align: right;">0.230</td>
+<td style="text-align: right;">259.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>rectangle</td>
 <td>1280x720 fill, corner_radius=48, aa=distance</td>
-<td style="text-align: right;">0.192</td>
-<td style="text-align: right;">0.193</td>
-<td style="text-align: right;">5172.9</td>
-<td style="text-align: right;">0.169</td>
-<td style="text-align: right;">0.224</td>
-<td style="text-align: right;">257.4</td>
+<td style="text-align: right;">0.196</td>
+<td style="text-align: right;">0.190</td>
+<td style="text-align: right;">5268.8</td>
+<td style="text-align: right;">0.186</td>
+<td style="text-align: right;">0.222</td>
+<td style="text-align: right;">262.2</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>circle</td>
 <td>fill radius=320, aa=supersample</td>
 <td style="text-align: right;">0.181</td>
-<td style="text-align: right;">0.182</td>
-<td style="text-align: right;">5504.8</td>
-<td style="text-align: right;">0.158</td>
-<td style="text-align: right;">0.211</td>
-<td style="text-align: right;">274.0</td>
+<td style="text-align: right;">0.174</td>
+<td style="text-align: right;">5760.9</td>
+<td style="text-align: right;">0.170</td>
+<td style="text-align: right;">0.212</td>
+<td style="text-align: right;">286.7</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>ellipse</td>
 <td>radii=(520,260), rotation=25, thickness=8</td>
-<td style="text-align: right;">0.166</td>
-<td style="text-align: right;">0.167</td>
-<td style="text-align: right;">5984.6</td>
-<td style="text-align: right;">0.149</td>
-<td style="text-align: right;">0.207</td>
-<td style="text-align: right;">297.8</td>
+<td style="text-align: right;">0.188</td>
+<td style="text-align: right;">0.184</td>
+<td style="text-align: right;">5446.8</td>
+<td style="text-align: right;">0.160</td>
+<td style="text-align: right;">0.235</td>
+<td style="text-align: right;">271.1</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>polygon</td>
 <td>8-point concave fill, aa=distance</td>
-<td style="text-align: right;">0.230</td>
-<td style="text-align: right;">0.225</td>
-<td style="text-align: right;">4436.2</td>
-<td style="text-align: right;">0.208</td>
-<td style="text-align: right;">0.270</td>
-<td style="text-align: right;">220.8</td>
+<td style="text-align: right;">0.268</td>
+<td style="text-align: right;">0.277</td>
+<td style="text-align: right;">3615.9</td>
+<td style="text-align: right;">0.221</td>
+<td style="text-align: right;">0.316</td>
+<td style="text-align: right;">180.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>text</td>
 <td>single-line CJK, size=64, one outline, supersample=False</td>
-<td style="text-align: right;">0.405</td>
-<td style="text-align: right;">0.399</td>
-<td style="text-align: right;">2508.9</td>
-<td style="text-align: right;">0.332</td>
-<td style="text-align: right;">0.494</td>
-<td style="text-align: right;">124.9</td>
+<td style="text-align: right;">0.468</td>
+<td style="text-align: right;">0.434</td>
+<td style="text-align: right;">2303.3</td>
+<td style="text-align: right;">0.371</td>
+<td style="text-align: right;">0.698</td>
+<td style="text-align: right;">114.6</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>text</td>
 <td>single-line CJK, size=64, one outline, supersample=True</td>
-<td style="text-align: right;">0.359</td>
-<td style="text-align: right;">0.353</td>
-<td style="text-align: right;">2836.7</td>
-<td style="text-align: right;">0.337</td>
-<td style="text-align: right;">0.396</td>
-<td style="text-align: right;">141.2</td>
+<td style="text-align: right;">0.498</td>
+<td style="text-align: right;">0.462</td>
+<td style="text-align: right;">2164.3</td>
+<td style="text-align: right;">0.367</td>
+<td style="text-align: right;">0.701</td>
+<td style="text-align: right;">107.7</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>ramp</td>
 <td>FHD linear RGB</td>
-<td style="text-align: right;">0.116</td>
-<td style="text-align: right;">0.113</td>
-<td style="text-align: right;">8869.3</td>
-<td style="text-align: right;">0.111</td>
-<td style="text-align: right;">0.133</td>
-<td style="text-align: right;">220.7</td>
+<td style="text-align: right;">0.193</td>
+<td style="text-align: right;">0.179</td>
+<td style="text-align: right;">5584.7</td>
+<td style="text-align: right;">0.146</td>
+<td style="text-align: right;">0.252</td>
+<td style="text-align: right;">139.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>grid</td>
 <td>FHD cell=(64,64), line_width=2, aa=distance</td>
-<td style="text-align: right;">0.118</td>
-<td style="text-align: right;">0.113</td>
-<td style="text-align: right;">8872.1</td>
-<td style="text-align: right;">0.111</td>
-<td style="text-align: right;">0.143</td>
-<td style="text-align: right;">220.8</td>
+<td style="text-align: right;">0.158</td>
+<td style="text-align: right;">0.151</td>
+<td style="text-align: right;">6612.1</td>
+<td style="text-align: right;">0.131</td>
+<td style="text-align: right;">0.198</td>
+<td style="text-align: right;">164.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>checkerboard</td>
 <td>FHD cell=(64,64), aa=distance</td>
-<td style="text-align: right;">0.120</td>
-<td style="text-align: right;">0.115</td>
-<td style="text-align: right;">8678.3</td>
-<td style="text-align: right;">0.113</td>
-<td style="text-align: right;">0.141</td>
-<td style="text-align: right;">215.9</td>
+<td style="text-align: right;">0.150</td>
+<td style="text-align: right;">0.133</td>
+<td style="text-align: right;">7517.4</td>
+<td style="text-align: right;">0.129</td>
+<td style="text-align: right;">0.214</td>
+<td style="text-align: right;">187.1</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>color_bars</td>
 <td>FHD ARIB STD-B28 normalized</td>
-<td style="text-align: right;">0.083</td>
-<td style="text-align: right;">0.079</td>
-<td style="text-align: right;">12689.9</td>
-<td style="text-align: right;">0.076</td>
-<td style="text-align: right;">0.099</td>
-<td style="text-align: right;">315.8</td>
+<td style="text-align: right;">0.087</td>
+<td style="text-align: right;">0.084</td>
+<td style="text-align: right;">11901.7</td>
+<td style="text-align: right;">0.081</td>
+<td style="text-align: right;">0.103</td>
+<td style="text-align: right;">296.2</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>fractal_noise</td>
 <td>FHD scale=64, octaves=4</td>
-<td style="text-align: right;">4.212</td>
-<td style="text-align: right;">4.217</td>
-<td style="text-align: right;">237.1</td>
-<td style="text-align: right;">4.145</td>
-<td style="text-align: right;">4.235</td>
-<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">2.166</td>
+<td style="text-align: right;">2.163</td>
+<td style="text-align: right;">462.4</td>
+<td style="text-align: right;">2.155</td>
+<td style="text-align: right;">2.186</td>
+<td style="text-align: right;">3.8</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>turbulent_noise</td>
 <td>FHD scale=64, octaves=4</td>
-<td style="text-align: right;">4.224</td>
-<td style="text-align: right;">4.220</td>
-<td style="text-align: right;">237.0</td>
-<td style="text-align: right;">4.205</td>
-<td style="text-align: right;">4.275</td>
-<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">2.166</td>
+<td style="text-align: right;">2.163</td>
+<td style="text-align: right;">462.3</td>
+<td style="text-align: right;">2.155</td>
+<td style="text-align: right;">2.185</td>
+<td style="text-align: right;">3.8</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>grain</td>
 <td>FHD intensity=0.1, size=1, RGB</td>
-<td style="text-align: right;">12.228</td>
-<td style="text-align: right;">12.217</td>
-<td style="text-align: right;">81.9</td>
-<td style="text-align: right;">11.722</td>
-<td style="text-align: right;">13.170</td>
-<td style="text-align: right;">2.0</td>
+<td style="text-align: right;">3.601</td>
+<td style="text-align: right;">3.597</td>
+<td style="text-align: right;">278.0</td>
+<td style="text-align: right;">3.591</td>
+<td style="text-align: right;">3.622</td>
+<td style="text-align: right;">6.9</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>from_array</td>
 <td>CHW + affine scale=255 -&gt; float32 HWC</td>
-<td style="text-align: right;">0.132</td>
-<td style="text-align: right;">0.128</td>
-<td style="text-align: right;">7813.6</td>
-<td style="text-align: right;">0.124</td>
-<td style="text-align: right;">0.150</td>
-<td style="text-align: right;">388.9</td>
+<td style="text-align: right;">0.144</td>
+<td style="text-align: right;">0.139</td>
+<td style="text-align: right;">7212.8</td>
+<td style="text-align: right;">0.136</td>
+<td style="text-align: right;">0.166</td>
+<td style="text-align: right;">359.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>from_array</td>
 <td>CHW uint16, bit_depth=10 -&gt; float32 HWC</td>
+<td style="text-align: right;">0.124</td>
+<td style="text-align: right;">0.120</td>
+<td style="text-align: right;">8345.9</td>
 <td style="text-align: right;">0.117</td>
-<td style="text-align: right;">0.114</td>
-<td style="text-align: right;">8787.2</td>
-<td style="text-align: right;">0.112</td>
-<td style="text-align: right;">0.135</td>
-<td style="text-align: right;">328.0</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td>px.io.to_array</td>
-<td>BGR + NCHW + float16 + affine</td>
-<td style="text-align: right;">0.117</td>
-<td style="text-align: right;">0.109</td>
-<td style="text-align: right;">9182.3</td>
-<td style="text-align: right;">0.105</td>
 <td style="text-align: right;">0.145</td>
-<td style="text-align: right;">342.7</td>
+<td style="text-align: right;">311.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>px.io.to_array</td>
-<td>bit_depth=10 -&gt; uint16 HWC</td>
+<td>to_array</td>
+<td>BGR + NCHW + float16 + affine</td>
 <td style="text-align: right;">0.119</td>
-<td style="text-align: right;">0.122</td>
-<td style="text-align: right;">8177.5</td>
-<td style="text-align: right;">0.099</td>
-<td style="text-align: right;">0.146</td>
-<td style="text-align: right;">305.2</td>
+<td style="text-align: right;">0.114</td>
+<td style="text-align: right;">8751.6</td>
+<td style="text-align: right;">0.111</td>
+<td style="text-align: right;">0.142</td>
+<td style="text-align: right;">326.7</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>to_array</td>
+<td>bit_depth=10 -&gt; uint16 HWC</td>
+<td style="text-align: right;">0.112</td>
+<td style="text-align: right;">0.107</td>
+<td style="text-align: right;">9389.3</td>
+<td style="text-align: right;">0.104</td>
+<td style="text-align: right;">0.139</td>
+<td style="text-align: right;">350.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>rgb_to_rgb</td>
 <td>ACEScg linear -&gt; sRGB srgb</td>
-<td style="text-align: right;">0.136</td>
-<td style="text-align: right;">0.124</td>
-<td style="text-align: right;">8095.9</td>
-<td style="text-align: right;">0.119</td>
-<td style="text-align: right;">0.192</td>
-<td style="text-align: right;">402.9</td>
+<td style="text-align: right;">0.139</td>
+<td style="text-align: right;">0.133</td>
+<td style="text-align: right;">7495.8</td>
+<td style="text-align: right;">0.128</td>
+<td style="text-align: right;">0.166</td>
+<td style="text-align: right;">373.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>rgb_to_rgb</td>
 <td>ACES 1.3 analytic -&gt; sRGB srgb</td>
-<td style="text-align: right;">0.200</td>
-<td style="text-align: right;">0.191</td>
-<td style="text-align: right;">5249.0</td>
-<td style="text-align: right;">0.177</td>
-<td style="text-align: right;">0.250</td>
-<td style="text-align: right;">261.2</td>
+<td style="text-align: right;">0.202</td>
+<td style="text-align: right;">0.194</td>
+<td style="text-align: right;">5142.9</td>
+<td style="text-align: right;">0.184</td>
+<td style="text-align: right;">0.236</td>
+<td style="text-align: right;">255.9</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>rgb_to_rgb</td>
 <td>ACES 2.0 analytic -&gt; sRGB srgb</td>
-<td style="text-align: right;">1.358</td>
-<td style="text-align: right;">1.378</td>
-<td style="text-align: right;">725.8</td>
-<td style="text-align: right;">1.311</td>
-<td style="text-align: right;">1.393</td>
-<td style="text-align: right;">36.1</td>
+<td style="text-align: right;">1.349</td>
+<td style="text-align: right;">1.347</td>
+<td style="text-align: right;">742.3</td>
+<td style="text-align: right;">1.340</td>
+<td style="text-align: right;">1.363</td>
+<td style="text-align: right;">36.9</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>rgb_to_rgb</td>
 <td>ACES 2.0 LUT -&gt; sRGB srgb</td>
-<td style="text-align: right;">0.132</td>
-<td style="text-align: right;">0.129</td>
-<td style="text-align: right;">7734.0</td>
-<td style="text-align: right;">0.125</td>
-<td style="text-align: right;">0.150</td>
-<td style="text-align: right;">384.9</td>
+<td style="text-align: right;">0.146</td>
+<td style="text-align: right;">0.140</td>
+<td style="text-align: right;">7146.2</td>
+<td style="text-align: right;">0.136</td>
+<td style="text-align: right;">0.171</td>
+<td style="text-align: right;">355.6</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>rgb_to_rgb</td>
 <td>BT.2408 direct mapping -&gt; Rec.2020 pq</td>
-<td style="text-align: right;">0.132</td>
-<td style="text-align: right;">0.129</td>
-<td style="text-align: right;">7742.6</td>
-<td style="text-align: right;">0.127</td>
-<td style="text-align: right;">0.149</td>
-<td style="text-align: right;">385.3</td>
+<td style="text-align: right;">0.146</td>
+<td style="text-align: right;">0.139</td>
+<td style="text-align: right;">7187.5</td>
+<td style="text-align: right;">0.135</td>
+<td style="text-align: right;">0.173</td>
+<td style="text-align: right;">357.7</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>chromatic_adaptation</td>
+<td>FHD fp32 RGB, D50 input -&gt; D60 output, CAT02</td>
+<td style="text-align: right;">0.156</td>
+<td style="text-align: right;">0.148</td>
+<td style="text-align: right;">6763.9</td>
+<td style="text-align: right;">0.140</td>
+<td style="text-align: right;">0.186</td>
+<td style="text-align: right;">336.6</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>white_balance</td>
+<td>FHD fp32 RGB, Temperature=5000 K, Tint=0 Duv, CAT02</td>
+<td style="text-align: right;">0.165</td>
+<td style="text-align: right;">0.157</td>
+<td style="text-align: right;">6355.3</td>
+<td style="text-align: right;">0.154</td>
+<td style="text-align: right;">0.196</td>
+<td style="text-align: right;">316.3</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>white_point_simulation</td>
+<td>FHD fp32 RGB, D65 input display -&gt; D93 output display</td>
+<td style="text-align: right;">0.146</td>
+<td style="text-align: right;">0.137</td>
+<td style="text-align: right;">7307.7</td>
+<td style="text-align: right;">0.131</td>
+<td style="text-align: right;">0.175</td>
+<td style="text-align: right;">363.7</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>rgb_to_ycbcr</td>
 <td>RGB -&gt; YCbCr, matrix=native</td>
-<td style="text-align: right;">0.160</td>
-<td style="text-align: right;">0.157</td>
-<td style="text-align: right;">6389.2</td>
-<td style="text-align: right;">0.133</td>
-<td style="text-align: right;">0.206</td>
-<td style="text-align: right;">318.0</td>
+<td style="text-align: right;">0.153</td>
+<td style="text-align: right;">0.145</td>
+<td style="text-align: right;">6890.6</td>
+<td style="text-align: right;">0.140</td>
+<td style="text-align: right;">0.179</td>
+<td style="text-align: right;">342.9</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>rgb_to_hsv</td>
 <td>RGB -&gt; HSV, label-driven scene values</td>
-<td style="text-align: right;">0.149</td>
-<td style="text-align: right;">0.170</td>
-<td style="text-align: right;">5892.0</td>
-<td style="text-align: right;">0.105</td>
-<td style="text-align: right;">0.180</td>
-<td style="text-align: right;">293.2</td>
+<td style="text-align: right;">0.120</td>
+<td style="text-align: right;">0.115</td>
+<td style="text-align: right;">8683.3</td>
+<td style="text-align: right;">0.112</td>
+<td style="text-align: right;">0.139</td>
+<td style="text-align: right;">432.1</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>hsv_to_rgb</td>
 <td>HSV six sectors, S=[0,1], V=[0,2] -&gt; RGB</td>
-<td style="text-align: right;">0.114</td>
-<td style="text-align: right;">0.108</td>
-<td style="text-align: right;">9296.2</td>
-<td style="text-align: right;">0.105</td>
-<td style="text-align: right;">0.143</td>
-<td style="text-align: right;">462.6</td>
+<td style="text-align: right;">0.127</td>
+<td style="text-align: right;">0.122</td>
+<td style="text-align: right;">8218.6</td>
+<td style="text-align: right;">0.113</td>
+<td style="text-align: right;">0.151</td>
+<td style="text-align: right;">409.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>ycbcr_to_rgb</td>
 <td>YCbCr -&gt; RGB, matrix=bt709</td>
-<td style="text-align: right;">0.141</td>
-<td style="text-align: right;">0.136</td>
-<td style="text-align: right;">7337.4</td>
-<td style="text-align: right;">0.134</td>
-<td style="text-align: right;">0.159</td>
-<td style="text-align: right;">365.2</td>
+<td style="text-align: right;">0.150</td>
+<td style="text-align: right;">0.144</td>
+<td style="text-align: right;">6957.9</td>
+<td style="text-align: right;">0.139</td>
+<td style="text-align: right;">0.175</td>
+<td style="text-align: right;">346.3</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>rgb_to_grayscale</td>
 <td>RGB -&gt; Y, matrix=native</td>
-<td style="text-align: right;">0.118</td>
-<td style="text-align: right;">0.114</td>
-<td style="text-align: right;">8749.8</td>
-<td style="text-align: right;">0.111</td>
-<td style="text-align: right;">0.137</td>
-<td style="text-align: right;">290.3</td>
+<td style="text-align: right;">0.125</td>
+<td style="text-align: right;">0.120</td>
+<td style="text-align: right;">8353.2</td>
+<td style="text-align: right;">0.116</td>
+<td style="text-align: right;">0.149</td>
+<td style="text-align: right;">277.1</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>gamma_to_linear</td>
 <td>gamma=2.6 claim -&gt; linear</td>
-<td style="text-align: right;">0.155</td>
-<td style="text-align: right;">0.155</td>
-<td style="text-align: right;">6437.4</td>
-<td style="text-align: right;">0.132</td>
-<td style="text-align: right;">0.203</td>
-<td style="text-align: right;">320.4</td>
+<td style="text-align: right;">0.148</td>
+<td style="text-align: right;">0.142</td>
+<td style="text-align: right;">7057.4</td>
+<td style="text-align: right;">0.138</td>
+<td style="text-align: right;">0.171</td>
+<td style="text-align: right;">351.2</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>linear_to_gamma</td>
 <td>linear -&gt; gamma=2.6</td>
-<td style="text-align: right;">0.147</td>
-<td style="text-align: right;">0.137</td>
-<td style="text-align: right;">7305.3</td>
-<td style="text-align: right;">0.132</td>
-<td style="text-align: right;">0.183</td>
-<td style="text-align: right;">363.6</td>
+<td style="text-align: right;">0.153</td>
+<td style="text-align: right;">0.145</td>
+<td style="text-align: right;">6919.7</td>
+<td style="text-align: right;">0.139</td>
+<td style="text-align: right;">0.181</td>
+<td style="text-align: right;">344.4</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>ycbcr_to_ycbcr</td>
 <td>YCbCr bt709 -&gt; native rematrix</td>
+<td style="text-align: right;">0.150</td>
+<td style="text-align: right;">0.144</td>
+<td style="text-align: right;">6943.0</td>
 <td style="text-align: right;">0.141</td>
-<td style="text-align: right;">0.137</td>
-<td style="text-align: right;">7277.3</td>
-<td style="text-align: right;">0.135</td>
-<td style="text-align: right;">0.158</td>
-<td style="text-align: right;">362.2</td>
+<td style="text-align: right;">0.173</td>
+<td style="text-align: right;">345.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>full_to_legal</td>
 <td>full -&gt; legal, bit_depth=10</td>
-<td style="text-align: right;">0.123</td>
-<td style="text-align: right;">0.119</td>
-<td style="text-align: right;">8395.9</td>
-<td style="text-align: right;">0.116</td>
-<td style="text-align: right;">0.139</td>
-<td style="text-align: right;">417.8</td>
+<td style="text-align: right;">0.131</td>
+<td style="text-align: right;">0.125</td>
+<td style="text-align: right;">8017.5</td>
+<td style="text-align: right;">0.122</td>
+<td style="text-align: right;">0.159</td>
+<td style="text-align: right;">399.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>legal_to_full</td>
 <td>legal -&gt; full, bit_depth=10</td>
-<td style="text-align: right;">0.126</td>
-<td style="text-align: right;">0.119</td>
-<td style="text-align: right;">8368.8</td>
-<td style="text-align: right;">0.116</td>
-<td style="text-align: right;">0.143</td>
-<td style="text-align: right;">416.5</td>
+<td style="text-align: right;">0.130</td>
+<td style="text-align: right;">0.125</td>
+<td style="text-align: right;">7999.0</td>
+<td style="text-align: right;">0.122</td>
+<td style="text-align: right;">0.154</td>
+<td style="text-align: right;">398.1</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>quantize</td>
 <td>float32 -&gt; uint8, bit_depth=8</td>
-<td style="text-align: right;">0.100</td>
-<td style="text-align: right;">0.097</td>
-<td style="text-align: right;">10343.2</td>
-<td style="text-align: right;">0.095</td>
-<td style="text-align: right;">0.117</td>
-<td style="text-align: right;">321.7</td>
+<td style="text-align: right;">0.103</td>
+<td style="text-align: right;">0.098</td>
+<td style="text-align: right;">10208.0</td>
+<td style="text-align: right;">0.087</td>
+<td style="text-align: right;">0.131</td>
+<td style="text-align: right;">317.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>dequantize</td>
 <td>uint8 -&gt; float32, bit_depth=8</td>
-<td style="text-align: right;">0.108</td>
-<td style="text-align: right;">0.104</td>
-<td style="text-align: right;">9631.3</td>
-<td style="text-align: right;">0.102</td>
-<td style="text-align: right;">0.127</td>
-<td style="text-align: right;">299.6</td>
+<td style="text-align: right;">0.096</td>
+<td style="text-align: right;">0.090</td>
+<td style="text-align: right;">11098.5</td>
+<td style="text-align: right;">0.087</td>
+<td style="text-align: right;">0.124</td>
+<td style="text-align: right;">345.2</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>cast_dtype</td>
 <td>float32 -&gt; float16</td>
+<td style="text-align: right;">0.100</td>
+<td style="text-align: right;">0.096</td>
+<td style="text-align: right;">10466.5</td>
 <td style="text-align: right;">0.093</td>
-<td style="text-align: right;">0.091</td>
-<td style="text-align: right;">10996.3</td>
-<td style="text-align: right;">0.090</td>
-<td style="text-align: right;">0.108</td>
-<td style="text-align: right;">410.4</td>
+<td style="text-align: right;">0.119</td>
+<td style="text-align: right;">390.7</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>recode_dtype</td>
 <td>uint8 -&gt; float32</td>
-<td style="text-align: right;">0.114</td>
-<td style="text-align: right;">0.109</td>
-<td style="text-align: right;">9191.2</td>
-<td style="text-align: right;">0.107</td>
-<td style="text-align: right;">0.139</td>
-<td style="text-align: right;">285.9</td>
+<td style="text-align: right;">0.188</td>
+<td style="text-align: right;">0.178</td>
+<td style="text-align: right;">5624.4</td>
+<td style="text-align: right;">0.170</td>
+<td style="text-align: right;">0.237</td>
+<td style="text-align: right;">174.9</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>recode_dtype</td>
 <td>float32 -&gt; uint8</td>
-<td style="text-align: right;">0.133</td>
+<td style="text-align: right;">0.101</td>
+<td style="text-align: right;">0.095</td>
+<td style="text-align: right;">10560.3</td>
+<td style="text-align: right;">0.091</td>
 <td style="text-align: right;">0.124</td>
-<td style="text-align: right;">8081.9</td>
-<td style="text-align: right;">0.099</td>
-<td style="text-align: right;">0.177</td>
-<td style="text-align: right;">251.4</td>
+<td style="text-align: right;">328.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>from_uyvy422</td>
 <td>legal range</td>
-<td style="text-align: right;">0.121</td>
-<td style="text-align: right;">0.106</td>
-<td style="text-align: right;">9444.8</td>
-<td style="text-align: right;">0.086</td>
-<td style="text-align: right;">0.174</td>
-<td style="text-align: right;">274.2</td>
+<td style="text-align: right;">0.099</td>
+<td style="text-align: right;">0.094</td>
+<td style="text-align: right;">10627.1</td>
+<td style="text-align: right;">0.091</td>
+<td style="text-align: right;">0.119</td>
+<td style="text-align: right;">308.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>from_v210</td>
 <td>legal range</td>
-<td style="text-align: right;">0.105</td>
-<td style="text-align: right;">0.109</td>
-<td style="text-align: right;">9184.4</td>
-<td style="text-align: right;">0.086</td>
-<td style="text-align: right;">0.125</td>
-<td style="text-align: right;">279.3</td>
+<td style="text-align: right;">0.099</td>
+<td style="text-align: right;">0.095</td>
+<td style="text-align: right;">10481.8</td>
+<td style="text-align: right;">0.093</td>
+<td style="text-align: right;">0.119</td>
+<td style="text-align: right;">318.8</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>from_nv12</td>
 <td>legal range, siting=left, interpolation=bilinear</td>
-<td style="text-align: right;">0.093</td>
-<td style="text-align: right;">0.087</td>
-<td style="text-align: right;">11514.5</td>
-<td style="text-align: right;">0.084</td>
-<td style="text-align: right;">0.111</td>
-<td style="text-align: right;">322.3</td>
+<td style="text-align: right;">0.106</td>
+<td style="text-align: right;">0.102</td>
+<td style="text-align: right;">9761.3</td>
+<td style="text-align: right;">0.090</td>
+<td style="text-align: right;">0.136</td>
+<td style="text-align: right;">273.3</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>from_p010</td>
 <td>legal range, siting=left, interpolation=bilinear</td>
-<td style="text-align: right;">0.095</td>
-<td style="text-align: right;">0.089</td>
-<td style="text-align: right;">11278.8</td>
-<td style="text-align: right;">0.087</td>
-<td style="text-align: right;">0.113</td>
-<td style="text-align: right;">350.8</td>
+<td style="text-align: right;">0.103</td>
+<td style="text-align: right;">0.097</td>
+<td style="text-align: right;">10302.9</td>
+<td style="text-align: right;">0.094</td>
+<td style="text-align: right;">0.126</td>
+<td style="text-align: right;">320.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>from_yuv420p</td>
 <td>legal range, interpolation=bilinear</td>
-<td style="text-align: right;">0.094</td>
-<td style="text-align: right;">0.085</td>
-<td style="text-align: right;">11738.6</td>
-<td style="text-align: right;">0.083</td>
-<td style="text-align: right;">0.111</td>
-<td style="text-align: right;">328.6</td>
+<td style="text-align: right;">0.102</td>
+<td style="text-align: right;">0.095</td>
+<td style="text-align: right;">10544.3</td>
+<td style="text-align: right;">0.090</td>
+<td style="text-align: right;">0.130</td>
+<td style="text-align: right;">295.2</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>from_yuv422p</td>
 <td>legal range</td>
-<td style="text-align: right;">0.112</td>
-<td style="text-align: right;">0.113</td>
-<td style="text-align: right;">8846.2</td>
-<td style="text-align: right;">0.092</td>
-<td style="text-align: right;">0.141</td>
-<td style="text-align: right;">293.5</td>
+<td style="text-align: right;">0.109</td>
+<td style="text-align: right;">0.102</td>
+<td style="text-align: right;">9850.1</td>
+<td style="text-align: right;">0.097</td>
+<td style="text-align: right;">0.135</td>
+<td style="text-align: right;">326.8</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>from_yuv444p</td>
 <td>10-bit legal range</td>
-<td style="text-align: right;">0.100</td>
-<td style="text-align: right;">0.094</td>
-<td style="text-align: right;">10694.3</td>
-<td style="text-align: right;">0.092</td>
-<td style="text-align: right;">0.118</td>
-<td style="text-align: right;">399.2</td>
+<td style="text-align: right;">0.111</td>
+<td style="text-align: right;">0.103</td>
+<td style="text-align: right;">9724.3</td>
+<td style="text-align: right;">0.099</td>
+<td style="text-align: right;">0.137</td>
+<td style="text-align: right;">363.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>from_yuva444p</td>
 <td>12-bit legal range</td>
-<td style="text-align: right;">0.131</td>
-<td style="text-align: right;">0.114</td>
-<td style="text-align: right;">8759.7</td>
-<td style="text-align: right;">0.110</td>
-<td style="text-align: right;">0.182</td>
-<td style="text-align: right;">435.9</td>
+<td style="text-align: right;">0.134</td>
+<td style="text-align: right;">0.129</td>
+<td style="text-align: right;">7752.5</td>
+<td style="text-align: right;">0.118</td>
+<td style="text-align: right;">0.164</td>
+<td style="text-align: right;">385.8</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>apply_lut</td>
 <td>FHD fp32 RGB, 65^3 LUT, interpolation=trilinear</td>
-<td style="text-align: right;">0.299</td>
-<td style="text-align: right;">0.297</td>
-<td style="text-align: right;">3363.1</td>
-<td style="text-align: right;">0.294</td>
-<td style="text-align: right;">0.314</td>
-<td style="text-align: right;">167.4</td>
+<td style="text-align: right;">0.364</td>
+<td style="text-align: right;">0.358</td>
+<td style="text-align: right;">2789.9</td>
+<td style="text-align: right;">0.353</td>
+<td style="text-align: right;">0.386</td>
+<td style="text-align: right;">138.8</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>apply_lut</td>
 <td>FHD fp32 RGB, 65^3 LUT, interpolation=tetrahedral</td>
-<td style="text-align: right;">0.179</td>
-<td style="text-align: right;">0.175</td>
-<td style="text-align: right;">5720.3</td>
-<td style="text-align: right;">0.164</td>
-<td style="text-align: right;">0.204</td>
-<td style="text-align: right;">284.7</td>
+<td style="text-align: right;">0.362</td>
+<td style="text-align: right;">0.358</td>
+<td style="text-align: right;">2795.2</td>
+<td style="text-align: right;">0.353</td>
+<td style="text-align: right;">0.382</td>
+<td style="text-align: right;">139.1</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>px.io.to_uyvy422</td>
+<td>apply_lut</td>
+<td>FHD fp32 RGB, 65-sample 1D LUT, interpolation=linear</td>
+<td style="text-align: right;">0.367</td>
+<td style="text-align: right;">0.357</td>
+<td style="text-align: right;">2804.1</td>
+<td style="text-align: right;">0.349</td>
+<td style="text-align: right;">0.414</td>
+<td style="text-align: right;">139.5</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>to_uyvy422</td>
 <td>FHD area, legal</td>
-<td style="text-align: right;">0.108</td>
-<td style="text-align: right;">0.101</td>
-<td style="text-align: right;">9920.4</td>
-<td style="text-align: right;">0.081</td>
-<td style="text-align: right;">0.153</td>
-<td style="text-align: right;">288.0</td>
+<td style="text-align: right;">0.113</td>
+<td style="text-align: right;">0.104</td>
+<td style="text-align: right;">9577.6</td>
+<td style="text-align: right;">0.084</td>
+<td style="text-align: right;">0.171</td>
+<td style="text-align: right;">278.0</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>px.io.to_v210</td>
+<td>to_v210</td>
 <td>FHD area, legal, 128-byte rows</td>
-<td style="text-align: right;">0.174</td>
-<td style="text-align: right;">0.164</td>
-<td style="text-align: right;">6102.8</td>
-<td style="text-align: right;">0.142</td>
-<td style="text-align: right;">0.215</td>
-<td style="text-align: right;">185.6</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td>px.io.to_nv12</td>
-<td>FHD area, legal, siting=left</td>
-<td style="text-align: right;">0.150</td>
-<td style="text-align: right;">0.135</td>
-<td style="text-align: right;">7410.8</td>
-<td style="text-align: right;">0.126</td>
-<td style="text-align: right;">0.196</td>
-<td style="text-align: right;">207.5</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td>px.io.to_p010</td>
-<td>FHD area, legal, siting=left</td>
+<td style="text-align: right;">0.169</td>
 <td style="text-align: right;">0.156</td>
-<td style="text-align: right;">0.148</td>
-<td style="text-align: right;">6761.4</td>
-<td style="text-align: right;">0.128</td>
-<td style="text-align: right;">0.198</td>
-<td style="text-align: right;">210.3</td>
+<td style="text-align: right;">6402.1</td>
+<td style="text-align: right;">0.145</td>
+<td style="text-align: right;">0.232</td>
+<td style="text-align: right;">194.7</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>px.io.to_yuv420p</td>
-<td>8-bit area, legal, siting=left</td>
+<td>to_nv12</td>
+<td>FHD area, legal, siting=left</td>
+<td style="text-align: right;">0.168</td>
 <td style="text-align: right;">0.155</td>
-<td style="text-align: right;">0.148</td>
-<td style="text-align: right;">6774.9</td>
-<td style="text-align: right;">0.126</td>
-<td style="text-align: right;">0.208</td>
-<td style="text-align: right;">189.7</td>
+<td style="text-align: right;">6446.9</td>
+<td style="text-align: right;">0.130</td>
+<td style="text-align: right;">0.223</td>
+<td style="text-align: right;">180.5</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>px.io.to_yuv422p</td>
-<td>10-bit area, legal</td>
-<td style="text-align: right;">0.128</td>
+<td>to_p010</td>
+<td>FHD area, legal, siting=left</td>
+<td style="text-align: right;">0.142</td>
+<td style="text-align: right;">0.137</td>
+<td style="text-align: right;">7319.0</td>
 <td style="text-align: right;">0.133</td>
-<td style="text-align: right;">7527.9</td>
-<td style="text-align: right;">0.113</td>
-<td style="text-align: right;">0.153</td>
-<td style="text-align: right;">249.8</td>
+<td style="text-align: right;">0.165</td>
+<td style="text-align: right;">227.6</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>px.io.to_yuv444p</td>
+<td>to_yuv420p</td>
+<td>8-bit area, legal, siting=left</td>
+<td style="text-align: right;">0.139</td>
+<td style="text-align: right;">0.134</td>
+<td style="text-align: right;">7439.3</td>
+<td style="text-align: right;">0.131</td>
+<td style="text-align: right;">0.160</td>
+<td style="text-align: right;">208.3</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>to_yuv422p</td>
+<td>10-bit area, legal</td>
+<td style="text-align: right;">0.126</td>
+<td style="text-align: right;">0.121</td>
+<td style="text-align: right;">8278.3</td>
+<td style="text-align: right;">0.118</td>
+<td style="text-align: right;">0.150</td>
+<td style="text-align: right;">274.7</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>to_yuv444p</td>
 <td>10-bit legal</td>
-<td style="text-align: right;">0.116</td>
-<td style="text-align: right;">0.107</td>
-<td style="text-align: right;">9363.0</td>
-<td style="text-align: right;">0.089</td>
-<td style="text-align: right;">0.162</td>
-<td style="text-align: right;">349.5</td>
+<td style="text-align: right;">0.099</td>
+<td style="text-align: right;">0.094</td>
+<td style="text-align: right;">10592.9</td>
+<td style="text-align: right;">0.091</td>
+<td style="text-align: right;">0.120</td>
+<td style="text-align: right;">395.4</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>px.io.to_yuva444p</td>
+<td>to_yuva444p</td>
 <td>12-bit legal, alpha full</td>
-<td style="text-align: right;">0.123</td>
-<td style="text-align: right;">0.113</td>
-<td style="text-align: right;">8876.7</td>
-<td style="text-align: right;">0.105</td>
-<td style="text-align: right;">0.175</td>
-<td style="text-align: right;">441.8</td>
+<td style="text-align: right;">0.128</td>
+<td style="text-align: right;">0.122</td>
+<td style="text-align: right;">8211.5</td>
+<td style="text-align: right;">0.109</td>
+<td style="text-align: right;">0.181</td>
+<td style="text-align: right;">408.7</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
 <td>read_lut</td>
 <td>65^3 RGB .cube file, parse, float4 packing, and host-to-device transfer included</td>
-<td style="text-align: right;">111.387</td>
-<td style="text-align: right;">111.459</td>
-<td style="text-align: right;">9.0</td>
-<td style="text-align: right;">110.436</td>
-<td style="text-align: right;">112.231</td>
+<td style="text-align: right;">139.451</td>
+<td style="text-align: right;">138.599</td>
+<td style="text-align: right;">7.2</td>
+<td style="text-align: right;">137.770</td>
+<td style="text-align: right;">140.834</td>
 <td style="text-align: right;">0.1</td>
+<td style="text-align: center;">yes</td>
+</tr>
+<tr>
+<td>read_lut</td>
+<td>65-sample RGB Cube 1D file, parse and host-to-device transfer included</td>
+<td style="text-align: right;">0.249</td>
+<td style="text-align: right;">0.238</td>
+<td style="text-align: right;">4203.6</td>
+<td style="text-align: right;">0.233</td>
+<td style="text-align: right;">0.295</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>read_lut</td>
+<td>17^3 RGB headerless 3DL file, parse, packing, and host-to-device transfer included</td>
+<td style="text-align: right;">8.623</td>
+<td style="text-align: right;">8.499</td>
+<td style="text-align: right;">117.7</td>
+<td style="text-align: right;">8.272</td>
+<td style="text-align: right;">9.290</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: center;">yes</td>
+</tr>
+<tr>
+<td>read_lut</td>
+<td>65-sample RGB SPI1D file, parse and host-to-device transfer included</td>
+<td style="text-align: right;">0.220</td>
+<td style="text-align: right;">0.205</td>
+<td style="text-align: right;">4870.5</td>
+<td style="text-align: right;">0.201</td>
+<td style="text-align: right;">0.276</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>read_lut</td>
+<td>17^3 RGB SPI3D file, explicit-index parse, packing, and host-to-device transfer included</td>
+<td style="text-align: right;">8.935</td>
+<td style="text-align: right;">8.858</td>
+<td style="text-align: right;">112.9</td>
+<td style="text-align: right;">8.595</td>
+<td style="text-align: right;">9.531</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: center;">yes</td>
+</tr>
+<tr>
+<td>write_lut</td>
+<td>65-sample RGB Lut1D, device-to-host transfer and Cube file write included</td>
+<td style="text-align: right;">0.320</td>
+<td style="text-align: right;">0.292</td>
+<td style="text-align: right;">3428.7</td>
+<td style="text-align: right;">0.271</td>
+<td style="text-align: right;">0.539</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>write_lut</td>
+<td>65^3 RGB Lut, device-to-host transfer and Cube file write included</td>
+<td style="text-align: right;">325.118</td>
+<td style="text-align: right;">323.924</td>
+<td style="text-align: right;">3.1</td>
+<td style="text-align: right;">321.219</td>
+<td style="text-align: right;">332.531</td>
+<td style="text-align: right;">0.0</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD uint8 RGB PNG file, unchanged, temporary-file I/O included</td>
-<td style="text-align: right;">24.939</td>
-<td style="text-align: right;">24.937</td>
-<td style="text-align: right;">40.1</td>
-<td style="text-align: right;">24.010</td>
-<td style="text-align: right;">25.653</td>
+<td style="text-align: right;">25.679</td>
+<td style="text-align: right;">25.537</td>
+<td style="text-align: right;">39.2</td>
+<td style="text-align: right;">25.141</td>
+<td style="text-align: right;">26.433</td>
 <td style="text-align: right;">0.5</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD uint8 RGB JPEG file, unchanged, temporary-file I/O included</td>
-<td style="text-align: right;">35.099</td>
-<td style="text-align: right;">35.088</td>
-<td style="text-align: right;">28.5</td>
-<td style="text-align: right;">34.587</td>
-<td style="text-align: right;">35.822</td>
-<td style="text-align: right;">0.4</td>
+<td style="text-align: right;">41.004</td>
+<td style="text-align: right;">41.125</td>
+<td style="text-align: right;">24.3</td>
+<td style="text-align: right;">39.467</td>
+<td style="text-align: right;">42.106</td>
+<td style="text-align: right;">0.3</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD uint8 RGB TIFF file, unchanged, temporary-file I/O included</td>
-<td style="text-align: right;">31.932</td>
-<td style="text-align: right;">31.896</td>
-<td style="text-align: right;">31.4</td>
-<td style="text-align: right;">31.616</td>
-<td style="text-align: right;">32.292</td>
+<td style="text-align: right;">33.054</td>
+<td style="text-align: right;">33.057</td>
+<td style="text-align: right;">30.3</td>
+<td style="text-align: right;">32.561</td>
+<td style="text-align: right;">33.636</td>
 <td style="text-align: right;">0.4</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD HALF RGB EXR ZIP file, unchanged, source-fixed custom CPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">31.960</td>
-<td style="text-align: right;">30.925</td>
-<td style="text-align: right;">32.3</td>
-<td style="text-align: right;">29.255</td>
-<td style="text-align: right;">35.430</td>
-<td style="text-align: right;">0.8</td>
+<td style="text-align: right;">40.090</td>
+<td style="text-align: right;">39.981</td>
+<td style="text-align: right;">25.0</td>
+<td style="text-align: right;">39.144</td>
+<td style="text-align: right;">41.098</td>
+<td style="text-align: right;">0.6</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD HALF RGB EXR NONE file, unchanged, source-fixed native lane, temporary-file I/O included</td>
-<td style="text-align: right;">31.146</td>
-<td style="text-align: right;">30.507</td>
-<td style="text-align: right;">32.8</td>
-<td style="text-align: right;">30.246</td>
-<td style="text-align: right;">31.079</td>
+<td style="text-align: right;">30.675</td>
+<td style="text-align: right;">30.418</td>
+<td style="text-align: right;">32.9</td>
+<td style="text-align: right;">29.628</td>
+<td style="text-align: right;">32.997</td>
 <td style="text-align: right;">0.8</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD HALF RGB EXR ZIP file, unchanged, source-fixed custom CPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">33.069</td>
-<td style="text-align: right;">32.826</td>
-<td style="text-align: right;">30.5</td>
-<td style="text-align: right;">31.996</td>
-<td style="text-align: right;">33.847</td>
-<td style="text-align: right;">0.8</td>
+<td style="text-align: right;">33.470</td>
+<td style="text-align: right;">33.472</td>
+<td style="text-align: right;">29.9</td>
+<td style="text-align: right;">32.594</td>
+<td style="text-align: right;">34.272</td>
+<td style="text-align: right;">0.7</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD HALF RGB EXR ZIPS file, unchanged, source-fixed custom CPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">63.551</td>
-<td style="text-align: right;">63.145</td>
-<td style="text-align: right;">15.8</td>
-<td style="text-align: right;">61.423</td>
-<td style="text-align: right;">64.884</td>
+<td style="text-align: right;">64.518</td>
+<td style="text-align: right;">64.289</td>
+<td style="text-align: right;">15.6</td>
+<td style="text-align: right;">62.168</td>
+<td style="text-align: right;">67.345</td>
 <td style="text-align: right;">0.4</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD HALF RGB EXR DWAA file, unchanged, dwa_level=45.0, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">25.820</td>
-<td style="text-align: right;">25.249</td>
-<td style="text-align: right;">39.6</td>
-<td style="text-align: right;">24.762</td>
-<td style="text-align: right;">26.886</td>
+<td style="text-align: right;">25.153</td>
+<td style="text-align: right;">24.606</td>
+<td style="text-align: right;">40.6</td>
+<td style="text-align: right;">24.229</td>
+<td style="text-align: right;">25.684</td>
 <td style="text-align: right;">1.0</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD HALF RGB EXR DWAB file, unchanged, dwa_level=45.0, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">28.502</td>
-<td style="text-align: right;">28.637</td>
-<td style="text-align: right;">34.9</td>
-<td style="text-align: right;">26.213</td>
-<td style="text-align: right;">30.009</td>
-<td style="text-align: right;">0.9</td>
+<td style="text-align: right;">26.260</td>
+<td style="text-align: right;">26.185</td>
+<td style="text-align: right;">38.2</td>
+<td style="text-align: right;">25.825</td>
+<td style="text-align: right;">26.795</td>
+<td style="text-align: right;">1.0</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD HALF RGB EXR RLE file, unchanged, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">177.058</td>
-<td style="text-align: right;">171.123</td>
-<td style="text-align: right;">5.8</td>
-<td style="text-align: right;">169.152</td>
-<td style="text-align: right;">194.852</td>
-<td style="text-align: right;">0.1</td>
+<td style="text-align: right;">177.179</td>
+<td style="text-align: right;">162.049</td>
+<td style="text-align: right;">6.2</td>
+<td style="text-align: right;">157.153</td>
+<td style="text-align: right;">219.767</td>
+<td style="text-align: right;">0.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD HALF RGB EXR PXR24 file, unchanged, source-fixed custom CPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">306.220</td>
-<td style="text-align: right;">305.966</td>
-<td style="text-align: right;">3.3</td>
-<td style="text-align: right;">293.368</td>
-<td style="text-align: right;">320.083</td>
+<td style="text-align: right;">330.270</td>
+<td style="text-align: right;">330.448</td>
+<td style="text-align: right;">3.0</td>
+<td style="text-align: right;">299.542</td>
+<td style="text-align: right;">364.100</td>
 <td style="text-align: right;">0.1</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD HALF RGB EXR B44 file, unchanged, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">74.756</td>
-<td style="text-align: right;">70.301</td>
-<td style="text-align: right;">14.2</td>
-<td style="text-align: right;">68.446</td>
-<td style="text-align: right;">93.049</td>
-<td style="text-align: right;">0.4</td>
-<td style="text-align: center;">yes</td>
-</tr>
-<tr>
-<td>read_image</td>
-<td>FHD HALF RGB EXR B44A file, unchanged, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">95.768</td>
-<td style="text-align: right;">91.025</td>
-<td style="text-align: right;">11.0</td>
-<td style="text-align: right;">90.160</td>
-<td style="text-align: right;">113.199</td>
+<td style="text-align: right;">83.478</td>
+<td style="text-align: right;">71.782</td>
+<td style="text-align: right;">13.9</td>
+<td style="text-align: right;">69.215</td>
+<td style="text-align: right;">128.423</td>
 <td style="text-align: right;">0.3</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
+<td>FHD HALF RGB EXR B44A file, unchanged, source-fixed GPU lane, temporary-file I/O included</td>
+<td style="text-align: right;">114.376</td>
+<td style="text-align: right;">102.995</td>
+<td style="text-align: right;">9.7</td>
+<td style="text-align: right;">100.099</td>
+<td style="text-align: right;">158.392</td>
+<td style="text-align: right;">0.2</td>
+<td style="text-align: center;">yes</td>
+</tr>
+<tr>
+<td>read_image</td>
 <td>FHD HALF RGB EXR PIZ file, unchanged, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">33.946</td>
-<td style="text-align: right;">33.598</td>
-<td style="text-align: right;">29.8</td>
-<td style="text-align: right;">33.114</td>
-<td style="text-align: right;">34.947</td>
+<td style="text-align: right;">35.363</td>
+<td style="text-align: right;">35.055</td>
+<td style="text-align: right;">28.5</td>
+<td style="text-align: right;">34.428</td>
+<td style="text-align: right;">36.907</td>
 <td style="text-align: right;">0.7</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD uint8 RGB JPEG 2000 file, unchanged, temporary-file I/O included</td>
-<td style="text-align: right;">25.184</td>
-<td style="text-align: right;">25.194</td>
-<td style="text-align: right;">39.7</td>
-<td style="text-align: right;">24.657</td>
-<td style="text-align: right;">25.751</td>
+<td style="text-align: right;">25.686</td>
+<td style="text-align: right;">25.634</td>
+<td style="text-align: right;">39.0</td>
+<td style="text-align: right;">25.286</td>
+<td style="text-align: right;">26.283</td>
 <td style="text-align: right;">0.5</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD uint8 RGB WebP file, unchanged, temporary-file I/O included</td>
-<td style="text-align: right;">41.128</td>
-<td style="text-align: right;">41.004</td>
-<td style="text-align: right;">24.4</td>
-<td style="text-align: right;">40.105</td>
-<td style="text-align: right;">42.625</td>
+<td style="text-align: right;">41.755</td>
+<td style="text-align: right;">41.687</td>
+<td style="text-align: right;">24.0</td>
+<td style="text-align: right;">40.910</td>
+<td style="text-align: right;">42.854</td>
 <td style="text-align: right;">0.3</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD uint8 RGB BMP file, unchanged, temporary-file I/O included</td>
-<td style="text-align: right;">17.386</td>
-<td style="text-align: right;">17.328</td>
-<td style="text-align: right;">57.7</td>
-<td style="text-align: right;">16.735</td>
-<td style="text-align: right;">17.983</td>
+<td style="text-align: right;">17.658</td>
+<td style="text-align: right;">17.614</td>
+<td style="text-align: right;">56.8</td>
+<td style="text-align: right;">17.088</td>
+<td style="text-align: right;">18.354</td>
 <td style="text-align: right;">0.7</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD uint8 RGB PNM file, unchanged, temporary-file I/O included</td>
-<td style="text-align: right;">18.649</td>
-<td style="text-align: right;">18.610</td>
-<td style="text-align: right;">53.7</td>
-<td style="text-align: right;">18.151</td>
-<td style="text-align: right;">19.163</td>
-<td style="text-align: right;">0.7</td>
+<td style="text-align: right;">19.311</td>
+<td style="text-align: right;">19.223</td>
+<td style="text-align: right;">52.0</td>
+<td style="text-align: right;">18.751</td>
+<td style="text-align: right;">19.969</td>
+<td style="text-align: right;">0.6</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD uint8 RGB TGA file, unchanged, temporary-file I/O and CPU RLE included</td>
-<td style="text-align: right;">9.424</td>
-<td style="text-align: right;">9.389</td>
-<td style="text-align: right;">106.5</td>
-<td style="text-align: right;">9.179</td>
-<td style="text-align: right;">9.710</td>
-<td style="text-align: right;">1.3</td>
+<td style="text-align: right;">12.703</td>
+<td style="text-align: right;">12.707</td>
+<td style="text-align: right;">78.7</td>
+<td style="text-align: right;">12.418</td>
+<td style="text-align: right;">12.952</td>
+<td style="text-align: right;">1.0</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD fp32 RGB HDR file, temporary-file I/O and CPU RLE included</td>
-<td style="text-align: right;">127.068</td>
-<td style="text-align: right;">126.732</td>
-<td style="text-align: right;">7.9</td>
-<td style="text-align: right;">126.032</td>
-<td style="text-align: right;">128.264</td>
-<td style="text-align: right;">0.3</td>
+<td style="text-align: right;">135.287</td>
+<td style="text-align: right;">134.518</td>
+<td style="text-align: right;">7.4</td>
+<td style="text-align: right;">132.113</td>
+<td style="text-align: right;">139.446</td>
+<td style="text-align: right;">0.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_image</td>
 <td>FHD fp32 RGB 10-bit DPX file, temporary-file I/O and GPU unpack included</td>
-<td style="text-align: right;">3.229</td>
-<td style="text-align: right;">3.219</td>
-<td style="text-align: right;">310.6</td>
-<td style="text-align: right;">3.035</td>
-<td style="text-align: right;">3.459</td>
-<td style="text-align: right;">10.3</td>
+<td style="text-align: right;">5.682</td>
+<td style="text-align: right;">5.623</td>
+<td style="text-align: right;">177.9</td>
+<td style="text-align: right;">5.293</td>
+<td style="text-align: right;">6.054</td>
+<td style="text-align: right;">5.9</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD uint8 RGB PNG file, compression_level=4, temporary-file I/O included</td>
-<td style="text-align: right;">196.107</td>
-<td style="text-align: right;">196.090</td>
-<td style="text-align: right;">5.1</td>
-<td style="text-align: right;">194.849</td>
-<td style="text-align: right;">197.293</td>
+<td style="text-align: right;">201.841</td>
+<td style="text-align: right;">201.835</td>
+<td style="text-align: right;">5.0</td>
+<td style="text-align: right;">200.549</td>
+<td style="text-align: right;">202.962</td>
 <td style="text-align: right;">0.1</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD uint8 RGB JPEG file, quality=95, temporary-file I/O included</td>
-<td style="text-align: right;">39.903</td>
-<td style="text-align: right;">39.546</td>
-<td style="text-align: right;">25.3</td>
-<td style="text-align: right;">38.099</td>
-<td style="text-align: right;">42.379</td>
+<td style="text-align: right;">43.952</td>
+<td style="text-align: right;">44.052</td>
+<td style="text-align: right;">22.7</td>
+<td style="text-align: right;">41.218</td>
+<td style="text-align: right;">46.573</td>
 <td style="text-align: right;">0.3</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD uint8 RGB TIFF file, temporary-file I/O included</td>
-<td style="text-align: right;">62.541</td>
-<td style="text-align: right;">60.787</td>
+<td style="text-align: right;">61.084</td>
+<td style="text-align: right;">60.589</td>
 <td style="text-align: right;">16.5</td>
-<td style="text-align: right;">59.480</td>
-<td style="text-align: right;">73.821</td>
+<td style="text-align: right;">57.591</td>
+<td style="text-align: right;">65.679</td>
 <td style="text-align: right;">0.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp32 RGB to EXR ZIP/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">37.380</td>
-<td style="text-align: right;">37.042</td>
-<td style="text-align: right;">27.0</td>
-<td style="text-align: right;">36.499</td>
-<td style="text-align: right;">38.747</td>
+<td style="text-align: right;">39.184</td>
+<td style="text-align: right;">38.921</td>
+<td style="text-align: right;">25.7</td>
+<td style="text-align: right;">37.615</td>
+<td style="text-align: right;">41.187</td>
 <td style="text-align: right;">1.0</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp32 RGB to EXR NONE/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">7.731</td>
-<td style="text-align: right;">7.546</td>
-<td style="text-align: right;">132.5</td>
-<td style="text-align: right;">6.177</td>
-<td style="text-align: right;">8.968</td>
-<td style="text-align: right;">4.9</td>
+<td style="text-align: right;">8.601</td>
+<td style="text-align: right;">8.605</td>
+<td style="text-align: right;">116.2</td>
+<td style="text-align: right;">6.738</td>
+<td style="text-align: right;">10.120</td>
+<td style="text-align: right;">4.3</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp32 RGB to EXR ZIP/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">31.249</td>
-<td style="text-align: right;">31.036</td>
-<td style="text-align: right;">32.2</td>
-<td style="text-align: right;">29.912</td>
-<td style="text-align: right;">32.846</td>
+<td style="text-align: right;">32.525</td>
+<td style="text-align: right;">32.234</td>
+<td style="text-align: right;">31.0</td>
+<td style="text-align: right;">31.469</td>
+<td style="text-align: right;">34.430</td>
 <td style="text-align: right;">1.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp32 RGB to EXR ZIPS/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">88.381</td>
-<td style="text-align: right;">88.328</td>
-<td style="text-align: right;">11.3</td>
-<td style="text-align: right;">68.142</td>
-<td style="text-align: right;">106.073</td>
+<td style="text-align: right;">88.079</td>
+<td style="text-align: right;">89.132</td>
+<td style="text-align: right;">11.2</td>
+<td style="text-align: right;">72.819</td>
+<td style="text-align: right;">104.309</td>
 <td style="text-align: right;">0.4</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp32 RGB to EXR DWAA/HALF, dtype omitted, dwa_level=45.0, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">91.481</td>
-<td style="text-align: right;">92.127</td>
-<td style="text-align: right;">10.9</td>
-<td style="text-align: right;">88.410</td>
-<td style="text-align: right;">94.934</td>
+<td style="text-align: right;">88.976</td>
+<td style="text-align: right;">87.287</td>
+<td style="text-align: right;">11.5</td>
+<td style="text-align: right;">83.391</td>
+<td style="text-align: right;">98.145</td>
 <td style="text-align: right;">0.4</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp32 RGB to EXR DWAB/HALF, dtype omitted, dwa_level=45.0, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">36.345</td>
-<td style="text-align: right;">36.316</td>
-<td style="text-align: right;">27.5</td>
-<td style="text-align: right;">33.545</td>
-<td style="text-align: right;">38.660</td>
-<td style="text-align: right;">1.0</td>
+<td style="text-align: right;">34.520</td>
+<td style="text-align: right;">33.830</td>
+<td style="text-align: right;">29.6</td>
+<td style="text-align: right;">33.359</td>
+<td style="text-align: right;">37.662</td>
+<td style="text-align: right;">1.1</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp32 RGB to EXR RLE/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">16.855</td>
-<td style="text-align: right;">17.213</td>
-<td style="text-align: right;">58.1</td>
-<td style="text-align: right;">15.357</td>
-<td style="text-align: right;">18.522</td>
-<td style="text-align: right;">2.2</td>
+<td style="text-align: right;">17.582</td>
+<td style="text-align: right;">17.822</td>
+<td style="text-align: right;">56.1</td>
+<td style="text-align: right;">15.868</td>
+<td style="text-align: right;">19.408</td>
+<td style="text-align: right;">2.1</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp32 RGB to EXR PXR24/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">41.569</td>
-<td style="text-align: right;">41.802</td>
-<td style="text-align: right;">23.9</td>
-<td style="text-align: right;">40.237</td>
-<td style="text-align: right;">42.896</td>
+<td style="text-align: right;">42.954</td>
+<td style="text-align: right;">42.980</td>
+<td style="text-align: right;">23.3</td>
+<td style="text-align: right;">41.347</td>
+<td style="text-align: right;">44.596</td>
 <td style="text-align: right;">0.9</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp16 RGB to EXR B44/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">5.904</td>
-<td style="text-align: right;">5.175</td>
-<td style="text-align: right;">193.2</td>
-<td style="text-align: right;">4.778</td>
-<td style="text-align: right;">8.092</td>
-<td style="text-align: right;">4.8</td>
+<td style="text-align: right;">6.505</td>
+<td style="text-align: right;">6.336</td>
+<td style="text-align: right;">157.8</td>
+<td style="text-align: right;">5.316</td>
+<td style="text-align: right;">7.497</td>
+<td style="text-align: right;">3.9</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp16 RGB to EXR B44A/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">5.789</td>
-<td style="text-align: right;">5.050</td>
-<td style="text-align: right;">198.0</td>
-<td style="text-align: right;">4.559</td>
-<td style="text-align: right;">7.572</td>
-<td style="text-align: right;">4.9</td>
+<td style="text-align: right;">8.002</td>
+<td style="text-align: right;">7.812</td>
+<td style="text-align: right;">128.0</td>
+<td style="text-align: right;">7.181</td>
+<td style="text-align: right;">9.945</td>
+<td style="text-align: right;">3.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp16 RGB to EXR PIZ/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included</td>
-<td style="text-align: right;">71.552</td>
-<td style="text-align: right;">71.584</td>
-<td style="text-align: right;">14.0</td>
-<td style="text-align: right;">70.771</td>
-<td style="text-align: right;">72.427</td>
+<td style="text-align: right;">80.984</td>
+<td style="text-align: right;">80.759</td>
+<td style="text-align: right;">12.4</td>
+<td style="text-align: right;">79.917</td>
+<td style="text-align: right;">83.056</td>
 <td style="text-align: right;">0.3</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD uint8 RGB JPEG 2000 file, lossless, temporary-file I/O included</td>
-<td style="text-align: right;">62.768</td>
-<td style="text-align: right;">62.973</td>
-<td style="text-align: right;">15.9</td>
-<td style="text-align: right;">60.374</td>
-<td style="text-align: right;">64.539</td>
+<td style="text-align: right;">67.973</td>
+<td style="text-align: right;">67.954</td>
+<td style="text-align: right;">14.7</td>
+<td style="text-align: right;">65.852</td>
+<td style="text-align: right;">70.524</td>
 <td style="text-align: right;">0.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD uint8 RGB WebP file, lossless, temporary-file I/O included</td>
-<td style="text-align: right;">310.879</td>
-<td style="text-align: right;">311.120</td>
-<td style="text-align: right;">3.2</td>
-<td style="text-align: right;">302.956</td>
-<td style="text-align: right;">319.749</td>
+<td style="text-align: right;">336.292</td>
+<td style="text-align: right;">327.946</td>
+<td style="text-align: right;">3.0</td>
+<td style="text-align: right;">321.356</td>
+<td style="text-align: right;">360.944</td>
 <td style="text-align: right;">0.0</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD uint8 RGB BMP file, temporary-file I/O included</td>
-<td style="text-align: right;">25.623</td>
-<td style="text-align: right;">25.539</td>
-<td style="text-align: right;">39.2</td>
-<td style="text-align: right;">24.487</td>
-<td style="text-align: right;">26.716</td>
-<td style="text-align: right;">0.5</td>
+<td style="text-align: right;">29.626</td>
+<td style="text-align: right;">29.418</td>
+<td style="text-align: right;">34.0</td>
+<td style="text-align: right;">27.438</td>
+<td style="text-align: right;">34.840</td>
+<td style="text-align: right;">0.4</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD uint8 RGB PNM file, temporary-file I/O included</td>
-<td style="text-align: right;">26.918</td>
-<td style="text-align: right;">26.738</td>
-<td style="text-align: right;">37.4</td>
-<td style="text-align: right;">25.676</td>
-<td style="text-align: right;">28.123</td>
-<td style="text-align: right;">0.5</td>
+<td style="text-align: right;">29.795</td>
+<td style="text-align: right;">29.808</td>
+<td style="text-align: right;">33.5</td>
+<td style="text-align: right;">28.007</td>
+<td style="text-align: right;">31.338</td>
+<td style="text-align: right;">0.4</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD uint8 RGB TGA file, temporary-file I/O and CPU RLE included</td>
-<td style="text-align: right;">52.046</td>
-<td style="text-align: right;">52.010</td>
-<td style="text-align: right;">19.2</td>
-<td style="text-align: right;">50.325</td>
-<td style="text-align: right;">53.795</td>
+<td style="text-align: right;">54.016</td>
+<td style="text-align: right;">53.814</td>
+<td style="text-align: right;">18.6</td>
+<td style="text-align: right;">53.072</td>
+<td style="text-align: right;">55.090</td>
 <td style="text-align: right;">0.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp32 RGB HDR file, temporary-file I/O and CPU RLE included</td>
-<td style="text-align: right;">279.685</td>
-<td style="text-align: right;">279.272</td>
-<td style="text-align: right;">3.6</td>
-<td style="text-align: right;">277.519</td>
-<td style="text-align: right;">282.207</td>
+<td style="text-align: right;">300.864</td>
+<td style="text-align: right;">298.743</td>
+<td style="text-align: right;">3.3</td>
+<td style="text-align: right;">293.265</td>
+<td style="text-align: right;">311.728</td>
 <td style="text-align: right;">0.1</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>write_image</td>
 <td>FHD fp32 RGB 10-bit DPX file, temporary-file I/O and GPU packing included</td>
-<td style="text-align: right;">7.522</td>
-<td style="text-align: right;">7.409</td>
-<td style="text-align: right;">135.0</td>
-<td style="text-align: right;">6.791</td>
-<td style="text-align: right;">8.141</td>
-<td style="text-align: right;">4.5</td>
+<td style="text-align: right;">10.945</td>
+<td style="text-align: right;">10.777</td>
+<td style="text-align: right;">92.8</td>
+<td style="text-align: right;">10.517</td>
+<td style="text-align: right;">11.302</td>
+<td style="text-align: right;">3.1</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>read_header</td>
 <td>FHD uint8 RGB PNG header, temporary-file I/O included</td>
-<td style="text-align: right;">2.100</td>
-<td style="text-align: right;">2.095</td>
-<td style="text-align: right;">477.3</td>
-<td style="text-align: right;">2.064</td>
-<td style="text-align: right;">2.145</td>
+<td style="text-align: right;">2.212</td>
+<td style="text-align: right;">2.198</td>
+<td style="text-align: right;">454.9</td>
+<td style="text-align: right;">2.111</td>
+<td style="text-align: right;">2.338</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: center;">yes</td>
+</tr>
+<tr>
+<td>decode_lut</td>
+<td>65-sample RGB Cube 1D UTF-8 bytes, sniff, parse, and host-to-device transfer included</td>
+<td style="text-align: right;">0.200</td>
+<td style="text-align: right;">0.191</td>
+<td style="text-align: right;">5245.7</td>
+<td style="text-align: right;">0.186</td>
+<td style="text-align: right;">0.243</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>decode_lut</td>
+<td>65^3 RGB Cube 3D UTF-8 bytes, sniff, parse, packing, and host-to-device transfer included</td>
+<td style="text-align: right;">153.160</td>
+<td style="text-align: right;">154.029</td>
+<td style="text-align: right;">6.5</td>
+<td style="text-align: right;">150.088</td>
+<td style="text-align: right;">156.122</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: center;">yes</td>
+</tr>
+<tr>
+<td>decode_lut</td>
+<td>17^3 RGB headerless 3DL UTF-8 bytes, sniff, parse, packing, and host-to-device transfer included</td>
+<td style="text-align: right;">15.696</td>
+<td style="text-align: right;">15.780</td>
+<td style="text-align: right;">63.4</td>
+<td style="text-align: right;">15.099</td>
+<td style="text-align: right;">16.417</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: center;">yes</td>
+</tr>
+<tr>
+<td>decode_lut</td>
+<td>65-sample RGB SPI1D UTF-8 bytes, sniff, parse, and host-to-device transfer included</td>
+<td style="text-align: right;">0.204</td>
+<td style="text-align: right;">0.190</td>
+<td style="text-align: right;">5257.8</td>
+<td style="text-align: right;">0.180</td>
+<td style="text-align: right;">0.267</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>decode_lut</td>
+<td>17^3 RGB SPI3D UTF-8 bytes, sniff, explicit-index parse, and host-to-device transfer included</td>
+<td style="text-align: right;">9.811</td>
+<td style="text-align: right;">9.777</td>
+<td style="text-align: right;">102.3</td>
+<td style="text-align: right;">9.532</td>
+<td style="text-align: right;">10.231</td>
 <td style="text-align: right;">0.0</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>decode_image</td>
 <td>FHD uint8 RGB PNG, unchanged, host bytes exchange included</td>
-<td style="text-align: right;">23.434</td>
-<td style="text-align: right;">23.422</td>
-<td style="text-align: right;">42.7</td>
-<td style="text-align: right;">22.965</td>
-<td style="text-align: right;">23.874</td>
+<td style="text-align: right;">24.632</td>
+<td style="text-align: right;">24.645</td>
+<td style="text-align: right;">40.6</td>
+<td style="text-align: right;">23.753</td>
+<td style="text-align: right;">25.503</td>
 <td style="text-align: right;">0.5</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>decode_image</td>
 <td>FHD uint8 RGB JPEG, unchanged, host bytes exchange included</td>
-<td style="text-align: right;">35.214</td>
-<td style="text-align: right;">35.265</td>
-<td style="text-align: right;">28.4</td>
-<td style="text-align: right;">34.343</td>
-<td style="text-align: right;">35.928</td>
-<td style="text-align: right;">0.4</td>
+<td style="text-align: right;">40.651</td>
+<td style="text-align: right;">40.687</td>
+<td style="text-align: right;">24.6</td>
+<td style="text-align: right;">38.936</td>
+<td style="text-align: right;">42.189</td>
+<td style="text-align: right;">0.3</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>decode_image</td>
 <td>FHD uint8 RGB TIFF, unchanged, host bytes exchange included</td>
-<td style="text-align: right;">31.523</td>
-<td style="text-align: right;">31.431</td>
-<td style="text-align: right;">31.8</td>
-<td style="text-align: right;">30.972</td>
-<td style="text-align: right;">32.059</td>
+<td style="text-align: right;">32.802</td>
+<td style="text-align: right;">32.594</td>
+<td style="text-align: right;">30.7</td>
+<td style="text-align: right;">32.218</td>
+<td style="text-align: right;">33.693</td>
 <td style="text-align: right;">0.4</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>decode_image</td>
 <td>FHD uint8 RGB JPEG 2000, unchanged, host bytes exchange included</td>
-<td style="text-align: right;">23.459</td>
-<td style="text-align: right;">23.441</td>
-<td style="text-align: right;">42.7</td>
-<td style="text-align: right;">23.092</td>
-<td style="text-align: right;">23.903</td>
+<td style="text-align: right;">24.697</td>
+<td style="text-align: right;">24.759</td>
+<td style="text-align: right;">40.4</td>
+<td style="text-align: right;">24.040</td>
+<td style="text-align: right;">25.337</td>
 <td style="text-align: right;">0.5</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>decode_image</td>
 <td>FHD uint8 RGB WebP, unchanged, host bytes exchange included</td>
-<td style="text-align: right;">39.647</td>
-<td style="text-align: right;">39.315</td>
-<td style="text-align: right;">25.4</td>
-<td style="text-align: right;">38.556</td>
-<td style="text-align: right;">41.061</td>
+<td style="text-align: right;">41.575</td>
+<td style="text-align: right;">41.403</td>
+<td style="text-align: right;">24.2</td>
+<td style="text-align: right;">40.483</td>
+<td style="text-align: right;">43.694</td>
 <td style="text-align: right;">0.3</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>decode_image</td>
 <td>FHD uint8 RGB BMP, unchanged, host bytes exchange included</td>
-<td style="text-align: right;">16.470</td>
-<td style="text-align: right;">16.438</td>
-<td style="text-align: right;">60.8</td>
-<td style="text-align: right;">15.976</td>
-<td style="text-align: right;">16.998</td>
-<td style="text-align: right;">0.8</td>
+<td style="text-align: right;">17.361</td>
+<td style="text-align: right;">17.339</td>
+<td style="text-align: right;">57.7</td>
+<td style="text-align: right;">16.659</td>
+<td style="text-align: right;">18.175</td>
+<td style="text-align: right;">0.7</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>decode_image</td>
 <td>FHD uint8 RGB PNM, unchanged, host bytes exchange included</td>
-<td style="text-align: right;">17.856</td>
-<td style="text-align: right;">17.852</td>
-<td style="text-align: right;">56.0</td>
-<td style="text-align: right;">17.504</td>
-<td style="text-align: right;">18.225</td>
-<td style="text-align: right;">0.7</td>
+<td style="text-align: right;">19.387</td>
+<td style="text-align: right;">19.283</td>
+<td style="text-align: right;">51.9</td>
+<td style="text-align: right;">18.541</td>
+<td style="text-align: right;">20.045</td>
+<td style="text-align: right;">0.6</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>encode_image</td>
 <td>FHD uint8 RGB PNG, compression_level=4, host bytes exchange included</td>
-<td style="text-align: right;">194.341</td>
-<td style="text-align: right;">194.331</td>
-<td style="text-align: right;">5.1</td>
-<td style="text-align: right;">193.207</td>
-<td style="text-align: right;">195.509</td>
+<td style="text-align: right;">201.653</td>
+<td style="text-align: right;">200.633</td>
+<td style="text-align: right;">5.0</td>
+<td style="text-align: right;">196.665</td>
+<td style="text-align: right;">209.469</td>
 <td style="text-align: right;">0.1</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>encode_image</td>
 <td>FHD uint8 RGB JPEG, quality=95, host bytes exchange included</td>
-<td style="text-align: right;">37.361</td>
-<td style="text-align: right;">37.393</td>
-<td style="text-align: right;">26.7</td>
-<td style="text-align: right;">35.987</td>
-<td style="text-align: right;">38.604</td>
+<td style="text-align: right;">39.636</td>
+<td style="text-align: right;">39.603</td>
+<td style="text-align: right;">25.3</td>
+<td style="text-align: right;">37.979</td>
+<td style="text-align: right;">41.651</td>
 <td style="text-align: right;">0.3</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>encode_image</td>
 <td>FHD uint8 RGB TIFF, host bytes exchange included</td>
-<td style="text-align: right;">49.555</td>
-<td style="text-align: right;">49.449</td>
-<td style="text-align: right;">20.2</td>
-<td style="text-align: right;">47.458</td>
-<td style="text-align: right;">51.851</td>
-<td style="text-align: right;">0.3</td>
+<td style="text-align: right;">55.464</td>
+<td style="text-align: right;">55.711</td>
+<td style="text-align: right;">17.9</td>
+<td style="text-align: right;">52.192</td>
+<td style="text-align: right;">58.252</td>
+<td style="text-align: right;">0.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>encode_image</td>
 <td>FHD uint8 RGB JPEG 2000, lossless, host bytes exchange included</td>
-<td style="text-align: right;">58.731</td>
-<td style="text-align: right;">58.667</td>
-<td style="text-align: right;">17.0</td>
-<td style="text-align: right;">57.717</td>
-<td style="text-align: right;">59.687</td>
+<td style="text-align: right;">63.345</td>
+<td style="text-align: right;">63.370</td>
+<td style="text-align: right;">15.8</td>
+<td style="text-align: right;">61.746</td>
+<td style="text-align: right;">64.945</td>
 <td style="text-align: right;">0.2</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>encode_image</td>
 <td>FHD uint8 RGB WebP, lossless, host bytes exchange included</td>
-<td style="text-align: right;">299.695</td>
-<td style="text-align: right;">300.318</td>
-<td style="text-align: right;">3.3</td>
-<td style="text-align: right;">295.584</td>
-<td style="text-align: right;">302.509</td>
+<td style="text-align: right;">323.127</td>
+<td style="text-align: right;">323.674</td>
+<td style="text-align: right;">3.1</td>
+<td style="text-align: right;">313.824</td>
+<td style="text-align: right;">334.365</td>
 <td style="text-align: right;">0.0</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>encode_image</td>
 <td>FHD uint8 RGB BMP, host bytes exchange included</td>
-<td style="text-align: right;">20.123</td>
-<td style="text-align: right;">20.068</td>
-<td style="text-align: right;">49.8</td>
-<td style="text-align: right;">19.557</td>
-<td style="text-align: right;">20.871</td>
-<td style="text-align: right;">0.6</td>
+<td style="text-align: right;">24.260</td>
+<td style="text-align: right;">24.238</td>
+<td style="text-align: right;">41.3</td>
+<td style="text-align: right;">22.855</td>
+<td style="text-align: right;">25.634</td>
+<td style="text-align: right;">0.5</td>
 <td style="text-align: center;">yes</td>
 </tr>
 <tr>
 <td>encode_image</td>
 <td>FHD uint8 RGB PNM, host bytes exchange included</td>
-<td style="text-align: right;">23.825</td>
-<td style="text-align: right;">23.889</td>
-<td style="text-align: right;">41.9</td>
-<td style="text-align: right;">21.857</td>
-<td style="text-align: right;">25.509</td>
+<td style="text-align: right;">25.872</td>
+<td style="text-align: right;">25.853</td>
+<td style="text-align: right;">38.7</td>
+<td style="text-align: right;">24.146</td>
+<td style="text-align: right;">27.658</td>
 <td style="text-align: right;">0.5</td>
 <td style="text-align: center;">yes</td>
 </tr>
 </tbody>
 </table>
-<p>1 ms exceedances: 90</p>
 
 
 
