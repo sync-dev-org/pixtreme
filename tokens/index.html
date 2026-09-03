@@ -14,7 +14,7 @@
         <link rel="prev" href="../performance/">
       
       
-        <link rel="next" href="../reference/channel/">
+        <link rel="next" href="../transport/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Token Reference - pixtreme 1.2.1</title>
+        <title>Token Reference - pixtreme 1.3.0</title>
       
     
     
@@ -84,7 +84,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="pixtreme 1.2.1" class="md-header__button md-logo" aria-label="pixtreme 1.2.1" data-md-component="logo">
+    <a href=".." title="pixtreme 1.3.0" class="md-header__button md-logo" aria-label="pixtreme 1.3.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -98,7 +98,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            pixtreme 1.2.1
+            pixtreme 1.3.0
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -194,13 +194,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="pixtreme 1.2.1" class="md-nav__button md-logo" aria-label="pixtreme 1.2.1" data-md-component="logo">
+    <a href=".." title="pixtreme 1.3.0" class="md-nav__button md-logo" aria-label="pixtreme 1.3.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    pixtreme 1.2.1
+    pixtreme 1.3.0
   </label>
   
     <div class="md-nav__source">
@@ -345,6 +345,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Literal aliases and synchronization contract">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#permanent-aliases-from-earlier-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permanent aliases from earlier releases
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -901,6 +918,33 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware video codec connections
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     
     
     
@@ -915,10 +959,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -936,8 +980,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1352,6 +1396,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Literal aliases and synchronization contract">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#permanent-aliases-from-earlier-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permanent aliases from earlier releases
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1915,12 +1976,20 @@
 
 
 <h1 id="token-reference">Token Reference</h1>
-<p>This page defines the exact spelling and meaning of every named token accepted by the public API, together with the
+<p>This page defines the canonical spelling and meaning of every named closed token in the public API, together with the
 subset accepted by each API. The single definition point for each closed vocabulary is the corresponding
 <code>typing.Literal</code> alias exported by <code>pixtreme.core</code>; documentation tests mechanically compare the token columns on this
-page with those aliases. Runtime validators derive their accepted sets with <code>typing.get_args(alias)</code>. Tokens are
-case-sensitive exactly as shown. Alternate casing and unlisted tokens raise <code>ValueError</code>. Channel sequences are the
-only exception: they may contain application-defined labels not listed here.</p>
+page with those aliases. Public annotations and defaults expose only these canonical spellings.</p>
+<p>Runtime input is case-insensitive and separator-insensitive. A value matches a canonical token when <code>casefold()</code> gives
+the same result after every U+0020 SPACE, <code>.</code>, <code>-</code>, and <code>_</code> has been removed. The four separators are therefore
+interchangeable and may also be omitted: <code>Rec.709</code>, <code>rec 709</code>, <code>REC_709</code>, and <code>rec709</code> all resolve to canonical
+<code>Rec.709</code>. Other punctuation and whitespace remain significant. Validation searches only the family or API-specific
+subset named by the receiving parameter; it never crosses into another family. Non-string, empty, separator-only, and
+unknown values raise <code>ValueError</code> before backend processing, with canonical recovery candidates.</p>
+<p>Every accepted spelling is normalized at the public boundary. Frame metadata, return values, object representations,
+defaults, and error recovery candidates use canonical output. The <code>what</code> field of an error preserves the raw rejected
+input. The 30 earlier spellings listed below are permanent aliases, so existing runtime calls remain valid.
+Channel sequences are the only open-vocabulary exception: they may contain application-defined labels not listed here.</p>
 <h2 id="literal-aliases-and-synchronization-contract">Literal aliases and synchronization contract</h2>
 <p>Closed-vocabulary aliases use PascalCase and map to the sections below. When multiple APIs accept subsets of one
 vocabulary, the alias remains a single definition of the complete token set. Each API-specific subset is fixed in the
@@ -1933,6 +2002,14 @@ corresponding section.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>ChromaticAdaptation</code></td>
+<td>chromatic adaptation</td>
+</tr>
+<tr>
+<td><code>ReferenceWhite</code></td>
+<td>reference white</td>
+</tr>
 <tr>
 <td><code>Layout</code></td>
 <td>layout</td>
@@ -2050,6 +2127,170 @@ corresponding section.</p>
 <p><code>channels</code> is an open set because it permits unknown labels, so it has no Literal alias. Closed numeric and Boolean
 arguments such as <code>bit_depth</code>, the three-state <code>copy</code> option, dimensions, and quality values are not named tokens and
 are outside this alias table.</p>
+<h3 id="permanent-aliases-from-earlier-releases">Permanent aliases from earlier releases</h3>
+<p>These spellings remain accepted at every corresponding public input point. They normalize to the canonical value in
+the right column and are not added to the static <code>Literal</code> aliases.</p>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Permanent alias</th>
+<th>Canonical output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gamma</td>
+<td><code>srgb</code></td>
+<td><code>sRGB</code></td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td><code>rec709</code></td>
+<td><code>Rec.709</code></td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td><code>bt1886</code></td>
+<td><code>BT.1886</code></td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td><code>pq</code></td>
+<td><code>PQ</code></td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td><code>hlg</code></td>
+<td><code>HLG</code></td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td><code>s-log3</code></td>
+<td><code>S-Log3</code></td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td><code>logc4</code></td>
+<td><code>ARRI-LogC4</code></td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td><code>cineon</code></td>
+<td><code>Cineon</code></td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td><code>2.2</code></td>
+<td><code>Gamma-2.2</code></td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td><code>2.4</code></td>
+<td><code>Gamma-2.4</code></td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td><code>2.6</code></td>
+<td><code>Gamma-2.6</code></td>
+</tr>
+<tr>
+<td>Matrix</td>
+<td><code>bt601</code></td>
+<td><code>BT.601</code></td>
+</tr>
+<tr>
+<td>Matrix</td>
+<td><code>bt709</code></td>
+<td><code>BT.709</code></td>
+</tr>
+<tr>
+<td>Matrix</td>
+<td><code>bt2020</code></td>
+<td><code>BT.2020</code></td>
+</tr>
+<tr>
+<td>ChromaticAdaptation</td>
+<td><code>bradford</code></td>
+<td><code>Bradford</code></td>
+</tr>
+<tr>
+<td>ChromaticAdaptation</td>
+<td><code>cat02</code></td>
+<td><code>CAT02</code></td>
+</tr>
+<tr>
+<td>ChromaticAdaptation</td>
+<td><code>cat16</code></td>
+<td><code>CAT16</code></td>
+</tr>
+<tr>
+<td>ChromaticAdaptation</td>
+<td><code>von-kries</code></td>
+<td><code>von-Kries</code></td>
+</tr>
+<tr>
+<td>ReferenceWhite</td>
+<td><code>d65</code></td>
+<td><code>D65</code></td>
+</tr>
+<tr>
+<td>ReferenceWhite</td>
+<td><code>d93</code></td>
+<td><code>D93</code></td>
+</tr>
+<tr>
+<td>ReferenceWhite</td>
+<td><code>d50</code></td>
+<td><code>D50</code></td>
+</tr>
+<tr>
+<td>ReferenceWhite</td>
+<td><code>aces</code></td>
+<td><code>ACES</code></td>
+</tr>
+<tr>
+<td>Tonemap</td>
+<td><code>aces-1.3</code></td>
+<td><code>ACES-1.3</code></td>
+</tr>
+<tr>
+<td>Tonemap</td>
+<td><code>aces-2.0</code></td>
+<td><code>ACES-2.0</code></td>
+</tr>
+<tr>
+<td>Tonemap</td>
+<td><code>bt2408</code></td>
+<td><code>BT.2408</code></td>
+</tr>
+<tr>
+<td>ColorBarsStandard</td>
+<td><code>arib-std-b28</code></td>
+<td><code>ARIB-STD-B28</code></td>
+</tr>
+<tr>
+<td>ColorBarsStandard</td>
+<td><code>smpte-rp219</code></td>
+<td><code>SMPTE-RP219</code></td>
+</tr>
+<tr>
+<td>ColorBarsStandard</td>
+<td><code>bt2111-hlg</code></td>
+<td><code>BT.2111-HLG</code></td>
+</tr>
+<tr>
+<td>ColorBarsStandard</td>
+<td><code>bt2111-pq</code></td>
+<td><code>BT.2111-PQ</code></td>
+</tr>
+<tr>
+<td>ColorBarsStandard</td>
+<td><code>bt2111-pq-full</code></td>
+<td><code>BT.2111-PQ-full</code></td>
+</tr>
+</tbody>
+</table>
 <h2 id="channels">channels</h2>
 <p>A compact channel string is split greedily by longest match against the known labels below. An unlisted label can be
 specified only through <code>Sequence[str]</code>. <code>px.core.channels</code> is the single public normalizer; this open vocabulary
@@ -2223,7 +2464,8 @@ Frames. Use <code>px.color.rgb_to_ycbcr</code> or <code>px.color.ycbcr_to_rgb</c
 <code>px.color.ycbcr_to_ycbcr</code> for explicit rematrixing; channel routing never combines those operations.</p>
 <h2 id="layout">layout</h2>
 <p>Layout tokens declare dimension order at the device-array boundary. They determine how <code>px.io.from_array</code> interprets
-input shape and which shape <code>px.io.to_array</code> produces. The default is <code>HWC</code>. Tokens are case-sensitive.</p>
+input shape and which shape <code>px.io.to_array</code> produces. The canonical default is <code>HWC</code>; runtime input follows the
+case-insensitive, separator-insensitive contract above.</p>
 <table>
 <thead>
 <tr>
@@ -2313,75 +2555,154 @@ it may explicitly pass a CuPy view created with <code>cp.from_dlpack(tensor)</co
 <td>Identity extended naturally to all real values; fixed as <strong>scene-referred</strong> and never used to mean display-linear</td>
 </tr>
 <tr>
-<td><code>srgb</code></td>
+<td><code>sRGB</code></td>
 <td>Piecewise sRGB transfer</td>
 <td>IEC 61966-2-1</td>
 <td>Linear and power branches extend naturally below 0 and above 1; the standard transfer for the <code>sRGB</code> colorspace</td>
 </tr>
 <tr>
-<td><code>rec709</code></td>
+<td><code>Rec.709</code></td>
 <td>Rec.709 camera OETF</td>
 <td>ITU-R BT.709</td>
 <td>Linear and power branches extend naturally below 0 and above 1; independent of the <code>Rec.709</code> primaries token</td>
 </tr>
 <tr>
-<td><code>bt1886</code></td>
+<td><code>BT.1886</code></td>
 <td>Reference-display EOTF</td>
 <td>ITU-R BT.1886</td>
-<td>Display transfer naturally extended as a signed-power branch with nominal exponent 2.4</td>
+<td>Annex 1 ideal-black (<code>L_B = 0</code>) specialization; pure 2.4 power with sign-preserving reflection, numerically equivalent to <code>Gamma-2.4</code> but semantically distinct; matches industry production and conversion practice</td>
 </tr>
 <tr>
-<td><code>pq</code></td>
+<td><code>PQ</code></td>
 <td>Perceptual quantizer</td>
 <td>SMPTE ST 2084 / ITU-R BT.2100</td>
 <td>Apply the standard formula to the nonnegative magnitude and reflect the negative side with preserved sign, <code>f(-x) = -f(x)</code>; absolute-luminance encoding</td>
 </tr>
 <tr>
-<td><code>hlg</code></td>
+<td><code>HLG</code></td>
 <td>Hybrid log-gamma</td>
 <td>ITU-R BT.2100</td>
 <td>Extend the piecewise low power and high logarithmic branches naturally with sign; scene-referred broadcast HDR transfer</td>
 </tr>
 <tr>
-<td><code>s-log3</code></td>
+<td><code>S-Log</code></td>
+<td>S-Log camera log transfer</td>
+<td>Sony S-Log whitepaper; Sony S-Log2 technical paper (decoder branch)</td>
+<td>Public scene-linear reflectance <code>r</code> uses <code>x = r / 0.9</code>; Sony encoded IRE <code>y</code> uses <code>e = (64 + 876 * y) / 1023</code>; the lower linear branch below zero is the algebraic inverse of Sony's published S-Log1 decoder linear branch, not a separately published Sony forward equation, and extends without clipping or sign/magnitude mirroring; 0% / 18% / 90% reflection rounds to 10-bit code <code>90 / 394 / 636</code></td>
+</tr>
+<tr>
+<td><code>S-Log2</code></td>
+<td>S-Log2 camera log transfer</td>
+<td>Sony S-Log2 technical paper</td>
+<td>Uses the same public reflectance and legal-range embedding as S-Log with Sony's distinct positive log scale and negative linear slope; the lower linear branch extends below zero without clipping or sign/magnitude mirroring; 0% / 18% / 90% reflection rounds to 10-bit code <code>90 / 347 / 582</code></td>
+</tr>
+<tr>
+<td><code>S-Log3</code></td>
 <td>S-Log3 camera log transfer</td>
 <td>Sony S-Log3 specification</td>
-<td>Apply the standard formula to nonnegative magnitude and reflect the negative side with preserved sign; validate independently of S-Gamut colorspaces</td>
+<td>S-Log3 applies the Sony piecewise formula directly to signed inputs; the lower linear branch extends below zero, maps linear 0 to <code>95 / 1023</code>, and does not use sign/magnitude mirroring; validate independently of S-Gamut colorspaces</td>
 </tr>
 <tr>
-<td><code>logc4</code></td>
-<td>LogC4 camera log transfer</td>
+<td><code>ARRI-LogC3</code></td>
+<td>ARRI-LogC3 EI 800 camera log transfer</td>
+<td>ARRI Log C Curve Usage in VFX; OpenColorIO built-in transform</td>
+<td>EI 800 relative scene exposure with 18% gray at <code>400 / 1023</code>; the high branch uses ARRI's logarithmic equation and the tangent-derived lower linear branch extends to negative values without clipping or sign/magnitude mirroring; values above 1 remain unclipped; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>ARRI-LogC4</code></td>
+<td>ARRI-LogC4 camera log transfer</td>
 <td>ARRI LogC4 specification</td>
-<td>Apply the standard formula to nonnegative magnitude and reflect the negative side with preserved sign; ARRI Wide Gamut 4 is not currently a colorspace token</td>
+<td>ARRI-LogC4 applies the ARRI piecewise formula directly to signed inputs: the log branch covers <code>x &gt;= t</code>, the lower linear branch covers <code>x &lt; t</code>, and negative encoded values decode linearly without sign/magnitude mirroring; specify <code>ARRI-Wide-Gamut-4</code> independently</td>
 </tr>
 <tr>
-<td><code>cineon</code></td>
+<td><code>Blackmagic-Film-Gen-5</code></td>
+<td>Blackmagic Film Generation 5 camera log transfer</td>
+<td>Blackmagic Design Generation 5 Color Science</td>
+<td>Uses a natural logarithm above linear input <code>0.005</code>, with the published lower linear branch applied directly to negative values; decode uses the threshold derived from that branch; no clipping or sign/magnitude mirroring; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>DaVinci-Intermediate</code></td>
+<td>DaVinci Intermediate working log transfer</td>
+<td>Blackmagic Design DaVinci Wide Gamut / Intermediate</td>
+<td>Uses a base-2 logarithm above linear input <code>0.00262409</code>, with the published lower linear branch applied directly to negative values; decode uses the derived decode threshold rather than the printed rounded cut; no clipping or sign/magnitude mirroring; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>RED-Log3G10</code></td>
+<td>RED Log3G10 camera log transfer</td>
+<td>RED Log3G10 whitepaper revision C</td>
+<td>Uses the published <code>0.224282 / 155.975327 / 0.01 / 15.1927</code> piecewise constants; the lower linear branch applies directly below scene-linear <code>-0.01</code>, the logarithmic branch includes the boundary, and neither negative values nor scene overshoot are clipped or mirrored; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>REDlogFilm</code></td>
+<td>RED Cineon-compatible printing-density transfer</td>
+<td>RED logarithmic exposure paper; Kodak Cineon specification</td>
+<td>Numerically identical to <code>Cineon</code>, including its sign-preserving mirror and zero offset, while preserving independent gamma metadata; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>Cineon</code></td>
 <td>Cineon printing-density log transfer</td>
 <td>Kodak Cineon specification</td>
 <td>Formula with black CV=95, white CV=685, 0.002 density/code, and film gamma=0.6; apply to nonnegative magnitude and reflect the negative side with preserved sign</td>
 </tr>
 <tr>
-<td><code>2.2</code></td>
+<td><code>Gamma-2.2</code></td>
 <td>Power transfer with exponent 2.2</td>
 <td>Conventional value</td>
 <td><strong>Pure power</strong>, reflected with preserved sign; not a piecewise function</td>
 </tr>
 <tr>
-<td><code>2.4</code></td>
+<td><code>Gamma-2.4</code></td>
 <td>Power transfer with exponent 2.4</td>
 <td>Conventional value</td>
-<td><strong>Pure power</strong>, reflected with preserved sign; not BT.1886</td>
+<td><strong>Pure power</strong>, reflected with preserved sign; numerically equivalent to the ideal-black <code>BT.1886</code> implementation but semantically distinct</td>
 </tr>
 <tr>
-<td><code>2.6</code></td>
+<td><code>Gamma-2.6</code></td>
 <td>Power transfer with exponent 2.6</td>
 <td>Conventional value</td>
 <td>Decode with <code>sign(x) * abs(x) ** 2.6</code> and encode with <code>sign(x) * abs(x) ** (1 / 2.6)</code>; no offset, piecewise branch, or clipping</td>
 </tr>
 </tbody>
 </table>
+<p>S-Log / S-Log2 / S-Log3 apply their lower linear branches directly to signed inputs. S-Log and S-Log2 use
+<code>x = r / 0.9</code> to convert public scene-linear reflectance to Sony's older scene-linear IRE basis, then embed Sony
+encoded IRE with <code>e = (64 + 876 * y) / 1023</code>. S-Log3 instead uses its published reflection-to-full-range-code
+normalization. These transfer tokens remain independent of every S-Gamut colorspace token.</p>
+<p>ARRI-LogC3 is the fixed ARRI EI 800 relative scene-exposure curve. With <code>cut = 0.0105909904954696</code>,
+<code>a = 5.55555555555556</code>, <code>b = 0.0522722750251688</code>, <code>c = 0.247189638318671</code>, and
+<code>d = 0.385536998692443</code>, its lower-branch slope and offset are derived by tangent continuity. Encode uses the lower
+linear branch at and below the cut and the logarithmic branch above it; decode uses the corresponding encoded
+boundary. The lower branch extends to negative values without clipping or sign/magnitude mirroring, and the log
+branch does not clip scene overshoot. The 18% gray anchor is exactly <code>400 / 1023</code> under the normative definition.</p>
+<p><code>Blackmagic-Film-Gen-5</code> uses <code>A = 0.08692876065491224</code>, <code>B = 0.005494072432257808</code>,
+<code>C = 0.5300133392291939</code>, <code>D = 8.283605932402494</code>, <code>E = 0.09246575342465753</code>, and
+<code>LIN_CUT = 0.005</code>. Encode is <code>D * x + E</code> below the cut and <code>A * ln(x + B) + C</code> at and above it. Decode uses
+the derived decode threshold <code>D * LIN_CUT + E</code>, the inverse linear branch below it, and the inverse natural
+logarithm at and above it. The public anchors for linear input <code>0 / 0.18 / 1 / 10 / 40 / 100 / 222.86</code> produce
+10-bit video levels <code>145 / 400 / 529 / 704 / 809 / 879 / 940</code>.</p>
+<p><code>DaVinci-Intermediate</code> uses <code>DI_A = 0.0075</code>, <code>DI_B = 7.0</code>, <code>DI_C = 0.07329248</code>, <code>DI_M = 10.44426855</code>, and
+<code>DI_LIN_CUT = 0.00262409</code>. Encode is <code>L * DI_M</code> through the cut and
+<code>(log2(L + DI_A) + DI_B) * DI_C</code> above it. Decode uses the derived decode threshold
+<code>DI_M * DI_LIN_CUT = 0.0274067006593695</code>, not the rounded printed value <code>0.02740668</code>. Its public anchors include
+<code>-0.01 -&gt; -0.104443</code>, <code>0.18 -&gt; 0.336043</code>, and <code>100 -&gt; 1.000000</code>. Both new curves extend their lower branches to
+negative values, leave scene overshoot unclipped, and remain independent from colorspace selection.</p>
+<p><code>RED-Log3G10</code> uses <code>a = 0.224282</code>, <code>b = 155.975327</code>, <code>c = 0.01</code>, and <code>g = 15.1927</code>. For relative
+scene-linear <code>x</code>, let <code>t = x + c</code>: encode is <code>g * t</code> when <code>t &lt; 0</code>, otherwise <code>a * log10(b * t + 1)</code>.
+Decode is <code>y / g - c</code> when encoded <code>y &lt; 0</code>, otherwise <code>(10 ** (y / a) - 1) / b - c</code>. The log branch owns
+the zero boundary. The published anchors <code>-0.01 / 0 / 0.18 / 1</code> encode to <code>0 / 0.091551 / 0.333333 /
+0.493449</code> at six decimals, and encoded <code>1</code> decodes to <code>184.322347640325...</code>. The published linear/log slope
+difference at the boundary is retained; negative values and scene overshoot are neither clipped nor mirrored.</p>
+<p><code>REDlogFilm</code> uses the same sign-preserving mirror and float32 transfer bits as <code>Cineon</code>, while retaining its own
+canonical metadata. Its black CV is 95, white CV is 685, density per code is 0.002, film gamma is 0.6, and derived
+black offset is <code>0.0107977516232771</code>. Scene-linear <code>0 / 0.18 / 1</code> encodes to <code>0.0928641251 / 0.4573196131 /
+0.6695992180</code>. Zero maps to the positive black offset, while the negative-side limit approaches its negative.</p>
+<p><code>BT.1886</code> remains a standards-meaning token distinct from the conventional <code>Gamma-2.4</code> power token. pixtreme fixes
+the BT.1886 white-normalized EOTF to the Annex 1 ideal-black specialization instead of accepting display-luminance
+parameters. Decode and encode are therefore bit-equivalent to <code>Gamma-2.4</code> across the sign-preserving extension, while
+canonical output preserves whichever of the two meanings the caller selected. Display adaptation and calibration from
+measured white or black luminance remain outside the transfer-operation contract.</p>
 <h2 id="reference-white">reference white</h2>
-<p><code>ReferenceWhite</code> is the case-sensitive display-white axis accepted by
+<p><code>ReferenceWhite</code> is the canonical display-white axis accepted by
 <code>px.color.white_point_simulation</code> and <code>px.color.chromatic_adaptation</code>. A white
 without a token is supplied directly as a two-element CIE 1931 xy sequence.</p>
 <table>
@@ -2395,32 +2716,32 @@ without a token is supplied directly as a two-element CIE 1931 xy sequence.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>d65</code></td>
+<td><code>D65</code></td>
 <td><code>(0.3127, 0.3290)</code></td>
 <td>CIE D65; ITU / SMPTE signal and display white</td>
 <td>Identical to the D65 coordinate in the named colorspace definitions</td>
 </tr>
 <tr>
-<td><code>d93</code></td>
+<td><code>D93</code></td>
 <td><code>(0.2831, 0.2971)</code></td>
 <td>SMPTE ST 2080-1 regional 9300 K display white</td>
 <td>The four-decimal D93 / 9300 K + 8 MPCD broadcast-monitor convention</td>
 </tr>
 <tr>
-<td><code>d50</code></td>
+<td><code>D50</code></td>
 <td><code>(0.3457, 0.3585)</code></td>
 <td>CIE D50; ISO 12646 / ICC PCS print and proofing white</td>
 <td>Four-decimal soft-proof monitor calibration white</td>
 </tr>
 <tr>
-<td><code>aces</code></td>
+<td><code>ACES</code></td>
 <td><code>(0.32168, 0.33767)</code></td>
 <td>Academy-published ACES white point</td>
 <td>Bit-identical to the ACES2065-1 and ACEScg nominal white coordinate</td>
 </tr>
 </tbody>
 </table>
-<p><code>d93</code> does not denote a separate illuminant standardized by ISO/CIE 11664-2.
+<p><code>D93</code> does not denote a separate illuminant standardized by ISO/CIE 11664-2.
 It does not normalize the unrounded CIE daylight-formula coordinate, 9300 K +
 27 MPCD, a manufacturing target, or a tolerance. Alternate spellings such as
 <code>d93-8mpcd</code>, <code>d93-27mpcd</code>, and <code>cie-d93</code> are not tokens.</p>
@@ -2460,9 +2781,11 @@ white. Its meaning is equivalent to ICC absolute colorimetric intent: it does
 not perform perceptual chromatic adaptation, gamut mapping, tone mapping, or
 implicit clipping.</p>
 <h2 id="chromatic-adaptation">chromatic adaptation</h2>
-<p><code>ChromaticAdaptation</code> is the case-sensitive CAT axis used by
+<p><code>ChromaticAdaptation</code> is the canonical CAT axis used by
 <code>px.color.chromatic_adaptation</code> and <code>px.color.white_balance</code>. Both functions
-default to <code>cat02</code>; <code>None</code>, alternate spelling, and case variants are invalid.
+default to <code>CAT02</code>; <code>None</code> is invalid. Input follows the shared
+case-insensitive, separator-insensitive contract above and resolves to the
+canonical spelling.
 <code>chromatic_adaptation</code> accepts either <code>ReferenceWhite</code> tokens or direct CIE
 1931 xy sequences for both white points. <code>white_point_simulation</code> does not
 accept or apply a CAT.</p>
@@ -2477,25 +2800,25 @@ accept or apply a CAT.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>bradford</code></td>
+<td><code>Bradford</code></td>
 <td>Bradford cone-response transform</td>
 <td>Bradford chromatic adaptation</td>
 <td>Explicit opt-in</td>
 </tr>
 <tr>
-<td><code>cat02</code></td>
+<td><code>CAT02</code></td>
 <td>CIECAM02 chromatic adaptation transform</td>
 <td>CAT02</td>
 <td>Default for both public functions</td>
 </tr>
 <tr>
-<td><code>cat16</code></td>
+<td><code>CAT16</code></td>
 <td>CAM16 chromatic adaptation transform</td>
 <td>CAT16</td>
 <td>Explicit opt-in</td>
 </tr>
 <tr>
-<td><code>von-kries</code></td>
+<td><code>von-Kries</code></td>
 <td>von Kries cone-response transform</td>
 <td>von Kries</td>
 <td>Explicit opt-in</td>
@@ -2553,10 +2876,16 @@ and usage contexts differ.</p>
 <td>Scene-linear working colorspace</td>
 </tr>
 <tr>
+<td><code>S-Gamut</code></td>
+<td>Sony S-Gamut primaries</td>
+<td>Sony S-Log whitepaper</td>
+<td>Numerically identical to <code>S-Gamut3</code>; token identity remains distinct; specify a transfer such as <code>S-Log</code> separately</td>
+</tr>
+<tr>
 <td><code>S-Gamut3</code></td>
 <td>Sony S-Gamut3 primaries</td>
 <td>Sony technical specification</td>
-<td>Camera gamut; specify a transfer such as <code>s-log3</code> separately</td>
+<td>Camera gamut; specify a transfer such as <code>S-Log3</code> separately</td>
 </tr>
 <tr>
 <td><code>S-Gamut3.Cine</code></td>
@@ -2564,12 +2893,137 @@ and usage contexts differ.</p>
 <td>Sony technical specification</td>
 <td>Cinema-oriented camera gamut</td>
 </tr>
+<tr>
+<td><code>ARRI-Wide-Gamut-3</code></td>
+<td>ARRI Wide Gamut 3 primaries and D65 white</td>
+<td>ARRI Wide Gamut 3 specification</td>
+<td>Scene-referred camera gamut; selected independently from gamma, including <code>ARRI-LogC3</code></td>
+</tr>
+<tr>
+<td><code>ARRI-Wide-Gamut-4</code></td>
+<td>ARRI Wide Gamut 4 primaries and D65 white</td>
+<td>ARRI Wide Gamut 4 specification</td>
+<td>Scene-referred camera gamut; selected independently from gamma, including <code>ARRI-LogC4</code></td>
+</tr>
+<tr>
+<td><code>Blackmagic-Wide-Gamut-Gen-5</code></td>
+<td>Blackmagic Wide Gamut Generation 5 primaries and D65 white</td>
+<td>Blackmagic Design Generation 5 Color Science</td>
+<td>Scene-referred camera gamut; selected independently from gamma, including <code>Blackmagic-Film-Gen-5</code>; does not assert numerical identity with Gen 4</td>
+</tr>
+<tr>
+<td><code>DaVinci-Wide-Gamut</code></td>
+<td>DaVinci Wide Gamut revision 1.1 primaries and D65 white</td>
+<td>Blackmagic Design DaVinci Wide Gamut / Intermediate</td>
+<td>Scene-referred working gamut; selected independently from gamma, including <code>DaVinci-Intermediate</code></td>
+</tr>
+<tr>
+<td><code>REDWideGamutRGB</code></td>
+<td>REDWideGamutRGB primaries and D65 white</td>
+<td>REDWideGamutRGB / Log3G10 whitepaper revision C</td>
+<td>Scene-referred IPP2 gamut; selected independently from gamma, including <code>RED-Log3G10</code></td>
+</tr>
+<tr>
+<td><code>DRAGONcolor</code></td>
+<td>Legacy RED DRAGONcolor-derived primaries and D65 white</td>
+<td>ACES 1.0.3 OpenColorIO config</td>
+<td>Scene-referred gamut reconstructed from the published RGB-to-ACES2065-1 matrix; selected independently from gamma</td>
+</tr>
+<tr>
+<td><code>DRAGONcolor2</code></td>
+<td>Legacy RED DRAGONcolor2-derived primaries and D65 white</td>
+<td>ACES 1.0.3 OpenColorIO config</td>
+<td>Scene-referred gamut reconstructed from the published RGB-to-ACES2065-1 matrix; selected independently from gamma</td>
+</tr>
+<tr>
+<td><code>REDcolor2</code></td>
+<td>Legacy REDcolor2-derived primaries and D65 white</td>
+<td>ACES 1.0.3 OpenColorIO config</td>
+<td>Scene-referred gamut reconstructed from the published RGB-to-ACES2065-1 matrix; selected independently from gamma</td>
+</tr>
+<tr>
+<td><code>REDcolor3</code></td>
+<td>Legacy REDcolor3-derived primaries and D65 white</td>
+<td>ACES 1.0.3 OpenColorIO config</td>
+<td>Scene-referred gamut reconstructed from the published RGB-to-ACES2065-1 matrix; selected independently from gamma</td>
+</tr>
+<tr>
+<td><code>REDcolor4</code></td>
+<td>Legacy REDcolor4-derived primaries and D65 white</td>
+<td>ACES 1.0.3 OpenColorIO config</td>
+<td>Scene-referred gamut reconstructed from the published RGB-to-ACES2065-1 matrix; selected independently from gamma</td>
+</tr>
 </tbody>
 </table>
 <p><code>px.color.rgb_to_rgb</code> constructs normalized primary matrices from the published RGB primaries and white point in each
 row. Conversions between different white points, such as D65 and ACES white, use the <strong>Bradford</strong> CAT. A colorspace
 conversion between sRGB and Rec.709 is the identity because their primaries and white point match. This is a technical
 conversion and does not include a tone scale or display rendering.</p>
+<p>S-Gamut and S-Gamut3 are numerically identical: both use R <code>(0.73, 0.28)</code>, G <code>(0.14, 0.855)</code>,
+B <code>(0.10, -0.05)</code>, and D65 <code>(0.3127, 0.3290)</code>. Their normalized primary matrices and <code>native</code> luma rows are bit
+identical. Conversion between them preserves pixel bits and updates only the canonical colorspace metadata.</p>
+<p><code>ARRI-Wide-Gamut-3</code> uses R <code>(0.6840, 0.3130)</code>, G <code>(0.2210, 0.8480)</code>, B <code>(0.0861, -0.1020)</code>, and D65
+<code>(0.3127, 0.3290)</code>. <code>ARRI-Wide-Gamut-4</code> uses R <code>(0.7347, 0.2653)</code>, G <code>(0.1424, 0.8576)</code>,
+B <code>(0.0991, -0.0308)</code>, and the same D65 white. Both use the shared Bradford path for conversions to a different
+white point, expose their normalized primary-matrix Y row through <code>native</code>, and remain independent from gamma.</p>
+<p><code>Blackmagic-Wide-Gamut-Gen-5</code> uses R <code>(0.7177215, 0.3171181)</code>, G <code>(0.2280410, 0.8615690)</code>,
+B <code>(0.1005841, -0.0820452)</code>, and production D65 <code>(0.3127, 0.3290)</code>. The vendor's higher-precision D65 spelling is
+treated as the same white for production, so no adaptation is inserted between this gamut and another D65 gamut.
+This token makes no claim that the unverified Gen 4 gamut is numerically identical.</p>
+<p><code>DaVinci-Wide-Gamut</code> uses R <code>(0.8000, 0.3130)</code>, G <code>(0.1682, 0.9877)</code>, B <code>(0.0790, -0.1155)</code>, and the same D65.
+Both Blackmagic gamuts construct normalized primary matrices from these coordinates, expose the Y row through
+<code>native</code>, use Bradford when converting to a different white, and are selected independently from gamma.</p>
+<p><code>REDWideGamutRGB</code> uses R <code>(0.780308, 0.304253)</code>, G <code>(0.121595, 1.493994)</code>, B <code>(0.095612, -0.084589)</code>,
+and D65 <code>(0.3127, 0.3290)</code>. The normalized primary matrix derived from these coordinates agrees with RED's
+six-decimal RGB-to-XYZ matrix within <code>1e-6</code>. Its Bradford conversion to <code>ACES2065-1</code> agrees with RED's printed
+RGB-to-ACES2065-1 matrix within <code>2e-4</code>; the coordinate-derived Bradford result remains normative.</p>
+<p>The five legacy RED gamuts use D65 production white and these CIE 1931 xy primaries:</p>
+<table>
+<thead>
+<tr>
+<th>Colorspace</th>
+<th>R</th>
+<th>G</th>
+<th>B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DRAGONcolor</td>
+<td><code>(0.7586558926, 0.3303553486)</code></td>
+<td><code>(0.2949236198, 0.7080532421)</code></td>
+<td><code>(0.0859616012, -0.0458794370)</code></td>
+</tr>
+<tr>
+<td>DRAGONcolor2</td>
+<td><code>(0.7586562142, 0.3303558357)</code></td>
+<td><code>(0.2949238877, 0.7080533632)</code></td>
+<td><code>(0.1441687269, 0.0503573846)</code></td>
+</tr>
+<tr>
+<td>REDcolor2</td>
+<td><code>(0.8974072220, 0.3307762259)</code></td>
+<td><code>(0.2960220945, 0.6846355509)</code></td>
+<td><code>(0.0997995129, -0.0230005132)</code></td>
+</tr>
+<tr>
+<td>REDcolor3</td>
+<td><code>(0.7025986586, 0.3301855889)</code></td>
+<td><code>(0.2957822357, 0.6897482584)</code></td>
+<td><code>(0.1110905291, -0.0043323210)</code></td>
+</tr>
+<tr>
+<td>REDcolor4</td>
+<td><code>(0.7025981547, 0.3301850962)</code></td>
+<td><code>(0.2957823281, 0.6897482540)</code></td>
+<td><code>(0.1444592365, 0.0508377210)</code></td>
+</tr>
+</tbody>
+</table>
+<p>The coordinates are reconstructed from the ACES 1.0.3 RGB-to-ACES2065-1 matrices by returning to XYZ, applying
+Bradford adaptation from ACES white to D65, and normalizing each primary column. Recomposition through the shared
+Bradford path agrees with the published six-decimal matrices within <code>3e-5</code>. All six RED colorspaces derive
+<code>matrix="native"</code> from the Y row of their normalized primary matrix and remain independent from gamma selection.</p>
 <h2 id="golden-path">golden path</h2>
 <p>The recommended working state is <strong>ACEScg, linear, full-range, float32</strong>, preserving negative values and overshoots
 above 1.0. This golden path is a recommendation, not a requirement. It does not apply to non-color channels such as Z,
@@ -2588,51 +3042,37 @@ performs only the technical conversion, without rendering or white placement.</p
 </thead>
 <tbody>
 <tr>
-<td><code>aces-1.3</code></td>
+<td><code>ACES-1.3</code></td>
 <td>ACES 1.3 RRT + ODT family SDR rendering</td>
 <td>ACES 1.3</td>
 <td>Evaluate the ACES 1.0 SDR Video view directly in one analytic CUDA pass</td>
 </tr>
 <tr>
-<td><code>aces-1.3-lut</code></td>
-<td>ACES 1.3 RRT + ODT family SDR rendering</td>
-<td>ACES 1.3</td>
-<td>Evaluate the same view with the existing 4,096-point shaper and 65³ LUT</td>
-</tr>
-<tr>
-<td><code>aces-2.0</code></td>
+<td><code>ACES-2.0</code></td>
 <td>ACES 2.0 Output Transform SDR rendering</td>
 <td>ACES 2.0</td>
 <td>Evaluate the ACES 2.0 SDR 100-nit view directly with one analytic CUDA pass and a fixed algorithm table</td>
 </tr>
 <tr>
-<td><code>aces-2.0-lut</code></td>
-<td>ACES 2.0 Output Transform SDR rendering</td>
-<td>ACES 2.0</td>
-<td>Evaluate the ACES 2.0 SDR 100-nit view with the existing 4,096-point shaper and 65³ LUT</td>
-</tr>
-<tr>
-<td><code>bt2408</code></td>
+<td><code>BT.2408</code></td>
 <td>Direct mapping that places SDR reference white at HDR Reference White, 203 cd/m²</td>
 <td>—</td>
 <td>Not inverse tone mapping with a gradation curve; multiplies every Rec.2020-linear RGB component by the same positive gain</td>
 </tr>
 </tbody>
 </table>
-<p>An ACES token without a suffix selects the analytic implementation; <code>-lut</code> selects the LUT implementation. The
-<code>aces-2.0</code> algorithm table contains hue-dependent reach M and gamut-boundary parameters fixed for 100-nit Rec.709/D65;
-it is not a 65³ grid approximation of output RGB. The immutable source constants contain 363 reach-M records,
-non-uniform hue, and cusp and upper-hull data: 1,815 float32 values, or 7,260 bytes. CAM, tone, chroma, gamut, and display
-encoding are evaluated analytically per pixel. ACES generation identities stored in LUT archives remain <code>aces-1.3</code> and
-<code>aces-2.0</code>; public <code>-lut</code> tokens map to them explicitly.</p>
-<p><code>bt2408</code> applies gain after input-transfer decoding and the Rec.2020 primary matrix, but before output-transfer
+<p>Each ACES token selects its analytic implementation. The <code>ACES-2.0</code> algorithm table contains hue-dependent reach M and
+gamut-boundary parameters fixed for 100-nit Rec.709/D65; it is not a sampled grid approximation of output RGB. The
+immutable source constants contain 363 reach-M records, non-uniform hue, and cusp and upper-hull data: 1,815 float32
+values, or 7,260 bytes. CAM, tone, chroma, gamut, and display encoding are evaluated analytically per pixel.</p>
+<p><code>BT.2408</code> applies gain after input-transfer decoding and the Rec.2020 primary matrix, but before output-transfer
 encoding. For HLG, derive <code>G_HLG = (exp((0.75 - c) / a) + b) / 12</code> in closed form from the BT.2100 OETF constants
 <code>a = 0.17883277</code>, <code>b = 1 - 4a</code>, and <code>c = 0.5 - a × ln(4a)</code>. For PQ, <code>G_PQ = 203 / 10000</code> under the 10,000 cd/m²
 normalization. Thus Rec.2020-linear <code>(1, 1, 1)</code> maps to HLG signal <code>0.75</code> or approximately 58% PQ signal. The 58% PQ
 figure is an explanatory approximation derived from ST 2084, not an arithmetic constant or numerical oracle. Neither
 intermediate gain application nor output is clipped, preserving negative values and values above reference white.</p>
 <h2 id="tonemap-combinations">tonemap combinations</h2>
-<p>Version 1.0 supplies exactly these ten tonemap/output combinations. Both output colorspace and output gamma must be
+<p>Version 1.x supplies exactly these six tonemap/output combinations. Both output colorspace and output gamma must be
 explicit when a tonemap is selected. Any unlisted combination raises <code>ValueError</code> immediately.</p>
 <table>
 <thead>
@@ -2645,76 +3085,50 @@ explicit when a tonemap is selected. Any unlisted combination raises <code>Value
 </thead>
 <tbody>
 <tr>
-<td><code>aces-1.3</code></td>
+<td><code>ACES-1.3</code></td>
 <td><code>Rec.709</code></td>
-<td><code>bt1886</code></td>
+<td><code>BT.1886</code></td>
 <td>Rec.1886 Rec.709 display</td>
 </tr>
 <tr>
-<td><code>aces-1.3</code></td>
+<td><code>ACES-1.3</code></td>
 <td><code>sRGB</code></td>
-<td><code>srgb</code></td>
+<td><code>sRGB</code></td>
 <td>sRGB display</td>
 </tr>
 <tr>
-<td><code>aces-1.3-lut</code></td>
+<td><code>ACES-2.0</code></td>
 <td><code>Rec.709</code></td>
-<td><code>bt1886</code></td>
+<td><code>BT.1886</code></td>
 <td>Rec.1886 Rec.709 display</td>
 </tr>
 <tr>
-<td><code>aces-1.3-lut</code></td>
+<td><code>ACES-2.0</code></td>
 <td><code>sRGB</code></td>
-<td><code>srgb</code></td>
+<td><code>sRGB</code></td>
 <td>sRGB display</td>
 </tr>
 <tr>
-<td><code>aces-2.0</code></td>
-<td><code>Rec.709</code></td>
-<td><code>bt1886</code></td>
-<td>Rec.1886 Rec.709 display</td>
-</tr>
-<tr>
-<td><code>aces-2.0</code></td>
-<td><code>sRGB</code></td>
-<td><code>srgb</code></td>
-<td>sRGB display</td>
-</tr>
-<tr>
-<td><code>aces-2.0-lut</code></td>
-<td><code>Rec.709</code></td>
-<td><code>bt1886</code></td>
-<td>Rec.1886 Rec.709 display</td>
-</tr>
-<tr>
-<td><code>aces-2.0-lut</code></td>
-<td><code>sRGB</code></td>
-<td><code>srgb</code></td>
-<td>sRGB display</td>
-</tr>
-<tr>
-<td><code>bt2408</code></td>
+<td><code>BT.2408</code></td>
 <td><code>Rec.2020</code></td>
-<td><code>hlg</code></td>
+<td><code>HLG</code></td>
 <td>BT.2100 HLG; SDR reference white = 75% signal</td>
 </tr>
 <tr>
-<td><code>bt2408</code></td>
+<td><code>BT.2408</code></td>
 <td><code>Rec.2020</code></td>
-<td><code>pq</code></td>
+<td><code>PQ</code></td>
 <td>BT.2100 PQ; SDR reference white = 203 cd/m²</td>
 </tr>
 </tbody>
 </table>
 <p>OCIO DisplayViewTransform is a general boundary that dynamically selects display, view, and look from the caller's
-configuration. In contrast, <code>aces-1.3</code> fixes the <code>ACES 1.0 - SDR Video</code> view from Studio Config
+configuration. In contrast, <code>ACES-1.3</code> fixes the <code>ACES 1.0 - SDR Video</code> view from Studio Config
 <code>studio-config-v2.2.0_aces-v1.3_ocio-v2.4</code> as analytic formulas in a fused GPU kernel, without OCIO, shapers, 3D LUTs,
-or package data. <code>aces-2.0</code> likewise fixes the <code>ACES 2.0 - SDR 100 nits (Rec.709)</code> view from Studio Config
+or package data. <code>ACES-2.0</code> likewise fixes the <code>ACES 2.0 - SDR 100 nits (Rec.709)</code> view from Studio Config
 <code>studio-config-v4.0.0_aces-v2.0_ocio-v2.5</code>, evaluating AP1 input limiting, Hellwig JMh, tone/chroma/gamut compression,
 Rec.709/D65 limiting RGB, the reference's intrinsic range, and display encoding in that order. The reference's
-intrinsic <code>[0, 1]</code> range is part of the Output Transform, not an added post-processor clip. <code>aces-1.3-lut</code> and
-<code>aces-2.0-lut</code> fix each generation's image with pre-baked shaper and 65³ LUT data plus the <strong>pixtreme version</strong>; they are
-not runtime OCIO-compatible APIs. <code>bt2408</code> also uses neither LUT data nor ACES shaper or bake tooling, evaluating the
+intrinsic <code>[0, 1]</code> range is part of the Output Transform, not an added post-processor clip. <code>BT.2408</code> evaluates the
 analytic formula above directly in the fused GPU kernel. A change to a fixed ACES rendering is a pixtreme release and
 changelog event. No path adds a post-clip to rendered output RGB.</p>
 <h2 id="matrix">matrix</h2>
@@ -2732,21 +3146,21 @@ full-range float with chroma centered at 0.5. A <strong>token denotes coefficien
 </thead>
 <tbody>
 <tr>
-<td><code>bt601</code></td>
+<td><code>BT.601</code></td>
 <td>BT.601</td>
 <td>Kr = 0.299, Kb = 0.114</td>
 <td>ITU-T H.273 / ITU-R BT.601</td>
 <td>SD-family non-constant-luminance coefficients</td>
 </tr>
 <tr>
-<td><code>bt709</code></td>
+<td><code>BT.709</code></td>
 <td>BT.709</td>
 <td>Kr = 0.2126, Kb = 0.0722</td>
 <td>ITU-T H.273 / ITU-R BT.709</td>
 <td>Specification-fixed result for sRGB and Rec.709</td>
 </tr>
 <tr>
-<td><code>bt2020</code></td>
+<td><code>BT.2020</code></td>
 <td>BT.2020</td>
 <td>Kr = 0.2627, Kb = 0.0593</td>
 <td>ITU-T H.273 / ITU-R BT.2020</td>
@@ -2777,17 +3191,17 @@ to which <code>native</code> resolves.</p>
 <tr>
 <td><code>sRGB</code></td>
 <td><code>(0.2126390059, 0.7151686788, 0.0721923154)</code></td>
-<td>Numerically identical to <code>bt709</code></td>
+<td>Numerically identical to <code>BT.709</code></td>
 </tr>
 <tr>
 <td><code>Rec.709</code></td>
 <td><code>(0.2126390059, 0.7151686788, 0.0721923154)</code></td>
-<td>Numerically identical to <code>bt709</code></td>
+<td>Numerically identical to <code>BT.709</code></td>
 </tr>
 <tr>
 <td><code>Rec.2020</code></td>
 <td><code>(0.2627002120, 0.6779980715, 0.0593017165)</code></td>
-<td>Numerically identical to <code>bt2020</code></td>
+<td>Numerically identical to <code>BT.2020</code></td>
 </tr>
 <tr>
 <td><code>ACES2065-1</code></td>
@@ -2800,6 +3214,11 @@ to which <code>native</code> resolves.</p>
 <td>AP1 own-row</td>
 </tr>
 <tr>
+<td><code>S-Gamut</code></td>
+<td><code>(0.2709796708, 0.7866064112, -0.0575860820)</code></td>
+<td>Numerically identical to <code>S-Gamut3</code></td>
+</tr>
+<tr>
 <td><code>S-Gamut3</code></td>
 <td><code>(0.2709796708, 0.7866064112, -0.0575860820)</code></td>
 <td>Sony S-Gamut3 own-row</td>
@@ -2809,18 +3228,68 @@ to which <code>native</code> resolves.</p>
 <td><code>(0.2150758201, 0.8850685017, -0.1001443219)</code></td>
 <td>Sony S-Gamut3.Cine own-row</td>
 </tr>
+<tr>
+<td><code>ARRI-Wide-Gamut-3</code></td>
+<td><code>(0.2919537790, 0.8238410415, -0.1157948205)</code></td>
+<td>ARRI Wide Gamut 3 own-row</td>
+</tr>
+<tr>
+<td><code>ARRI-Wide-Gamut-4</code></td>
+<td><code>(0.2545241764, 0.7814777327, -0.0360019091)</code></td>
+<td>ARRI Wide Gamut 4 own-row</td>
+</tr>
+<tr>
+<td><code>Blackmagic-Wide-Gamut-Gen-5</code></td>
+<td><code>(0.2679929401, 0.8327484091, -0.1007413492)</code></td>
+<td>Blackmagic Wide Gamut Generation 5 own-row</td>
+</tr>
+<tr>
+<td><code>DaVinci-Wide-Gamut</code></td>
+<td><code>(0.2741185109, 0.8736318959, -0.1477504068)</code></td>
+<td>DaVinci Wide Gamut own-row</td>
+</tr>
+<tr>
+<td><code>REDWideGamutRGB</code></td>
+<td><code>(0.2866940995, 0.8429791340, -0.1296732335)</code></td>
+<td>REDWideGamutRGB own-row</td>
+</tr>
+<tr>
+<td><code>DRAGONcolor</code></td>
+<td><code>(0.2169921791, 0.8380223380, -0.0550145171)</code></td>
+<td>DRAGONcolor own-row</td>
+</tr>
+<tr>
+<td><code>DRAGONcolor2</code></td>
+<td><code>(0.1909714594, 0.7375309361, 0.0714976045)</code></td>
+<td>DRAGONcolor2 own-row</td>
+</tr>
+<tr>
+<td><code>REDcolor2</code></td>
+<td><code>(0.1657102643, 0.8636624823, -0.0293727466)</code></td>
+<td>REDcolor2 own-row</td>
+</tr>
+<tr>
+<td><code>REDcolor3</code></td>
+<td><code>(0.2255112277, 0.7798000805, -0.0053113082)</code></td>
+<td>REDcolor3 own-row</td>
+</tr>
+<tr>
+<td><code>REDcolor4</code></td>
+<td><code>(0.2088065893, 0.7220385248, 0.0691548859)</code></td>
+<td>REDcolor4 own-row</td>
+</tr>
 </tbody>
 </table>
 <h2 id="matrix-resolver">matrix resolver</h2>
 <p>When matrix is omitted for RGB encoding (<code>px.color.rgb_to_ycbcr</code> or <code>px.color.rgb_to_grayscale</code>), resolve from the
-output representation in this order: sRGB or Rec.709 to <code>bt709</code>; Rec.2020 to <code>bt2020</code>; any remaining colorspace with
-<code>linear</code> gamma to <code>native</code>; and any remaining colorspace with nonlinear gamma to <code>bt709</code>. An explicit token is never
+output representation in this order: sRGB or Rec.709 to <code>BT.709</code>; Rec.2020 to <code>BT.2020</code>; any remaining colorspace with
+<code>linear</code> gamma to <code>native</code>; and any remaining colorspace with nonlinear gamma to <code>BT.709</code>. An explicit token is never
 canonicalized even when its coefficients are equal to another token. Read Y as luminance under <code>linear</code> gamma and as
 luma under nonlinear gamma.</p>
 <p>When matrix is omitted for YCbCr decoding, on the input side of <code>px.color.ycbcr_to_rgb</code> or
-<code>px.color.ycbcr_to_ycbcr</code>, resolve in this order: explicit per-call value, <code>frame.matrix</code>, <code>bt709</code> for sRGB or Rec.709,
-<code>bt2020</code> for Rec.2020, then error. ACES and S-Gamut families are never guessed. For camera material without provenance,
-<code>matrix="bt709"</code> is the most common practical candidate, but the caller must state it.</p>
+<code>px.color.ycbcr_to_ycbcr</code>, resolve in this order: explicit per-call value, <code>frame.matrix</code>, <code>BT.709</code> for sRGB or Rec.709,
+<code>BT.2020</code> for Rec.2020, then error. ACES and S-Gamut families are never guessed. For camera material without provenance,
+<code>matrix="BT.709"</code> is the most common practical candidate, but the caller must state it.</p>
 <p><code>px.color.ycbcr_to_ycbcr</code> keeps input and output matrix, range, and bit depth independent. When output matrix is
 omitted, preserve the resolved input token if output colorspace equals input colorspace; only a colorspace change uses
 the RGB-encode resolver. Both ends accept <code>full</code> or <code>legal</code> range and bit depth 8, 10, 12, 14, or 16.</p>
@@ -3028,7 +3497,7 @@ Neither point nor area renormalizes only in-canvas taps; both apply the border s
 <p>The cubic and Lanczos support widths in <code>px.transform.resize</code> do not expand on the source side during reduction; these
 kernels provide no scale-aware antialiasing. Use <code>area</code> for antialiased reduction.</p>
 <h2 id="stack-direction">stack direction</h2>
-<p><code>px.transform.stack</code> direction tokens are case-sensitive; default <code>vertical</code>. Input order is preserved, and output
+<p><code>px.transform.stack</code> uses the runtime normalization contract above; the canonical default <code>vertical</code> preserves input order, and output
 always owns new storage.</p>
 <table>
 <thead>
@@ -3049,7 +3518,7 @@ always owns new storage.</p>
 </tbody>
 </table>
 <h2 id="sobel-direction">sobel direction</h2>
-<p><code>px.filter.sobel</code> direction tokens are case-sensitive; default <code>magnitude</code>. Each channel is processed independently,
+<p><code>px.filter.sobel</code> uses the runtime normalization contract above; its canonical default is <code>magnitude</code>. Each channel is processed independently,
 without dispatch based on channel labels.</p>
 <table>
 <thead>
@@ -3074,7 +3543,7 @@ without dispatch based on channel labels.</p>
 </tbody>
 </table>
 <h2 id="template-matching-method">template matching method</h2>
-<p><code>px.feature.match_template</code> method tokens are case-sensitive; default <code>ccoeff_normed</code>. Sums over window <code>I</code> and
+<p><code>px.feature.match_template</code> uses the runtime normalization contract above; its canonical default is <code>ccoeff_normed</code>. Sums over window <code>I</code> and
 template <code>T</code> include spatial dimensions and every channel. In ccoeff methods, <code>mean_I[c]</code> and <code>mean_T[c]</code> are spatial
 arithmetic means per channel; channels are not combined into one mean.</p>
 <table>
@@ -3166,7 +3635,8 @@ dimensions accept finite real numbers and preserve subpixel positions. Negative 
 only the intersection with the image is drawn.</p>
 <h2 id="language">language</h2>
 <p>Text-language tokens select the OpenType shaping language and therefore the CJK glyph forms provided by the selected
-bundled font's <code>locl</code> feature. The default for <code>px.draw.text</code> is <code>ja</code>. Tokens are case-sensitive.</p>
+bundled font's <code>locl</code> feature. The canonical default for <code>px.draw.text</code> is <code>ja</code>; runtime input follows the shared
+normalization contract.</p>
 <table>
 <thead>
 <tr>
@@ -3262,8 +3732,8 @@ newlines. Carriage returns are rejected rather than normalized. Each nonempty li
 right with OpenType GSUB and GPOS in the selected font; shaping never spans lines. Advances and offsets returned by
 the shaper accumulate at subpixel precision.</p>
 <h2 id="text-align">text align</h2>
-<p>Text-align tokens choose each line's pen origin relative to the left edge of the <code>px.draw.text</code> block. Default <code>left</code>.
-Tokens are case-sensitive.</p>
+<p>Text-align tokens choose each line's pen origin relative to the left edge of the <code>px.draw.text</code> block. The canonical
+default is <code>left</code>; runtime input follows the shared normalization contract.</p>
 <table>
 <thead>
 <tr>
@@ -3494,58 +3964,58 @@ normalized output. Bar channels are always <code>RGB</code>, and region edges ha
 </thead>
 <tbody>
 <tr>
-<td><code>arib-std-b28</code></td>
+<td><code>ARIB-STD-B28</code></td>
 <td>ARIB STD-B28 multiformat color bar</td>
 <td><code>Rec.709</code></td>
-<td><code>rec709</code></td>
+<td><code>Rec.709</code></td>
 <td>narrow</td>
 </tr>
 <tr>
-<td><code>smpte-rp219</code></td>
+<td><code>SMPTE-RP219</code></td>
 <td>SMPTE RP 219-1 basic pattern; identical output to ARIB STD-B28</td>
 <td><code>Rec.709</code></td>
-<td><code>rec709</code></td>
+<td><code>Rec.709</code></td>
 <td>narrow</td>
 </tr>
 <tr>
-<td><code>bt2111-hlg</code></td>
+<td><code>BT.2111-HLG</code></td>
 <td>ITU-R BT.2111-2 HLG pattern</td>
 <td><code>Rec.2020</code></td>
-<td><code>hlg</code></td>
+<td><code>HLG</code></td>
 <td>narrow</td>
 </tr>
 <tr>
-<td><code>bt2111-pq</code></td>
+<td><code>BT.2111-PQ</code></td>
 <td>ITU-R BT.2111-2 PQ pattern</td>
 <td><code>Rec.2020</code></td>
-<td><code>pq</code></td>
+<td><code>PQ</code></td>
 <td>narrow</td>
 </tr>
 <tr>
-<td><code>bt2111-pq-full</code></td>
+<td><code>BT.2111-PQ-full</code></td>
 <td>ITU-R BT.2111-2 PQ full-range pattern</td>
 <td><code>Rec.2020</code></td>
-<td><code>pq</code></td>
+<td><code>PQ</code></td>
 <td>full</td>
 </tr>
 <tr>
 <td><code>full-100</code></td>
 <td>ITU-R BT.471 100/0/100/0 full-field bars with BT.1729 BT.709 code values</td>
 <td><code>Rec.709</code></td>
-<td><code>rec709</code></td>
+<td><code>Rec.709</code></td>
 <td>narrow</td>
 </tr>
 <tr>
 <td><code>full-75</code></td>
 <td>ITU-R BT.471 100/0/75/0 full-field bars, retaining 100% white</td>
 <td><code>Rec.709</code></td>
-<td><code>rec709</code></td>
+<td><code>Rec.709</code></td>
 <td>narrow</td>
 </tr>
 </tbody>
 </table>
 <p>Normalized output for a narrow standard applies <code>(code - 64) / 876</code> to every RGB code and preserves negative
-sub-black regions such as PLUGE. <code>bt2111-pq-full</code> uses <code>code / 1023</code>. Region boundaries scale proportionally from the
+sub-black regions such as PLUGE. <code>BT.2111-PQ-full</code> uses <code>code / 1023</code>. Region boundaries scale proportionally from the
 standard's reference-resolution ratios to output dimensions and round to nearest integer pixel boundaries. A region
 that rounds to zero pixels in a very small image may disappear.</p>
 <h2 id="color-bars-output">color bars output</h2>
@@ -3571,8 +4041,8 @@ follows the standard-token table for either output; the Frame does not store cod
 </table>
 <h2 id="morphology-shape">morphology shape</h2>
 <p>Morphology-shape tokens define structuring-element support as integer pixel offsets. <code>radius</code> is an integer at least 1,
-and support always contains the center pixel. Raw kernel arrays and iterations are not accepted. Tokens are
-case-sensitive.</p>
+and support always contains the center pixel. Raw kernel arrays and iterations are not accepted. Runtime token input
+follows the shared normalization contract.</p>
 <table>
 <thead>
 <tr>
@@ -3601,7 +4071,7 @@ the input to extract small bright details. <code>px.morphology.black_tophat</cod
 small dark details.</p>
 <h2 id="border">border</h2>
 <p>Border tokens define virtual pixels when a neighborhood operation reads beyond an image. They do not change output
-dimensions and are case-sensitive. If an image dimension is one pixel, every border reference on that axis maps to
+dimensions and follow the shared runtime normalization contract. If an image dimension is one pixel, every border reference on that axis maps to
 the single pixel.</p>
 <p>Blur APIs default to <code>mirror</code> and include <code>px.filter.gaussian_blur</code>, <code>px.filter.unsharp_mask</code>, <code>px.filter.box_blur</code>,
 <code>px.filter.median_blur</code>, <code>px.filter.bilateral_blur</code>, <code>px.filter.convolve_box</code>, <code>px.filter.directional_blur</code>,
@@ -3670,8 +4140,8 @@ Both violations fail immediately. The rule corresponds to
 <code>np.pad(mode="reflect")</code> does not repeat edge pixels and matches pixtreme <code>mirror</code>; <code>scipy.ndimage</code> <code>reflect</code> is
 half-sample symmetric and repeats edge pixels. The SciPy token corresponding to pixtreme <code>mirror</code> is <code>mirror</code>.</p>
 <h2 id="vector-blur-shutter">vector blur shutter</h2>
-<p>Vector-blur shutter tokens select the sampling interval along a motion vector. Default <code>centered</code>. Tokens are
-case-sensitive.</p>
+<p>Vector-blur shutter tokens select the sampling interval along a motion vector. The canonical default is <code>centered</code>;
+runtime input follows the shared normalization contract.</p>
 <table>
 <thead>
 <tr>
@@ -3715,13 +4185,13 @@ buffer contains no metadata, not guaranteed truths about the material.</p>
 </tr>
 <tr>
 <td>gamma</td>
-<td><code>rec709</code></td>
+<td><code>Rec.709</code></td>
 <td>Placeholder; an explicit per-call <code>gamma=</code> token takes precedence</td>
 </tr>
 <tr>
 <td>matrix</td>
 <td><code>None</code></td>
-<td>Unknown provenance; an explicit per-call <code>matrix=</code> token is stamped literally</td>
+<td>Unknown provenance; an explicit per-call <code>matrix=</code> token is normalized and stamped as its canonical spelling</td>
 </tr>
 <tr>
 <td>channels</td>
@@ -4043,31 +4513,31 @@ values and dtype as a default read. EXR and HDR are file-only boundaries.</p>
 <tr>
 <td>PNG / JPEG / TIFF</td>
 <td><code>sRGB</code></td>
-<td><code>srgb</code></td>
+<td><code>sRGB</code></td>
 <td>RGB or RGBA; grayscale is one-channel <code>("Y",)</code></td>
 </tr>
 <tr>
 <td>JPEG 2000</td>
 <td><code>sRGB</code></td>
-<td><code>srgb</code></td>
+<td><code>sRGB</code></td>
 <td>Y, RGB, or RGBA</td>
 </tr>
 <tr>
 <td>WebP</td>
 <td><code>sRGB</code></td>
-<td><code>srgb</code></td>
+<td><code>sRGB</code></td>
 <td>RGB</td>
 </tr>
 <tr>
 <td>BMP / PNM</td>
 <td><code>sRGB</code></td>
-<td><code>srgb</code></td>
+<td><code>sRGB</code></td>
 <td>Y or RGB</td>
 </tr>
 <tr>
 <td>TGA</td>
 <td><code>sRGB</code></td>
-<td><code>srgb</code></td>
+<td><code>sRGB</code></td>
 <td>RGB or RGBA</td>
 </tr>
 <tr>
@@ -4079,7 +4549,7 @@ values and dtype as a default read. EXR and HDR are file-only boundaries.</p>
 <tr>
 <td>DPX</td>
 <td><code>Rec.709</code></td>
-<td>Header transfer; unknown maps to <code>cineon</code> at 10 bit, <code>rec709</code> at 8 bit, and <code>linear</code> at 12 or 16 bit</td>
+<td>Header transfer; unknown maps to <code>Cineon</code> at 10 bit, <code>Rec.709</code> at 8 bit, and <code>linear</code> at 12 or 16 bit</td>
 <td>RGB or RGBA</td>
 </tr>
 <tr>
@@ -4095,7 +4565,7 @@ also include metadata inside encoded bytes accepted by <code>px.io.decode_image<
 metadata claims and do not transform pixel values. File metadata is limited to PNG cICP, sRGB, and gAMA chunks, plus
 EXR chromaticities and the ACES container flag. HDR EXPOSURE, PRIMARIES, and COLORCORR can be inspected as raw header
 values but are applied to neither pixels nor metadata. DPX maps printing-density, logarithmic, and ADX transfer
-characteristics to <code>cineon</code>; linear to <code>linear</code>; and video-family characteristics to <code>rec709</code>. ICC profiles are not
+characteristics to <code>Cineon</code>; linear to <code>linear</code>; and video-family characteristics to <code>Rec.709</code>. ICC profiles are not
 read. If a file value cannot map into the public vocabulary, pixtreme falls back to the specification default and emits
 a Python warning.</p>
 <p><code>px.io.read_header</code> performs no pixel decoding or GPU allocation. It returns an <code>ImageHeader</code> with format, dimensions,
@@ -4220,7 +4690,8 @@ and <code>dwa_level</code> exist only on <code>px.io.write_image</code>. Omissio
 </tbody>
 </table>
 <h2 id="image-format">image format</h2>
-<p>Case-sensitive closed tokens accepted by <code>px.io.encode_image(format=...)</code>. They are not file extensions.</p>
+<p>Closed tokens accepted by <code>px.io.encode_image(format=...)</code> under the shared case-insensitive, separator-insensitive
+contract above. They are not file extensions.</p>
 <table>
 <thead>
 <tr>
@@ -4286,11 +4757,13 @@ input as uint8 and 10-, 12-, or 16-bit codes as uint16.</p>
 nonnative input, including uint32, to the native/default float32 container with <code>recode_dtype</code> full-scale semantics,
 then clips to <code>[0, 1]</code>, scales by the depth maximum, rounds half away from zero, and packs big-endian <code>SDPX</code> raw bytes
 in one GPU pass. <code>bit_depth</code> defaults to 10 and accepts only 8, 10, 12, or 16. The writer fixes orientation 0, one
-unsigned element, no compression, and Method A filled for 10- and 12-bit output. Frame gamma records <code>cineon</code> as
-printing density, <code>linear</code> as linear, <code>s-log3</code> and <code>logc4</code> as logarithmic, and video or power families as the BT.709
-transfer characteristic.</p>
+unsigned element, no compression, and Method A filled for 10- and 12-bit output. Frame gamma records <code>Cineon</code> and
+<code>REDlogFilm</code> as printing density, <code>linear</code> as linear, <code>S-Log</code>, <code>S-Log2</code>, <code>S-Log3</code>, <code>ARRI-LogC3</code>, <code>ARRI-LogC4</code>,
+<code>Blackmagic-Film-Gen-5</code>, <code>DaVinci-Intermediate</code>, and <code>RED-Log3G10</code> as logarithmic, and video or power families as
+the BT.709 transfer characteristic.</p>
 <h2 id="tiff-compression">TIFF compression</h2>
-<p>Case-sensitive tokens accepted by <code>compression=</code> for TIFF output from <code>px.io.encode_image</code> or <code>px.io.write_image</code>.</p>
+<p>Tokens accepted by <code>compression=</code> for TIFF output from <code>px.io.encode_image</code> or <code>px.io.write_image</code>, resolved under the
+shared case-insensitive, separator-insensitive contract above.</p>
 <table>
 <thead>
 <tr>
@@ -4310,7 +4783,8 @@ transfer characteristic.</p>
 </tbody>
 </table>
 <h2 id="exr-compression">EXR compression</h2>
-<p>Case-sensitive tokens accepted by <code>compression=</code> for EXR file output from <code>px.io.write_image</code>. <code>None</code> selects <code>zip</code>.
+<p>Tokens accepted by <code>compression=</code> for EXR file output from <code>px.io.write_image</code>, resolved under the shared
+case-insensitive, separator-insensitive contract above. <code>None</code> selects <code>zip</code>.
 PXR24 is lossless for HALF and rounds FLOAT to 24-bit precision. B44 and B44A lossily compress 4×4 blocks of HALF and
 do not compress FLOAT. DWAA and DWAB are lossy DCT compression; <code>dwa_level=None</code> resolves to <code>45.0</code>.</p>
 <table>

@@ -25,7 +25,7 @@
     
     
       
-        <title>pixtreme.color - pixtreme 1.2.1</title>
+        <title>pixtreme.color - pixtreme 1.3.0</title>
       
     
     
@@ -84,7 +84,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="pixtreme 1.2.1" class="md-header__button md-logo" aria-label="pixtreme 1.2.1" data-md-component="logo">
+    <a href="../.." title="pixtreme 1.3.0" class="md-header__button md-logo" aria-label="pixtreme 1.3.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -98,7 +98,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            pixtreme 1.2.1
+            pixtreme 1.3.0
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -194,13 +194,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="pixtreme 1.2.1" class="md-nav__button md-logo" aria-label="pixtreme 1.2.1" data-md-component="logo">
+    <a href="../.." title="pixtreme 1.3.0" class="md-nav__button md-logo" aria-label="pixtreme 1.3.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    pixtreme 1.2.1
+    pixtreme 1.3.0
   </label>
   
     <div class="md-nav__source">
@@ -302,6 +302,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware video codec connections
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -320,10 +347,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -341,8 +368,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1503,8 +1530,10 @@ input is mutated, and the result owns new C-contiguous Frame storage.</p>
         <p>Decode a claimed RGB transfer to scene-linear values on the GPU.</p>
 <p><code>frame</code> must be a float32 Frame containing exactly one R, G, and B.
 <code>gamma</code> is an input metadata claim; <code>None</code> uses <code>frame.gamma</code>. Explicit
-values are case-sensitive <code>linear</code>, <code>srgb</code>, <code>rec709</code>, <code>bt1886</code>,
-<code>pq</code>, <code>hlg</code>, <code>s-log3</code>, <code>logc4</code>, <code>2.2</code>, <code>2.4</code>, or <code>2.6</code> tokens.
+canonical values are <code>linear</code>, <code>sRGB</code>, <code>Rec.709</code>, <code>BT.1886</code>,
+<code>PQ</code>, <code>HLG</code>, <code>S-Log</code>, <code>S-Log2</code>, <code>S-Log3</code>, <code>ARRI-LogC3</code>, <code>ARRI-LogC4</code>, <code>Blackmagic-Film-Gen-5</code>,
+<code>DaVinci-Intermediate</code>, <code>RED-Log3G10</code>, <code>REDlogFilm</code>, <code>Cineon</code>, <code>Gamma-2.2</code>, <code>Gamma-2.4</code>, or
+<code>Gamma-2.6</code> tokens.
 The claim controls interpretation without mutating the input Frame metadata.</p>
 <p>Only R/G/B values are decoded. Auxiliary channels and channel order are
 preserved bit for bit, colorspace is inherited, output gamma is <code>"linear"</code>,
@@ -1512,6 +1541,16 @@ and matrix metadata is cleared. Negative and above-one scene values follow
 each transfer's documented extension and are not clipped. A new Frame and GPU
 allocation are returned even for a linear claim. Invalid frame types, dtypes,
 RGB labels, or gamma tokens raise :class:<code>ValueError</code>.</p>
+<p>S-Log / S-Log2 / S-Log3 apply their lower linear branches directly to signed inputs. For S-Log and S-Log2,
+public scene-linear reflectance uses x = r / 0.9 and Sony encoded IRE uses the public embedding
+e = (64 + 876 * y) / 1023. S-Log3 / ARRI-LogC4 do not use sign/magnitude mirroring; ARRI-LogC4 retains its negative
+scene cut. Established S-Log3 and ARRI-LogC4 results for nonnegative inputs remain float32 bit-identical.
+ARRI-LogC3 is the ARRI EI 800 relative scene-exposure curve, maps 18% gray to 400 / 1023, and extends its lower
+linear branch to negative values without clipping or sign/magnitude mirroring.
+Blackmagic Film Gen 5 uses its published natural-log branches. DaVinci Intermediate uses its published base-2
+branches and a derived decode threshold. Both apply their lower linear branches directly to negative values.
+RED-Log3G10 uses RED's published base-10 curve with a directly extended lower branch below scene-linear -0.01.
+REDlogFilm uses the Cineon sign-preserving mirror and exact float32 bits while preserving its own metadata.</p>
 
 
     </div>
@@ -1531,9 +1570,10 @@ RGB labels, or gamma tokens raise :class:<code>ValueError</code>.</p>
 
         <p>Encode scene-linear RGB with an explicit transfer on the GPU.</p>
 <p><code>frame</code> must be a float32 Frame with <code>frame.gamma == "linear"</code> and exactly
-one R, G, and B. <code>gamma</code> is a required, case-sensitive output token:
-<code>linear</code>, <code>srgb</code>, <code>rec709</code>, <code>bt1886</code>, <code>pq</code>, <code>hlg</code>, <code>s-log3</code>,
-<code>logc4</code>, <code>2.2</code>, <code>2.4</code>, or <code>2.6</code>. Passing <code>None</code> or an unknown token
+one R, G, and B. <code>gamma</code> is a required normalized output token:
+<code>linear</code>, <code>sRGB</code>, <code>Rec.709</code>, <code>BT.1886</code>, <code>PQ</code>, <code>HLG</code>, <code>S-Log</code>, <code>S-Log2</code>, <code>S-Log3</code>,
+<code>ARRI-LogC3</code>, <code>ARRI-LogC4</code>, <code>Blackmagic-Film-Gen-5</code>, <code>DaVinci-Intermediate</code>, <code>RED-Log3G10</code>,
+<code>REDlogFilm</code>, <code>Cineon</code>, <code>Gamma-2.2</code>, <code>Gamma-2.4</code>, or <code>Gamma-2.6</code>. Passing <code>None</code> or an unknown token
 is rejected rather than inferred.</p>
 <p>Only R/G/B values are encoded. Auxiliary channels and channel order are
 preserved bit for bit, colorspace is inherited, output gamma is the requested
@@ -1541,6 +1581,16 @@ token, and matrix metadata is cleared. Negative and above-one scene values
 follow each transfer's documented extension and are not clipped; a new Frame
 and GPU allocation are always returned. Invalid frame types, dtypes, RGB
 labels, gamma tokens, or non-linear input metadata raise :class:<code>ValueError</code>.</p>
+<p>S-Log / S-Log2 / S-Log3 apply their lower linear branches directly to signed inputs. For S-Log and S-Log2,
+public scene-linear reflectance uses x = r / 0.9 and Sony encoded IRE uses the public embedding
+e = (64 + 876 * y) / 1023. S-Log3 / ARRI-LogC4 do not use sign/magnitude mirroring; ARRI-LogC4 retains its negative
+scene cut. Established S-Log3 and ARRI-LogC4 results for nonnegative inputs remain float32 bit-identical.
+ARRI-LogC3 is the ARRI EI 800 relative scene-exposure curve, maps 18% gray to 400 / 1023, and extends its lower
+linear branch to negative values without clipping or sign/magnitude mirroring.
+Blackmagic Film Gen 5 uses its published natural-log branches. DaVinci Intermediate uses its published base-2
+branches and a derived decode threshold. Both apply their lower linear branches directly to negative values.
+RED-Log3G10 uses RED's published base-10 curve with a directly extended lower branch below scene-linear -0.01.
+REDlogFilm uses the Cineon sign-preserving mirror and exact float32 bits while preserving its own metadata.</p>
 
 
     </div>
@@ -1562,9 +1612,11 @@ labels, gamma tokens, or non-linear input metadata raise :class:<code>ValueError
 <p><code>frame</code> must be a float32 Frame containing exactly one R, G, and B and no
 YCbCr destination labels. <code>colorspace</code> and <code>gamma</code> declare the projection
 representation; <code>None</code> inherits Frame metadata. They use the closed Frame
-colorspace vocabulary and the <code>linear</code>, <code>srgb</code>, <code>rec709</code>, <code>bt1886</code>,
-<code>pq</code>, <code>hlg</code>, <code>s-log3</code>, <code>logc4</code>, <code>2.2</code>, <code>2.4</code>, and <code>2.6</code> gamma
-tokens. <code>matrix</code> accepts <code>"bt601"</code>, <code>"bt709"</code>, <code>"bt2020"</code>, or
+colorspace vocabulary and the <code>linear</code>, <code>sRGB</code>, <code>Rec.709</code>, <code>BT.1886</code>,
+<code>PQ</code>, <code>HLG</code>, <code>S-Log</code>, <code>S-Log2</code>, <code>S-Log3</code>, <code>ARRI-LogC3</code>, <code>ARRI-LogC4</code>, <code>Blackmagic-Film-Gen-5</code>,
+<code>DaVinci-Intermediate</code>, <code>RED-Log3G10</code>, <code>REDlogFilm</code>, <code>Cineon</code>, <code>Gamma-2.2</code>, <code>Gamma-2.4</code>, and
+<code>Gamma-2.6</code> gamma tokens. <code>matrix</code> accepts
+<code>"BT.601"</code>, <code>"BT.709"</code>, <code>"BT.2020"</code>, or
 <code>"native"</code> and otherwise resolves from the declared representation.</p>
 <p>The GPU result is a new C-contiguous float32 Frame with only the <code>("Y",)</code>
 channel; auxiliary channels are intentionally omitted. It stamps the declared
@@ -1593,12 +1645,13 @@ Invalid frame types, dtypes, labels, or tokens raise :class:<code>ValueError</co
 <p><code>frame</code> must be a float32 Frame containing exactly one R, G, and B and no
 YCbCr destination labels. <code>colorspace</code> and <code>gamma</code> declare the output
 representation; <code>None</code> inherits the corresponding Frame metadata. They use
-the same closed, case-sensitive vocabularies as Frame, including <code>sRGB</code> /
+the same case- and separator-insensitive closed vocabularies as Frame, including <code>sRGB</code> /
 <code>Rec.709</code> / <code>Rec.2020</code> / ACES and S-Gamut colorspaces and <code>linear</code> /
-<code>srgb</code> / <code>rec709</code> / <code>bt1886</code> / <code>pq</code> / <code>hlg</code> / <code>s-log3</code> /
-<code>logc4</code> / <code>2.2</code> / <code>2.4</code> / <code>2.6</code> transfers.</p>
-<p><code>matrix</code> accepts <code>"bt601"</code>, <code>"bt709"</code>, <code>"bt2020"</code>, or <code>"native"</code>.
-When omitted, the target representation resolves it to bt709, bt2020, native,
+<code>sRGB</code> / <code>Rec.709</code> / <code>BT.1886</code> / <code>PQ</code> / <code>HLG</code> / <code>S-Log</code> / <code>S-Log2</code> /
+<code>S-Log3</code> / <code>ARRI-LogC3</code> / <code>ARRI-LogC4</code> / <code>Blackmagic-Film-Gen-5</code> / <code>DaVinci-Intermediate</code> /
+<code>RED-Log3G10</code> / <code>REDlogFilm</code> / <code>Cineon</code> / <code>Gamma-2.2</code> / <code>Gamma-2.4</code> / <code>Gamma-2.6</code> transfers.</p>
+<p><code>matrix</code> accepts <code>"BT.601"</code>, <code>"BT.709"</code>, <code>"BT.2020"</code>, or <code>"native"</code>.
+When omitted, the target representation resolves it to BT.709, BT.2020, native,
 or the documented non-linear fallback. <code>range</code> is <code>"full"</code> or <code>"legal"</code>;
 <code>bit_depth</code> is 8, 10, 12, 14, or 16 and affects only legal-range scaling.</p>
 <p>The result replaces R/G/B labels in place with Y/Cb/Cr, stamps the declared
@@ -1627,14 +1680,16 @@ or bit depths raise :class:<code>ValueError</code>.</p>
 <p><code>frame</code> must be a float32 Frame containing exactly one Y, Cb, and Cr and no
 RGB destination labels. <code>range</code> accepts <code>"full"</code> or <code>"legal"</code> and
 <code>bit_depth</code> accepts 8, 10, 12, 14, or 16; legal code values are expanded
-before matrix decoding. <code>matrix</code> accepts <code>"bt601"</code>, <code>"bt709"</code>,
-<code>"bt2020"</code>, or <code>"native"</code> and resolves in order from the explicit value,
+before matrix decoding. <code>matrix</code> accepts <code>"BT.601"</code>, <code>"BT.709"</code>,
+<code>"BT.2020"</code>, or <code>"native"</code> and resolves in order from the explicit value,
 <code>frame.matrix</code>, or the sRGB/Rec.709/Rec.2020 convention. Other colorspaces
 require an explicit matrix when provenance is absent.</p>
 <p><code>colorspace</code> and <code>gamma</code> declare the output RGB representation, with
 <code>None</code> inheriting Frame metadata. They accept the Frame colorspace vocabulary
-and the <code>linear</code>, <code>srgb</code>, <code>rec709</code>, <code>bt1886</code>, <code>pq</code>, <code>hlg</code>,
-<code>s-log3</code>, <code>logc4</code>, <code>2.2</code>, <code>2.4</code>, and <code>2.6</code> transfer tokens.</p>
+and the <code>linear</code>, <code>sRGB</code>, <code>Rec.709</code>, <code>BT.1886</code>, <code>PQ</code>, <code>HLG</code>,
+<code>S-Log</code>, <code>S-Log2</code>, <code>S-Log3</code>, <code>ARRI-LogC3</code>, <code>ARRI-LogC4</code>, <code>Blackmagic-Film-Gen-5</code>,
+<code>DaVinci-Intermediate</code>, <code>RED-Log3G10</code>, <code>REDlogFilm</code>, <code>Cineon</code>, <code>Gamma-2.2</code>, <code>Gamma-2.4</code>, and
+<code>Gamma-2.6</code> transfer tokens.</p>
 <p>The result replaces Y/Cb/Cr labels in place with R/G/B, preserves auxiliary
 channels bit for bit, stamps the declared colorspace and gamma, and clears
 matrix metadata. Range expansion, matrix decoding, and technical conversion
@@ -1659,7 +1714,7 @@ tokens, ranges, bit depths, or unresolvable matrix provenance raise
     <div class="doc doc-contents ">
 
         <p>Re-express YCbCr in one fused pass without exposing an RGB Frame.</p>
-<p>For example, <code>input_matrix="bt709", output_matrix="native"</code> converts a
+<p>For example, <code>input_matrix="BT.709", output_matrix="native"</code> converts a
 Rec.709 container convention to the working colorspace's own-row basis.
 Reversing those arguments performs the inverse rematrix.</p>
 <h5 id="pixtreme.color.ycbcr_to_ycbcr--parameters">Parameters</h5>
@@ -1671,7 +1726,7 @@ colorspace, gamma:
     Output representation tokens. <code>None</code> independently inherits the
     corresponding input Frame metadata.
 input_matrix:
-    Input YCbCr basis: <code>"bt601"</code>, <code>"bt709"</code>, <code>"bt2020"</code>, or
+    Input YCbCr basis: <code>"BT.601"</code>, <code>"BT.709"</code>, <code>"BT.2020"</code>, or
     <code>"native"</code>. Omission resolves in order from <code>frame.matrix</code>, the
     sRGB/Rec.709/Rec.2020 convention, or an error when provenance is absent.
 input_range, input_bit_depth:
@@ -1680,8 +1735,8 @@ input_range, input_bit_depth:
 output_matrix:
     Output YCbCr basis from the same four-token set. When omitted, the same
     colorspace retains the resolved input basis; a changed colorspace uses
-    the encode resolver (bt709, bt2020, native for other linear output, or
-    bt709 for other encoded output).
+    the encode resolver (BT.709, BT.2020, native for other linear output, or
+    BT.709 for other encoded output).
 output_range, output_bit_depth:
     Independent output code grid with the same range and bit-depth domains.</p>
 <h5 id="pixtreme.color.ycbcr_to_ycbcr--returns">Returns</h5>
@@ -1713,22 +1768,33 @@ output_range, output_bit_depth:
     <div class="doc doc-contents ">
 
         <p>Transform a float32 Frame's RGB colorimetry. With <code>tonemap=None</code> this is a technical conversion without
-rendering; ACES tonemaps perform rendering, while <code>tonemap="bt2408"</code> performs direct mapping.</p>
+rendering; ACES tonemaps perform rendering, while <code>tonemap="BT.2408"</code> performs direct mapping.</p>
 <p>A simultaneous colorspace and transfer conversion runs decode, the Bradford-
 adapted primaries matrix, and encode in a single fused pass. Express the full
 conversion in one call: separate partial calls require additional passes.
 Channels are label-driven; R, G, and B are transformed while all other labels
-pass through unchanged. <code>tonemap="aces-1.3"</code> and <code>tonemap="aces-2.0"</code>
+pass through unchanged. <code>tonemap="ACES-1.3"</code> and <code>tonemap="ACES-2.0"</code>
 evaluate the corresponding analytic ACES SDR rendering in one CUDA pass;
-ACES 2.0 uses its fixed 100-nit Rec.709 algorithm table. <code>aces-1.3-lut</code>
-and <code>aces-2.0-lut</code> select the corresponding pre-baked LUT rendering. <code>bt2408</code> selects direct
-mapping to <code>Rec.2020</code> with <code>hlg</code> or <code>pq</code> and places SDR reference white
+ACES 2.0 uses its fixed 100-nit Rec.709 algorithm table. <code>BT.2408</code> selects direct
+mapping to <code>Rec.2020</code> with <code>HLG</code> or <code>PQ</code> and places SDR reference white
 at 203 cd/m². All ACES tonemaps accept exactly the two output pairs
-<code>Rec.709</code> / <code>bt1886</code> and <code>sRGB</code> / <code>srgb</code>. Both <code>output_colorspace</code>
+<code>Rec.709</code> / <code>BT.1886</code> and <code>sRGB</code> / <code>sRGB</code>. Both <code>output_colorspace</code>
 and <code>output_gamma</code> must be supplied explicitly whenever a tonemap is
 selected. The analytic runtime does not use OCIO or RGB-grid LUT data. ACES
 2.0 reproduces its reference-internal output range before display encoding;
 no tonemap path adds a post-render clip.</p>
+<p>S-Log / S-Log2 / S-Log3 apply their lower linear branches directly to signed inputs. For S-Log and S-Log2,
+public scene-linear reflectance uses x = r / 0.9 and Sony encoded IRE uses the public embedding
+e = (64 + 876 * y) / 1023. S-Log3 / ARRI-LogC4 do not use sign/magnitude mirroring; ARRI-LogC4 retains its negative
+scene cut. Established S-Log3 and ARRI-LogC4 results for nonnegative inputs remain float32 bit-identical.
+ARRI-LogC3 is the ARRI EI 800 relative scene-exposure curve, maps 18% gray to 400 / 1023, and extends its lower
+linear branch to negative values without clipping or sign/magnitude mirroring.
+Blackmagic Film Gen 5 uses its published natural-log branches. DaVinci Intermediate uses its published base-2
+branches and a derived decode threshold. Both apply their lower linear branches directly to negative values and
+remain independent from the Blackmagic Wide Gamut Gen 5 and DaVinci Wide Gamut colorspaces.
+RED-Log3G10 uses RED's published piecewise base-10 curve, applies its lower linear branch directly below -0.01,
+and leaves scene overshoot unclipped. REDlogFilm uses the Cineon sign-preserving mirror and exact float32 transfer
+bits while retaining independent gamma metadata. All RED colorspaces remain independent from transfer selection.</p>
 
 
     </div>
@@ -1739,7 +1805,7 @@ no tonemap path adds a post-render clip.</p>
 
 
 <h3 id="pixtreme.color.chromatic_adaptation" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">chromatic_adaptation</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">input_white</span><span class="p">,</span> <span class="n">output_white</span><span class="p">,</span> <span class="n">cat</span><span class="o">=</span><span class="s1">&#39;cat02&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">chromatic_adaptation</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">input_white</span><span class="p">,</span> <span class="n">output_white</span><span class="p">,</span> <span class="n">cat</span><span class="o">=</span><span class="s1">&#39;CAT02&#39;</span><span class="p">)</span></code>
 
 </h3>
 
@@ -1760,7 +1826,7 @@ RGB channels are label-driven; all other channels are copied bit-for-bit.</p>
 
 
 <h3 id="pixtreme.color.white_balance" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">white_balance</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">temperature</span><span class="p">,</span> <span class="n">tint</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">cat</span><span class="o">=</span><span class="s1">&#39;cat02&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">white_balance</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">temperature</span><span class="p">,</span> <span class="n">tint</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">cat</span><span class="o">=</span><span class="s1">&#39;CAT02&#39;</span><span class="p">)</span></code>
 
 </h3>
 

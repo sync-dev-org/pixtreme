@@ -1,0 +1,1221 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="GPU-first image processing for Python, built on CUDA and CuPy">
+      
+      
+      
+      
+        <link rel="prev" href="../tokens/">
+      
+      
+        <link rel="next" href="../reference/channel/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Hardware video codec connections - pixtreme 1.3.0</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#hardware-video-codec-connections" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="pixtreme 1.3.0" class="md-header__button md-logo" aria-label="pixtreme 1.3.0" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            pixtreme 1.3.0
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Hardware video codec connections
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/sync-dev-org/pixtreme" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sync-dev-org/pixtreme
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="pixtreme 1.3.0" class="md-nav__button md-logo" aria-label="pixtreme 1.3.0" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    pixtreme 1.3.0
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/sync-dev-org/pixtreme" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    sync-dev-org/pixtreme
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tokens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Token Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware video codec connections
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware video codec connections
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choose-the-decoder-entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose the decoder entry point
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#map-the-decoded-signal-explicitly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Map the decoded signal explicitly
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preserve-matrix-range-and-siting-on-the-encoder-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preserve matrix, range, and siting on the encoder path
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cuda-stream-and-lifetime-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CUDA stream and lifetime contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/channel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.channel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/color/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.color
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/composite/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.composite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/draw/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.draw
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/feature/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.feature
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.filter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.generate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/io/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.io
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/morphology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.morphology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/transform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.transform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/values/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    pixtreme.values
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choose-the-decoder-entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose the decoder entry point
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#map-the-decoded-signal-explicitly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Map the decoded signal explicitly
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preserve-matrix-range-and-siting-on-the-encoder-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preserve matrix, range, and siting on the encoder path
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cuda-stream-and-lifetime-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CUDA stream and lifetime contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="hardware-video-codec-connections">Hardware video codec connections</h1>
+<p>pixtreme owns the boundary between GPU-resident image arrays and <code>Frame</code>. A hardware decoder or encoder owns its
+session, compressed packets, codec configuration, and timestamps. Connect the two layers with an explicit raw-surface
+format, colour signal, CUDA device, stream-ordering rule, and allocation lifetime. None of those properties should be
+inferred from an array pointer alone.</p>
+<h2 id="choose-the-decoder-entry-point">Choose the decoder entry point</h2>
+<p>Use the packed-format entry that describes the decoder surface. Both functions unpack to a C-contiguous, full-range
+float32 YCbCr 4:4:4 <code>Frame</code> without a host raw-frame copy.</p>
+<table>
+<thead>
+<tr>
+<th>Decoder surface</th>
+<th>pixtreme entry</th>
+<th>Required CuPy storage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NV12, 8 bit</td>
+<td><code>px.io.from_nv12</code></td>
+<td>C-contiguous 1D <code>uint8</code>: Y followed by interleaved Cb/Cr</td>
+</tr>
+<tr>
+<td>P010, 10 bit</td>
+<td><code>px.io.from_p010</code></td>
+<td>C-contiguous 1D <code>uint16</code>: Y followed by interleaved Cb/Cr, ten bits MSB-aligned and the lower six bits padding</td>
+</tr>
+<tr>
+<td>Already unpacked device array</td>
+<td><code>px.io.from_array</code></td>
+<td>HWC, NHWC, CHW, or NCHW CUDA DLPack producer or CuPy array</td>
+</tr>
+</tbody>
+</table>
+<p><code>px.io.from_array</code> interprets an ordinary channel axis. It is not a substitute for unpacking a raw NV12 or P010
+buffer. Some decoder APIs label a ten-bit MSB-aligned output allocation as <code>P016</code>; use <code>px.io.from_p010</code> only when the
+decoder contract proves that the surface contains ten meaningful bits in P010 layout and that the lower six bits are
+padding. A true 16-bit surface or an unknown packing does not satisfy the P010 contract.</p>
+<p>The packed entries accept a CuPy array, not an arbitrary DLPack object. If the decoder exposes only DLPack, create the
+CuPy view with <code>cp.from_dlpack</code> inside the intended consumer-stream context, keep the decoder's owner object alive, and
+then pass the resulting C-contiguous 1D view to the packed entry.</p>
+<h2 id="map-the-decoded-signal-explicitly">Map the decoded signal explicitly</h2>
+<p>Pass the signal observed from codec VUI, container <code>colr</code>, or another authoritative stream description on every
+boundary where it is known:</p>
+<table>
+<thead>
+<tr>
+<th>Stream signal</th>
+<th>pixtreme claim</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>matrix_coefficients</code></td>
+<td><code>matrix=</code></td>
+<td>Stamps the YCbCr coefficient provenance; it does not change array values</td>
+</tr>
+<tr>
+<td><code>chroma_sample_loc_type</code></td>
+<td><code>siting=</code></td>
+<td>Selects the 4:2:0 chroma phase used by upsampling or downsampling</td>
+</tr>
+<tr>
+<td><code>video_full_range_flag</code></td>
+<td><code>range=</code></td>
+<td>Selects legal-code expansion or full-container scaling</td>
+</tr>
+<tr>
+<td>colour primaries</td>
+<td><code>colorspace=</code></td>
+<td>States the RGB primary system associated with the signal</td>
+</tr>
+<tr>
+<td>transfer characteristics</td>
+<td><code>gamma=</code></td>
+<td>States the transfer characteristic associated with the signal</td>
+</tr>
+</tbody>
+</table>
+<p>Common progressive 4:2:0 mappings are:</p>
+<table>
+<thead>
+<tr>
+<th>H.273 value</th>
+<th>pixtreme token</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>matrix_coefficients = 1</code></td>
+<td><code>matrix="BT.709"</code></td>
+</tr>
+<tr>
+<td><code>matrix_coefficients = 5</code> or <code>6</code></td>
+<td><code>matrix="BT.601"</code>, after the application confirms the equivalent non-constant-luminance coefficients</td>
+</tr>
+<tr>
+<td><code>matrix_coefficients = 9</code></td>
+<td><code>matrix="BT.2020"</code></td>
+</tr>
+<tr>
+<td><code>chroma_sample_loc_type = 0</code></td>
+<td><code>siting="left"</code></td>
+</tr>
+<tr>
+<td><code>chroma_sample_loc_type = 1</code></td>
+<td><code>siting="center"</code></td>
+</tr>
+<tr>
+<td><code>chroma_sample_loc_type = 2</code></td>
+<td><code>siting="topleft"</code></td>
+</tr>
+<tr>
+<td><code>video_full_range_flag = 0</code></td>
+<td><code>range="legal"</code></td>
+</tr>
+<tr>
+<td><code>video_full_range_flag = 1</code></td>
+<td><code>range="full"</code></td>
+</tr>
+</tbody>
+</table>
+<p>Do not infer chroma siting from matrix coefficients, colour primaries, resolution, or bit depth. <code>left</code> is pixtreme's
+omission default, not evidence about a particular stream. Likewise, do not guess an unspecified matrix from chroma
+siting. If signalling is absent or cannot be represented by pixtreme's closed tokens, reject the stream or apply a
+documented application policy explicitly. The named-format functions support progressive H.273 siting types 0, 1,
+and 2; field-specific interlaced locations are outside their contract.</p>
+<p>For a decoder object that exposes a readiness wait and signalling snapshot, the connection has this shape:</p>
+<p>The <code>"unpacked"</code> route below is an application-adapter result, not a catch-all decoder format. Select it only after
+the adapter has proved that the surface is an ordinary device array with one of the layouts accepted by
+<code>px.io.from_array</code>. Reject every other packed or unknown surface format.</p>
+<pre><code class="language-python">import cupy as cp
+import pixtreme as px
+
+consumer_stream = cp.cuda.Stream(non_blocking=True)
+with consumer_stream:
+    decoded.wait_on(consumer_stream.ptr)  # Backend-specific device-side readiness wait.
+    if decoded.format == &quot;nv12&quot;:
+        frame = px.io.from_nv12(
+            decoded.array,
+            width=decoded.width,
+            height=decoded.height,
+            colorspace=signal.colorspace,
+            gamma=signal.gamma,
+            matrix=signal.matrix,
+            range=signal.range,
+            siting=signal.siting,
+        )
+    elif decoded.format == &quot;p010&quot;:
+        frame = px.io.from_p010(
+            decoded.array,
+            width=decoded.width,
+            height=decoded.height,
+            colorspace=signal.colorspace,
+            gamma=signal.gamma,
+            matrix=signal.matrix,
+            range=signal.range,
+            siting=signal.siting,
+        )
+    elif decoded.format == &quot;unpacked&quot;:
+        frame = px.io.from_array(
+            decoded.array,
+            colorspace=signal.colorspace,
+            gamma=signal.gamma,
+            channels=signal.channels,
+            matrix=signal.matrix,
+            layout=signal.layout,
+        )
+    else:
+        raise ValueError(f&quot;Unsupported decoder surface format: {decoded.format!r}&quot;)
+</code></pre>
+<p>The <code>decoded</code> and <code>signal</code> names represent backend-owned records; they are not pixtreme types. Validate that the CUDA
+device, dimensions, dtype, packing, and reported surface format agree before calling a pixtreme boundary.</p>
+<h2 id="preserve-matrix-range-and-siting-on-the-encoder-path">Preserve matrix, range, and siting on the encoder path</h2>
+<p><code>px.io.from_nv12</code> and <code>px.io.from_p010</code> expand the selected input range to full-range float and stamp <code>Frame.matrix</code>.
+The inverse packed exits consume a full-range float32 Frame with exact <code>("Y", "Cb", "Cr")</code> channels. They quantize
+with the requested <code>range=</code> and <code>siting=</code>, but they do not perform an RGB-to-YCbCr conversion or rematrix the Frame.</p>
+<p>If processing produced RGB, explicitly create the encoder's YCbCr representation first. If processing retained YCbCr
+but changed its colour representation, use <code>px.color.ycbcr_to_ycbcr</code> to select the output matrix. Then pack with the
+same range and siting that the encoder will signal. The example supports exactly 8-bit NV12 and 10-bit P010; reject
+other bit depths unless the application provides a separately documented packing boundary:</p>
+<pre><code class="language-python">producer_stream = cp.cuda.Stream(non_blocking=True)
+with producer_stream:
+    encoder_ycbcr = px.color.rgb_to_ycbcr(
+        processed_rgb,
+        colorspace=output_signal.colorspace,
+        gamma=output_signal.gamma,
+        matrix=output_signal.matrix,
+    )
+    if output_signal.bit_depth == 8:
+        packed = px.io.to_nv12(
+            encoder_ycbcr,
+            range=output_signal.range,
+            siting=output_signal.siting,
+        )
+    elif output_signal.bit_depth == 10:
+        packed = px.io.to_p010(
+            encoder_ycbcr,
+            range=output_signal.range,
+            siting=output_signal.siting,
+        )
+    else:
+        raise ValueError(f&quot;Unsupported encoder bit depth: {output_signal.bit_depth!r}&quot;)
+
+encoder.submit(packed, producer_stream_handle=producer_stream.ptr)
+</code></pre>
+<p>The <code>encoder</code> and <code>output_signal</code> names represent application-owned records; they are not pixtreme types.
+The packed array carries no colour metadata. Configure the encoder's VUI or container signal separately with the same
+matrix, range, primaries, transfer, and chroma location. Matching function arguments alone cannot update encoded
+bitstream signalling.</p>
+<h2 id="cuda-stream-and-lifetime-contract">CUDA stream and lifetime contract</h2>
+<p>The safe hand-off is stream ordered and asynchronous:</p>
+<ol>
+<li>Select the current CuPy stream on which pixtreme should consume or produce the raw surface.</li>
+<li>Before decode consumption, enqueue the decoder's readiness wait on that consumer stream. For a non-CuPy DLPack
+   producer passed to <code>px.io.from_array</code>, CuPy passes the current stream as the DLPack consumer stream so the producer
+   can enqueue its protocol-defined event/wait handshake.</li>
+<li>Call the pixtreme boundary inside that stream context. Array repacking and NV12/P010 conversion kernels enqueue on
+   the current CuPy stream. The call does not perform an implicit host synchronization.</li>
+<li>Continue inference or image processing on the same stream, or record a CUDA event after pixtreme work and make each
+   different consumer stream wait for it.</li>
+<li>For encoding, give the encoder the producing stream handle or an equivalent CUDA event. If an external consumer has
+   no stream-ordering interface, producing-stream synchronization is the explicit fallback before hand-off; device-wide
+   synchronization is not the normal path.</li>
+<li>Keep the decoder surface, DLPack producer, pixtreme Frame, packed array, and any external owner alive until every
+   dependent GPU operation has completed.</li>
+</ol>
+<p>Calling a conversion inside one stream and immediately consuming its result on an unrelated stream without an event
+wait is a data race. Synchronizing only the producing stream is sufficient for a subsequent host read; it should not be
+inserted between GPU stages that can exchange stream handles or events.</p>
+<p>See <a href="../tokens/#matrix">Tokens</a> for matrix and range semantics and <a href="../tokens/#chroma-siting">chroma siting</a> for the
+supported progressive 4:2:0 phases.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

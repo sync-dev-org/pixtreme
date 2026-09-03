@@ -25,7 +25,7 @@
     
     
       
-        <title>pixtreme.io - pixtreme 1.2.1</title>
+        <title>pixtreme.io - pixtreme 1.3.0</title>
       
     
     
@@ -84,7 +84,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="pixtreme 1.2.1" class="md-header__button md-logo" aria-label="pixtreme 1.2.1" data-md-component="logo">
+    <a href="../.." title="pixtreme 1.3.0" class="md-header__button md-logo" aria-label="pixtreme 1.3.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -98,7 +98,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            pixtreme 1.2.1
+            pixtreme 1.3.0
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -194,13 +194,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="pixtreme 1.2.1" class="md-nav__button md-logo" aria-label="pixtreme 1.2.1" data-md-component="logo">
+    <a href="../.." title="pixtreme 1.3.0" class="md-nav__button md-logo" aria-label="pixtreme 1.3.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    pixtreme 1.2.1
+    pixtreme 1.3.0
   </label>
   
     <div class="md-nav__source">
@@ -302,6 +302,33 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware video codec connections
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -320,10 +347,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -341,8 +368,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2112,7 +2139,7 @@ headers, invalid tokens, and invalid channel selections raise
     <div class="doc doc-contents ">
 
         <p>Encode a Frame as a supported raster byte stream.</p>
-<p><code>format</code> is a case-sensitive image-format token. <code>quality</code> applies to
+<p><code>format</code> uses the shared case- and separator-insensitive image-format vocabulary. <code>quality</code> applies to
 JPEG and lossy WebP, <code>compression</code> is TIFF-only with <code>"none"</code>/<code>"lzw"</code>,
 <code>compression_level</code> is PNG-only from 0 through 9, and <code>lossless</code> applies
 to JPEG 2000 and WebP. JPEG 2000 bytes use a JP2 container. Every format
@@ -2150,7 +2177,7 @@ preserves uint8, uint16, uint32, float16, or float32 storage where
 representable, including exact EXR UINT sample bits. HDR is natively decoded to float32,
 so <code>unchanged=True</code> returns the same values and dtype as its default read.
 Explicit <code>colorspace</code> and <code>gamma</code>
-tokens override mapped file metadata, which overrides the fixed sRGB/srgb
+tokens override mapped file metadata, which overrides the fixed sRGB/sRGB
 raster, ACES2065-1/linear EXR, or Rec.709/linear HDR defaults; these are metadata claims and do not
 transform pixel values.</p>
 <p>Codec-backed raster pixels decode through nvImageCodec into CUDA memory. TGA
@@ -2282,7 +2309,11 @@ raises if contiguity, layout, dtype, or affine processing requires a write.
 <code>copy=True</code> always gives the Frame private storage. Host arrays and CPU
 DLPack producers are rejected rather than transferred implicitly.
 <code>matrix</code> stamps YCbCr basis provenance only; it never changes array
-values, ownership, layout, dtype, or affine processing.</p>
+values, ownership, layout, dtype, or affine processing. DLPack import asks
+the producer to make its data ready on the current CuPy stream; any
+repacking kernel is enqueued on that same stream. The function does not
+perform host synchronization, so direct CuPy inputs must already be ordered
+for that stream and a different consumer stream must wait on a CUDA event.</p>
 
 
     </div>
@@ -2323,7 +2354,10 @@ explicitly create a writable view with <code>cp.from_dlpack(tensor)</code> and
 pass that CuPy array instead.</p>
 <p>The returned <code>cupy.ndarray</code> is itself a DLPack producer. Frame is also
 a DLPack producer through its protocol methods; no to_tensor or
-to_dlpack helper is needed.</p>
+to_dlpack helper is needed. Any copy or fused export is enqueued on the
+current CuPy stream and does not perform host synchronization. Consume the
+result on that stream, or make another stream wait on an event recorded
+after this call before it reads the result.</p>
 
 
     </div>
@@ -2347,7 +2381,10 @@ to_dlpack helper is needed.</p>
 <code>center</code>, or <code>topleft</code> offsets; <code>interpolation</code> evaluates one of the
 eight resize-family point kernels at that phase with replicate edges.
 <code>range</code> expands legal code positions without clipping or maps full uint8.
-<code>colorspace</code> / <code>gamma</code> override placeholders and <code>matrix</code> stamps basis provenance only.</p>
+<code>colorspace</code> / <code>gamma</code> override placeholders and <code>matrix</code> stamps basis provenance only.
+The conversion kernel is enqueued on the current CuPy stream and the call
+does not perform host synchronization. Order the decoder surface onto that
+stream before calling; a different consumer stream must wait on a CUDA event.</p>
 
 
     </div>
@@ -2367,7 +2404,9 @@ eight resize-family point kernels at that phase with replicate edges.
 
         <p>Pack <code>frame</code> as an 8-bit Y plane followed by interleaved Cb/Cr.</p>
 <p><code>range</code> selects code-value mapping, <code>siting</code> selects the 4:2:0 chroma
-phase, and <code>interpolation</code> selects the chroma downsampling filter.</p>
+phase, and <code>interpolation</code> selects the chroma downsampling filter.
+Packing is enqueued on the current CuPy stream without host synchronization;
+consume on that stream or pass its handle/event to the encoder.</p>
 
 
     </div>
@@ -2391,7 +2430,10 @@ Each 10-bit code is MSB aligned in uint16; the lower 6 bits are padding and
 are ignored. <code>siting</code> selects the H.273 4:2:0 phase, <code>interpolation</code>
 selects one of eight point filters, and <code>range</code> expands legal positions
 without clipping or maps the full 10-bit domain.
-<code>colorspace</code> / <code>gamma</code> override placeholders and <code>matrix</code> stamps basis provenance only.</p>
+<code>colorspace</code> / <code>gamma</code> override placeholders and <code>matrix</code> stamps basis provenance only.
+The conversion kernel is enqueued on the current CuPy stream and the call
+does not perform host synchronization. Order the decoder surface onto that
+stream before calling; a different consumer stream must wait on a CUDA event.</p>
 
 
     </div>
@@ -2411,7 +2453,9 @@ without clipping or maps the full 10-bit domain.
 
         <p>Pack <code>frame</code> as P010 with 10-bit codes in each uint16 word's MSB.</p>
 <p>The lower 6 bits are zero. <code>range</code> selects code-value mapping, <code>siting</code>
-selects the 4:2:0 chroma phase, and <code>interpolation</code> selects its filter.</p>
+selects the 4:2:0 chroma phase, and <code>interpolation</code> selects its filter.
+Packing is enqueued on the current CuPy stream without host synchronization;
+consume on that stream or pass its handle/event to the encoder.</p>
 
 
     </div>
