@@ -205,7 +205,7 @@ def test_blur_vector_component_positions_use_x_right_and_y_down_independent_of_l
 
 
 def test_blur_vector_shutter_axis_defaults_and_fails_fast_with_all_tokens() -> None:
-    """v1-blur-vector acceptance 4: shutter is a three-token case-sensitive axis defaulting to centered."""
+    """v1-blur-vector acceptance 4; v1-token-vocabulary acceptance 3: shutter is a normalized three-token axis."""
     source = _frame(np.arange(12, dtype=np.float32).reshape(3, 4, 1), channels=["signal"])
     vector = _frame(np.ones((3, 4, 2), dtype=np.float32), channels=["x", "y"])
     default = px.io.to_array(
@@ -226,7 +226,7 @@ def test_blur_vector_shutter_axis_defaults_and_fails_fast_with_all_tokens() -> N
 
 
 def test_blur_vector_border_axis_defaults_and_fails_fast_with_all_tokens() -> None:
-    """v1-blur-vector acceptance 5: border is a four-token case-sensitive axis defaulting to mirror."""
+    """v1-blur-vector acceptance 5; v1-token-vocabulary acceptance 3: border is a normalized four-token axis."""
     source = _frame(np.arange(12, dtype=np.float32).reshape(3, 4, 1), channels=["signal"])
     vector = _frame(np.ones((3, 4, 2), dtype=np.float32), channels=["x", "y"])
     default = px.io.to_array(
@@ -289,7 +289,7 @@ def test_existing_blurs_share_the_symmetric_border_value_fail_fast_contract(
 @pytest.mark.parametrize("shutter", SHUTTERS)
 @pytest.mark.parametrize("border", BORDERS)
 def test_blur_vector_matches_independent_numpy_gather_bicubic_oracle(shutter: str, border: str) -> None:
-    """v1-blur-vector acceptance 3 and 7-12: nonuniform gather paths match independent border math."""
+    """v1-blur-vector acceptance 3 and 7-12; v1-red-tokens acceptance 68: vector metadata is inert."""
     rng = np.random.default_rng(20260717)
     values = rng.uniform(-0.8, 1.8, size=(4, 5, 3)).astype(np.float32)
     y, x = np.mgrid[:4, :5]
@@ -306,7 +306,7 @@ def test_blur_vector_matches_independent_numpy_gather_bicubic_oracle(shutter: st
     vector = _frame(
         vector_values,
         colorspace="ACEScg",
-        gamma="logc4",
+        gamma="ARRI-LogC4",
         channels=["not_x", "not_y"],
     )
     border_kwargs = {"border_value": border_value} if border == "constant" else {}
@@ -363,19 +363,19 @@ def test_uniform_centered_vector_matches_directional_blur_known_solution() -> No
 
 
 def test_blur_vector_preserves_source_metadata_and_ignores_vector_metadata() -> None:
-    """v1-blur-vector acceptance 15: source metadata and private data survive; vector metadata is inert."""
+    """v1-blur-vector acceptance 15; v1-red-tokens acceptance 68: source ARRI metadata survives."""
     values = np.linspace(-0.5, 1.5, 24, dtype=np.float32).reshape(3, 4, 2)
     vector_values = np.full((3, 4, 2), (0.75, -0.25), dtype=np.float32)
-    source = _frame(values, colorspace="ACEScg", gamma="logc4", channels=["depth", "confidence"])
-    first_vector = _frame(vector_values, colorspace="sRGB", gamma="srgb", channels=["x", "y"])
-    second_vector = _frame(vector_values, colorspace="Rec.2020", gamma="pq", channels=["vertical", "horizontal"])
+    source = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=["depth", "confidence"])
+    first_vector = _frame(vector_values, colorspace="sRGB", gamma="sRGB", channels=["x", "y"])
+    second_vector = _frame(vector_values, colorspace="Rec.2020", gamma="PQ", channels=["vertical", "horizontal"])
 
     first = px.filter.vector_blur(source, vector=first_vector)
     second = px.filter.vector_blur(source, vector=second_vector)
 
     assert first.data.data.ptr != source.data.data.ptr
     assert first.shape == source.shape
-    assert (first.colorspace, first.gamma, first.channels) == ("ACEScg", "logc4", ("depth", "confidence"))
+    assert (first.colorspace, first.gamma, first.channels) == ("ACEScg", "ARRI-LogC4", ("depth", "confidence"))
     np.testing.assert_array_equal(
         px.io.to_array(
             first,

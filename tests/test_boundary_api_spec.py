@@ -33,7 +33,7 @@ def test_array_layout_and_dtype_errors_are_actionable() -> None:
 
     source = cp.asarray(_sample_hwc())
     calls = (
-        lambda: px.io.from_array(source, colorspace="sRGB", gamma="linear", channels="RGB", layout="hwc"),
+        lambda: px.io.from_array(source, colorspace="sRGB", gamma="linear", channels="RGB", layout="HW"),
         lambda: px.io.from_array(source, colorspace="sRGB", gamma="linear", channels="RGB", dtype=32),
         lambda: px.io.from_array(source, colorspace="sRGB", gamma="linear", channels="RGB", dtype="float64"),
         lambda: px.io.from_array(
@@ -192,7 +192,7 @@ def test_from_array_wraps_hwc_zero_copy_and_treats_channels_as_an_interpretation
     import cupy as cp
 
     source = cp.asarray(_sample_hwc())
-    result = px.io.from_array(source, colorspace="sRGB", gamma="srgb", channels="BGR")
+    result = px.io.from_array(source, colorspace="sRGB", gamma="sRGB", channels="BGR")
 
     assert isinstance(result, px.core.Frame)
     assert result.data.data.ptr == source.data.ptr
@@ -219,7 +219,7 @@ def test_from_array_rejects_host_arrays_with_an_actionable_device_recovery_path(
     source = _sample_hwc()
 
     with pytest.raises(ValueError) as error:
-        px.io.from_array(source, colorspace="sRGB", gamma="srgb", channels="RGB")
+        px.io.from_array(source, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     _assert_actionable(error)
     assert "CUDA" in str(error.value)
@@ -231,12 +231,12 @@ def test_from_array_copy_tristate_controls_contiguity_and_private_ownership() ->
     import cupy as cp
 
     contiguous = cp.asarray(_sample_hwc())
-    private = px.io.from_array(contiguous, colorspace="sRGB", gamma="srgb", channels="RGB", copy=True)
+    private = px.io.from_array(contiguous, colorspace="sRGB", gamma="sRGB", channels="RGB", copy=True)
     assert private.data.data.ptr != contiguous.data.ptr
     np.testing.assert_array_equal(_host(private.data), _sample_hwc())
 
     non_contiguous = contiguous[:, ::2, :]
-    copied = px.io.from_array(non_contiguous, colorspace="sRGB", gamma="srgb", channels="RGB")
+    copied = px.io.from_array(non_contiguous, colorspace="sRGB", gamma="sRGB", channels="RGB")
     assert copied.data.flags.c_contiguous
     assert copied.data.data.ptr != non_contiguous.data.ptr
     np.testing.assert_array_equal(_host(copied.data), _host(non_contiguous))
@@ -245,7 +245,7 @@ def test_from_array_copy_tristate_controls_contiguity_and_private_ownership() ->
         px.io.from_array(
             non_contiguous,
             colorspace="sRGB",
-            gamma="srgb",
+            gamma="sRGB",
             channels="RGB",
             copy=False,
         )
@@ -255,7 +255,7 @@ def test_from_array_copy_tristate_controls_contiguity_and_private_ownership() ->
         px.io.from_array(
             contiguous,
             colorspace="sRGB",
-            gamma="srgb",
+            gamma="sRGB",
             channels="RGB",
             scale=255.0,
             copy=False,
@@ -266,7 +266,7 @@ def test_from_array_copy_tristate_controls_contiguity_and_private_ownership() ->
         px.io.from_array(
             contiguous,
             colorspace="sRGB",
-            gamma="srgb",
+            gamma="sRGB",
             channels="RGB",
             dtype="float32",
             copy=False,
@@ -291,7 +291,7 @@ def test_from_array_normalizes_each_layout_against_an_independent_numpy_oracle(l
     result = px.io.from_array(
         source,
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
         layout=layout,
     )
@@ -313,14 +313,14 @@ def test_from_array_layout_rejects_batches_and_strict_transpose_copy() -> None:
         px.io.from_array(
             cp.zeros((2, 2, 3, 3), dtype=cp.float32),
             colorspace="sRGB",
-            gamma="srgb",
+            gamma="sRGB",
             channels="RGB",
             layout="NHWC",
         )
 
     chw = cp.asarray(np.transpose(_sample_hwc(), (2, 0, 1)).copy())
     with pytest.raises(ValueError) as error:
-        px.io.from_array(chw, colorspace="sRGB", gamma="srgb", channels="RGB", layout="CHW", copy=False)
+        px.io.from_array(chw, colorspace="sRGB", gamma="sRGB", channels="RGB", layout="CHW", copy=False)
     _assert_actionable(error)
 
 
@@ -365,7 +365,7 @@ def test_from_array_bit_depth_normalizes_the_declared_integer_grid(bit_depth: in
     result = px.io.from_array(
         cp.asarray(codes),
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
         channels=["low", "middle", "high"],
         layout="CHW",
         bit_depth=bit_depth,
@@ -407,7 +407,7 @@ def test_from_array_bit_depth_matches_the_full_range_planar_format_entry() -> No
     generic = px.io.from_array(
         device.reshape(3, height, width),
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
         channels="YCbCr",
         layout="CHW",
         bit_depth=10,
@@ -436,7 +436,7 @@ def test_from_array_bit_depth_rejects_affine_non_fp32_and_strict_zero_copy(
         px.io.from_array(
             cp.zeros((1, 1, 1), dtype=cp.uint16),
             colorspace="Rec.709",
-            gamma="rec709",
+            gamma="Rec.709",
             channels="Y",
             **kwargs,
         )
@@ -456,7 +456,7 @@ def test_from_array_bit_depth_requires_the_matching_uint_container(bit_depth: in
         px.io.from_array(
             cp.zeros((1, 1, 1), dtype=dtype),
             colorspace="Rec.709",
-            gamma="rec709",
+            gamma="Rec.709",
             channels="Y",
             bit_depth=bit_depth,
         )
@@ -473,12 +473,12 @@ def test_array_boundary_rejects_unknown_tokens_and_malformed_affine_sequences() 
     import cupy as cp
 
     source = cp.asarray(_sample_hwc())
-    for kwargs in ({"layout": "hwc"}, {"dtype": "float64"}, {"scale": (1.0, 2.0)}):
+    for kwargs in ({"layout": "HW"}, {"dtype": "float64"}, {"scale": (1.0, 2.0)}):
         with pytest.raises(ValueError):
-            px.io.from_array(source, colorspace="sRGB", gamma="srgb", channels="RGB", **kwargs)
+            px.io.from_array(source, colorspace="sRGB", gamma="sRGB", channels="RGB", **kwargs)
 
-    frame = px.io.from_array(source, colorspace="sRGB", gamma="srgb", channels="RGB")
-    for kwargs in ({"layout": "hwc"}, {"dtype": "float64"}, {"mean": (0.0, 1.0)}):
+    frame = px.io.from_array(source, colorspace="sRGB", gamma="sRGB", channels="RGB")
+    for kwargs in ({"layout": "HW"}, {"dtype": "float64"}, {"mean": (0.0, 1.0)}):
         with pytest.raises(ValueError):
             px.io.to_array(frame, **kwargs)
 
@@ -488,7 +488,7 @@ def test_to_array_default_and_nhwc_are_zero_copy_views_while_copy_true_is_privat
     import cupy as cp
 
     source = cp.asarray(_sample_hwc())
-    frame = px.io.from_array(source, colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(source, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     view = px.io.to_array(
         frame,
@@ -514,7 +514,7 @@ def test_to_array_selects_channels_greedily_and_emits_each_layout() -> None:
     frame = px.io.from_array(
         cp.asarray(values),
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
         channels=["Y", "Y", "Cr", "A"],
     )
 
@@ -667,7 +667,7 @@ def test_to_array_copy_false_rejects_copy_requiring_repacking() -> None:
     """v1-boundary-api acceptance 15: strict zero-copy fails for selection, transpose, dtype, and affine."""
     import cupy as cp
 
-    frame = px.io.from_array(cp.asarray(_sample_hwc()), colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(cp.asarray(_sample_hwc()), colorspace="sRGB", gamma="sRGB", channels="RGB")
     calls = (
         {"channels": "BGR"},
         {"layout": "CHW"},
@@ -686,7 +686,7 @@ def test_to_array_writes_directly_to_cupy_out_and_returns_the_same_array() -> No
     import cupy as cp
 
     values = _sample_hwc()
-    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels="RGB")
     out = cp.empty((3, 2, 3), dtype=cp.float16)
     pointer = out.data.ptr
 
@@ -703,7 +703,7 @@ def test_to_array_out_rejects_non_cupy_and_incompatible_destinations_actionably(
     import cupy as cp
     import torch
 
-    frame = px.io.from_array(cp.asarray(_sample_hwc()), colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(cp.asarray(_sample_hwc()), colorspace="sRGB", gamma="sRGB", channels="RGB")
     invalid = (
         np.empty((2, 3, 3), dtype=np.float32),
         torch.empty((2, 3, 3), device="cuda"),

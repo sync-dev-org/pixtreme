@@ -292,9 +292,9 @@ def test_zero_and_zero_coverage_apertures_are_exact_identities_in_private_storag
     radius: float,
     blades: int | None,
 ) -> None:
-    """v1-blur-lens acceptance 9 and 11: degenerate apertures copy exactly into new Frame storage."""
+    """v1-blur-lens acceptance 9 and 11; v1-red-tokens acceptance 68: identities retain ARRI metadata."""
     values = np.linspace(-0.75, 1.75, 30, dtype=np.float32).reshape(3, 5, 2)
-    source = _frame(values, colorspace="ACEScg", gamma="logc4", channels=["depth", "confidence"])
+    source = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=["depth", "confidence"])
 
     result = px.filter.lens_blur(source, radius=radius, blades=blades)
 
@@ -307,11 +307,11 @@ def test_zero_and_zero_coverage_apertures_are_exact_identities_in_private_storag
         values,
     )
     assert (result.width, result.height) == (source.width, source.height)
-    assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "logc4", ("depth", "confidence"))
+    assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "ARRI-LogC4", ("depth", "confidence"))
 
 
 def test_blur_lens_preserves_metadata_channels_and_unclamped_scene_values_in_private_storage() -> None:
-    """v1-blur-lens acceptance 10-11: channels are independent and metadata/scene values survive unclamped."""
+    """v1-blur-lens acceptance 10-11; v1-red-tokens acceptance 68: renamed ARRI metadata survives."""
     values = np.asarray(
         [
             [[-0.5, 1.5], [-0.5, 1.5], [-0.5, 1.5]],
@@ -319,13 +319,13 @@ def test_blur_lens_preserves_metadata_channels_and_unclamped_scene_values_in_pri
         ],
         dtype=np.float32,
     )
-    source = _frame(values, colorspace="ACEScg", gamma="logc4", channels=["depth", "confidence"])
+    source = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=["depth", "confidence"])
 
     result = px.filter.lens_blur(source, radius=1.25, blades=5, rotation=18.0, border="wrap")
 
     assert result.data.data.ptr != source.data.data.ptr
     assert result.shape == source.shape
-    assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "logc4", ("depth", "confidence"))
+    assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "ARRI-LogC4", ("depth", "confidence"))
     assert float(result.data.min()) < 0.0
     assert float(result.data.max()) > 1.0
     np.testing.assert_allclose(

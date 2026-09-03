@@ -105,13 +105,13 @@ def _photo_like_source() -> px.core.Frame:
     data[..., 0] += ridge * texture * np.float32(0.07)
     data[..., 1] += ridge * texture * np.float32(0.12)
     data[..., 2] += ridge * texture * np.float32(0.05)
-    return px.io.from_array(data, colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(data, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def _display(frame: px.core.Frame) -> px.core.Frame:
     rgb = frame.data[..., :3]
     display = cp.rint(cp.clip(rgb, 0.0, 1.0) * np.float32(255.0)).astype(cp.uint8)
-    return px.io.from_array(display, colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(display, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def _panel(frame: px.core.Frame, label: str) -> px.core.Frame:
@@ -119,7 +119,7 @@ def _panel(frame: px.core.Frame, label: str) -> px.core.Frame:
     maximum = float(cp.max(frame.data).get())
     image = px.transform.resize(_display(frame), width=_PANEL_WIDTH, height=_PANEL_HEIGHT, interpolation="bilinear")
     label_data = cp.full((_LABEL_HEIGHT, _PANEL_WIDTH, 3), np.uint8(4), dtype=cp.uint8)
-    bar = px.io.from_array(label_data, colorspace="sRGB", gamma="srgb", channels="RGB")
+    bar = px.io.from_array(label_data, colorspace="sRGB", gamma="sRGB", channels="RGB")
     bar = px.values.cast_dtype(bar, dtype="float32")
     bar = px.draw.text(
         bar,

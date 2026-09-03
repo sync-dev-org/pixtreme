@@ -40,19 +40,19 @@ def _source() -> px.core.Frame:
         data[top:bottom, left:right] = cp.asarray(rgb, dtype=cp.float32)
     data[140:172, 16:120] = cp.asarray((1.9, 1.4, 1.1), dtype=cp.float32)
     data[140:172, 136:240] = cp.asarray((-0.25, 0.05, -0.15), dtype=cp.float32)
-    return px.io.from_array(data, colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(data, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def _display(frame: px.core.Frame) -> px.core.Frame:
     data = cp.clip(frame.data, np.float32(0.0), np.float32(1.0))
-    return px.io.from_array(data, colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(data, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def _label(frame: px.core.Frame, text: str) -> px.core.Frame:
     bar = px.io.from_array(
         cp.full((_LABEL_HEIGHT, _WIDTH, 3), np.float32(0.015), dtype=cp.float32),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
     )
     bar = px.draw.text(
@@ -69,7 +69,7 @@ def _label(frame: px.core.Frame, text: str) -> px.core.Frame:
 
 def _cat_row(source: px.core.Frame) -> px.core.Frame:
     panels = [_label(_display(source), "INPUT / sRGB / display clamp")]
-    for cat in ("bradford", "cat02", "cat16", "von-kries"):
+    for cat in ("Bradford", "CAT02", "CAT16", "von-Kries"):
         adapted = px.color.chromatic_adaptation(
             source,
             input_white=_SOURCE_WHITE,
@@ -115,7 +115,7 @@ def generate_sheet(path: Path) -> None:
         direction="vertical",
     )
     code = cp.rint(cp.clip(sheet.data, 0.0, 1.0) * np.float32(255.0)).astype(cp.uint8)
-    output = px.io.from_array(code, colorspace="sRGB", gamma="srgb", channels="RGB")
+    output = px.io.from_array(code, colorspace="sRGB", gamma="sRGB", channels="RGB")
     path.parent.mkdir(parents=True, exist_ok=True)
     px.io.write_image(path, output, compression_level=6)
 

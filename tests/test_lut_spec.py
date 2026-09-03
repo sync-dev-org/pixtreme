@@ -453,9 +453,9 @@ def test_lut_transform_rejects_non_float32_with_dtype_specific_guidance(
     assert tuple(message.index(route) for route in routes) == tuple(sorted(message.index(route) for route in routes))
 
 
-@pytest.mark.parametrize("interpolation", ("linear", "Tetrahedral"))
+@pytest.mark.parametrize("interpolation", ("linear", "cubic"))
 def test_lut_transform_rejects_unknown_interpolation_tokens(interpolation: object) -> None:
-    """v1-lut acceptance 10; v1-lut-extensions acceptance 5: 3D keeps its case-sensitive two-token subset."""
+    """v1-lut acceptance 10; v1-lut-extensions acceptance 5: 3D keeps its two-token subset."""
     source = _frame(np.zeros(3, dtype=np.float32))
 
     with pytest.raises(ValueError) as error:

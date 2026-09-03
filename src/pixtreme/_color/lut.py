@@ -11,6 +11,7 @@ from pixtreme._color._lut_cuda import _LUT_TETRAHEDRAL_CUDA_SOURCE
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame
 from pixtreme._core.lut import Lut, Lut1D
+from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._core.value_domain import _float32_conversion_guidance
 from pixtreme._core.vocabulary import _INTERPOLATION_TOKENS, Interpolation
 
@@ -410,14 +411,13 @@ def apply_lut(
     else:
         allowed_interpolations = _LUT_1D_INTERPOLATION_TOKENS
         resolved_interpolation = "linear" if interpolation is None else interpolation
-    if not isinstance(resolved_interpolation, str) or resolved_interpolation not in allowed_interpolations:
-        raise ValueError(
-            _actionable_error(
-                why=f"apply_lut interpolation must belong to the {type(lut).__name__} token subset",
-                what=f"received interpolation={interpolation!r}",
-                how=f"pass one of {allowed_interpolations!r} or None for the type-specific default",
-            )
-        )
+    resolved_interpolation = _normalized_closed_token(
+        resolved_interpolation,
+        axis="interpolation",
+        accepted=allowed_interpolations,
+        why=f"apply_lut interpolation must belong to the {type(lut).__name__} token subset",
+        how=f"pass one of the canonical tokens {allowed_interpolations!r} or None for the type-specific default",
+    )
 
     output = cp.empty_like(frame.data)
     pixel_count = int(frame.height * frame.width)

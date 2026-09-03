@@ -182,7 +182,7 @@ def test_write_image_preserves_the_unwritable_output_path_error(tmp_path: Path) 
     frame = px.io.from_array(
         cp.zeros((1, 1, 3), dtype=cp.uint8),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
     )
     output = tmp_path / "missing-parent" / "output.png"

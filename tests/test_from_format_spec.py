@@ -28,9 +28,48 @@ SITING_OFFSETS = {
     "center": (0.5, 0.5),
     "topleft": (0.0, 0.0),
 }
-COLORSPACES = ("sRGB", "Rec.709", "Rec.2020", "ACES2065-1", "ACEScg", "S-Gamut3", "S-Gamut3.Cine")
-GAMMAS = ("linear", "srgb", "rec709", "bt1886", "pq", "hlg", "s-log3", "logc4", "cineon", "2.2", "2.4", "2.6")
-MATRICES = ("bt601", "bt709", "bt2020", "native")
+COLORSPACES = (
+    "sRGB",
+    "Rec.709",
+    "Rec.2020",
+    "ACES2065-1",
+    "ACEScg",
+    "S-Gamut",
+    "S-Gamut3",
+    "S-Gamut3.Cine",
+    "ARRI-Wide-Gamut-3",
+    "ARRI-Wide-Gamut-4",
+    "Blackmagic-Wide-Gamut-Gen-5",
+    "DaVinci-Wide-Gamut",
+    "REDWideGamutRGB",
+    "DRAGONcolor",
+    "DRAGONcolor2",
+    "REDcolor2",
+    "REDcolor3",
+    "REDcolor4",
+)
+GAMMAS = (
+    "linear",
+    "sRGB",
+    "Rec.709",
+    "BT.1886",
+    "PQ",
+    "HLG",
+    "S-Log",
+    "S-Log2",
+    "S-Log3",
+    "ARRI-LogC3",
+    "ARRI-LogC4",
+    "Blackmagic-Film-Gen-5",
+    "DaVinci-Intermediate",
+    "RED-Log3G10",
+    "REDlogFilm",
+    "Cineon",
+    "Gamma-2.2",
+    "Gamma-2.4",
+    "Gamma-2.6",
+)
+MATRICES = ("BT.601", "BT.709", "BT.2020", "native")
 FROM_FORMAT_CASES = (
     ("from_uyvy422", [128, 16, 128, 235], np.uint8, {"width": 2, "height": 1}),
     ("from_v210", np.zeros(32, dtype=np.uint32), np.uint32, {"width": 2, "height": 1}),
@@ -640,7 +679,7 @@ def test_all_from_formats_return_fixed_contiguous_fp32_placeholder_frames(
     assert result.dtype == np.dtype(np.float32)
     assert result.data.flags.c_contiguous
     assert result.shape == (kwargs["height"], kwargs["width"], len(channels))
-    assert (result.colorspace, result.gamma, result.channels) == ("Rec.709", "rec709", channels)
+    assert (result.colorspace, result.gamma, result.channels) == ("Rec.709", "Rec.709", channels)
 
 
 @pytest.mark.parametrize("name", [case[0] for case in FROM_FORMAT_CASES])
@@ -648,18 +687,18 @@ def test_from_format_signatures_expose_keyword_only_metadata_overrides(name: str
     """v1-from-format-metadata acceptance 1: all eight signatures expose optional keyword-only metadata claims."""
     parameters = inspect.signature(getattr(px.io, name)).parameters
 
-    for axis in ("colorspace", "gamma"):
+    for axis, annotation in (("colorspace", "Colorspace | None"), ("gamma", "Gamma | None")):
         parameter = parameters[axis]
         assert parameter.kind is inspect.Parameter.KEYWORD_ONLY
-        assert parameter.annotation == "str | None"
+        assert parameter.annotation == annotation
         assert parameter.default is None
 
 
 @pytest.mark.parametrize(
     ("colorspace", "gamma", "expected"),
     (
-        (None, None, ("Rec.709", "rec709")),
-        ("ACEScg", None, ("ACEScg", "rec709")),
+        (None, None, ("Rec.709", "Rec.709")),
+        ("ACEScg", None, ("ACEScg", "Rec.709")),
         (None, "linear", ("Rec.709", "linear")),
         ("ACEScg", "linear", ("ACEScg", "linear")),
     ),
@@ -706,7 +745,9 @@ def test_from_format_metadata_tokens_match_frame_assignment_domains(
     axis: str,
     accepted: tuple[str, ...],
 ) -> None:
-    """v1-from-format-metadata acceptance 3; v1-color-semantics acceptance 5 and 27.
+    """v1-from-format-metadata acceptance 3; v1-color-semantics acceptance 5 and 27;
+    v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 17; v1-blackmagic-tokens acceptance 34;
+    v1-red-tokens acceptance 54-55.
 
     Format metadata uses the Frame token domains and rejects values outside them.
     """
@@ -771,9 +812,9 @@ def test_from_format_frames_still_allow_post_construction_metadata_correction(
     ).copy()
 
     result.colorspace = "S-Gamut3"
-    result.gamma = "s-log3"
+    result.gamma = "S-Log3"
 
-    assert (result.colorspace, result.gamma) == ("S-Gamut3", "s-log3")
+    assert (result.colorspace, result.gamma) == ("S-Gamut3", "S-Log3")
     assert cp.array_equal(
         px.io.to_array(
             result,
@@ -801,9 +842,9 @@ def test_all_from_formats_reject_unknown_range_tokens_actionably(
     dtype: type[np.generic],
     kwargs: dict[str, int],
 ) -> None:
-    """v1-format-boundary acceptance 11: range is a case-sensitive three-element fail-fast token axis."""
+    """v1-format-boundary acceptance 11; v1-token-vocabulary acceptance 7: unknown range tokens fail fast."""
     with pytest.raises(ValueError) as error:
-        getattr(px.io, name)(_device(source, dtype=dtype), range="FULL", **kwargs)
+        getattr(px.io, name)(_device(source, dtype=dtype), range="studio", **kwargs)
     _actionable(error)
     assert "('legal', 'full')" in str(error.value)
 
@@ -815,7 +856,7 @@ def test_420_formats_reject_unknown_siting_and_interpolation_tokens_actionably(n
     source = _device(np.zeros(6), dtype=dtype)
 
     with pytest.raises(ValueError) as siting_error:
-        getattr(px.io, name)(source, width=2, height=2, siting="top-left")
+        getattr(px.io, name)(source, width=2, height=2, siting="bottom")
     _actionable(siting_error)
     assert tuple(SITING_OFFSETS) == ("left", "center", "topleft")
     assert repr(tuple(SITING_OFFSETS)) in str(siting_error.value)

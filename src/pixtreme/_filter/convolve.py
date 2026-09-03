@@ -5,6 +5,7 @@ from __future__ import annotations
 from pixtreme._core.border import _resolve_border
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame, _validate_float32_frame
+from pixtreme._core.vocabulary import Border
 from pixtreme._filter.box import _convolve_box
 from pixtreme._filter.common import _validate_odd_size
 
@@ -31,7 +32,7 @@ def convolve_box(
     *,
     size: int | tuple[int, int],
     normalize: bool,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Apply a rectangular moving sum or moving mean independently per channel.

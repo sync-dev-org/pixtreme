@@ -21,7 +21,7 @@ from pixtreme._core.validation import (
     _positive_real,
     _strict_bool,
 )
-from pixtreme._core.vocabulary import _ANTIALIASING_TOKENS
+from pixtreme._core.vocabulary import _ANTIALIASING_TOKENS, Antialiasing, Blend
 
 _BLEND_TOKENS = _DRAW_BLEND_TOKENS
 _AA_TOKENS = _ANTIALIASING_TOKENS
@@ -464,7 +464,7 @@ def _common(
     blend: object,
     aa: object,
     softness: object,
-) -> tuple[Frame, tuple[float, ...], float, str, str, float]:
+) -> tuple[Frame, tuple[float, ...], float, Blend, Antialiasing, float]:
     checked_frame = _validate_float32_frame(frame, operation=operation)
     checked_color = _color(color, channel_count=len(checked_frame.channels))
     checked_opacity = _bounded_real(
@@ -562,8 +562,8 @@ def _draw(
     primitive: int,
     closed: bool,
     fill: bool,
-    blend: str,
-    aa: str,
+    blend: Blend,
+    aa: Antialiasing,
     softness: float,
     opacity: float,
     parameters: tuple[float, float, float, float, float, float],
@@ -637,8 +637,8 @@ def line(
     color: Sequence[float],
     thickness: float,
     opacity: float = 1.0,
-    blend: str = "normal",
-    aa: str = "distance",
+    blend: Blend = "normal",
+    aa: Antialiasing = "distance",
     softness: float = 0.0,
 ) -> Frame:
     """Draw one round-cap line in continuous pixel coordinates.
@@ -692,8 +692,8 @@ def polyline(
     thickness: float,
     closed: bool = False,
     opacity: float = 1.0,
-    blend: str = "normal",
-    aa: str = "distance",
+    blend: Blend = "normal",
+    aa: Antialiasing = "distance",
     softness: float = 0.0,
 ) -> Frame:
     """Draw a round-cap, round-join polyline as one coverage union.
@@ -749,8 +749,8 @@ def rectangle(
     fill: bool = False,
     corner_radius: float = 0.0,
     opacity: float = 1.0,
-    blend: str = "normal",
-    aa: str = "distance",
+    blend: Blend = "normal",
+    aa: Antialiasing = "distance",
     softness: float = 0.0,
 ) -> Frame:
     """Draw a continuous-coordinate axis-aligned rectangle.
@@ -833,8 +833,8 @@ def circle(
     thickness: float | None = None,
     fill: bool = False,
     opacity: float = 1.0,
-    blend: str = "normal",
-    aa: str = "distance",
+    blend: Blend = "normal",
+    aa: Antialiasing = "distance",
     softness: float = 0.0,
 ) -> Frame:
     """Draw a filled disk or a centered circular outline.
@@ -893,8 +893,8 @@ def ellipse(
     thickness: float | None = None,
     fill: bool = False,
     opacity: float = 1.0,
-    blend: str = "normal",
-    aa: str = "distance",
+    blend: Blend = "normal",
+    aa: Antialiasing = "distance",
     softness: float = 0.0,
 ) -> Frame:
     """Draw a rotated filled ellipse or an isotropic-width outline.
@@ -962,8 +962,8 @@ def polygon(
     points: Sequence[Sequence[float]] | np.ndarray,
     color: Sequence[float],
     opacity: float = 1.0,
-    blend: str = "normal",
-    aa: str = "distance",
+    blend: Blend = "normal",
+    aa: Antialiasing = "distance",
     softness: float = 0.0,
 ) -> Frame:
     """Fill a polygon with the even-odd rule in continuous coordinates.

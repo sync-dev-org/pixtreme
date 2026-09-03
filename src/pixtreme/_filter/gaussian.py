@@ -10,6 +10,7 @@ import numpy as np
 
 from pixtreme._core.border import _resolve_border
 from pixtreme._core.frame import Frame, _new_frame, _validate_float32_frame
+from pixtreme._core.vocabulary import Border
 from pixtreme._filter.common import (
     _SEPARABLE_KERNEL_SOURCE,
     _launch_gaussian_axis,
@@ -53,7 +54,7 @@ def gaussian_blur(
     frame: Frame,
     *,
     sigma: float,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Apply an isotropic Gaussian blur without changing Frame metadata.

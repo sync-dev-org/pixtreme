@@ -193,11 +193,11 @@ def test_bool_and_closed_token_contract_preserves_validation_variants() -> None:
             return "LOOKALIKE"
 
     lookalike = TokenLookalike()
-    assert validation._normalized_closed_token(lookalike, axis="blend", accepted=("normal",)) == "normal"
-    with pytest.raises(ValueError) as explicit_str_error:
-        validation._closed_str_token(lookalike, axis="blend", accepted=("normal",))
-    slots = _assert_error_case(explicit_str_error.value, parameter="blend", rejected_value=lookalike)
-    assert _accepted_values(slots["how"]) == ("normal",)
+    for normalizer in (validation._normalized_closed_token, validation._closed_str_token):
+        with pytest.raises(ValueError) as explicit_str_error:
+            normalizer(lookalike, axis="blend", accepted=("normal",))
+        slots = _assert_error_case(explicit_str_error.value, parameter="blend", rejected_value=lookalike)
+        assert _accepted_values(slots["how"]) == ("normal",)
 
     with pytest.raises(ValueError) as custom_token_error:
         validation._closed_token(

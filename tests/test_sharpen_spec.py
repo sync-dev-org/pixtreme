@@ -240,19 +240,19 @@ def test_sharpen_preserves_halo_excursions_shape_contiguity_and_input_storage() 
 
 
 def test_sharpen_is_channel_label_independent_and_preserves_all_metadata() -> None:
-    """v1-sharpen acceptance 6: labels do not affect math and all four metadata fields pass through."""
+    """v1-sharpen acceptance 6; v1-red-tokens acceptance 68: labels do not affect renamed ARRI metadata."""
     values = np.linspace(-0.5, 1.5, 48, dtype=np.float32).reshape(3, 4, 4)
     source = _frame(
         values,
         colorspace="ACEScg",
-        gamma="logc4",
+        gamma="ARRI-LogC4",
         channels=("R", "G", "B", "A"),
         matrix="native",
     )
     relabeled = _frame(
         values,
         colorspace="ACEScg",
-        gamma="logc4",
+        gamma="ARRI-LogC4",
         channels=("Z", "Y", "Cb", "Cr"),
         matrix="native",
     )
@@ -270,7 +270,7 @@ def test_sharpen_is_channel_label_independent_and_preserves_all_metadata() -> No
     )
     assert (result.colorspace, result.gamma, result.channels, result.matrix) == (
         "ACEScg",
-        "logc4",
+        "ARRI-LogC4",
         ("R", "G", "B", "A"),
         "native",
     )
@@ -304,7 +304,7 @@ def test_sharpen_rejects_non_fp32_frames_with_conversion_guidance(
     ("border", "border_value"),
     (
         ("reflect", None),
-        ("Mirror", None),
+        ("reflect", None),
         ("constant", None),
         ("constant", True),
         ("constant", float("inf")),

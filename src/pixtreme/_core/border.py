@@ -8,7 +8,8 @@ from numbers import Real
 import numpy as np
 
 from pixtreme._core.errors import _actionable_error
-from pixtreme._core.vocabulary import _BORDER_TOKENS
+from pixtreme._core.validation import _normalized_closed_token
+from pixtreme._core.vocabulary import _BORDER_TOKENS, Border
 
 _BORDER_PREAMBLE = r"""
 __device__ long long pixtreme_positive_modulo(const long long value, const long long modulus) {
@@ -58,19 +59,11 @@ __device__ float pixtreme_border_sample(
 """
 
 
-def _validate_border(border: object) -> str:
-    if border not in _BORDER_TOKENS:
-        raise ValueError(
-            _actionable_error(
-                why="border is a closed, case-sensitive token axis",
-                what=f"received border={border!r}",
-                how=f"pass one of {_BORDER_TOKENS!r}",
-            )
-        )
-    return str(border)
+def _validate_border(border: object) -> Border:
+    return _normalized_closed_token(border, axis="border", accepted=_BORDER_TOKENS)
 
 
-def _resolve_border(border: object, border_value: object) -> tuple[str, float]:
+def _resolve_border(border: object, border_value: object) -> tuple[Border, float]:
     checked_border = _validate_border(border)
     if checked_border == "constant":
         if isinstance(border_value, bool) or not isinstance(border_value, Real):
@@ -102,5 +95,5 @@ def _resolve_border(border: object, border_value: object) -> tuple[str, float]:
     return checked_border, 0.0
 
 
-def _border_argument(border: str) -> np.int32:
+def _border_argument(border: Border) -> np.int32:
     return np.int32(_BORDER_TOKENS.index(border))

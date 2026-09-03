@@ -12,9 +12,16 @@ from numpy.typing import NDArray
 from pixtreme._core.colorspace import _COLORSPACE_DEFINITIONS
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import _COLORSPACE_TOKENS, _GAMMA_TOKENS, Frame
-from pixtreme._core.validation import _closed_token
+from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._core.value_domain import _float32_conversion_guidance
-from pixtreme._core.vocabulary import _TONEMAP_DIRECT_TOKENS
+from pixtreme._core.vocabulary import (
+    _TONEMAP_ACES_TOKENS,
+    _TONEMAP_DIRECT_TOKENS,
+    _TONEMAP_TOKENS,
+    Colorspace,
+    Gamma,
+    Tonemap,
+)
 
 _RGB_CHANNELS = ("R", "G", "B")
 
@@ -32,22 +39,36 @@ _BRADFORD = np.asarray(
 
 _GAMMA_CODES: Mapping[str, int] = {
     "linear": 0,
-    "srgb": 1,
-    "rec709": 2,
-    "bt1886": 3,
-    "pq": 4,
-    "hlg": 5,
-    "s-log3": 6,
-    "logc4": 7,
-    "cineon": 8,
-    "2.2": 9,
-    "2.4": 10,
-    "2.6": 11,
+    "sRGB": 1,
+    "Rec.709": 2,
+    "BT.1886": 3,
+    "PQ": 4,
+    "HLG": 5,
+    "S-Log": 12,
+    "S-Log2": 13,
+    "S-Log3": 6,
+    "ARRI-LogC3": 14,
+    "ARRI-LogC4": 7,
+    "Blackmagic-Film-Gen-5": 15,
+    "DaVinci-Intermediate": 16,
+    "RED-Log3G10": 17,
+    "REDlogFilm": 8,
+    "Cineon": 8,
+    "Gamma-2.2": 9,
+    "Gamma-2.4": 10,
+    "Gamma-2.6": 11,
 }
 
 _BT2408_COMBINATIONS = tuple(
-    (tonemap, "Rec.2020", output_gamma) for tonemap in _TONEMAP_DIRECT_TOKENS for output_gamma in ("hlg", "pq")
+    (tonemap, "Rec.2020", output_gamma) for tonemap in _TONEMAP_DIRECT_TOKENS for output_gamma in ("HLG", "PQ")
 )
+_ACES_OUTPUT_COMBINATIONS = (("Rec.709", "BT.1886"), ("sRGB", "sRGB"))
+_ANALYTIC_COMBINATIONS = tuple(
+    (tonemap, output_colorspace, output_gamma)
+    for tonemap in _TONEMAP_ACES_TOKENS
+    for output_colorspace, output_gamma in _ACES_OUTPUT_COMBINATIONS
+)
+_SUPPORTED_COMBINATIONS = (*_ANALYTIC_COMBINATIONS, *_BT2408_COMBINATIONS)
 
 _COLOR_TRANSFORM_KERNEL = r"""
 __device__ __forceinline__ float signed_power(const float value, const float exponent) {
@@ -66,6 +87,25 @@ __device__ __forceinline__ float decode_transfer(const float value, const int ga
     }
     if (gamma == 3) {
         return signed_power(value, 2.4f);
+    }
+    if (gamma == 12) {
+        const float y = (1023.0f * value - 64.0f) / 876.0f;
+        const float x = y >= 0.030001222851889303f
+            ? powf(10.0f, (y - 0.616596f - 0.03f) / 0.432699f) - 0.037584f
+            : (y - 0.030001222851889303f) / 5.0f;
+        return 0.9f * x;
+    }
+    if (gamma == 13) {
+        const float y = (1023.0f * value - 64.0f) / 876.0f;
+        const float x = y >= 0.030001222851889303f
+            ? 219.0f * (powf(10.0f, (y - 0.616596f - 0.03f) / 0.432699f) - 0.037584f) / 155.0f
+            : (y - 0.030001222851889303f) / 3.53881278538813f;
+        return 0.9f * x;
+    }
+    if (gamma == 17) {
+        return value < 0.0f
+            ? value / 15.1927f - 0.01f
+            : (powf(10.0f, value / 0.224282f) - 1.0f) / 155.975327f - 0.01f;
     }
 
     const float sign = value < 0.0f ? -1.0f : 1.0f;
@@ -91,10 +131,45 @@ __device__ __forceinline__ float decode_transfer(const float value, const int ga
     }
     if (gamma == 6) {
         const float cut = 171.2102946929f / 1023.0f;
-        const float decoded = magnitude >= cut
-            ? powf(10.0f, (magnitude * 1023.0f - 420.0f) / 261.5f) * 0.19f - 0.01f
-            : (magnitude * 1023.0f - 95.0f) * 0.01125f / (171.2102946929f - 95.0f);
-        return sign * decoded;
+        return value >= cut
+            ? powf(10.0f, (value * 1023.0f - 420.0f) / 261.5f) * 0.19f - 0.01f
+            : (value * 1023.0f - 95.0f) * 0.01125f / (171.2102946929f - 95.0f);
+    }
+    if (gamma == 14) {
+        const float cut = 0.0105909904954696f;
+        const float a = 5.55555555555556f;
+        const float b = 0.0522722750251688f;
+        const float c = 0.247189638318671f;
+        const float d = 0.385536998692443f;
+        const float e = c * a / ((a * cut + b) * logf(10.0f));
+        const float f = c * log10f(a * cut + b) + d - e * cut;
+        const float boundary = e * cut + f;
+        return value > boundary
+            ? (powf(10.0f, (value - d) / c) - b) / a
+            : (value - f) / e;
+    }
+    if (gamma == 15) {
+        const float a = 0.08692876065491224f;
+        const float b = 0.005494072432257808f;
+        const float c = 0.5300133392291939f;
+        const float d = 8.283605932402494f;
+        const float e = 0.09246575342465753f;
+        const float linear_cut = 0.005f;
+        const float log_cut = d * linear_cut + e;
+        return value < log_cut
+            ? (value - e) / d
+            : expf((value - c) / a) - b;
+    }
+    if (gamma == 16) {
+        const float a = 0.0075f;
+        const float b = 7.0f;
+        const float c = 0.07329248f;
+        const float m = 10.44426855f;
+        const float linear_cut = 0.00262409f;
+        const float decode_cut = m * linear_cut;
+        return value > decode_cut
+            ? exp2f(value / c - b) - a
+            : value / m;
     }
     if (gamma == 7) {
         const float a = (powf(2.0f, 18.0f) - 16.0f) / 117.45f;
@@ -102,10 +177,9 @@ __device__ __forceinline__ float decode_transfer(const float value, const int ga
         const float c = 95.0f / 1023.0f;
         const float s = (7.0f * logf(2.0f) * powf(2.0f, 7.0f - 14.0f * c / b)) / (a * b);
         const float t = (powf(2.0f, 14.0f * (-c / b) + 6.0f) - 64.0f) / a;
-        const float decoded = magnitude >= 0.0f
-            ? (powf(2.0f, 14.0f * (magnitude - c) / b + 6.0f) - 64.0f) / a
-            : magnitude * s + t;
-        return sign * decoded;
+        return value >= 0.0f
+            ? (powf(2.0f, 14.0f * (value - c) / b + 6.0f) - 64.0f) / a
+            : value * s + t;
     }
     if (gamma == 8) {
         const float black_offset = powf(10.0f, (95.0f - 685.0f) / 300.0f);
@@ -130,6 +204,26 @@ __device__ __forceinline__ float encode_transfer(const float value, const int ga
     if (gamma == 3) {
         return signed_power(value, 1.0f / 2.4f);
     }
+    if (gamma == 12) {
+        const float x = value / 0.9f;
+        const float y = x >= 0.0f
+            ? 0.432699f * log10f(x + 0.037584f) + 0.616596f + 0.03f
+            : 5.0f * x + 0.030001222851889303f;
+        return (64.0f + 876.0f * y) / 1023.0f;
+    }
+    if (gamma == 13) {
+        const float x = value / 0.9f;
+        const float y = x >= 0.0f
+            ? 0.432699f * log10f(155.0f * x / 219.0f + 0.037584f) + 0.616596f + 0.03f
+            : 3.53881278538813f * x + 0.030001222851889303f;
+        return (64.0f + 876.0f * y) / 1023.0f;
+    }
+    if (gamma == 17) {
+        const float t = value + 0.01f;
+        return t < 0.0f
+            ? 15.1927f * t
+            : 0.224282f * log10f(155.975327f * t + 1.0f);
+    }
 
     const float sign = value < 0.0f ? -1.0f : 1.0f;
     const float magnitude = fabsf(value);
@@ -152,10 +246,42 @@ __device__ __forceinline__ float encode_transfer(const float value, const int ga
         return sign * encoded;
     }
     if (gamma == 6) {
-        const float encoded = magnitude >= 0.01125f
-            ? (420.0f + log10f((magnitude + 0.01f) / 0.19f) * 261.5f) / 1023.0f
-            : (magnitude * (171.2102946929f - 95.0f) / 0.01125f + 95.0f) / 1023.0f;
-        return sign * encoded;
+        return value >= 0.01125f
+            ? (420.0f + log10f((value + 0.01f) / 0.19f) * 261.5f) / 1023.0f
+            : (value * (171.2102946929f - 95.0f) / 0.01125f + 95.0f) / 1023.0f;
+    }
+    if (gamma == 14) {
+        const float cut = 0.0105909904954696f;
+        const float a = 5.55555555555556f;
+        const float b = 0.0522722750251688f;
+        const float c = 0.247189638318671f;
+        const float d = 0.385536998692443f;
+        const float e = c * a / ((a * cut + b) * logf(10.0f));
+        const float f = c * log10f(a * cut + b) + d - e * cut;
+        return value > cut
+            ? c * log10f(a * value + b) + d
+            : e * value + f;
+    }
+    if (gamma == 15) {
+        const float a = 0.08692876065491224f;
+        const float b = 0.005494072432257808f;
+        const float c = 0.5300133392291939f;
+        const float d = 8.283605932402494f;
+        const float e = 0.09246575342465753f;
+        const float linear_cut = 0.005f;
+        return value < linear_cut
+            ? d * value + e
+            : a * logf(value + b) + c;
+    }
+    if (gamma == 16) {
+        const float a = 0.0075f;
+        const float b = 7.0f;
+        const float c = 0.07329248f;
+        const float m = 10.44426855f;
+        const float linear_cut = 0.00262409f;
+        return value > linear_cut
+            ? (log2f(value + a) + b) * c
+            : value * m;
     }
     if (gamma == 7) {
         const float a = (powf(2.0f, 18.0f) - 16.0f) / 117.45f;
@@ -163,10 +289,9 @@ __device__ __forceinline__ float encode_transfer(const float value, const int ga
         const float c = 95.0f / 1023.0f;
         const float s = (7.0f * logf(2.0f) * powf(2.0f, 7.0f - 14.0f * c / b)) / (a * b);
         const float t = (powf(2.0f, 14.0f * (-c / b) + 6.0f) - 64.0f) / a;
-        const float encoded = magnitude >= t
-            ? (log2f(a * magnitude + 64.0f) - 6.0f) / 14.0f * b + c
-            : (magnitude - t) / s;
-        return sign * encoded;
+        return value >= t
+            ? (log2f(a * value + 64.0f) - 6.0f) / 14.0f * b + c
+            : (value - t) / s;
     }
     if (gamma == 8) {
         const float black_offset = powf(10.0f, (95.0f - 685.0f) / 300.0f);
@@ -325,7 +450,7 @@ def _transform_data(
 
 
 def _bt2408_gain(output_gamma: str) -> float:
-    if output_gamma == "pq":
+    if output_gamma == "PQ":
         return float(np.float32(np.float64(203) / np.float64(10000)))
     a = np.float64(0.17883277)
     b = np.float64(1) - np.float64(4) * a
@@ -336,30 +461,42 @@ def _bt2408_gain(output_gamma: str) -> float:
 def rgb_to_rgb(
     frame: Frame,
     *,
-    input_colorspace: str | None = None,
-    input_gamma: str | None = None,
-    output_colorspace: str | None = None,
-    output_gamma: str | None = None,
-    tonemap: str | None = None,
+    input_colorspace: Colorspace | None = None,
+    input_gamma: Gamma | None = None,
+    output_colorspace: Colorspace | None = None,
+    output_gamma: Gamma | None = None,
+    tonemap: Tonemap | None = None,
 ) -> Frame:
     """Transform a float32 Frame's RGB colorimetry. With ``tonemap=None`` this is a technical conversion without
-    rendering; ACES tonemaps perform rendering, while ``tonemap="bt2408"`` performs direct mapping.
+    rendering; ACES tonemaps perform rendering, while ``tonemap="BT.2408"`` performs direct mapping.
 
     A simultaneous colorspace and transfer conversion runs decode, the Bradford-
     adapted primaries matrix, and encode in a single fused pass. Express the full
     conversion in one call: separate partial calls require additional passes.
     Channels are label-driven; R, G, and B are transformed while all other labels
-    pass through unchanged. ``tonemap="aces-1.3"`` and ``tonemap="aces-2.0"``
+    pass through unchanged. ``tonemap="ACES-1.3"`` and ``tonemap="ACES-2.0"``
     evaluate the corresponding analytic ACES SDR rendering in one CUDA pass;
-    ACES 2.0 uses its fixed 100-nit Rec.709 algorithm table. ``aces-1.3-lut``
-    and ``aces-2.0-lut`` select the corresponding pre-baked LUT rendering. ``bt2408`` selects direct
-    mapping to ``Rec.2020`` with ``hlg`` or ``pq`` and places SDR reference white
+    ACES 2.0 uses its fixed 100-nit Rec.709 algorithm table. ``BT.2408`` selects direct
+    mapping to ``Rec.2020`` with ``HLG`` or ``PQ`` and places SDR reference white
     at 203 cd/m². All ACES tonemaps accept exactly the two output pairs
-    ``Rec.709`` / ``bt1886`` and ``sRGB`` / ``srgb``. Both ``output_colorspace``
+    ``Rec.709`` / ``BT.1886`` and ``sRGB`` / ``sRGB``. Both ``output_colorspace``
     and ``output_gamma`` must be supplied explicitly whenever a tonemap is
     selected. The analytic runtime does not use OCIO or RGB-grid LUT data. ACES
     2.0 reproduces its reference-internal output range before display encoding;
     no tonemap path adds a post-render clip.
+
+    S-Log / S-Log2 / S-Log3 apply their lower linear branches directly to signed inputs. For S-Log and S-Log2,
+    public scene-linear reflectance uses x = r / 0.9 and Sony encoded IRE uses the public embedding
+    e = (64 + 876 * y) / 1023. S-Log3 / ARRI-LogC4 do not use sign/magnitude mirroring; ARRI-LogC4 retains its negative
+    scene cut. Established S-Log3 and ARRI-LogC4 results for nonnegative inputs remain float32 bit-identical.
+    ARRI-LogC3 is the ARRI EI 800 relative scene-exposure curve, maps 18% gray to 400 / 1023, and extends its lower
+    linear branch to negative values without clipping or sign/magnitude mirroring.
+    Blackmagic Film Gen 5 uses its published natural-log branches. DaVinci Intermediate uses its published base-2
+    branches and a derived decode threshold. Both apply their lower linear branches directly to negative values and
+    remain independent from the Blackmagic Wide Gamut Gen 5 and DaVinci Wide Gamut colorspaces.
+    RED-Log3G10 uses RED's published piecewise base-10 curve, applies its lower linear branch directly below -0.01,
+    and leaves scene overshoot unclipped. REDlogFilm uses the Cineon sign-preserving mirror and exact float32 transfer
+    bits while retaining independent gamma metadata. All RED colorspaces remain independent from transfer selection.
     """
     if not isinstance(frame, Frame):
         raise ValueError(
@@ -389,66 +526,64 @@ def rgb_to_rgb(
     input_colorspace = (
         None
         if input_colorspace is None
-        else _closed_token(
+        else _normalized_closed_token(
             input_colorspace,
             axis="input_colorspace",
             accepted=_COLORSPACE_TOKENS,
-            why="input_colorspace must be a known, case-sensitive token",
-            how=f"use one of {_COLORSPACE_TOKENS!r}",
+            why="input_colorspace must be a known closed token",
+            how=f"use one of the canonical tokens {_COLORSPACE_TOKENS!r}",
         )
     )
     output_colorspace = (
         None
         if output_colorspace is None
-        else _closed_token(
+        else _normalized_closed_token(
             output_colorspace,
             axis="output_colorspace",
             accepted=_COLORSPACE_TOKENS,
-            why="output_colorspace must be a known, case-sensitive token",
-            how=f"use one of {_COLORSPACE_TOKENS!r}",
+            why="output_colorspace must be a known closed token",
+            how=f"use one of the canonical tokens {_COLORSPACE_TOKENS!r}",
         )
     )
     input_gamma = (
         None
         if input_gamma is None
-        else _closed_token(
+        else _normalized_closed_token(
             input_gamma,
             axis="input_gamma",
             accepted=_GAMMA_TOKENS,
-            why="input_gamma must be a known, case-sensitive token",
-            how=f"use one of {_GAMMA_TOKENS!r}",
+            why="input_gamma must be a known closed token",
+            how=f"use one of the canonical tokens {_GAMMA_TOKENS!r}",
         )
     )
     output_gamma = (
         None
         if output_gamma is None
-        else _closed_token(
+        else _normalized_closed_token(
             output_gamma,
             axis="output_gamma",
             accepted=_GAMMA_TOKENS,
-            why="output_gamma must be a known, case-sensitive token",
-            how=f"use one of {_GAMMA_TOKENS!r}",
+            why="output_gamma must be a known closed token",
+            how=f"use one of the canonical tokens {_GAMMA_TOKENS!r}",
         )
     )
 
     if tonemap is not None:
-        from pixtreme._color.view_transform import _ANALYTIC_COMBINATIONS, _SUPPORTED_COMBINATIONS
-
+        tonemap = _normalized_closed_token(tonemap, axis="tonemap", accepted=_TONEMAP_TOKENS)
         combination = (tonemap, output_colorspace, output_gamma)
-        supported_combinations = (*_SUPPORTED_COMBINATIONS, *_BT2408_COMBINATIONS)
-        if combination not in supported_combinations:
+        if combination not in _SUPPORTED_COMBINATIONS:
             raise ValueError(
                 _actionable_error(
                     why="tonemap requires a documented rendering or direct-mapping output representation",
                     what=f"received unsupported combination {combination!r}",
-                    how=f"use one of {supported_combinations!r}",
+                    how=f"use one of {_SUPPORTED_COMBINATIONS!r}",
                 )
             )
         assert output_colorspace is not None and output_gamma is not None
         resolved_input_colorspace = frame.colorspace if input_colorspace is None else input_colorspace
         resolved_input_gamma = frame.gamma if input_gamma is None else input_gamma
         if combination in _ANALYTIC_COMBINATIONS:
-            if tonemap == "aces-1.3":
+            if tonemap == "ACES-1.3":
                 from pixtreme._color.aces13_analytic import _apply_aces13_data
 
                 output_data = _apply_aces13_data(
@@ -475,40 +610,13 @@ def rgb_to_rgb(
                 channels=frame.channels,
                 matrix=None,
             )
-        if combination in _BT2408_COMBINATIONS:
-            output_data = _transform_data(
-                frame.data,
-                frame.channels,
-                input_gamma=resolved_input_gamma,
-                output_gamma=output_gamma,
-                matrix=_compose_matrix(resolved_input_colorspace, "Rec.2020"),
-                gain=_bt2408_gain(output_gamma),
-            )
-            return Frame(
-                data=output_data,
-                colorspace=output_colorspace,
-                gamma=output_gamma,
-                channels=frame.channels,
-                matrix=None,
-            )
-
-        from pixtreme._color.view_transform import _apply_lut_data, _load_lut
-
-        same_colorimetry = (
-            _COLORSPACE_DEFINITIONS[resolved_input_colorspace] == _COLORSPACE_DEFINITIONS["ACES2065-1"]
-            and resolved_input_gamma == "linear"
-        )
-        matrix = None if same_colorimetry else _compose_matrix(resolved_input_colorspace, "ACES2065-1")
-        shaper, shaper_domain, lut = _load_lut(tonemap, output_colorspace, output_gamma)
-        output_data = _apply_lut_data(
+        output_data = _transform_data(
             frame.data,
             frame.channels,
-            shaper=shaper,
-            shaper_domain=shaper_domain,
-            lut=lut,
-            output_gamma=output_gamma,
             input_gamma=resolved_input_gamma,
-            matrix=matrix,
+            output_gamma=output_gamma,
+            matrix=_compose_matrix(resolved_input_colorspace, "Rec.2020"),
+            gain=_bt2408_gain(output_gamma),
         )
         return Frame(
             data=output_data,

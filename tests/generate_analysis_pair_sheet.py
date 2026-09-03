@@ -36,7 +36,7 @@ def _remap_response(response: cp.ndarray) -> tuple[px.core.Frame, float, float]:
     span = finite_max - finite_min
     remapped = cp.where(span > np.float32(0.0), (finite - finite_min) / span, np.float32(0.0))
     rgb = cp.repeat(remapped, 3, axis=2)
-    display = px.io.from_array(rgb, colorspace="sRGB", gamma="srgb", channels="RGB")
+    display = px.io.from_array(rgb, colorspace="sRGB", gamma="sRGB", channels="RGB")
     return px.transform.resize(display, width=_PANEL_WIDTH, height=_PANEL_HEIGHT), raw_min, raw_max
 
 
@@ -50,13 +50,13 @@ def _display_source(frame: px.core.Frame) -> tuple[px.core.Frame, float, float]:
         mapped = cp.zeros_like(frame.data)
     if mapped.shape[2] == 1:
         mapped = cp.repeat(mapped, 3, axis=2)
-    display = px.io.from_array(mapped, colorspace="sRGB", gamma="srgb", channels="RGB")
+    display = px.io.from_array(mapped, colorspace="sRGB", gamma="sRGB", channels="RGB")
     return px.transform.resize(display, width=_PANEL_WIDTH, height=_PANEL_HEIGHT), raw_min, raw_max
 
 
 def _label(display: px.core.Frame, text: str) -> px.core.Frame:
     label_data = cp.full((_LABEL_HEIGHT, _PANEL_WIDTH, 3), np.float32(0.015), dtype=cp.float32)
-    bar = px.io.from_array(label_data, colorspace="sRGB", gamma="srgb", channels="RGB")
+    bar = px.io.from_array(label_data, colorspace="sRGB", gamma="sRGB", channels="RGB")
     bar = px.draw.text(
         bar,
         text=text,
@@ -170,7 +170,7 @@ def generate_sheet(path: Path) -> None:
     match_row = px.transform.stack(tuple(match_panels), direction="horizontal")
     sheet = px.transform.stack((corner_row, border_row, material_row, match_row), direction="vertical")
     code = cp.rint(cp.clip(sheet.data, 0.0, 1.0) * np.float32(255.0)).astype(cp.uint8)
-    output = px.io.from_array(code, colorspace="sRGB", gamma="srgb", channels="RGB")
+    output = px.io.from_array(code, colorspace="sRGB", gamma="sRGB", channels="RGB")
     path.parent.mkdir(parents=True, exist_ok=True)
     px.io.write_image(path, output, compression_level=6)
 

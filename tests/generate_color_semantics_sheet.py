@@ -30,9 +30,9 @@ def _source() -> px.core.Frame:
 
 
 def _display(frame: px.core.Frame) -> px.core.Frame:
-    converted = px.color.rgb_to_rgb(frame, output_colorspace="sRGB", output_gamma="srgb")
+    converted = px.color.rgb_to_rgb(frame, output_colorspace="sRGB", output_gamma="sRGB")
     data = cp.clip(converted.data, np.float32(0.0), np.float32(1.0))
-    return px.io.from_array(data, colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(data, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def _gray_display(frame: px.core.Frame) -> px.core.Frame:
@@ -44,7 +44,7 @@ def _label(frame: px.core.Frame, text: str) -> px.core.Frame:
     bar = px.io.from_array(
         cp.full((_LABEL_HEIGHT, _WIDTH, 3), np.float32(0.015), dtype=cp.float32),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
     )
     bar = px.draw.text(
@@ -61,12 +61,12 @@ def _label(frame: px.core.Frame, text: str) -> px.core.Frame:
 
 def _grayscale_gamma_row(source: px.core.Frame) -> px.core.Frame:
     linear_gray = px.color.rgb_to_grayscale(source, matrix="native")
-    encoded_gray = px.color.rgb_to_grayscale(source, colorspace="sRGB", gamma="srgb")
-    power = px.color.linear_to_gamma(source, gamma="2.6")
+    encoded_gray = px.color.rgb_to_grayscale(source, colorspace="sRGB", gamma="sRGB")
+    power = px.color.linear_to_gamma(source, gamma="Gamma-2.6")
     raw_power = px.io.from_array(
         cp.clip(power.data, np.float32(0.0), np.float32(1.0)),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
     )
     return px.transform.stack(
@@ -74,7 +74,7 @@ def _grayscale_gamma_row(source: px.core.Frame) -> px.core.Frame:
             _label(_display(source), "INPUT / ACEScg linear / display clamp"),
             _label(_gray_display(linear_gray), "GRAYSCALE linear / native luminance"),
             _label(_gray_display(encoded_gray), "GRAYSCALE sRGB / bt709 luma"),
-            _label(raw_power, "GAMMA 2.6 encoded values / raw-code view"),
+            _label(raw_power, "Gamma-2.6 encoded values / raw-code view"),
         ),
         direction="horizontal",
     )
@@ -82,8 +82,8 @@ def _grayscale_gamma_row(source: px.core.Frame) -> px.core.Frame:
 
 def _matrix_row(source: px.core.Frame) -> px.core.Frame:
     panels = [_label(_display(source), "RGB SOURCE / matrix comparison")]
-    for matrix in ("bt601", "bt709", "bt2020"):
-        ycbcr = px.color.rgb_to_ycbcr(source, colorspace="sRGB", gamma="srgb", matrix=matrix)
+    for matrix in ("BT.601", "BT.709", "BT.2020"):
+        ycbcr = px.color.rgb_to_ycbcr(source, colorspace="sRGB", gamma="sRGB", matrix=matrix)
         y = px.io.from_array(
             ycbcr.data[..., ycbcr.channels.index("Y") : ycbcr.channels.index("Y") + 1],
             colorspace=ycbcr.colorspace,
@@ -96,7 +96,7 @@ def _matrix_row(source: px.core.Frame) -> px.core.Frame:
 
 
 def _rendering_row(source: px.core.Frame) -> px.core.Frame:
-    encoded = px.color.rgb_to_ycbcr(source, colorspace="Rec.709", gamma="rec709", matrix="bt709")
+    encoded = px.color.rgb_to_ycbcr(source, colorspace="Rec.709", gamma="Rec.709", matrix="BT.709")
     remapped = px.color.ycbcr_to_ycbcr(
         encoded,
         colorspace="ACEScg",
@@ -106,23 +106,23 @@ def _rendering_row(source: px.core.Frame) -> px.core.Frame:
     remapped_rgb = px.color.ycbcr_to_rgb(
         remapped,
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         matrix="native",
     )
-    aces13 = px.color.rgb_to_rgb(source, output_colorspace="sRGB", output_gamma="srgb", tonemap="aces-1.3")
-    aces20 = px.color.rgb_to_rgb(source, output_colorspace="sRGB", output_gamma="srgb", tonemap="aces-2.0-lut")
+    aces13 = px.color.rgb_to_rgb(source, output_colorspace="sRGB", output_gamma="sRGB", tonemap="ACES-1.3")
+    aces20 = px.color.rgb_to_rgb(source, output_colorspace="sRGB", output_gamma="sRGB", tonemap="ACES-2.0")
     outside = cp.zeros_like(aces13.data)
     outside[..., 0] = cp.any(aces13.data > np.float32(1.0), axis=2)
     outside[..., 2] = cp.any(aces13.data < np.float32(0.0), axis=2)
     outside[..., 1] = np.float32(0.15) * cp.all(
         (aces13.data >= np.float32(0.0)) & (aces13.data <= np.float32(1.0)), axis=2
     )
-    outside_frame = px.io.from_array(outside, colorspace="sRGB", gamma="srgb", channels="RGB")
+    outside_frame = px.io.from_array(outside, colorspace="sRGB", gamma="sRGB", channels="RGB")
     return px.transform.stack(
         (
             _label(_display(remapped_rgb), "YCbCr bt709 -> ACEScg linear native"),
-            _label(_display(aces13), "TONEMAP aces-1.3 analytic / display clamp"),
-            _label(_display(aces20), "TONEMAP aces-2.0-lut / display clamp"),
+            _label(_display(aces13), "TONEMAP ACES-1.3 analytic / display clamp"),
+            _label(_display(aces20), "TONEMAP ACES-2.0 analytic / display clamp"),
             _label(outside_frame, "ACES 1.3 OUTSIDE / red >1, blue <0"),
         ),
         direction="horizontal",
@@ -136,7 +136,7 @@ def generate_sheet(path: Path) -> None:
         direction="vertical",
     )
     code = cp.rint(cp.clip(sheet.data, 0.0, 1.0) * np.float32(255.0)).astype(cp.uint8)
-    output = px.io.from_array(code, colorspace="sRGB", gamma="srgb", channels="RGB")
+    output = px.io.from_array(code, colorspace="sRGB", gamma="sRGB", channels="RGB")
     path.parent.mkdir(parents=True, exist_ok=True)
     px.io.write_image(path, output, compression_level=6)
 

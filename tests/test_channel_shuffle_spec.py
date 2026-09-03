@@ -144,7 +144,7 @@ def test_missing_source_label_names_available_labels_and_repair() -> None:
 
 def test_fill_and_literal_labels_preserve_scene_values_without_semantic_checks() -> None:
     """v1-channel-shuffle acceptance 5-7 and 20-22: fills and literal relabels are value-only routing."""
-    source = _frame([[[0.25], [0.75]]], colorspace="Rec.2020", channels=("Y",), matrix="bt2020")
+    source = _frame([[[0.25], [0.75]]], colorspace="Rec.2020", channels=("Y",), matrix="BT.2020")
 
     result = px.channel.shuffle(
         **{
@@ -181,13 +181,13 @@ def test_first_frame_after_leading_fills_defines_geometry_and_metadata() -> None
     master = _frame(
         np.arange(12, dtype=np.float32).reshape(2, 2, 3),
         colorspace="ACEScg",
-        gamma="2.6",
+        gamma="Gamma-2.6",
         matrix="native",
     )
 
     result = px.channel.shuffle(fill=0.5, blue=(master, "B"))
 
-    assert (result.width, result.height, result.colorspace, result.gamma) == (2, 2, "ACEScg", "2.6")
+    assert (result.width, result.height, result.colorspace, result.gamma) == (2, 2, "ACEScg", "Gamma-2.6")
 
 
 @pytest.mark.parametrize(
@@ -220,7 +220,7 @@ def test_every_source_requires_float32_with_shared_conversion_guidance(
         ("width", {"values": np.zeros((2, 3, 3), dtype=np.float32)}, ("2", "3", "resize")),
         ("height", {"values": np.zeros((3, 2, 3), dtype=np.float32)}, ("2", "3", "resize")),
         ("colorspace", {"colorspace": "sRGB"}, ("ACEScg", "sRGB")),
-        ("gamma", {"gamma": "srgb"}, ("linear", "srgb")),
+        ("gamma", {"gamma": "sRGB"}, ("linear", "sRGB")),
     ),
 )
 def test_source_mismatch_errors_name_field_values_and_repair(
@@ -251,7 +251,7 @@ def test_adapt_matches_public_rgb_to_rgb_composition_bit_exactly() -> None:
     source = _frame(
         np.asarray([[[0.02, 0.30, 0.90], [0.80, 0.10, 0.04]]], dtype=np.float32),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
     )
 
     result = px.channel.shuffle(
@@ -281,7 +281,7 @@ def test_adapt_transforms_each_source_identity_once(monkeypatch: pytest.MonkeyPa
     import pixtreme._channel.shuffle as implementation
 
     master = _frame([0.1, 0.2, 0.3], colorspace="ACEScg")
-    source = _frame([0.4, 0.5, 0.6], colorspace="sRGB", gamma="srgb")
+    source = _frame([0.4, 0.5, 0.6], colorspace="sRGB", gamma="sRGB")
     calls: list[px.core.Frame] = []
     original = implementation.rgb_to_rgb
 
@@ -298,7 +298,7 @@ def test_adapt_transforms_each_source_identity_once(monkeypatch: pytest.MonkeyPa
 def test_adapt_preserves_public_color_conversion_fail_fast_as_actionable_error() -> None:
     """v1-channel-shuffle acceptance 12: unsupported rgb_to_rgb inputs remain explicit three-part errors."""
     master = _frame([0.2], channels=("Y",), gamma="linear")
-    source = _frame([0.4], channels=("Y",), gamma="srgb")
+    source = _frame([0.4], channels=("Y",), gamma="sRGB")
 
     with pytest.raises(ValueError) as error:
         px.channel.shuffle(adapt=True, master=(master, "Y"), source=(source, "Y"))
@@ -309,7 +309,7 @@ def test_adapt_preserves_public_color_conversion_fail_fast_as_actionable_error()
 
 def test_shuffle_allocates_contiguous_storage_without_mutating_inputs() -> None:
     """v1-channel-shuffle acceptance 13: output is a new contiguous Frame and inputs remain unchanged."""
-    source = _frame(np.arange(12, dtype=np.float32).reshape(2, 2, 3), matrix="bt709")
+    source = _frame(np.arange(12, dtype=np.float32).reshape(2, 2, 3), matrix="BT.709")
     original_data = _host(source).copy()
     original_metadata = source.model_dump(exclude={"data"})
 
@@ -324,17 +324,17 @@ def test_shuffle_allocates_contiguous_storage_without_mutating_inputs() -> None:
 @pytest.mark.parametrize(
     ("outputs", "expected_matrix"),
     (
-        ({"R": "bt709"}, None),
-        ({"Z": "bt709"}, None),
-        ({"R": "bt709", "Y": "bt601"}, None),
-        ({"Y": "bt709"}, "bt709"),
+        ({"R": "BT.709"}, None),
+        ({"Z": "BT.709"}, None),
+        ({"R": "BT.709", "Y": "BT.601"}, None),
+        ({"Y": "BT.709"}, "BT.709"),
         ({"Y": "native"}, "native"),
         ({"Y": None}, None),
-        ({"Y": "bt709", "Cb": "fill"}, "bt709"),
-        ({"Y": "bt709", "Cb": "bt709"}, "bt709"),
+        ({"Y": "BT.709", "Cb": "fill"}, "BT.709"),
+        ({"Y": "BT.709", "Cb": "BT.709"}, "BT.709"),
         ({"Y": "native", "Cb": "native", "Cr": "fill"}, "native"),
-        ({"Y": "bt709", "Cb": None}, None),
-        ({"Y": "fill", "Cb": "fill", "Z": "bt709"}, None),
+        ({"Y": "BT.709", "Cb": None}, None),
+        ({"Y": "fill", "Cb": "fill", "Z": "BT.709"}, None),
     ),
 )
 def test_matrix_provenance_decision_table(outputs: dict[str, str | None], expected_matrix: str | None) -> None:
@@ -355,20 +355,20 @@ def test_matrix_provenance_decision_table(outputs: dict[str, str | None], expect
 @pytest.mark.parametrize("adapt", (False, True))
 def test_conflicting_matrix_claims_fail_without_implicit_rematrix(adapt: bool) -> None:
     """v1-channel-shuffle acceptance 15-16 and 20: distinct claims fail and adapt never rematrices."""
-    first = _frame([0.1, 0.2, 0.3], matrix="bt601")
-    second = _frame([0.4, 0.5, 0.6], matrix="bt709")
+    first = _frame([0.1, 0.2, 0.3], matrix="BT.601")
+    second = _frame([0.4, 0.5, 0.6], matrix="BT.709")
 
     with pytest.raises(ValueError) as error:
         px.channel.shuffle(adapt=adapt, Y=(first, "R"), Cb=(second, "G"))
 
     message = _assert_actionable(error)
-    assert all(value in message for value in ("bt601", "bt709", "Y", "Cb", "rematrix"))
+    assert all(value in message for value in ("BT.601", "BT.709", "Y", "Cb", "rematrix"))
 
 
 def test_adapt_matrix_claim_comes_from_call_site_source_not_temporary_frame() -> None:
     """v1-channel-shuffle acceptance 15: adapt provenance uses the original source Frame matrix."""
-    master = _frame([0.1, 0.2, 0.3], colorspace="ACEScg", matrix="bt709")
-    source = _frame([0.4, 0.5, 0.6], colorspace="sRGB", gamma="srgb", matrix="native")
+    master = _frame([0.1, 0.2, 0.3], colorspace="ACEScg", matrix="BT.709")
+    source = _frame([0.4, 0.5, 0.6], colorspace="sRGB", gamma="sRGB", matrix="native")
 
     result = px.channel.shuffle(adapt=True, Z=(master, "R"), Y=(source, "R"))
 

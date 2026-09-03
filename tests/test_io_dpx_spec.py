@@ -211,7 +211,7 @@ def test_dpx_read_decodes_both_endians_depths_and_descriptors(
         np.dtype(np.float32),
         tuple("RGBA"[:channels]),
         "Rec.709",
-        "cineon",
+        "Cineon",
     )
     assert actual.data.flags.c_contiguous
     expected = codes.astype(np.float32) / np.float32((1 << bit_depth) - 1)
@@ -288,19 +288,19 @@ def test_dpx_read_transfers_only_flat_packed_uint8_bytes_before_gpu_unpack(
 @pytest.mark.parametrize(
     ("transfer", "bit_depth", "gamma", "mappable"),
     (
-        (1, 10, "cineon", True),
-        (3, 10, "cineon", True),
-        (13, 10, "cineon", True),
+        (1, 10, "Cineon", True),
+        (3, 10, "Cineon", True),
+        (13, 10, "Cineon", True),
         (2, 12, "linear", True),
-        (4, 8, "rec709", True),
-        (5, 8, "rec709", True),
-        (6, 8, "rec709", True),
-        (7, 8, "rec709", True),
-        (8, 8, "rec709", True),
-        (9, 8, "rec709", True),
-        (10, 8, "rec709", True),
-        (255, 10, "cineon", False),
-        (255, 8, "rec709", False),
+        (4, 8, "Rec.709", True),
+        (5, 8, "Rec.709", True),
+        (6, 8, "Rec.709", True),
+        (7, 8, "Rec.709", True),
+        (8, 8, "Rec.709", True),
+        (9, 8, "Rec.709", True),
+        (10, 8, "Rec.709", True),
+        (255, 10, "Cineon", False),
+        (255, 8, "Rec.709", False),
         (255, 12, "linear", False),
         (255, 16, "linear", False),
     ),
@@ -417,7 +417,7 @@ def test_dpx_write_emits_big_endian_filled_bytes_and_round_trips_on_grid(
     """v1-dpx acceptance 6, 7, and 13: exact SDPX bytes and read-after-write follow an independent oracle."""
     values = np.resize(np.array((-0.1, 0.0, 0.1, 0.5, 0.9, 1.0, 1.1), dtype=np.float32), (2, 3, channels))
     labels = tuple("RGBA"[:channels])
-    frame = px.io.from_array(cp.asarray(values[..., ::-1]), colorspace="Rec.709", gamma="cineon", channels=labels[::-1])
+    frame = px.io.from_array(cp.asarray(values[..., ::-1]), colorspace="Rec.709", gamma="Cineon", channels=labels[::-1])
     path = tmp_path / "written.dpx"
 
     assert px.io.write_image(path, frame, bit_depth=bit_depth) is None
@@ -491,22 +491,33 @@ def test_dpx_write_float32_native_bypasses_recode_dtype(tmp_path: Path, monkeypa
 @pytest.mark.parametrize(
     ("gamma", "transfer"),
     (
-        ("cineon", 1),
+        ("Cineon", 1),
         ("linear", 2),
-        ("s-log3", 3),
-        ("logc4", 3),
-        ("rec709", 6),
-        ("srgb", 6),
-        ("bt1886", 6),
-        ("pq", 6),
-        ("hlg", 6),
-        ("2.2", 6),
-        ("2.4", 6),
-        ("2.6", 6),
+        ("S-Log", 3),
+        ("S-Log2", 3),
+        ("S-Log3", 3),
+        ("ARRI-LogC3", 3),
+        ("ARRI-LogC4", 3),
+        ("Blackmagic-Film-Gen-5", 3),
+        ("DaVinci-Intermediate", 3),
+        ("RED-Log3G10", 3),
+        ("REDlogFilm", 1),
+        ("Rec.709", 6),
+        ("sRGB", 6),
+        ("BT.1886", 6),
+        ("PQ", 6),
+        ("HLG", 6),
+        ("Gamma-2.2", 6),
+        ("Gamma-2.4", 6),
+        ("Gamma-2.6", 6),
     ),
 )
 def test_dpx_write_maps_frame_gamma_to_transfer_characteristic(tmp_path: Path, gamma: str, transfer: int) -> None:
-    """v1-dpx acceptance 8: the header records the documented closed gamma mapping."""
+    """v1-dpx acceptance 8; v1-sony-tokens acceptance 12; v1-arri-tokens acceptance 27;
+    v1-red-tokens acceptance 70.
+
+    The header records the closed gamma mapping.
+    """
     frame = px.io.from_array(cp.ones((1, 1, 3), dtype=cp.float32), colorspace="Rec.709", gamma=gamma, channels="RGB")
     path = tmp_path / "transfer.dpx"
 
@@ -542,7 +553,7 @@ def test_dpx_write_rejects_non_rgb_rgba_or_duplicate_layouts(
 
 def test_bit_depth_is_rejected_for_non_dpx_writes(tmp_path: Path) -> None:
     """v1-dpx acceptance 8: explicit bit_depth never silently disappears on another container."""
-    frame = px.io.from_array(cp.ones((1, 1, 3), dtype=cp.uint8), colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(cp.ones((1, 1, 3), dtype=cp.uint8), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     with pytest.raises(ValueError, match=_ACTIONABLE) as error:
         px.io.write_image(tmp_path / "invalid.png", frame, bit_depth=10)

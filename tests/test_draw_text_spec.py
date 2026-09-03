@@ -499,7 +499,7 @@ def test_draw_text_supersample_requires_a_strict_python_bool(supersample: object
 def test_draw_text_supersample_false_is_bit_identical_before_and_after_true_mode() -> None:
     """v1-draw-text-supersample acceptance 3: the default 8-bit path stays bit-identical and mode-local."""
     source_values = np.linspace(-0.4, 1.6, 96 * 192, dtype=np.float32).reshape(96, 192, 1)
-    source = _frame(source_values, colorspace="S-Gamut3", gamma="s-log3", channels=("matte",))
+    source = _frame(source_values, colorspace="S-Gamut3", gamma="S-Log3", channels=("matte",))
     kwargs = {
         "text": "AV 骨",
         "position": (18.375, 62.625),
@@ -794,7 +794,7 @@ def test_draw_text_supersample_preserves_scene_metadata_input_and_private_storag
     """v1-draw-text-supersample acceptance 9: True keeps scene values, channels, metadata, and storage contracts."""
     labels = ("normal.x", "depth", "id", "custom")
     source_values = np.full((96, 192, len(labels)), -0.25, dtype=np.float32)
-    source = _frame(source_values, colorspace="S-Gamut3", gamma="s-log3", channels=labels)
+    source = _frame(source_values, colorspace="S-Gamut3", gamma="S-Log3", channels=labels)
     result = px.draw.text(
         source,
         text="scene 骨",
@@ -1011,7 +1011,7 @@ def test_draw_text_preserves_metadata_channels_and_private_fp32_output() -> None
     """v1-draw-text acceptance 23-26: metadata and arbitrary labels survive, and one-channel matte uses numeric coverage."""
     labels = ("normal.x", "depth", "id", "custom")
     source_values = np.full((80, 160, len(labels)), 0.25, dtype=np.float32)
-    source = _frame(source_values, colorspace="S-Gamut3", gamma="s-log3", channels=labels)
+    source = _frame(source_values, colorspace="S-Gamut3", gamma="S-Log3", channels=labels)
     result = px.draw.text(
         source,
         text="mask",

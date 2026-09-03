@@ -39,11 +39,15 @@ def test_exr_metadata_priority_default_channels_explicit_order_and_header_are_pr
     )
 
     default = px.io.read_image(path)
-    explicit = px.io.read_image(path, channels=("depth.Z", "B", "R"), colorspace="ACEScg", gamma="2.2")
+    explicit = px.io.read_image(path, channels=("depth.Z", "B", "R"), colorspace="ACEScg", gamma="Gamma-2.2")
     header = px.io.read_header(path)
 
     assert (default.channels, default.colorspace, default.gamma) == (("R", "G", "B", "A"), "ACES2065-1", "linear")
-    assert (explicit.channels, explicit.colorspace, explicit.gamma) == (("depth.Z", "B", "R"), "ACEScg", "2.2")
+    assert (explicit.channels, explicit.colorspace, explicit.gamma) == (
+        ("depth.Z", "B", "R"),
+        "ACEScg",
+        "Gamma-2.2",
+    )
     np.testing.assert_array_equal(
         px.io.to_array(explicit).get(),
         np.stack([channels["depth.Z"], channels["B"], channels["R"]], axis=2).astype(np.float32),

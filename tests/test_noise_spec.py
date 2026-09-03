@@ -313,9 +313,9 @@ def test_grain_monochromatic_accepts_bool_only(value: object) -> None:
 
 
 @pytest.mark.parametrize("name", NOISE_NAMES)
-@pytest.mark.parametrize(("axis", "token"), (("colorspace", "acescg"), ("gamma", "Linear")))
+@pytest.mark.parametrize(("axis", "token"), (("colorspace", "P3"), ("gamma", "log")))
 def test_noise_metadata_tokens_fail_fast(name: str, axis: str, token: str) -> None:
-    """v1-noise acceptance 12: colorspace and gamma share the closed case-sensitive vocabulary."""
+    """v1-noise acceptance 12; v1-token-vocabulary acceptance 7: colorspace and gamma stay closed."""
     with pytest.raises(ValueError) as error:
         getattr(px.generate, name)(**(_base_kwargs(name) | {axis: token}))
     _assert_actionable(error)
@@ -324,7 +324,7 @@ def test_noise_metadata_tokens_fail_fast(name: str, axis: str, token: str) -> No
 @pytest.mark.parametrize("name", NOISE_NAMES)
 def test_noise_outputs_are_new_contiguous_fp32_frames_with_requested_metadata(name: str) -> None:
     """v1-noise acceptance 13-16: output ownership, layout, dtype, channels, dimensions, and metadata are fixed."""
-    kwargs = _base_kwargs(name) | {"colorspace": "S-Gamut3", "gamma": "s-log3"}
+    kwargs = _base_kwargs(name) | {"colorspace": "S-Gamut3", "gamma": "S-Log3"}
     first = getattr(px.generate, name)(**kwargs)
     second = getattr(px.generate, name)(**kwargs)
     expected_channels = ("Y",)
@@ -332,7 +332,7 @@ def test_noise_outputs_are_new_contiguous_fp32_frames_with_requested_metadata(na
     assert first.dtype == np.dtype(np.float32)
     assert first.data.flags.c_contiguous
     assert first.data.data.ptr != second.data.data.ptr
-    assert (first.colorspace, first.gamma, first.channels) == ("S-Gamut3", "s-log3", expected_channels)
+    assert (first.colorspace, first.gamma, first.channels) == ("S-Gamut3", "S-Log3", expected_channels)
 
 
 def test_color_grain_has_three_independent_rgb_channels() -> None:

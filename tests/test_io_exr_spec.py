@@ -200,11 +200,11 @@ def test_exr_file_color_metadata_maps_and_per_call_claims_override_it(tmp_path: 
     )
 
     file_claim = px.io.read_image(path)
-    call_claim = px.io.read_image(path, colorspace="ACEScg", gamma="2.2")
+    call_claim = px.io.read_image(path, colorspace="ACEScg", gamma="Gamma-2.2")
     header = px.io.read_header(path)
 
     assert (file_claim.colorspace, file_claim.gamma) == ("ACES2065-1", "linear")
-    assert (call_claim.colorspace, call_claim.gamma) == ("ACEScg", "2.2")
+    assert (call_claim.colorspace, call_claim.gamma) == ("ACEScg", "Gamma-2.2")
     assert header.color.colorspace == "ACES2065-1"
     assert header.color.mappable is True
     assert "chromaticities" in header.color.raw and "acesImageContainerFlag" in header.color.raw

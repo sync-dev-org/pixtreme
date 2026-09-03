@@ -6,6 +6,7 @@ import struct
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -17,9 +18,23 @@ import pixtreme._io.formats.exr.codec_pxr24 as codec_pxr24
 import pixtreme._io.formats.exr.codec_rle as codec_rle
 import pixtreme._io.formats.exr.codec_zip as codec_zip
 import pixtreme._io.formats.exr.container as container_module
+import pixtreme._io.formats.exr.packing as packing_module
 import pixtreme._io.formats.exr.selection as selection
 
 _CHROMATICITIES = (0.7347, 0.2653, 0.0, 1.0, 0.0001, -0.077, 0.32168, 0.33767)
+_UINT_COMPRESSIONS = ("none", "rle", "zips", "zip", "piz", "pxr24", "b44", "b44a", "dwaa", "dwab")
+_LINES_PER_CHUNK = {
+    "none": 1,
+    "rle": 1,
+    "zips": 1,
+    "zip": 16,
+    "piz": 32,
+    "pxr24": 16,
+    "b44": 32,
+    "b44a": 32,
+    "dwaa": 32,
+    "dwab": 256,
+}
 
 
 def _pack_uint_gpu(
@@ -95,6 +110,169 @@ def _with_codec_chunks(container: container_module._ExrContainer) -> container_m
     )
     materialized_part = replace(part, offset_table=offset_table, chunks=chunks)
     return replace(container, parts=(materialized_part,), offset_table=offset_table, chunks=chunks)
+
+
+def _synthetic_uint_unpack_case(
+    compression: str,
+) -> tuple[object, tuple[object, ...], object, np.ndarray, np.ndarray, np.ndarray]:
+    """Build two scanline chunks with file-order mixed channels and alternating EXR byte grouping."""
+    import cupy as cp
+
+    lines_per_chunk = _LINES_PER_CHUNK[compression]
+    height = lines_per_chunk + 1
+    width = 5
+    channels = (
+        SimpleNamespace(name="U0", pixel_type=0, bytes_per_sample=4),
+        SimpleNamespace(name="H", pixel_type=1, bytes_per_sample=2),
+        SimpleNamespace(name="U1", pixel_type=0, bytes_per_sample=4),
+        SimpleNamespace(name="U2", pixel_type=0, bytes_per_sample=4),
+    )
+    selected = (channels[3], channels[0])
+    sample_indices = np.arange(height * width, dtype=np.uint32).reshape(height, width)
+    channel_values = {
+        "U0": sample_indices * np.uint32(0x9E3779B1) + np.uint32(0x01020304),
+        "H": (sample_indices & np.uint32(0xFFFF)).astype(np.uint16),
+        "U1": sample_indices ^ np.uint32(0xA5A5A5A5),
+        "U2": sample_indices * np.uint32(0x85EBCA6B) + np.uint32(0xDEADBEEF),
+    }
+    rows = tuple(
+        b"".join(
+            channel_values[channel.name][row]
+            .astype("<u2" if channel.bytes_per_sample == 2 else "<u4", copy=False)
+            .tobytes()
+            for channel in channels
+        )
+        for row in range(height)
+    )
+    chunks: list[object] = []
+    payloads: list[bytes] = []
+    offsets: list[int] = []
+    sizes: list[int] = []
+    grouped: list[int] = []
+    payload_offset = 0
+    for chunk_index, row_start in enumerate(range(0, height, lines_per_chunk)):
+        row_count = min(lines_per_chunk, height - row_start)
+        original = b"".join(rows[row_start : row_start + row_count])
+        is_grouped = chunk_index % 2 == 1
+        payload = original[::2] + original[1::2] if is_grouped else original
+        chunks.append(SimpleNamespace(y=row_start, row_start=row_start, row_count=row_count))
+        payloads.append(payload)
+        offsets.append(payload_offset)
+        sizes.append(len(payload))
+        grouped.append(int(is_grouped))
+        payload_offset += len(payload)
+    container = SimpleNamespace(
+        compression=compression,
+        data_window=(0, 0, width - 1, height - 1),
+        parts=(SimpleNamespace(channels=channels),),
+        chunks=tuple(chunks),
+        lines_per_chunk=lines_per_chunk,
+    )
+    decoded = cp.asarray(np.frombuffer(b"".join(payloads), dtype=np.uint8))
+    return (
+        container,
+        selected,
+        decoded,
+        np.asarray(offsets, dtype=np.int64),
+        np.asarray(sizes, dtype=np.int64),
+        np.asarray(grouped, dtype=np.uint8),
+    )
+
+
+def _reference_unpack_exr_uint_chunks(
+    container: object,
+    selected: Sequence[object],
+    decoded: object,
+    decoded_offsets: Sequence[int] | np.ndarray,
+    decoded_sizes: Sequence[int] | np.ndarray,
+    even_odd_grouped: Sequence[int] | np.ndarray,
+) -> object:
+    """Test-owned copy of the pre-trial CuPy composition used as the characterization oracle."""
+    import cupy as cp
+
+    width = container.data_window[2] - container.data_window[0] + 1  # type: ignore[attr-defined]
+    height = container.data_window[3] - container.data_window[1] + 1  # type: ignore[attr-defined]
+    channel_offsets: dict[str, int] = {}
+    row_bytes = 0
+    for channel in container.parts[0].channels:  # type: ignore[attr-defined]
+        channel_offsets[channel.name] = row_bytes
+        row_bytes += width * channel.bytes_per_sample
+    output = cp.empty((height, width, len(selected)), dtype=cp.uint32)
+    for chunk, offset, size, is_even_odd_grouped in zip(
+        container.chunks,  # type: ignore[attr-defined]
+        (int(value) for value in decoded_offsets),
+        (int(value) for value in decoded_sizes),
+        (bool(value) for value in even_odd_grouped),
+        strict=True,
+    ):
+        chunk_bytes = decoded[offset : offset + size]
+        if is_even_odd_grouped:
+            original = cp.arange(size, dtype=cp.int64)
+            half = (size + 1) // 2
+            stored = cp.where(original & 1, half + original // 2, original // 2)
+            chunk_bytes = chunk_bytes[stored]
+        rows = chunk_bytes.reshape(chunk.row_count, row_bytes)
+        output_rows = slice(chunk.row_start, chunk.row_start + chunk.row_count)
+        for output_channel, channel in enumerate(selected):
+            channel_start = channel_offsets[channel.name]
+            sample_bytes = cp.ascontiguousarray(rows[:, channel_start : channel_start + width * 4]).reshape(
+                chunk.row_count,
+                width,
+                4,
+            )
+            output[output_rows, :, output_channel] = (
+                sample_bytes[..., 0].astype(cp.uint32)
+                | (sample_bytes[..., 1].astype(cp.uint32) << cp.uint32(8))
+                | (sample_bytes[..., 2].astype(cp.uint32) << cp.uint32(16))
+                | (sample_bytes[..., 3].astype(cp.uint32) << cp.uint32(24))
+            )
+    return output
+
+
+def test_uint_output_routes_through_shared_unpack_kernel_contract(monkeypatch: pytest.MonkeyPatch) -> None:
+    """REQ-TEST-002; issue #1 RawKernel trial acceptance 4: UINT output uses the shared unpack kernel."""
+    sentinel = object()
+    calls: list[str] = []
+
+    def shared_unpack(*args: object, output_dtype: str) -> object:
+        calls.append(output_dtype)
+        return sentinel
+
+    monkeypatch.setattr(packing_module, "_unpack_exr_chunks", shared_unpack)
+
+    actual = packing_module._unpack_exr_output(
+        object(),
+        (),
+        object(),
+        np.empty(0, dtype=np.int64),
+        np.empty(0, dtype=np.int64),
+        np.empty(0, dtype=np.uint8),
+        output_dtype="uint32",
+    )
+
+    assert actual is sentinel
+    assert calls == ["uint32"]
+
+
+@pytest.mark.parametrize("compression", _UINT_COMPRESSIONS)
+def test_shared_unpack_kernel_matches_pretrial_uint_composition_characterization(compression: str) -> None:
+    """characterization: issue #1 RawKernel trial acceptance 1 retains the pre-trial UINT composition because it
+    is the trial's exact compatibility baseline; replace it when an external wire oracle covers every tested layout.
+    """
+    container, selected, decoded, offsets, sizes, grouped = _synthetic_uint_unpack_case(compression)
+    expected = _reference_unpack_exr_uint_chunks(container, selected, decoded, offsets, sizes, grouped)
+
+    actual = packing_module._unpack_exr_output(
+        container,
+        selected,
+        decoded,
+        offsets,
+        sizes,
+        grouped,
+        output_dtype="uint32",
+    )
+
+    np.testing.assert_array_equal(actual.get(), expected.get())
 
 
 @pytest.mark.parametrize(

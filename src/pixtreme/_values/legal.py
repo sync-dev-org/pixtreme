@@ -171,9 +171,9 @@ def legal_to_full(frame: Frame, *, bit_depth: int = 8) -> Frame:
     To repair RGB produced by applying a matrix before legal-range expansion,
     reverse that composition in the same matrix domain::
 
-        restored_ycbcr = px.color.rgb_to_ycbcr(frame, matrix="bt709")
+        restored_ycbcr = px.color.rgb_to_ycbcr(frame, matrix="BT.709")
         full_ycbcr = px.values.legal_to_full(restored_ycbcr, bit_depth=8)
-        corrected_rgb = px.color.ycbcr_to_rgb(full_ycbcr, matrix="bt709")
+        corrected_rgb = px.color.ycbcr_to_rgb(full_ycbcr, matrix="BT.709")
     """
     return _convert_range(frame, bit_depth=bit_depth, direction="legal_to_full", operation="legal_to_full")
 

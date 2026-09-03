@@ -157,7 +157,7 @@ def test_tga_read_supports_true_color_rle_and_both_vertical_origins(
         np.dtype(np.float32),
         ("R", "G", "B", "A")[:channel_count],
         "sRGB",
-        "srgb",
+        "sRGB",
     )
     assert actual.data.flags.c_contiguous
     np.testing.assert_array_equal(
@@ -179,14 +179,14 @@ def test_tga_read_unchanged_selects_channels_and_overrides_metadata(tmp_path: Pa
         unchanged=True,
         channels="ABR",
         colorspace="Rec.2020",
-        gamma="pq",
+        gamma="PQ",
     )
 
     assert (actual.dtype, actual.channels, actual.colorspace, actual.gamma) == (
         np.dtype(np.uint8),
         ("A", "B", "R"),
         "Rec.2020",
-        "pq",
+        "PQ",
     )
     np.testing.assert_array_equal(
         px.io.to_array(
@@ -281,7 +281,7 @@ def test_tga_write_is_rle_top_left_and_independently_decodable(
     values: np.ndarray,
 ) -> None:
     """v1-tga acceptance 6 and 7: writer fixes type, depth, origin, packet bounds, and swizzle."""
-    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="srgb", channels=channels)
+    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels=channels)
     path = tmp_path / "output.tga"
 
     assert px.io.write_image(path, frame) is None
@@ -313,7 +313,7 @@ def test_tga_write_is_rle_top_left_and_independently_decodable(
 def test_tga_write_packets_never_cross_scanlines(tmp_path: Path) -> None:
     """v1-tga acceptance 7: an equal-color row boundary still produces separate packets."""
     values = np.full((2, 3, 3), 17, dtype=np.uint8)
-    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels="RGB")
     path = tmp_path / "rows.tga"
 
     px.io.write_image(path, frame)
@@ -377,7 +377,7 @@ def test_tga_write_splits_raw_and_run_packets_at_128_pixels(
     else:
         codes = np.arange(pixel_count, dtype=np.uint8)
         values = np.stack((codes, codes ^ np.uint8(0x55), codes ^ np.uint8(0xAA)), axis=1)[None, ...]
-    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels="RGB")
     path = tmp_path / f"writer-{packet_kind}-{pixel_count}.tga"
 
     px.io.write_image(path, frame)
@@ -417,7 +417,7 @@ def test_tga_write_read_round_trip_is_exact_on_the_255_grid(tmp_path: Path) -> N
         [[[0, 1, 2, 3], [127, 128, 254, 255]], [[255, 0, 128, 64], [9, 8, 7, 6]]],
         dtype=np.uint8,
     )
-    frame = px.io.from_array(cp.asarray(codes), colorspace="sRGB", gamma="srgb", channels="RGBA")
+    frame = px.io.from_array(cp.asarray(codes), colorspace="sRGB", gamma="sRGB", channels="RGBA")
     path = tmp_path / "roundtrip.tga"
 
     px.io.write_image(path, frame)
@@ -458,7 +458,7 @@ def test_tga_write_converts_every_frame_dtype_to_uint8_with_independent_oracle(
     """
     one_channel = np.asarray(samples, dtype=dtype).reshape(1, -1, 1)
     values = np.repeat(one_channel, 3, axis=2)
-    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels="RGB")
     before = frame.data.copy()
     path = tmp_path / f"{np.dtype(dtype).name}.tga"
 
@@ -477,7 +477,7 @@ def test_tga_write_rejects_non_rgb_layout(tmp_path: Path) -> None:
 
     TGA output retains the channel-layout error contract while accepting every dtype.
     """
-    y_frame = px.io.from_array(cp.zeros((1, 1, 1), dtype=cp.uint8), colorspace="sRGB", gamma="srgb", channels="Y")
+    y_frame = px.io.from_array(cp.zeros((1, 1, 1), dtype=cp.uint8), colorspace="sRGB", gamma="sRGB", channels="Y")
 
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.write_image(tmp_path / "gray.tga", y_frame)
@@ -514,7 +514,7 @@ assert "OpenEXR" not in sys.modules
 def test_tga_remains_outside_bytes_boundaries(tmp_path: Path) -> None:
     """v1-tga acceptance 10: TGA is file-only and adds no bytes token or signature path."""
     payload = _header(width=1, height=1) + b"\x03\x02\x01"
-    frame = px.io.from_array(cp.zeros((1, 1, 3), dtype=cp.uint8), colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(cp.zeros((1, 1, 3), dtype=cp.uint8), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.decode_image(payload)

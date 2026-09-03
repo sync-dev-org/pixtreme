@@ -9,6 +9,7 @@ import numpy as np
 
 from pixtreme._core.frame import Frame
 from pixtreme._core.value_domain import _RANGE_TOKENS
+from pixtreme._core.vocabulary import ChromaSiting, Colorspace, Gamma, Interpolation, Matrix, Range
 from pixtreme._io.wire.sampling import (
     _INTERPOLATION_TOKENS,
     _SITING_TOKENS,
@@ -45,12 +46,12 @@ def from_yuv420p(
     width: int,
     height: int,
     bit_depth: int = 8,
-    colorspace: str | None = None,
-    gamma: str | None = None,
-    matrix: str | None = None,
-    range: str = "legal",
-    siting: str = "left",
-    interpolation: str = "bilinear",
+    colorspace: Colorspace | None = None,
+    gamma: Gamma | None = None,
+    matrix: Matrix | None = None,
+    range: Range = "legal",
+    siting: ChromaSiting = "left",
+    interpolation: Interpolation = "bilinear",
 ) -> Frame:
     """Construct a full-range fp32 YCbCr444 Frame from planar YUV420.
 
@@ -96,9 +97,9 @@ def to_yuv420p(
     frame: Frame,
     *,
     bit_depth: int = 8,
-    range: str = "legal",
-    siting: str = "left",
-    interpolation: str = "area",
+    range: Range = "legal",
+    siting: ChromaSiting = "left",
+    interpolation: Interpolation = "area",
 ) -> cp.ndarray:
     """Pack ``frame`` as contiguous planar Y, Cb, Cr 4:2:0 samples.
 

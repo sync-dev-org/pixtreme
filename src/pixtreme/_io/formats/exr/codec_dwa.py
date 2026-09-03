@@ -1233,6 +1233,152 @@ def _read_exr_dwa_custom_cpu(
     return cast(cp.ndarray, cp.asarray(np.ascontiguousarray(host_output)))
 
 
+_DWA_TRANSFER_GPU_SOURCE = r"""
+#include <cuda_fp16.h>
+
+static __device__ __forceinline__ float pixtreme_dwa_load_linear(
+    const unsigned char* data,
+    const long long offset,
+    const int dtype_code
+) {
+    if (dtype_code == 0) {
+        return __fmul_rn((float)(*(const unsigned char*)(data + offset)), 1.0f / 255.0f);
+    }
+    if (dtype_code == 1) {
+        return __fmul_rn((float)(*(const unsigned short*)(data + offset)), 1.0f / 65535.0f);
+    }
+    if (dtype_code == 2) {
+        return __half2float(*(const __half*)(data + offset));
+    }
+    float value = *(const float*)(data + offset);
+    if (isfinite(value)) {
+        if (value > 65504.0f) value = 65504.0f;
+        else if (value < -65504.0f) value = -65504.0f;
+    }
+    return value;
+}
+
+static __device__ __forceinline__ float pixtreme_dwa_forward_transfer(const float source) {
+    // Explicit RN operations preserve the eager fp32 boundaries before downstream HALF quantization.
+    const float linear = __half2float(__float2half_rn(source));
+    const float magnitude = fabsf(linear);
+    float nonlinear = magnitude <= 1.0f
+        ? powf(magnitude, 0.4545454680919647216796875f)
+        : __fadd_rn(__fdiv_rn(logf(magnitude), 2.2000000476837158203125f), 1.0f);
+    nonlinear = copysignf(nonlinear, linear);
+    if (!isfinite(linear)) nonlinear = 0.0f;
+    return __half2float(__float2half_rn(nonlinear));
+}
+
+extern "C" __global__ void pixtreme_dwa_forward_color(
+    const unsigned char* data,
+    const long long* source_rows,
+    float* output,
+    const long long element_count,
+    const int width,
+    const int padded_width,
+    const int lines_per_chunk,
+    const long long row_stride,
+    const long long column_stride,
+    const long long channel_stride,
+    const int dtype_code,
+    const int input_0,
+    const int input_1,
+    const int input_2,
+    const int component_count
+) {
+    const long long index = (long long)blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= element_count) return;
+    const int padded_x = (int)(index % padded_width);
+    const long long row_slot = index / padded_width;
+    const int local_y = (int)(row_slot % lines_per_chunk);
+    const long long chunk = row_slot / lines_per_chunk;
+    int source_x = padded_x;
+    if (source_x >= width) source_x = width - (source_x - (width - 1));
+    if (source_x < 0) source_x = width - 1;
+    const long long source_y = source_rows[chunk * lines_per_chunk + local_y];
+    const long long pixel_offset = source_y * row_stride + source_x * column_stride;
+    const float first = pixtreme_dwa_forward_transfer(
+        pixtreme_dwa_load_linear(data, pixel_offset + (long long)input_0 * channel_stride, dtype_code)
+    );
+    if (component_count == 1) {
+        output[index] = first;
+        return;
+    }
+    const float second = pixtreme_dwa_forward_transfer(
+        pixtreme_dwa_load_linear(data, pixel_offset + (long long)input_1 * channel_stride, dtype_code)
+    );
+    const float third = pixtreme_dwa_forward_transfer(
+        pixtreme_dwa_load_linear(data, pixel_offset + (long long)input_2 * channel_stride, dtype_code)
+    );
+    // Keep the original CuPy ufunc evaluation order instead of permitting FMA contraction.
+    const float luminance = __fadd_rn(
+        __fadd_rn(__fmul_rn(0.2125999927520751953125f, first), __fmul_rn(0.715200006961822509765625f, second)),
+        __fmul_rn(0.072200000286102294921875f, third)
+    );
+    const float cb = __fadd_rn(
+        __fsub_rn(__fmul_rn(-0.114600002765655517578125f, first), __fmul_rn(0.385399997234344482421875f, second)),
+        __fmul_rn(0.5f, third)
+    );
+    const float cr = __fsub_rn(
+        __fsub_rn(__fmul_rn(0.5f, first), __fmul_rn(0.4541999995708465576171875f, second)),
+        __fmul_rn(0.0458000004291534423828125f, third)
+    );
+    output[index] = luminance;
+    output[element_count + index] = cb;
+    output[2LL * element_count + index] = cr;
+}
+
+extern "C" __global__ void pixtreme_dwa_inverse_color(
+    const float* spatial,
+    const unsigned char* transfer_flags,
+    const long long* csc_groups,
+    const long long* csc_triplets,
+    __half* output,
+    const long long element_count
+) {
+    const long long index = (long long)blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= element_count) return;
+    const long long block = index / 64LL;
+    const int coefficient = (int)(index % 64LL);
+    float nonlinear = spatial[index];
+    const long long group = csc_groups[block];
+    if (group >= 0) {
+        const long long y_block = csc_triplets[group * 3LL];
+        const long long cb_block = csc_triplets[group * 3LL + 1LL];
+        const long long cr_block = csc_triplets[group * 3LL + 2LL];
+        const float y = spatial[y_block * 64LL + coefficient];
+        const float cb = spatial[cb_block * 64LL + coefficient];
+        const float cr = spatial[cr_block * 64LL + coefficient];
+        // Match the eager CSC operation order exactly before the mandatory HALF rounding point.
+        if (block == y_block) {
+            nonlinear = __fadd_rn(y, __fmul_rn(1.57469999790191650390625f, cr));
+        } else if (block == cb_block) {
+            nonlinear = __fsub_rn(
+                __fsub_rn(y, __fmul_rn(0.1872999966144561767578125f, cb)),
+                __fmul_rn(0.4681999981403350830078125f, cr)
+            );
+        } else {
+            nonlinear = __fadd_rn(y, __fmul_rn(1.85559999942779541015625f, cb));
+        }
+    }
+    const __half nonlinear_half = __float2half_rn(nonlinear);
+    if (!transfer_flags[block]) {
+        output[index] = nonlinear_half;
+        return;
+    }
+    const float nonlinear_float = __half2float(nonlinear_half);
+    const float magnitude = fabsf(nonlinear_float);
+    float linear = magnitude <= 1.0f
+        ? powf(magnitude, 2.2000000476837158203125f)
+        : expf(__fmul_rn(2.2000000476837158203125f, __fsub_rn(magnitude, 1.0f)));
+    linear = copysignf(linear, nonlinear_float);
+    if (!isfinite(nonlinear_float)) linear = 0.0f;
+    output[index] = __float2half_rn(linear);
+}
+"""
+
+
 _DWA_WRITE_GPU_SOURCE = r"""
 #include <cuda_fp16.h>
 
@@ -2134,6 +2280,16 @@ extern "C" __global__ void pixtreme_dwa_scatter(
 
 
 @lru_cache(maxsize=1)
+def _dwa_forward_color_kernel() -> cp.RawKernel:
+    return cp.RawKernel(_DWA_TRANSFER_GPU_SOURCE, "pixtreme_dwa_forward_color")
+
+
+@lru_cache(maxsize=1)
+def _dwa_inverse_color_kernel() -> cp.RawKernel:
+    return cp.RawKernel(_DWA_TRANSFER_GPU_SOURCE, "pixtreme_dwa_inverse_color")
+
+
+@lru_cache(maxsize=1)
 def _dwa_huffman_parse_tables_kernel() -> cp.RawKernel:
     return cp.RawKernel(_DWA_GPU_SOURCE, "pixtreme_dwa_huffman_parse_tables")
 
@@ -2374,18 +2530,76 @@ def _dwa_mirror_indices(size: int, padded_size: int) -> cp.ndarray:
     return cp.asarray(indices)
 
 
-def _forward_dwa_transfer_gpu(values: cp.ndarray) -> cp.ndarray:
-    half_values = cp.ascontiguousarray(values, dtype=cp.float16)
-    linear = half_values.astype(cp.float32)
-    magnitude = cp.abs(linear)
-    nonlinear = cp.where(
-        magnitude <= np.float32(1.0),
-        cp.power(magnitude, np.float32(1.0 / 2.2)),
-        cp.log(magnitude) / np.float32(2.2) + np.float32(1.0),
-    )
-    nonlinear = cp.copysign(nonlinear, linear)
-    nonlinear = cp.where(cp.isfinite(linear), nonlinear, np.float32(0.0))
-    return cast(cp.ndarray, nonlinear.astype(cp.float16).astype(cp.float32))
+def _prepare_dwa_lossy_components_gpu(
+    data: cp.ndarray,
+    source_rows: cp.ndarray,
+    input_indices: tuple[int, ...],
+    padded_width: int,
+) -> tuple[cp.ndarray, ...]:
+    dtype_code = {"uint8": 0, "uint16": 1, "float16": 2, "float32": 3}[data.dtype.name]
+    component_count = len(input_indices)
+    if component_count not in (1, 3):
+        raise ValueError(f"DWA lossy units must contain one channel or one RGB triplet, got {component_count}")
+    device_source_rows = cp.ascontiguousarray(source_rows, dtype=cp.int64)
+    chunk_count, lines_per_chunk = (int(value) for value in device_source_rows.shape)
+    element_count = chunk_count * lines_per_chunk * padded_width
+    output = cp.empty((component_count, chunk_count, lines_per_chunk, padded_width), dtype=cp.float32)
+    padded_indices = (*input_indices, -1, -1)[:3]
+    if element_count:
+        _dwa_forward_color_kernel()(
+            ((element_count + _EXR_THREADS_PER_BLOCK - 1) // _EXR_THREADS_PER_BLOCK,),
+            (_EXR_THREADS_PER_BLOCK,),
+            (
+                data,
+                device_source_rows,
+                output,
+                np.int64(element_count),
+                np.int32(data.shape[1]),
+                np.int32(padded_width),
+                np.int32(lines_per_chunk),
+                np.int64(data.strides[0]),
+                np.int64(data.strides[1]),
+                np.int64(data.strides[2]),
+                np.int32(dtype_code),
+                np.int32(padded_indices[0]),
+                np.int32(padded_indices[1]),
+                np.int32(padded_indices[2]),
+                np.int32(component_count),
+            ),
+        )
+    return tuple(output[index] for index in range(component_count))
+
+
+def _reconstruct_dwa_lossy_blocks_gpu(
+    spatial: cp.ndarray,
+    transfer_flags: np.ndarray,
+    csc_triplets: np.ndarray,
+) -> cp.ndarray:
+    contiguous_spatial = cp.ascontiguousarray(spatial, dtype=cp.float32)
+    total_blocks = int(contiguous_spatial.shape[0])
+    host_triplets = np.ascontiguousarray(csc_triplets, dtype=np.int64).reshape(-1, 3)
+    host_groups = np.full(total_blocks, -1, dtype=np.int64)
+    if host_triplets.size:
+        host_groups[host_triplets] = np.arange(host_triplets.shape[0], dtype=np.int64)[:, None]
+    device_transfer_flags = cp.asarray(np.ascontiguousarray(transfer_flags, dtype=np.uint8))
+    device_groups = cp.asarray(host_groups)
+    device_triplets = cp.asarray(host_triplets.reshape(-1))
+    output = cp.empty(contiguous_spatial.shape, dtype=cp.float16)
+    element_count = int(output.size)
+    if element_count:
+        _dwa_inverse_color_kernel()(
+            ((element_count + _EXR_THREADS_PER_BLOCK - 1) // _EXR_THREADS_PER_BLOCK,),
+            (_EXR_THREADS_PER_BLOCK,),
+            (
+                contiguous_spatial,
+                device_transfer_flags,
+                device_groups,
+                device_triplets,
+                output,
+                np.int64(element_count),
+            ),
+        )
+    return output.view(cp.uint16).reshape(-1)
 
 
 def _dwa_channel_rules_bytes(channels: Sequence[_ExrChannel]) -> bytes:
@@ -2477,37 +2691,21 @@ def _prepare_dwa_write_streams(
     block_rows_per_chunk = lines_per_chunk // 8
     blocks_per_chunk = block_rows_per_chunk * block_columns
     padded_width = block_columns * 8
-    x_indices = _dwa_mirror_indices(width, padded_width)
     zigzag_destination = cp.asarray(_DWA_NATURAL_TO_ZIGZAG)
     block_counts = tuple(((row_count + 7) // 8) * block_columns for row_count in row_counts)
     valid_blocks = cp.arange(blocks_per_chunk, dtype=cp.int64)[None, :] < cp.asarray(block_counts)[:, None]
-    batched_data = data[device_source_rows]
     ac_fixed_parts: list[cp.ndarray] = []
     ac_mask_parts: list[cp.ndarray] = []
     dc_fixed_parts: list[cp.ndarray] = []
     dc_mask_parts: list[cp.ndarray] = []
     lossy_units = _dwa_lossy_units(channels, layout)
     for unit in lossy_units:
-        components: list[cp.ndarray] = []
-        for channel in unit:
-            values = batched_data[..., input_indices[channel.name]]
-            if data.dtype.name == "uint8":
-                values = values.astype(cp.float32) * np.float32(1.0 / 255.0)
-            elif data.dtype.name == "uint16":
-                values = values.astype(cp.float32) * np.float32(1.0 / 65535.0)
-            elif data.dtype.name == "float32":
-                maximum = np.float32(65504.0)
-                values = cp.where(cp.isfinite(values), cp.clip(values, -maximum, maximum), values)
-            half_plane = values.astype(cp.float16)
-            nonlinear = _forward_dwa_transfer_gpu(half_plane)
-            components.append(nonlinear[:, :, x_indices])
-        if len(components) == 3:
-            red, green, blue = components
-            components = [
-                np.float32(0.2126) * red + np.float32(0.7152) * green + np.float32(0.0722) * blue,
-                np.float32(-0.1146) * red - np.float32(0.3854) * green + np.float32(0.5) * blue,
-                np.float32(0.5) * red - np.float32(0.4542) * green - np.float32(0.0458) * blue,
-            ]
+        components = _prepare_dwa_lossy_components_gpu(
+            data,
+            device_source_rows,
+            tuple(input_indices[channel.name] for channel in unit),
+            padded_width,
+        )
 
         unit_zigzag: list[cp.ndarray] = []
         for component_index, component in enumerate(components):
@@ -3135,30 +3333,7 @@ def _read_exr_dwa_gpu(
         )
         basis = cp.asarray(_DWA_INVERSE_BASIS_HOST)
         spatial = cp.matmul(cp.matmul(basis, coefficients), basis.T)
-        if csc_triplets.size:
-            triplets = cp.asarray(csc_triplets)
-            y_plane = spatial[triplets[:, 0]].copy()
-            cb_plane = spatial[triplets[:, 1]].copy()
-            cr_plane = spatial[triplets[:, 2]].copy()
-            spatial[triplets[:, 0]] = y_plane + cp.float32(1.5747) * cr_plane
-            spatial[triplets[:, 1]] = y_plane - cp.float32(0.1873) * cb_plane - cp.float32(0.4682) * cr_plane
-            spatial[triplets[:, 2]] = y_plane + cp.float32(1.8556) * cb_plane
-        nonlinear = spatial.astype(cp.float16)
-        nonlinear_float = nonlinear.astype(cp.float32)
-        magnitude = cp.abs(nonlinear_float)
-        linear = cp.where(
-            magnitude <= cp.float32(1.0),
-            cp.power(magnitude, cp.float32(2.2)),
-            cp.exp(cp.float32(2.2) * (magnitude - cp.float32(1.0))),
-        )
-        linear = cp.copysign(linear, nonlinear_float)
-        linear = cp.where(cp.isfinite(nonlinear_float), linear, cp.float32(0.0))
-        reconstructed = cp.where(
-            cp.asarray(transfer_flags)[:, None, None],
-            linear.astype(cp.float16),
-            nonlinear,
-        )
-        lossy_blocks = cp.ascontiguousarray(reconstructed).view(cp.uint16).reshape(-1)
+        lossy_blocks = _reconstruct_dwa_lossy_blocks_gpu(spatial, transfer_flags, csc_triplets)
     else:
         lossy_blocks = cp.empty(1, dtype=cp.uint16)
 

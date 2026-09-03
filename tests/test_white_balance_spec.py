@@ -16,10 +16,10 @@ import pytest
 import pixtreme as px
 
 _CAT_ORACLE_NAMES = {
-    "bradford": "Bradford",
-    "cat02": "CAT02",
-    "cat16": "CAT16",
-    "von-kries": "Von Kries",
+    "Bradford": "Bradford",
+    "CAT02": "CAT02",
+    "CAT16": "CAT16",
+    "von-Kries": "Von Kries",
 }
 
 # Adobe DNG SDK 1.7.1 dng_temperature.cpp kTempTable. The 325-mired
@@ -151,7 +151,7 @@ def test_public_surface_signatures_alias_counts_and_docs_are_synchronized() -> N
     """v1-white-balance acceptance 1; v1-white-point-simulation acceptance 1:
     API, Literal, operation counts, requirements, and token docs agree.
     """
-    expected_tokens = ("bradford", "cat02", "cat16", "von-kries")
+    expected_tokens = ("Bradford", "CAT02", "CAT16", "von-Kries")
     assert get_args(px.core.ChromaticAdaptation) == expected_tokens
     assert px.color.__all__[-3:-1] == ("chromatic_adaptation", "white_balance")
     assert len(px.color.__all__) == 15
@@ -165,7 +165,7 @@ def test_public_surface_signatures_alias_counts_and_docs_are_synchronized() -> N
     )
     assert chromatic_signature.parameters["input_white"].default is inspect.Parameter.empty
     assert chromatic_signature.parameters["output_white"].default is inspect.Parameter.empty
-    assert chromatic_signature.parameters["cat"].default == "cat02"
+    assert chromatic_signature.parameters["cat"].default == "CAT02"
 
     balance_signature = inspect.signature(px.color.white_balance)
     assert tuple(balance_signature.parameters) == ("frame", "temperature", "tint", "cat")
@@ -176,7 +176,7 @@ def test_public_surface_signatures_alias_counts_and_docs_are_synchronized() -> N
     )
     assert balance_signature.parameters["temperature"].default is inspect.Parameter.empty
     assert balance_signature.parameters["tint"].default == 0.0
-    assert balance_signature.parameters["cat"].default == "cat02"
+    assert balance_signature.parameters["cat"].default == "CAT02"
 
     root = Path(__file__).resolve().parents[1]
     requirements = (root / "docs" / "requirements.md").read_text(encoding="utf-8")
@@ -238,7 +238,7 @@ def test_default_cat_is_cat02_and_cat_tokens_remain_distinct() -> None:
     source = _frame((0.31, 0.47, 0.82))
     kwargs = {"input_white": (0.34567, 0.35850), "output_white": (0.31270, 0.32900)}
     default = px.color.chromatic_adaptation(source, **kwargs)
-    explicit = px.color.chromatic_adaptation(source, cat="cat02", **kwargs)
+    explicit = px.color.chromatic_adaptation(source, cat="CAT02", **kwargs)
     assert np.array_equal(px.io.to_array(default).get(), px.io.to_array(explicit).get())
     outputs = {
         token: px.io.to_array(px.color.chromatic_adaptation(source, cat=token, **kwargs)).get().tobytes()
@@ -250,15 +250,15 @@ def test_default_cat_is_cat02_and_cat_tokens_remain_distinct() -> None:
 @pytest.mark.parametrize(
     ("input_white", "output_white", "cat"),
     (
-        ((0.3,), (0.3127, 0.3290), "cat02"),
-        ((0.3, 0.3, 0.4), (0.3127, 0.3290), "cat02"),
-        ((True, 0.3), (0.3127, 0.3290), "cat02"),
-        (("0.3", 0.3), (0.3127, 0.3290), "cat02"),
-        ((math.nan, 0.3), (0.3127, 0.3290), "cat02"),
-        ((math.inf, 0.3), (0.3127, 0.3290), "cat02"),
-        ((0.0, 0.3), (0.3127, 0.3290), "cat02"),
-        ((0.3, 0.0), (0.3127, 0.3290), "cat02"),
-        ((0.6, 0.4), (0.3127, 0.3290), "cat02"),
+        ((0.3,), (0.3127, 0.3290), "CAT02"),
+        ((0.3, 0.3, 0.4), (0.3127, 0.3290), "CAT02"),
+        ((True, 0.3), (0.3127, 0.3290), "CAT02"),
+        (("0.3", 0.3), (0.3127, 0.3290), "CAT02"),
+        ((math.nan, 0.3), (0.3127, 0.3290), "CAT02"),
+        ((math.inf, 0.3), (0.3127, 0.3290), "CAT02"),
+        ((0.0, 0.3), (0.3127, 0.3290), "CAT02"),
+        ((0.3, 0.0), (0.3127, 0.3290), "CAT02"),
+        ((0.6, 0.4), (0.3127, 0.3290), "CAT02"),
         ((0.3, 0.3), (0.3127, 0.3290), "CAT02"),
         ((0.3, 0.3), (0.3127, 0.3290), None),
     ),
@@ -296,7 +296,7 @@ def test_chromatic_adaptation_rejects_numerically_zero_cat_response() -> None:
             _frame((0.2, 0.3, 0.4)),
             input_white=(float(x), float(y)),
             output_white=(0.3127, 0.3290),
-            cat="cat02",
+            cat="CAT02",
         )
     _assert_actionable(error)
 
@@ -340,7 +340,7 @@ def test_adaptation_is_one_pass_label_driven_private_and_metadata_preserving(mon
         [[[-0.25, 0.60, 17.0, 0.15, 1.40, -3.0], [1.25, -0.10, 23.0, 0.70, 0.05, 8.0]]],
         dtype=np.float32,
     )
-    source = _frame(values, gamma="srgb", channels=("A", "B", "custom", "R", "G", "Z"))
+    source = _frame(values, gamma="sRGB", channels=("A", "B", "custom", "R", "G", "Z"))
     source_snapshot = source.data.copy()
     metadata_snapshot = (source.colorspace, source.gamma, source.channels, source.matrix)
     original_transform = implementation._transform_data
@@ -356,7 +356,7 @@ def test_adaptation_is_one_pass_label_driven_private_and_metadata_preserving(mon
         source,
         input_white=(0.34567, 0.35850),
         output_white=(0.31270, 0.32900),
-        cat="cat16",
+        cat="CAT16",
     )
 
     assert calls == 1
@@ -395,7 +395,7 @@ def test_equal_white_points_return_bit_preserving_private_copy(cat: str) -> None
     assert output.matrix is None
 
 
-@pytest.mark.parametrize("gamma", ("linear", "srgb"))
+@pytest.mark.parametrize("gamma", ("linear", "sRGB"))
 def test_scene_values_match_independent_host_matrix_and_reverse_round_trip(gamma: str) -> None:
     """v1-white-balance acceptance 7: scene values match an independent host oracle without clipping and round-trip."""
     matrix_chromatic_adaptation_VonKries = _import_colour_oracle().adaptation.matrix_chromatic_adaptation_VonKries
@@ -406,7 +406,7 @@ def test_scene_values_match_independent_host_matrix_and_reverse_round_trip(gamma
         [[[-0.20, 0.35, 1.40], [1.75, 0.08, 0.60], [0.04, 1.20, 0.22]]],
         dtype=np.float32,
     )
-    encoded_values = _encode_srgb(values.astype(np.float64)).astype(np.float32) if gamma == "srgb" else values
+    encoded_values = _encode_srgb(values.astype(np.float64)).astype(np.float32) if gamma == "sRGB" else values
     source = _frame(encoded_values, gamma=gamma)
 
     cat_matrix = matrix_chromatic_adaptation_VonKries(
@@ -415,16 +415,16 @@ def test_scene_values_match_independent_host_matrix_and_reverse_round_trip(gamma
         transform="CAT02",
     )
     rgb_matrix = np.linalg.inv(_SRGB_RGB_TO_XYZ) @ cat_matrix @ _SRGB_RGB_TO_XYZ
-    decoded = _decode_srgb(encoded_values.astype(np.float64)) if gamma == "srgb" else encoded_values.astype(np.float64)
+    decoded = _decode_srgb(encoded_values.astype(np.float64)) if gamma == "sRGB" else encoded_values.astype(np.float64)
     linear_expected = np.einsum("ij,...j->...i", rgb_matrix, decoded)
-    expected = _encode_srgb(linear_expected) if gamma == "srgb" else linear_expected
+    expected = _encode_srgb(linear_expected) if gamma == "sRGB" else linear_expected
 
     actual = px.color.chromatic_adaptation(
         source,
         input_white=input_white,
         output_white=output_white,
     )
-    tolerance = 8e-5 if gamma == "srgb" else 1e-5
+    tolerance = 8e-5 if gamma == "sRGB" else 1e-5
     np.testing.assert_allclose(px.io.to_array(actual).get(), expected, rtol=tolerance, atol=tolerance)
     assert np.min(px.io.to_array(actual).get()) < 0.0
     assert np.max(px.io.to_array(actual).get()) > 1.0
@@ -495,14 +495,14 @@ def test_tint_is_signed_raw_duv_with_positive_green_side() -> None:
 
 @pytest.mark.parametrize(
     ("temperature", "tint", "cat"),
-    ((2800.0, -0.008, "bradford"), (6500.0, 0.0, "cat02"), (12000.0, 0.011, "von-kries")),
+    ((2800.0, -0.008, "Bradford"), (6500.0, 0.0, "CAT02"), (12000.0, 0.011, "von-Kries")),
 )
 def test_white_balance_is_bit_identical_to_explicit_low_level_call(temperature: float, tint: float, cat: str) -> None:
     """v1-white-balance acceptance 10: convenience mapping executes the same low-level input/output/CAT kernel."""
     source = _frame(
         np.asarray([[[-0.1, 0.4, 1.2], [0.7, 0.2, 0.05]]], dtype=np.float32),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
     )
     input_white = _independent_temperature_to_xy(temperature, tint)
     direct = px.color.chromatic_adaptation(
@@ -537,10 +537,10 @@ def test_calls_are_bit_deterministic_across_order_and_environment(monkeypatch: p
         colorspace="ACEScg",
         gamma="linear",
     )
-    kwargs = {"temperature": 7312.5, "tint": -0.00625, "cat": "von-kries"}
+    kwargs = {"temperature": 7312.5, "tint": -0.00625, "cat": "von-Kries"}
     first = px.io.to_array(px.color.white_balance(source, **kwargs)).get().tobytes()
     monkeypatch.setenv("PIXTREME_WHITE_BALANCE_TEST_SENTINEL", "must-not-be-read")
-    px.color.white_balance(source, temperature=2400.0, tint=0.015, cat="bradford")
+    px.color.white_balance(source, temperature=2400.0, tint=0.015, cat="Bradford")
     second = px.io.to_array(px.color.white_balance(source, **kwargs)).get().tobytes()
     assert first == second
 
@@ -551,7 +551,7 @@ def test_adaptation_host_memoization_is_bounded_lru_and_recomputes_bit_exactly()
 
     cached = implementation._compose_adaptation_rgb_matrix
     cached.cache_clear()
-    key = ("sRGB", (0.3127, 0.3290), (0.3457, 0.3585), "cat02")
+    key = ("sRGB", (0.3127, 0.3290), (0.3457, 0.3585), "CAT02")
     cold = cached(*key).tobytes()
     assert cached.cache_info().maxsize == 128
     assert cached(*key).tobytes() == cold
@@ -559,7 +559,7 @@ def test_adaptation_host_memoization_is_bounded_lru_and_recomputes_bit_exactly()
 
     for index in range(128):
         input_white = (float(np.float64(0.29) + np.float64(index) * np.float64(1e-5)), 0.33)
-        cached("sRGB", input_white, (0.3457, 0.3585), "cat02")
+        cached("sRGB", input_white, (0.3457, 0.3585), "CAT02")
 
     assert cached.cache_info().currsize == 128
     misses_before_revisit = cached.cache_info().misses
@@ -575,9 +575,9 @@ def test_adaptation_memoization_identity_uses_every_resolved_binary64_value() ->
     cached = implementation._compose_adaptation_rgb_matrix
     cached.cache_clear()
     source = _frame((0.2, 0.3, 0.4), colorspace="sRGB")
-    px.color.chromatic_adaptation(source, input_white="d65", output_white="d50", cat="cat02")
+    px.color.chromatic_adaptation(source, input_white="D65", output_white="D50", cat="CAT02")
     token_stats = cached.cache_info()
-    px.color.chromatic_adaptation(source, input_white=(0.3127, 0.3290), output_white=(0.3457, 0.3585), cat="cat02")
+    px.color.chromatic_adaptation(source, input_white=(0.3127, 0.3290), output_white=(0.3457, 0.3585), cat="CAT02")
     direct_stats = cached.cache_info()
     assert direct_stats.hits == token_stats.hits + 1
     assert direct_stats.misses == token_stats.misses
@@ -585,28 +585,28 @@ def test_adaptation_memoization_identity_uses_every_resolved_binary64_value() ->
     temperature = 7312.5
     tint = -0.00625
     resolved_input = implementation._temperature_to_xy(temperature, tint)
-    px.color.white_balance(source, temperature=temperature, tint=tint, cat="von-kries")
+    px.color.white_balance(source, temperature=temperature, tint=tint, cat="von-Kries")
     balance_stats = cached.cache_info()
     px.color.chromatic_adaptation(
         source,
         input_white=resolved_input,
-        output_white="d65",
-        cat="von-kries",
+        output_white="D65",
+        cat="von-Kries",
     )
     assert cached.cache_info().hits == balance_stats.hits + 1
 
     input_white = (0.3127, 0.3290)
     output_white = (0.3457, 0.3585)
     cached.cache_clear()
-    cached("sRGB", input_white, output_white, "cat02")
+    cached("sRGB", input_white, output_white, "CAT02")
     misses = cached.cache_info().misses
     variants = (
-        ("ACEScg", input_white, output_white, "cat02"),
-        ("sRGB", (float(np.nextafter(input_white[0], np.inf)), input_white[1]), output_white, "cat02"),
-        ("sRGB", (input_white[0], float(np.nextafter(input_white[1], np.inf))), output_white, "cat02"),
-        ("sRGB", input_white, (float(np.nextafter(output_white[0], np.inf)), output_white[1]), "cat02"),
-        ("sRGB", input_white, (output_white[0], float(np.nextafter(output_white[1], np.inf))), "cat02"),
-        ("sRGB", input_white, output_white, "cat16"),
+        ("ACEScg", input_white, output_white, "CAT02"),
+        ("sRGB", (float(np.nextafter(input_white[0], np.inf)), input_white[1]), output_white, "CAT02"),
+        ("sRGB", (input_white[0], float(np.nextafter(input_white[1], np.inf))), output_white, "CAT02"),
+        ("sRGB", input_white, (float(np.nextafter(output_white[0], np.inf)), output_white[1]), "CAT02"),
+        ("sRGB", input_white, (output_white[0], float(np.nextafter(output_white[1], np.inf))), "CAT02"),
+        ("sRGB", input_white, output_white, "CAT16"),
     )
     for variant in variants:
         cached(*variant)
@@ -628,7 +628,7 @@ def test_adaptation_cache_states_and_uncached_composition_are_publicly_bit_ident
     )
     temperature = 7312.5
     tint = -0.00625
-    cat = "von-kries"
+    cat = "von-Kries"
     input_white = implementation._temperature_to_xy(temperature, tint)
     output_white = (0.32168, 0.33767)
 
@@ -655,7 +655,7 @@ def test_adaptation_cache_states_and_uncached_composition_are_publicly_bit_ident
     hit = balance_bits()
     direct = direct_bits()
     monkeypatch.setenv("PIXTREME_WHITE_BALANCE_CACHE_SENTINEL", "ignored")
-    px.color.chromatic_adaptation(source, input_white="d50", output_white="aces", cat="bradford")
+    px.color.chromatic_adaptation(source, input_white="D50", output_white="ACES", cat="Bradford")
     interposed = balance_bits()
     for index in range(128):
         other_input = (float(np.float64(0.29) + np.float64(index) * np.float64(1e-5)), 0.33)

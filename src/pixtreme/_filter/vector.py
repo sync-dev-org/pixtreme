@@ -10,7 +10,8 @@ import numpy as np
 from pixtreme._core.border import _border_argument, _resolve_border
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame, _new_frame, _validate_float32_frame
-from pixtreme._core.vocabulary import _VECTOR_BLUR_SHUTTER_TOKENS
+from pixtreme._core.validation import _normalized_closed_token
+from pixtreme._core.vocabulary import _VECTOR_BLUR_SHUTTER_TOKENS, Border, VectorBlurShutter
 from pixtreme._filter.directional_radial import _PATH_BLUR_PREAMBLE, _RAW_KERNEL_BLOCK
 
 _SHUTTER_TOKENS = _VECTOR_BLUR_SHUTTER_TOKENS
@@ -249,23 +250,15 @@ def _validate_vector(vector: object, *, frame: Frame) -> Frame:
 
 
 def _validate_shutter(shutter: object) -> str:
-    if shutter not in _SHUTTER_TOKENS:
-        raise ValueError(
-            _actionable_error(
-                why="shutter is a closed, case-sensitive token axis",
-                what=f"received shutter={shutter!r}",
-                how=f"pass one of {_SHUTTER_TOKENS!r}",
-            )
-        )
-    return str(shutter)
+    return _normalized_closed_token(shutter, axis="shutter", accepted=_SHUTTER_TOKENS)
 
 
 def vector_blur(
     frame: Frame,
     *,
     vector: Frame,
-    shutter: str = "centered",
-    border: str = "mirror",
+    shutter: VectorBlurShutter = "centered",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Average a per-pixel straight line selected by one gather vector.

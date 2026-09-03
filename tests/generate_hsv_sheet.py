@@ -93,11 +93,11 @@ def _color_wheel() -> px.core.Frame:
 
 
 def _display(frame: px.core.Frame) -> px.core.Frame:
-    converted = px.color.rgb_to_rgb(frame, output_colorspace="sRGB", output_gamma="srgb")
+    converted = px.color.rgb_to_rgb(frame, output_colorspace="sRGB", output_gamma="sRGB")
     return px.io.from_array(
         cp.clip(converted.data, np.float32(0.0), np.float32(1.0)),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
     )
 
@@ -106,12 +106,12 @@ def _plane(hsv: px.core.Frame, label: str, *, scale: float = 1.0) -> px.core.Fra
     index = hsv.channels.index(label)
     values = cp.clip(hsv.data[..., index] * np.float32(scale), np.float32(0.0), np.float32(1.0))
     rgb = cp.repeat(values[..., None], 3, axis=2)
-    return px.io.from_array(rgb, colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(rgb, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def _error_view(source: px.core.Frame, restored: px.core.Frame) -> px.core.Frame:
     error = cp.clip(cp.abs(restored.data - source.data) * _ERROR_GAIN, np.float32(0.0), np.float32(1.0))
-    return px.io.from_array(error, colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(error, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def _panel(frame: px.core.Frame, label: str) -> px.core.Frame:
@@ -120,7 +120,7 @@ def _panel(frame: px.core.Frame, label: str) -> px.core.Frame:
     bar = px.io.from_array(
         cp.full((_LABEL_HEIGHT, _WIDTH, 3), np.float32(0.015), dtype=cp.float32),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
     )
     bar = px.draw.text(
@@ -166,7 +166,7 @@ def generate_sheet(path: Path) -> None:
     )
     sheet = px.transform.stack((diagnostic_row, round_trip_row), direction="vertical")
     code = cp.rint(cp.clip(sheet.data, np.float32(0.0), np.float32(1.0)) * np.float32(255.0)).astype(cp.uint8)
-    output = px.io.from_array(code, colorspace="sRGB", gamma="srgb", channels="RGB")
+    output = px.io.from_array(code, colorspace="sRGB", gamma="sRGB", channels="RGB")
     path.parent.mkdir(parents=True, exist_ok=True)
     px.io.write_image(path, output, compression_level=6)
 

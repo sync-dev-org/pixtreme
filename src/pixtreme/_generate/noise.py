@@ -11,6 +11,7 @@ import numpy as np
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame
 from pixtreme._core.validation import _bounded_real, _finite_real, _positive_real, _strict_bool
+from pixtreme._core.vocabulary import Colorspace, Gamma
 from pixtreme._generate.patterns import _dimension, _metadata
 
 _NOISE_BLOCK = (16, 16)
@@ -609,8 +610,8 @@ def _generate_gradient_noise(
     gain: float,
     seed: int,
     evolution: float,
-    colorspace: str,
-    gamma: str,
+    colorspace: Colorspace,
+    gamma: Gamma,
     turbulent: bool,
 ) -> Frame:
     output = cp.empty((height, width, 1), dtype=cp.float32)
@@ -648,8 +649,8 @@ def fractal_noise(
     gain: float = 0.5,
     seed: int | None = 0,
     evolution: float = 0.0,
-    colorspace: str,
-    gamma: str = "linear",
+    colorspace: Colorspace,
+    gamma: Gamma = "linear",
 ) -> Frame:
     """Generate normalized fractal gradient noise on the GPU.
 
@@ -711,8 +712,8 @@ def turbulent_noise(
     gain: float = 0.5,
     seed: int | None = 0,
     evolution: float = 0.0,
-    colorspace: str,
-    gamma: str = "linear",
+    colorspace: Colorspace,
+    gamma: Gamma = "linear",
 ) -> Frame:
     """Generate normalized absolute-value turbulent gradient noise on the GPU.
 
@@ -773,8 +774,8 @@ def grain(
     monochromatic: bool = True,
     seed: int | None = 0,
     evolution: float = 0.0,
-    colorspace: str,
-    gamma: str = "linear",
+    colorspace: Colorspace,
+    gamma: Gamma = "linear",
 ) -> Frame:
     """Generate Gaussian grain with continuous spatial and evolution interpolation.
 

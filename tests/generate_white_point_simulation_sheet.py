@@ -37,20 +37,20 @@ def _source() -> px.core.Frame:
         data[top:bottom, left:right] = cp.asarray(rgb, dtype=cp.float32)
     data[140:172, 16:120] = cp.asarray((1.9, 1.4, 1.1), dtype=cp.float32)
     data[140:172, 136:240] = cp.asarray((-0.25, 0.05, -0.15), dtype=cp.float32)
-    return px.io.from_array(data, colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(data, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def _display(frame: px.core.Frame) -> px.core.Frame:
-    display = px.color.rgb_to_rgb(frame, output_colorspace="sRGB", output_gamma="srgb")
+    display = px.color.rgb_to_rgb(frame, output_colorspace="sRGB", output_gamma="sRGB")
     data = cp.clip(display.data, np.float32(0.0), np.float32(1.0))
-    return px.io.from_array(data, colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(data, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def _label(frame: px.core.Frame, text: str) -> px.core.Frame:
     bar = px.io.from_array(
         cp.full((_LABEL_HEIGHT, _WIDTH, 3), np.float32(0.015), dtype=cp.float32),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
     )
     bar = px.draw.text(
@@ -70,15 +70,15 @@ def generate_sheet(path: Path) -> None:
     variants = (
         (source, "INPUT / explicit sRGB display transform"),
         (
-            px.color.white_point_simulation(source, input_white="d65", output_white="d93"),
+            px.color.white_point_simulation(source, input_white="D65", output_white="D93"),
             "TOKEN d65 -> d93",
         ),
         (
-            px.color.white_point_simulation(source, input_white="d93", output_white="d65"),
+            px.color.white_point_simulation(source, input_white="D93", output_white="D65"),
             "TOKEN d93 -> d65",
         ),
         (
-            px.color.white_point_simulation(source, input_white="d65", output_white=(0.3127, 0.3290)),
+            px.color.white_point_simulation(source, input_white="D65", output_white=(0.3127, 0.3290)),
             "IDENTITY token d65 -> xy D65",
         ),
         (
@@ -93,7 +93,7 @@ def generate_sheet(path: Path) -> None:
     panels = tuple(_label(_display(frame), label) for frame, label in variants)
     sheet = px.transform.stack(panels, direction="horizontal")
     code = cp.rint(cp.clip(sheet.data, 0.0, 1.0) * np.float32(255.0)).astype(cp.uint8)
-    output = px.io.from_array(code, colorspace="sRGB", gamma="srgb", channels="RGB")
+    output = px.io.from_array(code, colorspace="sRGB", gamma="sRGB", channels="RGB")
     path.parent.mkdir(parents=True, exist_ok=True)
     px.io.write_image(path, output, compression_level=6)
 

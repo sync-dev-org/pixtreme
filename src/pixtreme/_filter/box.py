@@ -8,6 +8,7 @@ import cupy as cp
 
 from pixtreme._core.border import _resolve_border
 from pixtreme._core.frame import Frame, _new_frame, _validate_float32_frame
+from pixtreme._core.vocabulary import Border
 from pixtreme._filter.common import (
     _SEPARABLE_KERNEL_SOURCE,
     _launch_box_axis,
@@ -41,7 +42,7 @@ def _convolve_box(
     height: int,
     width: int,
     normalize: bool,
-    border: str,
+    border: Border,
     border_value: float,
 ) -> Frame:
     output = cp.empty(frame.shape, dtype=cp.float32)
@@ -89,7 +90,7 @@ def box_blur(
     frame: Frame,
     *,
     size: int,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Replace each channel value with its square-window mean.

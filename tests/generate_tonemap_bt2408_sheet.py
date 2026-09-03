@@ -16,7 +16,7 @@ _LABEL_HEIGHT = 38
 
 
 def _gain(output_gamma: str) -> np.float32:
-    if output_gamma == "pq":
+    if output_gamma == "PQ":
         return np.float32(np.float64(203) / np.float64(10000))
     a = np.float64(0.17883277)
     b = np.float64(1) - np.float64(4) * a
@@ -69,7 +69,7 @@ def _raw_signal(frame: px.core.Frame) -> px.core.Frame:
     return px.io.from_array(
         cp.clip(frame.data, np.float32(0.0), np.float32(1.0)),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
     )
 
@@ -85,11 +85,11 @@ def _white_normalized_linear(frame: px.core.Frame, *, scale: np.float32) -> px.c
 
 
 def _preview(frame: px.core.Frame) -> px.core.Frame:
-    display = px.color.rgb_to_rgb(frame, output_colorspace="sRGB", output_gamma="srgb")
+    display = px.color.rgb_to_rgb(frame, output_colorspace="sRGB", output_gamma="sRGB")
     return px.io.from_array(
         cp.clip(display.data, np.float32(0.0), np.float32(1.0)),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
     )
 
@@ -101,7 +101,7 @@ def _range_diagnostic(frame: px.core.Frame) -> px.core.Frame:
     diagnostic[..., 0] = cp.clip(-minimum * np.float32(4.0), np.float32(0.0), np.float32(1.0))
     diagnostic[..., 1] = cp.clip(cp.mean(frame.data, axis=2), np.float32(0.0), np.float32(1.0))
     diagnostic[..., 2] = cp.clip(maximum - np.float32(1.0), np.float32(0.0), np.float32(1.0))
-    return px.io.from_array(diagnostic, colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(diagnostic, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def _panel(frame: px.core.Frame, label: str, *, measured: px.core.Frame) -> px.core.Frame:
@@ -110,7 +110,7 @@ def _panel(frame: px.core.Frame, label: str, *, measured: px.core.Frame) -> px.c
     bar = px.io.from_array(
         cp.full((_LABEL_HEIGHT, _WIDTH, 3), np.float32(0.015), dtype=cp.float32),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
     )
     bar = px.draw.text(
@@ -128,32 +128,32 @@ def _panel(frame: px.core.Frame, label: str, *, measured: px.core.Frame) -> px.c
 
 def generate_sheet(path: Path) -> None:
     source = _source()
-    hlg_none = px.color.rgb_to_rgb(source, output_colorspace="Rec.2020", output_gamma="hlg")
+    hlg_none = px.color.rgb_to_rgb(source, output_colorspace="Rec.2020", output_gamma="HLG")
     hlg_bt2408 = px.color.rgb_to_rgb(
         source,
         output_colorspace="Rec.2020",
-        output_gamma="hlg",
-        tonemap="bt2408",
+        output_gamma="HLG",
+        tonemap="BT.2408",
     )
-    pq_none = px.color.rgb_to_rgb(source, output_colorspace="Rec.2020", output_gamma="pq")
+    pq_none = px.color.rgb_to_rgb(source, output_colorspace="Rec.2020", output_gamma="PQ")
     pq_bt2408 = px.color.rgb_to_rgb(
         source,
         output_colorspace="Rec.2020",
-        output_gamma="pq",
-        tonemap="bt2408",
+        output_gamma="PQ",
+        tonemap="BT.2408",
     )
 
     hlg_none_linear = _white_normalized_linear(hlg_none, scale=np.float32(1.0))
-    hlg_bt2408_normalized = _white_normalized_linear(hlg_bt2408, scale=np.float32(1.0) / _gain("hlg"))
+    hlg_bt2408_normalized = _white_normalized_linear(hlg_bt2408, scale=np.float32(1.0) / _gain("HLG"))
     pq_none_linear = _white_normalized_linear(pq_none, scale=np.float32(1.0))
-    pq_bt2408_normalized = _white_normalized_linear(pq_bt2408, scale=np.float32(1.0) / _gain("pq"))
+    pq_bt2408_normalized = _white_normalized_linear(pq_bt2408, scale=np.float32(1.0) / _gain("PQ"))
 
     raw_row = px.transform.stack(
         (
             _panel(_raw_signal(hlg_none), "HLG NONE / raw signal", measured=hlg_none),
-            _panel(_raw_signal(hlg_bt2408), "HLG BT2408 / white = 0.75", measured=hlg_bt2408),
+            _panel(_raw_signal(hlg_bt2408), "HLG BT.2408 / white = 0.75", measured=hlg_bt2408),
             _panel(_raw_signal(pq_none), "PQ NONE / raw signal", measured=pq_none),
-            _panel(_raw_signal(pq_bt2408), "PQ BT2408 / white = ST2084(203)", measured=pq_bt2408),
+            _panel(_raw_signal(pq_bt2408), "PQ BT.2408 / white = ST2084(203)", measured=pq_bt2408),
         ),
         direction="horizontal",
     )
@@ -162,13 +162,13 @@ def generate_sheet(path: Path) -> None:
             _panel(_preview(hlg_none_linear), "HLG NONE / SDR preview", measured=hlg_none_linear),
             _panel(
                 _preview(hlg_bt2408_normalized),
-                "HLG BT2408 / divide by G_HLG",
+                "HLG BT.2408 / divide by G_HLG",
                 measured=hlg_bt2408_normalized,
             ),
             _panel(_preview(pq_none_linear), "PQ NONE / SDR preview", measured=pq_none_linear),
             _panel(
                 _preview(pq_bt2408_normalized),
-                "PQ BT2408 / divide by 203/10000",
+                "PQ BT.2408 / divide by 203/10000",
                 measured=pq_bt2408_normalized,
             ),
         ),
@@ -179,13 +179,13 @@ def generate_sheet(path: Path) -> None:
             _panel(_range_diagnostic(hlg_none_linear), "HLG NONE / red<0 blue>1", measured=hlg_none_linear),
             _panel(
                 _range_diagnostic(hlg_bt2408_normalized),
-                "HLG BT2408 normalized / red<0 blue>1",
+                "HLG BT.2408 normalized / red<0 blue>1",
                 measured=hlg_bt2408_normalized,
             ),
             _panel(_range_diagnostic(pq_none_linear), "PQ NONE / red<0 blue>1", measured=pq_none_linear),
             _panel(
                 _range_diagnostic(pq_bt2408_normalized),
-                "PQ BT2408 normalized / red<0 blue>1",
+                "PQ BT.2408 normalized / red<0 blue>1",
                 measured=pq_bt2408_normalized,
             ),
         ),
@@ -193,7 +193,7 @@ def generate_sheet(path: Path) -> None:
     )
     sheet = px.transform.stack((raw_row, preview_row, diagnostic_row), direction="vertical")
     code = cp.rint(cp.clip(sheet.data, np.float32(0.0), np.float32(1.0)) * np.float32(255.0)).astype(cp.uint8)
-    output = px.io.from_array(code, colorspace="sRGB", gamma="srgb", channels="RGB")
+    output = px.io.from_array(code, colorspace="sRGB", gamma="sRGB", channels="RGB")
     path.parent.mkdir(parents=True, exist_ok=True)
     px.io.write_image(path, output, compression_level=6)
 

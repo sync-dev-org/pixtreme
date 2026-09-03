@@ -12,7 +12,7 @@ import pytest
 
 import pixtreme as px
 
-MATRIX_TOKENS = ("bt601", "bt709", "bt2020", "native")
+MATRIX_TOKENS = ("BT.601", "BT.709", "BT.2020", "native")
 
 _COLORSPACE_XY = {
     "sRGB": (((0.640, 0.330), (0.300, 0.600), (0.150, 0.060)), (0.3127, 0.3290)),
@@ -20,8 +20,11 @@ _COLORSPACE_XY = {
     "Rec.2020": (((0.708, 0.292), (0.170, 0.797), (0.131, 0.046)), (0.3127, 0.3290)),
     "ACES2065-1": (((0.7347, 0.2653), (0.0000, 1.0000), (0.0001, -0.0770)), (0.32168, 0.33767)),
     "ACEScg": (((0.713, 0.293), (0.165, 0.830), (0.128, 0.044)), (0.32168, 0.33767)),
+    "S-Gamut": (((0.730, 0.280), (0.140, 0.855), (0.100, -0.050)), (0.3127, 0.3290)),
     "S-Gamut3": (((0.730, 0.280), (0.140, 0.855), (0.100, -0.050)), (0.3127, 0.3290)),
     "S-Gamut3.Cine": (((0.766, 0.275), (0.225, 0.800), (0.089, -0.087)), (0.3127, 0.3290)),
+    "ARRI-Wide-Gamut-3": (((0.6840, 0.3130), (0.2210, 0.8480), (0.0861, -0.1020)), (0.3127, 0.3290)),
+    "ARRI-Wide-Gamut-4": (((0.7347, 0.2653), (0.1424, 0.8576), (0.0991, -0.0308)), (0.3127, 0.3290)),
 }
 
 
@@ -29,7 +32,7 @@ def _frame(
     values: object,
     *,
     colorspace: str = "Rec.709",
-    gamma: str = "rec709",
+    gamma: str = "Rec.709",
     channels: tuple[str, ...] = ("R", "G", "B"),
     matrix: str | None = None,
 ) -> px.core.Frame:
@@ -69,11 +72,11 @@ def test_frame_matrix_is_independent_mutable_metadata() -> None:
     frame.colorspace = "ACEScg"
     frame.gamma = "linear"
     frame.channels = ("Y", "Cb", "Cr")
-    frame.matrix = "bt601"
-    assert frame.matrix == "bt601"
+    frame.matrix = "BT.601"
+    assert frame.matrix == "BT.601"
 
     with pytest.raises(ValueError, match="matrix"):
-        frame.matrix = "BT709"
+        frame.matrix = "BT.710"
 
 
 def test_from_array_stamps_matrix_without_changing_ownership_or_values() -> None:
@@ -82,13 +85,13 @@ def test_from_array_stamps_matrix_without_changing_ownership_or_values() -> None
     frame = px.io.from_array(
         data,
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
         channels="RGB",
-        matrix="bt709",
+        matrix="BT.709",
         copy=False,
     )
 
-    assert frame.matrix == "bt709"
+    assert frame.matrix == "BT.709"
     assert frame.data.data.ptr == data.data.ptr
     cp.testing.assert_array_equal(frame.data, data)
 
@@ -139,7 +142,7 @@ def test_color_public_surface_uses_semantic_operation_names_only() -> None:
 
 @pytest.mark.parametrize(
     ("matrix", "kr", "kb"),
-    (("bt601", 0.299, 0.114), ("bt709", 0.2126, 0.0722), ("bt2020", 0.2627, 0.0593)),
+    (("BT.601", 0.299, 0.114), ("BT.709", 0.2126, 0.0722), ("BT.2020", 0.2627, 0.0593)),
 )
 def test_rgb_to_ycbcr_matches_h273_and_preserves_auxiliary_channels(matrix: str, kr: float, kb: float) -> None:
     """v1-color-semantics acceptance 6 and 9-14: RGB encoding uses H.273 and label-driven passthrough."""
@@ -157,11 +160,11 @@ def test_rgb_to_ycbcr_matches_h273_and_preserves_auxiliary_channels(matrix: str,
 @pytest.mark.parametrize(
     ("colorspace", "gamma", "expected"),
     (
-        ("sRGB", "srgb", "bt709"),
-        ("Rec.709", "linear", "bt709"),
-        ("Rec.2020", "linear", "bt2020"),
+        ("sRGB", "sRGB", "BT.709"),
+        ("Rec.709", "linear", "BT.709"),
+        ("Rec.2020", "linear", "BT.2020"),
         ("ACEScg", "linear", "native"),
-        ("ACEScg", "2.6", "bt709"),
+        ("ACEScg", "Gamma-2.6", "BT.709"),
     ),
 )
 def test_rgb_encode_matrix_resolver_is_representation_dependent(colorspace: str, gamma: str, expected: str) -> None:
@@ -173,7 +176,9 @@ def test_rgb_encode_matrix_resolver_is_representation_dependent(colorspace: str,
 
 @pytest.mark.parametrize("colorspace", tuple(_COLORSPACE_XY))
 def test_native_matrix_uses_independently_derived_primary_own_row(colorspace: str) -> None:
-    """v1-color-semantics acceptance 3 and 7-8: native follows the current colorspace's independently derived Y row."""
+    """v1-color-semantics acceptance 3 and 7-8; v1-sony-tokens acceptance 9;
+    v1-arri-tokens acceptance 23-24: native uses the independent Y row.
+    """
     rgb = np.asarray((0.2, 1.1, -0.4), dtype=np.float64)
     source = _frame(rgb, colorspace=colorspace, gamma="linear")
 
@@ -187,7 +192,7 @@ def test_decode_matrix_resolver_honors_override_then_metadata_and_refuses_unsafe
     """v1-color-semantics acceptance 16 and 42: decode resolution is explicit, provenance-aware, and conservative."""
     source = _frame((0.15, 0.7, 1.3), colorspace="ACEScg", gamma="linear")
     encoded = px.color.rgb_to_ycbcr(source, matrix="native")
-    misleading = encoded.model_copy(update={"matrix": "bt601"})
+    misleading = encoded.model_copy(update={"matrix": "BT.601"})
 
     explicit = px.color.ycbcr_to_rgb(misleading, matrix="native")
     metadata = px.color.ycbcr_to_rgb(encoded)
@@ -199,13 +204,13 @@ def test_decode_matrix_resolver_honors_override_then_metadata_and_refuses_unsafe
         px.color.ycbcr_to_rgb(unknown)
     message = str(captured.value)
     assert "why=" in message and "what=" in message and "how=" in message
-    assert "matrix=" in message and "bt709" in message
+    assert "matrix=" in message and "BT.709" in message
 
 
 def test_rgb_ycbcr_round_trip_preserves_scene_values_and_metadata() -> None:
     """v1-color-semantics acceptance 15-19: the paired conversion round-trips unrestricted values."""
     source = _frame((-0.25, 0.5, 1.75, 7.0), channels=("R", "G", "B", "Z"))
-    encoded = px.color.rgb_to_ycbcr(source, matrix="bt709", range="legal", bit_depth=10)
+    encoded = px.color.rgb_to_ycbcr(source, matrix="BT.709", range="legal", bit_depth=10)
     restored = px.color.ycbcr_to_rgb(encoded, range="legal", bit_depth=10)
 
     assert restored.channels == source.channels
@@ -217,7 +222,7 @@ def test_rgb_ycbcr_round_trip_preserves_scene_values_and_metadata() -> None:
 
 def test_rgb_legal_encode_matches_full_encode_then_public_range_conversion() -> None:
     """v1-color-semantics acceptance 10 and 13: legal RGB encode matches the public one-way composition."""
-    source = _frame((-0.2, 0.45, 1.4), colorspace="S-Gamut3", gamma="s-log3")
+    source = _frame((-0.2, 0.45, 1.4), colorspace="S-Gamut3", gamma="S-Log3")
 
     result = px.color.rgb_to_ycbcr(
         source,
@@ -244,9 +249,9 @@ def test_ycbcr_legal_decode_matches_public_range_conversion_then_full_decode() -
     source = _frame(
         (-0.1, 0.35, 1.2),
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
         channels=("Y", "Cb", "Cr"),
-        matrix="bt709",
+        matrix="BT.709",
     )
 
     result = px.color.ycbcr_to_rgb(
@@ -268,27 +273,27 @@ def test_ycbcr_to_ycbcr_matches_three_public_ops_across_different_legal_code_gri
     source = _frame(
         (0.15, 0.7, 1.1),
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
         channels=("Y", "Cb", "Cr"),
-        matrix="bt709",
+        matrix="BT.709",
     )
 
     result = px.color.ycbcr_to_ycbcr(
         source,
-        input_matrix="bt709",
-        output_matrix="bt709",
+        input_matrix="BT.709",
+        output_matrix="BT.709",
         input_range="legal",
         input_bit_depth=10,
         output_range="legal",
         output_bit_depth=12,
     )
-    rgb = px.color.ycbcr_to_rgb(source, matrix="bt709", range="legal", bit_depth=10)
+    rgb = px.color.ycbcr_to_rgb(source, matrix="BT.709", range="legal", bit_depth=10)
     transformed = px.color.rgb_to_rgb(
         rgb,
         output_colorspace=source.colorspace,
         output_gamma=source.gamma,
     )
-    expected = px.color.rgb_to_ycbcr(transformed, matrix="bt709", range="legal", bit_depth=12)
+    expected = px.color.rgb_to_ycbcr(transformed, matrix="BT.709", range="legal", bit_depth=12)
 
     cp.testing.assert_allclose(result.data, expected.data, rtol=0.0, atol=2e-6)
 
@@ -298,13 +303,13 @@ def test_ycbcr_to_ycbcr_matches_three_public_ops_for_explicit_bt709_to_native_re
     source = _frame(
         (0.15, 0.7, 1.1),
         colorspace="S-Gamut3",
-        gamma="s-log3",
+        gamma="S-Log3",
         channels=("Y", "Cb", "Cr"),
-        matrix="bt709",
+        matrix="BT.709",
     )
 
-    result = px.color.ycbcr_to_ycbcr(source, input_matrix="bt709", output_matrix="native")
-    rgb = px.color.ycbcr_to_rgb(source, matrix="bt709")
+    result = px.color.ycbcr_to_ycbcr(source, input_matrix="BT.709", output_matrix="native")
+    rgb = px.color.ycbcr_to_rgb(source, matrix="BT.709")
     transformed = px.color.rgb_to_rgb(
         rgb,
         output_colorspace=source.colorspace,
@@ -319,9 +324,9 @@ def test_ycbcr_to_ycbcr_matches_three_public_ops_for_explicit_bt709_to_native_re
 @pytest.mark.parametrize(
     ("parameter", "invalid"),
     (
-        ("input_range", "FULL"),
+        ("input_range", "studio"),
         ("input_range", True),
-        ("output_range", "FULL"),
+        ("output_range", "studio"),
         ("output_range", True),
         ("input_bit_depth", True),
         ("input_bit_depth", "10"),
@@ -336,7 +341,7 @@ def test_ycbcr_to_ycbcr_validates_each_range_and_bit_depth_axis(parameter: str, 
     source = _frame(
         (0.2, 0.5, 0.8),
         channels=("Y", "Cb", "Cr"),
-        matrix="bt709",
+        matrix="BT.709",
     )
 
     with pytest.raises(ValueError) as captured:
@@ -350,7 +355,7 @@ def test_ycbcr_to_ycbcr_validates_each_range_and_bit_depth_axis(parameter: str, 
 def test_declarative_ycbcr_conversion_matches_a_separated_rgb_to_rgb_call(direction: str) -> None:
     """v1-color-semantics acceptance 10 and 18-19: fused declarations match a separated technical conversion."""
     if direction == "encode":
-        source = _frame((-0.2, 0.45, 1.4), colorspace="S-Gamut3", gamma="s-log3")
+        source = _frame((-0.2, 0.45, 1.4), colorspace="S-Gamut3", gamma="S-Log3")
         result = px.color.rgb_to_ycbcr(
             source,
             colorspace="ACEScg",
@@ -363,17 +368,17 @@ def test_declarative_ycbcr_conversion_matches_a_separated_rgb_to_rgb_call(direct
         source = _frame(
             (-0.1, 0.35, 1.2),
             colorspace="S-Gamut3",
-            gamma="s-log3",
+            gamma="S-Log3",
             channels=("Y", "Cb", "Cr"),
-            matrix="bt709",
+            matrix="BT.709",
         )
         result = px.color.ycbcr_to_rgb(
             source,
             colorspace="ACEScg",
             gamma="linear",
-            matrix="bt709",
+            matrix="BT.709",
         )
-        decoded = px.color.ycbcr_to_rgb(source, matrix="bt709")
+        decoded = px.color.ycbcr_to_rgb(source, matrix="BT.709")
         expected = px.color.rgb_to_rgb(decoded, output_colorspace="ACEScg", output_gamma="linear")
 
     cp.testing.assert_allclose(result.data, expected.data, rtol=0.0, atol=2e-6)
@@ -392,9 +397,9 @@ def test_rgb_to_grayscale_is_the_full_range_y_channel_bit_for_bit() -> None:
 
 
 def test_gamma_directional_pair_supports_pure_power_2_6_without_clipping() -> None:
-    """v1-color-semantics acceptance 24-28: gamma pairs expose pure-power 2.6 and preserve scene values."""
+    """v1-color-semantics acceptance 24-28: gamma pairs expose pure-power Gamma-2.6 and preserve scene values."""
     encoded_values = np.asarray((-1.4, -0.25, 2.0), dtype=np.float64)
-    source = _frame(encoded_values, gamma="2.6", matrix="native")
+    source = _frame(encoded_values, gamma="Gamma-2.6", matrix="native")
 
     linear = px.color.gamma_to_linear(source)
     expected = np.sign(encoded_values) * np.abs(encoded_values) ** 2.6
@@ -402,9 +407,9 @@ def test_gamma_directional_pair_supports_pure_power_2_6_without_clipping() -> No
     assert linear.gamma == "linear"
     assert linear.matrix is None
 
-    restored = px.color.linear_to_gamma(linear, gamma="2.6")
+    restored = px.color.linear_to_gamma(linear, gamma="Gamma-2.6")
     np.testing.assert_allclose(restored.data.get()[0, 0], encoded_values, rtol=2e-6, atol=2e-6)
-    assert restored.gamma == "2.6"
+    assert restored.gamma == "Gamma-2.6"
     assert restored.matrix is None
 
 
@@ -421,7 +426,7 @@ def test_rgb_to_rgb_signature_integrates_tonemap_and_always_clears_matrix() -> N
     )
     assert signature.parameters["tonemap"].default is None
 
-    source = _frame((-0.1, 0.5, 1.2), matrix="bt709")
+    source = _frame((-0.1, 0.5, 1.2), matrix="BT.709")
     technical = px.color.rgb_to_rgb(source)
     assert technical.matrix is None
     cp.testing.assert_array_equal(technical.data, source.data)
@@ -432,9 +437,9 @@ def test_ycbcr_to_ycbcr_matches_public_composition_and_preserves_auxiliary_value
     source = _frame(
         (0.35, 0.1, 0.9, 6.0),
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
         channels=("Y", "Cb", "Cr", "A"),
-        matrix="bt709",
+        matrix="BT.709",
     )
     result = px.color.ycbcr_to_ycbcr(
         source,
@@ -445,7 +450,7 @@ def test_ycbcr_to_ycbcr_matches_public_composition_and_preserves_auxiliary_value
         input_bit_depth=10,
         output_range="full",
     )
-    rgb = px.color.ycbcr_to_rgb(source, matrix="bt709", range="legal", bit_depth=10)
+    rgb = px.color.ycbcr_to_rgb(source, matrix="BT.709", range="legal", bit_depth=10)
     transformed = px.color.rgb_to_rgb(rgb, output_colorspace="ACEScg", output_gamma="linear")
     expected = px.color.rgb_to_ycbcr(transformed, matrix="native")
 
@@ -462,16 +467,16 @@ def test_ycbcr_to_ycbcr_preserves_resolved_input_matrix_when_colorspace_is_uncha
     source = _frame(
         (0.35, 0.1, 0.9),
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
         channels=("Y", "Cb", "Cr"),
-        matrix="bt601",
+        matrix="BT.601",
     )
 
-    result = px.color.ycbcr_to_ycbcr(source, gamma="2.6")
+    result = px.color.ycbcr_to_ycbcr(source, gamma="Gamma-2.6")
 
-    assert result.matrix == "bt601"
+    assert result.matrix == "BT.601"
     assert result.colorspace == source.colorspace
-    assert result.gamma == "2.6"
+    assert result.gamma == "Gamma-2.6"
 
 
 def test_ycbcr_to_ycbcr_docstring_is_symmetric_with_the_directional_pair() -> None:
@@ -490,7 +495,7 @@ def test_ycbcr_to_ycbcr_docstring_is_symmetric_with_the_directional_pair() -> No
         "Returns",
         "Raises",
         "ValueError",
-        'input_matrix="bt709"',
+        'input_matrix="BT.709"',
         'output_matrix="native"',
         "inverse rematrix",
     ):
@@ -498,11 +503,11 @@ def test_ycbcr_to_ycbcr_docstring_is_symmetric_with_the_directional_pair() -> No
 
 
 @pytest.mark.parametrize("operation", ("rgb_to_ycbcr", "ycbcr_to_rgb"))
-@pytest.mark.parametrize(("parameter", "value"), (("range", "FULL"), ("bit_depth", True), ("bit_depth", 9)))
+@pytest.mark.parametrize(("parameter", "value"), (("range", "studio"), ("bit_depth", True), ("bit_depth", 9)))
 def test_directional_range_and_bit_depth_validation_is_closed(operation: str, parameter: str, value: object) -> None:
     """v1-color-semantics acceptance 14, 17, and 46: range and code-grid axes fail actionably."""
     channels = ("Y", "Cb", "Cr") if operation == "ycbcr_to_rgb" else ("R", "G", "B")
-    frame = _frame((0.1, 0.2, 0.3), channels=channels, matrix="bt709")
+    frame = _frame((0.1, 0.2, 0.3), channels=channels, matrix="BT.709")
 
     with pytest.raises(ValueError) as captured:
         getattr(px.color, operation)(frame, **{parameter: value})

@@ -2,18 +2,55 @@
 
 from __future__ import annotations
 
-from typing import Literal, TypeAlias, cast, get_args
+from typing import Literal, TypeAlias, TypeVar, cast, get_args
 
-ChromaticAdaptation: TypeAlias = Literal["bradford", "cat02", "cat16", "von-kries"]
-ReferenceWhite: TypeAlias = Literal["d65", "d93", "d50", "aces"]
-Colorspace: TypeAlias = Literal["sRGB", "Rec.709", "Rec.2020", "ACES2065-1", "ACEScg", "S-Gamut3", "S-Gamut3.Cine"]
-Gamma: TypeAlias = Literal[
-    "linear", "srgb", "rec709", "bt1886", "pq", "hlg", "s-log3", "logc4", "cineon", "2.2", "2.4", "2.6"
+ChromaticAdaptation: TypeAlias = Literal["Bradford", "CAT02", "CAT16", "von-Kries"]
+ReferenceWhite: TypeAlias = Literal["D65", "D93", "D50", "ACES"]
+Colorspace: TypeAlias = Literal[
+    "sRGB",
+    "Rec.709",
+    "Rec.2020",
+    "ACES2065-1",
+    "ACEScg",
+    "S-Gamut",
+    "S-Gamut3",
+    "S-Gamut3.Cine",
+    "ARRI-Wide-Gamut-3",
+    "ARRI-Wide-Gamut-4",
+    "Blackmagic-Wide-Gamut-Gen-5",
+    "DaVinci-Wide-Gamut",
+    "REDWideGamutRGB",
+    "DRAGONcolor",
+    "DRAGONcolor2",
+    "REDcolor2",
+    "REDcolor3",
+    "REDcolor4",
 ]
-Matrix: TypeAlias = Literal["bt601", "bt709", "bt2020", "native"]
+Gamma: TypeAlias = Literal[
+    "linear",
+    "sRGB",
+    "Rec.709",
+    "BT.1886",
+    "PQ",
+    "HLG",
+    "S-Log",
+    "S-Log2",
+    "S-Log3",
+    "ARRI-LogC3",
+    "ARRI-LogC4",
+    "Blackmagic-Film-Gen-5",
+    "DaVinci-Intermediate",
+    "RED-Log3G10",
+    "REDlogFilm",
+    "Cineon",
+    "Gamma-2.2",
+    "Gamma-2.4",
+    "Gamma-2.6",
+]
+Matrix: TypeAlias = Literal["BT.601", "BT.709", "BT.2020", "native"]
 Dtype: TypeAlias = Literal["float32", "float16", "uint8", "uint16", "uint32"]
 Layout: TypeAlias = Literal["HWC", "NHWC", "CHW", "NCHW"]
-Tonemap: TypeAlias = Literal["aces-1.3", "aces-1.3-lut", "aces-2.0", "aces-2.0-lut", "bt2408"]
+Tonemap: TypeAlias = Literal["ACES-1.3", "ACES-2.0", "BT.2408"]
 Range: TypeAlias = Literal["legal", "full"]
 Interpolation: TypeAlias = Literal[
     "nearest",
@@ -60,7 +97,7 @@ TextAlign: TypeAlias = Literal["left", "center", "right", "justify"]
 TextFont: TypeAlias = Literal["sans", "mono"]
 GeneratorKind: TypeAlias = Literal["linear", "radial"]
 ColorBarsStandard: TypeAlias = Literal[
-    "arib-std-b28", "smpte-rp219", "bt2111-hlg", "bt2111-pq", "bt2111-pq-full", "full-100", "full-75"
+    "ARIB-STD-B28", "SMPTE-RP219", "BT.2111-HLG", "BT.2111-PQ", "BT.2111-PQ-full", "full-100", "full-75"
 ]
 ColorBarsOutput: TypeAlias = Literal["normalized", "code"]
 MorphologyShape: TypeAlias = Literal["disk", "square"]
@@ -70,41 +107,51 @@ ExrCompression: TypeAlias = Literal["none", "rle", "zip", "zips", "piz", "pxr24"
 VectorBlurShutter: TypeAlias = Literal["centered", "forward", "backward"]
 
 
-def _tokens(alias: object) -> tuple[str, ...]:
+_PERMANENT_TOKEN_ALIASES = (
+    ("logc4", "ARRI-LogC4"),
+    ("2.2", "Gamma-2.2"),
+    ("2.4", "Gamma-2.4"),
+    ("2.6", "Gamma-2.6"),
+)
+
+
+_Token = TypeVar("_Token", bound=str)
+
+
+def _tokens(alias: object) -> tuple[_Token, ...]:
     """Return the runtime token set for one canonical Literal alias."""
-    return cast(tuple[str, ...], get_args(alias))
+    return cast(tuple[_Token, ...], get_args(alias))
 
 
-_CHROMATIC_ADAPTATION_TOKENS = _tokens(ChromaticAdaptation)
-_REFERENCE_WHITE_TOKENS = _tokens(ReferenceWhite)
-_COLORSPACE_TOKENS = _tokens(Colorspace)
-_GAMMA_TOKENS = _tokens(Gamma)
-_MATRIX_TOKENS = _tokens(Matrix)
-_DTYPE_TOKENS = _tokens(Dtype)
-_LAYOUT_TOKENS = _tokens(Layout)
-_TONEMAP_TOKENS = _tokens(Tonemap)
-_TONEMAP_ACES_TOKENS = _TONEMAP_TOKENS[0:4:2]
-_TONEMAP_LUT_TOKENS = _TONEMAP_TOKENS[1:4:2]
-_TONEMAP_DIRECT_TOKENS = _TONEMAP_TOKENS[4:]
-_RANGE_TOKENS = _tokens(Range)
-_INTERPOLATION_TOKENS = _tokens(Interpolation)
-_BORDER_TOKENS = _tokens(Border)
-_CHROMA_SITING_TOKENS = _tokens(ChromaSiting)
-_STACK_DIRECTION_TOKENS = _tokens(StackDirection)
-_SOBEL_DIRECTION_TOKENS = _tokens(SobelDirection)
-_TEMPLATE_MATCHING_METHOD_TOKENS = _tokens(TemplateMatchingMethod)
-_BLEND_TOKENS = _tokens(Blend)
-_ALPHA_TOKENS = _tokens(Alpha)
-_ANTIALIASING_TOKENS = _tokens(Antialiasing)
-_TEXT_LANGUAGE_TOKENS = _tokens(TextLanguage)
-_TEXT_ANCHOR_TOKENS = _tokens(TextAnchor)
-_TEXT_ALIGN_TOKENS = _tokens(TextAlign)
-_TEXT_FONT_TOKENS = _tokens(TextFont)
-_GENERATOR_KIND_TOKENS = _tokens(GeneratorKind)
-_COLOR_BARS_STANDARD_TOKENS = _tokens(ColorBarsStandard)
-_COLOR_BARS_OUTPUT_TOKENS = _tokens(ColorBarsOutput)
-_MORPHOLOGY_SHAPE_TOKENS = _tokens(MorphologyShape)
-_IMAGE_FORMAT_TOKENS = _tokens(ImageFormat)
-_TIFF_COMPRESSION_TOKENS = _tokens(TiffCompression)
-_EXR_COMPRESSION_TOKENS = _tokens(ExrCompression)
-_VECTOR_BLUR_SHUTTER_TOKENS = _tokens(VectorBlurShutter)
+_CHROMATIC_ADAPTATION_TOKENS: tuple[ChromaticAdaptation, ...] = _tokens(ChromaticAdaptation)
+_REFERENCE_WHITE_TOKENS: tuple[ReferenceWhite, ...] = _tokens(ReferenceWhite)
+_COLORSPACE_TOKENS: tuple[Colorspace, ...] = _tokens(Colorspace)
+_GAMMA_TOKENS: tuple[Gamma, ...] = _tokens(Gamma)
+_MATRIX_TOKENS: tuple[Matrix, ...] = _tokens(Matrix)
+_DTYPE_TOKENS: tuple[Dtype, ...] = _tokens(Dtype)
+_LAYOUT_TOKENS: tuple[Layout, ...] = _tokens(Layout)
+_TONEMAP_TOKENS: tuple[Tonemap, ...] = _tokens(Tonemap)
+_TONEMAP_ACES_TOKENS = _TONEMAP_TOKENS[:2]
+_TONEMAP_DIRECT_TOKENS = _TONEMAP_TOKENS[2:]
+_RANGE_TOKENS: tuple[Range, ...] = _tokens(Range)
+_INTERPOLATION_TOKENS: tuple[Interpolation, ...] = _tokens(Interpolation)
+_BORDER_TOKENS: tuple[Border, ...] = _tokens(Border)
+_CHROMA_SITING_TOKENS: tuple[ChromaSiting, ...] = _tokens(ChromaSiting)
+_STACK_DIRECTION_TOKENS: tuple[StackDirection, ...] = _tokens(StackDirection)
+_SOBEL_DIRECTION_TOKENS: tuple[SobelDirection, ...] = _tokens(SobelDirection)
+_TEMPLATE_MATCHING_METHOD_TOKENS: tuple[TemplateMatchingMethod, ...] = _tokens(TemplateMatchingMethod)
+_BLEND_TOKENS: tuple[Blend, ...] = _tokens(Blend)
+_ALPHA_TOKENS: tuple[Alpha, ...] = _tokens(Alpha)
+_ANTIALIASING_TOKENS: tuple[Antialiasing, ...] = _tokens(Antialiasing)
+_TEXT_LANGUAGE_TOKENS: tuple[TextLanguage, ...] = _tokens(TextLanguage)
+_TEXT_ANCHOR_TOKENS: tuple[TextAnchor, ...] = _tokens(TextAnchor)
+_TEXT_ALIGN_TOKENS: tuple[TextAlign, ...] = _tokens(TextAlign)
+_TEXT_FONT_TOKENS: tuple[TextFont, ...] = _tokens(TextFont)
+_GENERATOR_KIND_TOKENS: tuple[GeneratorKind, ...] = _tokens(GeneratorKind)
+_COLOR_BARS_STANDARD_TOKENS: tuple[ColorBarsStandard, ...] = _tokens(ColorBarsStandard)
+_COLOR_BARS_OUTPUT_TOKENS: tuple[ColorBarsOutput, ...] = _tokens(ColorBarsOutput)
+_MORPHOLOGY_SHAPE_TOKENS: tuple[MorphologyShape, ...] = _tokens(MorphologyShape)
+_IMAGE_FORMAT_TOKENS: tuple[ImageFormat, ...] = _tokens(ImageFormat)
+_TIFF_COMPRESSION_TOKENS: tuple[TiffCompression, ...] = _tokens(TiffCompression)
+_EXR_COMPRESSION_TOKENS: tuple[ExrCompression, ...] = _tokens(ExrCompression)
+_VECTOR_BLUR_SHUTTER_TOKENS: tuple[VectorBlurShutter, ...] = _tokens(VectorBlurShutter)

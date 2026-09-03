@@ -369,7 +369,7 @@ def test_blur_kernels_match_independent_numpy_oracles(name: str, kwargs: dict[st
 
 
 def test_blur_is_label_independent_unclamped_and_preserves_metadata_privately() -> None:
-    """v1-blur acceptance 11-14: labels do not steer math, scene excursions and metadata survive privately."""
+    """v1-blur acceptance 11-14; v1-red-tokens acceptance 68: ARRI metadata survives privately."""
     values = np.asarray(
         [
             [[-0.5, 1.5], [-0.5, 1.5]],
@@ -377,7 +377,7 @@ def test_blur_is_label_independent_unclamped_and_preserves_metadata_privately() 
         ],
         dtype=np.float32,
     )
-    source = _frame(values, colorspace="ACEScg", gamma="logc4", channels=["depth", "confidence"])
+    source = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=["depth", "confidence"])
 
     result = px.filter.box_blur(source, size=3, border="wrap")
 
@@ -385,7 +385,7 @@ def test_blur_is_label_independent_unclamped_and_preserves_metadata_privately() 
     assert result is not source
     assert result.data.data.ptr != source.data.data.ptr
     assert result.shape == source.shape
-    assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "logc4", ("depth", "confidence"))
+    assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "ARRI-LogC4", ("depth", "confidence"))
     np.testing.assert_array_equal(
         px.io.to_array(
             result,

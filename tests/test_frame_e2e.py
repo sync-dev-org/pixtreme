@@ -15,13 +15,13 @@ def test_frame_accepts_cuda_dlpack_zero_copy_and_rejects_cpu_producers() -> None
     assert torch.cuda.is_available(), "v1-frame-core acceptance 4 requires the repository's NVIDIA GPU environment"
     cuda_tensor = torch.arange(2 * 3 * 3, dtype=torch.float32, device="cuda").reshape(2, 3, 3)
 
-    result = px.io.from_array(cuda_tensor, colorspace="sRGB", gamma="srgb", channels="RGB")
+    result = px.io.from_array(cuda_tensor, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     assert result.data.data.ptr == cuda_tensor.data_ptr()
     with pytest.raises(ValueError, match="CUDA"):
-        px.io.from_array(torch.zeros((1, 1, 3)), colorspace="sRGB", gamma="srgb", channels="RGB")
+        px.io.from_array(torch.zeros((1, 1, 3)), colorspace="sRGB", gamma="sRGB", channels="RGB")
     with pytest.raises(ValueError, match="CUDA"):
-        px.io.from_array(np.zeros((1, 1, 3), dtype=np.float32), colorspace="sRGB", gamma="srgb", channels="RGB")
+        px.io.from_array(np.zeros((1, 1, 3), dtype=np.float32), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def test_torch_consumes_frame_dlpack_zero_copy() -> None:
@@ -31,7 +31,7 @@ def test_torch_consumes_frame_dlpack_zero_copy() -> None:
 
     assert torch.cuda.is_available(), "v1-frame-core acceptance 12 requires the repository's NVIDIA GPU environment"
     data = cp.arange(2 * 3 * 3, dtype=cp.float32).reshape(2, 3, 3)
-    source = px.io.from_array(data, colorspace="sRGB", gamma="srgb", channels="RGB")
+    source = px.io.from_array(data, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     consumed = torch.from_dlpack(source)
 

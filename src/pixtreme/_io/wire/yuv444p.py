@@ -9,6 +9,7 @@ import numpy as np
 
 from pixtreme._core.frame import Frame
 from pixtreme._core.value_domain import _RANGE_TOKENS
+from pixtreme._core.vocabulary import Colorspace, Gamma, Matrix, Range
 from pixtreme._io.wire.sampling import (
     _bit_depth,
     _dimensions,
@@ -42,10 +43,10 @@ def from_yuv444p(
     width: int,
     height: int,
     bit_depth: int = 10,
-    colorspace: str | None = None,
-    gamma: str | None = None,
-    matrix: str | None = None,
-    range: str = "legal",
+    colorspace: Colorspace | None = None,
+    gamma: Gamma | None = None,
+    matrix: Matrix | None = None,
+    range: Range = "legal",
 ) -> Frame:
     """Construct a full-range fp32 YCbCr444 Frame from planar YUV444.
 
@@ -87,7 +88,7 @@ def to_yuv444p(
     frame: Frame,
     *,
     bit_depth: int = 10,
-    range: str = "legal",
+    range: Range = "legal",
 ) -> cp.ndarray:
     """Pack ``frame`` as planar Y, Cb, Cr 4:4:4 samples.
 

@@ -230,12 +230,12 @@ def test_hdr_read_unchanged_selects_channels_and_overrides_metadata(tmp_path: Pa
         channels=("B", "R", "R"),
         unchanged=True,
         colorspace="ACEScg",
-        gamma="2.2",
+        gamma="Gamma-2.2",
     )
 
     assert (default.dtype, unchanged.dtype) == (np.dtype(np.float32), np.dtype(np.float32))
     assert unchanged.channels == ("B", "R", "R")
-    assert (unchanged.colorspace, unchanged.gamma) == ("ACEScg", "2.2")
+    assert (unchanged.colorspace, unchanged.gamma) == ("ACEScg", "Gamma-2.2")
     np.testing.assert_array_equal(
         px.io.to_array(
             default,

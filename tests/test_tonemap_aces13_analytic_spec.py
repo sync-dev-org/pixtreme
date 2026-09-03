@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import inspect
 import re
 import subprocess
@@ -21,28 +20,16 @@ ROOT = Path(__file__).resolve().parents[1]
 ORACLE_PATH = ROOT / "tests" / "data" / "tonemap_aces13_analytic_oracle.npz"
 
 _ANALYTIC_COMBINATIONS = (
-    ("aces-1.3", "Rec.709", "bt1886"),
-    ("aces-1.3", "sRGB", "srgb"),
-    ("aces-2.0", "Rec.709", "bt1886"),
-    ("aces-2.0", "sRGB", "srgb"),
-)
-_LUT_COMBINATIONS = (
-    ("aces-1.3-lut", "Rec.709", "bt1886"),
-    ("aces-1.3-lut", "sRGB", "srgb"),
-    ("aces-2.0-lut", "Rec.709", "bt1886"),
-    ("aces-2.0-lut", "sRGB", "srgb"),
+    ("ACES-1.3", "Rec.709", "BT.1886"),
+    ("ACES-1.3", "sRGB", "sRGB"),
+    ("ACES-2.0", "Rec.709", "BT.1886"),
+    ("ACES-2.0", "sRGB", "sRGB"),
 )
 _BT2408_COMBINATIONS = (
-    ("bt2408", "Rec.2020", "hlg"),
-    ("bt2408", "Rec.2020", "pq"),
+    ("BT.2408", "Rec.2020", "HLG"),
+    ("BT.2408", "Rec.2020", "PQ"),
 )
-_SUPPLIED_COMBINATIONS = (*_ANALYTIC_COMBINATIONS, *_LUT_COMBINATIONS, *_BT2408_COMBINATIONS)
-_ASSET_SHA256 = {
-    "view_transform_aces-1.3_rec709_bt1886.npz": "071e62774058b724e5e19ff696dc034d91327e109da539c3701b786187ddbccf",
-    "view_transform_aces-1.3_srgb_srgb.npz": "40030a2299be1527fbd5745796525ebae430ef44cb57e67767b298355f171088",
-    "view_transform_aces-2.0_rec709_bt1886.npz": "2c1c230fcf24f32e06ffcc082586e090c2bf650b40fb8157bb44362d6da77165",
-    "view_transform_aces-2.0_srgb_srgb.npz": "a6b3ae6440ec11486d67d0c1ad9795913f69b2eb080d9c115c84ed3ba8a91a47",
-}
+_SUPPLIED_COMBINATIONS = (*_ANALYTIC_COMBINATIONS, *_BT2408_COMBINATIONS)
 _BOUNDARY_POSITIONS = ("below", "at", "above")
 _EXPECTED_ORACLE_BOUNDARY_NAMES = (
     *(f"curve0_{index}_{position}" for index in range(5) for position in _BOUNDARY_POSITIONS),
@@ -69,10 +56,9 @@ def _frame(
     return px.io.from_array(data, colorspace=colorspace, gamma=gamma, channels=channels)
 
 
-def test_public_signature_tokens_and_exact_ten_row_supply_table() -> None:
-    """v1-tonemap-aces20-analytic acceptance 1-3: signature and the exact ten-row grammar are fixed."""
+def test_public_signature_tokens_and_exact_six_row_supply_table() -> None:
+    """v1-view-transform-lut-removal acceptance 2 and 4: signature and the exact six-row grammar are fixed."""
     import pixtreme._color.transform as implementation
-    import pixtreme._color.view_transform as _view_transform
 
     signature = inspect.signature(px.color.rgb_to_rgb)
     assert tuple(signature.parameters) == (
@@ -85,12 +71,8 @@ def test_public_signature_tokens_and_exact_ten_row_supply_table() -> None:
     )
     assert signature.parameters["tonemap"].default is None
     assert implementation._BT2408_COMBINATIONS == _BT2408_COMBINATIONS
-    assert _view_transform._ANALYTIC_COMBINATIONS == _ANALYTIC_COMBINATIONS
-    assert _view_transform._LUT_COMBINATIONS == _LUT_COMBINATIONS
-    assert _view_transform._PUBLIC_TO_INTERNAL_LUT == {
-        "aces-1.3-lut": "aces-1.3",
-        "aces-2.0-lut": "aces-2.0",
-    }
+    assert implementation._ANALYTIC_COMBINATIONS == _ANALYTIC_COMBINATIONS
+    assert implementation._SUPPORTED_COMBINATIONS == _SUPPLIED_COMBINATIONS
 
     source = _frame((0.18, 0.18, 0.18))
     for tonemap, output_colorspace, output_gamma in _SUPPLIED_COMBINATIONS:
@@ -106,17 +88,16 @@ def test_public_signature_tokens_and_exact_ten_row_supply_table() -> None:
 @pytest.mark.parametrize(
     ("tonemap", "output_colorspace", "output_gamma"),
     (
-        ("aces-2.0", "Rec.2020", "pq"),
-        ("ACES-1.3", "sRGB", "srgb"),
-        ("aces-1.3", None, None),
-        ("aces-1.3-lut", "Rec.2020", "pq"),
-        ("bt2408", "sRGB", "srgb"),
+        ("ACES-2.0", "Rec.2020", "PQ"),
+        ("ACES-1.3", "sRGB", "linear"),
+        ("ACES-1.3", None, None),
+        ("BT.2408", "sRGB", "sRGB"),
     ),
 )
-def test_table_external_forms_fail_before_pixel_processing_with_the_complete_ten_row_recipe(
+def test_table_external_forms_fail_before_pixel_processing_with_the_complete_six_row_recipe(
     tonemap: str, output_colorspace: str | None, output_gamma: str | None
 ) -> None:
-    """v1-tonemap-aces20-analytic acceptance 3: invalid forms fail with the complete why/what/how recipe."""
+    """v1-view-transform-lut-removal acceptance 1 and 2: invalid forms fail with the complete six-row recipe."""
     with pytest.raises(ValueError) as error:
         px.color.rgb_to_rgb(
             _frame((0.18, 0.18, 0.18)),
@@ -129,20 +110,20 @@ def test_table_external_forms_fail_before_pixel_processing_with_the_complete_ten
     how = message.split("how=", maxsplit=1)[1]
     for combination in _SUPPLIED_COMBINATIONS:
         assert repr(combination) in how
-    assert "('aces-2.0', 'sRGB', 'srgb')" in how
+    assert "('ACES-2.0', 'sRGB', 'sRGB')" in how
 
 
 @pytest.mark.parametrize(
     ("output_colorspace", "output_gamma", "fixture_key"),
     (
-        ("Rec.709", "bt1886", "output_rec709_bt1886"),
-        ("sRGB", "srgb", "output_srgb_srgb"),
+        ("Rec.709", "BT.1886", "output_rec709_bt1886"),
+        ("sRGB", "sRGB", "output_srgb_srgb"),
     ),
 )
 def test_analytic_output_matches_the_raw_ocio_cpu_oracle_corpus(
     output_colorspace: str, output_gamma: str, fixture_key: str
 ) -> None:
-    """v1-tonemap-aces13-analytic acceptance 4-7: raw OCIO float32 corpus matches within 5e-5."""
+    """v1-tonemap-aces13-analytic acceptance 4-7; v1-color-semantics acceptance 36: raw OCIO oracle matches."""
     with np.load(ORACLE_PATH, allow_pickle=False) as fixture:
         source_values = np.asarray(fixture["input"], dtype=np.float32)
         expected = np.asarray(fixture[fixture_key], dtype=np.float32)
@@ -165,7 +146,7 @@ def test_analytic_output_matches_the_raw_ocio_cpu_oracle_corpus(
         source,
         output_colorspace=output_colorspace,
         output_gamma=output_gamma,
-        tonemap="aces-1.3",
+        tonemap="ACES-1.3",
     )
     actual = result.data.get().reshape(-1, 3)
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=5e-5)
@@ -184,7 +165,7 @@ def test_analytic_input_claims_override_metadata_and_equivalent_ap1_ap0_light_co
     )
     ap1 = np.asarray((0.4, 0.18, 0.1), dtype=np.float32)
     ap0 = ap1_to_ap0 @ ap1
-    source_ap1 = _frame(ap1, colorspace="sRGB", gamma="srgb")
+    source_ap1 = _frame(ap1, colorspace="sRGB", gamma="sRGB")
     source_ap0 = _frame(ap0)
 
     from_claim = px.color.rgb_to_rgb(
@@ -192,17 +173,17 @@ def test_analytic_input_claims_override_metadata_and_equivalent_ap1_ap0_light_co
         input_colorspace="ACEScg",
         input_gamma="linear",
         output_colorspace="sRGB",
-        output_gamma="srgb",
-        tonemap="aces-1.3",
+        output_gamma="sRGB",
+        tonemap="ACES-1.3",
     )
     from_ap0 = px.color.rgb_to_rgb(
         source_ap0,
         output_colorspace="sRGB",
-        output_gamma="srgb",
-        tonemap="aces-1.3",
+        output_gamma="sRGB",
+        tonemap="ACES-1.3",
     )
     np.testing.assert_allclose(from_claim.data.get(), from_ap0.data.get(), rtol=0.0, atol=5e-5)
-    assert (source_ap1.colorspace, source_ap1.gamma) == ("sRGB", "srgb")
+    assert (source_ap1.colorspace, source_ap1.gamma) == ("sRGB", "sRGB")
 
 
 def test_analytic_accepts_every_input_axis_token() -> None:
@@ -215,8 +196,8 @@ def test_analytic_accepts_every_input_axis_token() -> None:
             source,
             input_colorspace=input_colorspace,
             output_colorspace="sRGB",
-            output_gamma="srgb",
-            tonemap="aces-1.3",
+            output_gamma="sRGB",
+            tonemap="ACES-1.3",
         )
         assert np.isfinite(result.data.get()).all()
     for input_gamma in _GAMMA_TOKENS:
@@ -224,8 +205,8 @@ def test_analytic_accepts_every_input_axis_token() -> None:
             source,
             input_gamma=input_gamma,
             output_colorspace="sRGB",
-            output_gamma="srgb",
-            tonemap="aces-1.3",
+            output_gamma="sRGB",
+            tonemap="ACES-1.3",
         )
         assert np.isfinite(result.data.get()).all()
 
@@ -240,12 +221,12 @@ def test_analytic_is_label_driven_preserves_auxiliary_bits_and_returns_private_s
     result = px.color.rgb_to_rgb(
         source,
         output_colorspace="sRGB",
-        output_gamma="srgb",
-        tonemap="aces-1.3",
+        output_gamma="sRGB",
+        tonemap="ACES-1.3",
     )
     actual = result.data.get()[0, 0]
     assert result.channels == source.channels
-    assert (result.colorspace, result.gamma, result.matrix) == ("sRGB", "srgb", None)
+    assert (result.colorspace, result.gamma, result.matrix) == ("sRGB", "sRGB", None)
     assert actual[0].view(np.uint32) == np.float32(9.0).view(np.uint32)
     assert actual[2].view(np.uint32) == np.float32(0.75).view(np.uint32)
     assert result.data.data.ptr != source.data.data.ptr
@@ -259,8 +240,8 @@ def test_analytic_rejects_missing_rgb_before_rendering(channels: str | list[str]
         px.color.rgb_to_rgb(
             _frame(np.zeros(len(px.core.channels(channels)), dtype=np.float32), channels=channels),
             output_colorspace="sRGB",
-            output_gamma="srgb",
-            tonemap="aces-1.3",
+            output_gamma="sRGB",
+            tonemap="ACES-1.3",
         )
 
 
@@ -280,8 +261,8 @@ def test_analytic_rejects_non_float32_with_dtype_specific_guidance(
         px.color.rgb_to_rgb(
             _frame((0, 0, 0), dtype=dtype),
             output_colorspace="sRGB",
-            output_gamma="srgb",
-            tonemap="aces-1.3",
+            output_gamma="sRGB",
+            tonemap="ACES-1.3",
         )
     message = str(error.value)
     assert "float32" in message
@@ -294,8 +275,8 @@ def test_analytic_rejects_non_frame_with_three_part_guidance() -> None:
         px.color.rgb_to_rgb(  # type: ignore[arg-type]
             cp.zeros((1, 1, 3), dtype=cp.float32),
             output_colorspace="sRGB",
-            output_gamma="srgb",
-            tonemap="aces-1.3",
+            output_gamma="sRGB",
+            tonemap="ACES-1.3",
         )
     _, what, how = _actionable_slots(str(error.value))
     assert "ndarray" in what
@@ -305,10 +286,10 @@ def test_analytic_rejects_non_frame_with_three_part_guidance() -> None:
 @pytest.mark.parametrize(
     ("parameter", "invalid_value"),
     (
-        ("input_colorspace", "acescg"),
-        ("output_colorspace", "rec709"),
-        ("input_gamma", "Linear"),
-        ("output_gamma", "sRGB"),
+        ("input_colorspace", "P3"),
+        ("output_colorspace", "P3"),
+        ("input_gamma", "log"),
+        ("output_gamma", "gamma/2.2"),
     ),
 )
 def test_analytic_rejects_every_unknown_axis_token_with_three_part_guidance(parameter: str, invalid_value: str) -> None:
@@ -318,8 +299,8 @@ def test_analytic_rejects_every_unknown_axis_token_with_three_part_guidance(para
     accepted = _COLORSPACE_TOKENS if parameter.endswith("colorspace") else _GAMMA_TOKENS
     arguments: dict[str, str] = {
         "output_colorspace": "sRGB",
-        "output_gamma": "srgb",
-        "tonemap": "aces-1.3",
+        "output_gamma": "sRGB",
+        "tonemap": "ACES-1.3",
         parameter: invalid_value,
     }
     with pytest.raises(ValueError) as error:
@@ -333,61 +314,9 @@ def test_analytic_rejects_every_unknown_axis_token_with_three_part_guidance(para
     assert repr(accepted) in how
 
 
-@pytest.mark.parametrize(
-    ("public_token", "internal_version", "output_colorspace", "output_gamma"),
-    (
-        ("aces-1.3-lut", "aces-1.3", "Rec.709", "bt1886"),
-        ("aces-1.3-lut", "aces-1.3", "sRGB", "srgb"),
-        ("aces-2.0-lut", "aces-2.0", "Rec.709", "bt1886"),
-        ("aces-2.0-lut", "aces-2.0", "sRGB", "srgb"),
-    ),
-)
-def test_lut_public_tokens_are_bit_identical_to_the_unchanged_internal_versions(
-    public_token: str, internal_version: str, output_colorspace: str, output_gamma: str
-) -> None:
-    """v1-tonemap-aces13-analytic acceptance 10-13: public LUT names map to unchanged internal identities."""
-    from pixtreme._color.view_transform import _apply_lut_data, _load_lut_identity
-
-    source = _frame((0.4, 0.18, 0.1, 1.2, -0.1, 0.4))
-    public = px.color.rgb_to_rgb(
-        source,
-        output_colorspace=output_colorspace,
-        output_gamma=output_gamma,
-        tonemap=public_token,
-    )
-    shaper, shaper_domain, lut = _load_lut_identity(internal_version, output_colorspace, output_gamma)
-    internal_data = _apply_lut_data(
-        source.data,
-        source.channels,
-        shaper=shaper,
-        shaper_domain=shaper_domain,
-        lut=lut,
-        output_gamma=output_gamma,
-    )
-    cp.testing.assert_array_equal(public.data.view(cp.uint32), internal_data.view(cp.uint32))
-    assert (public.colorspace, public.gamma, public.channels, public.matrix) == (
-        output_colorspace,
-        output_gamma,
-        source.channels,
-        None,
-    )
-
-
-def test_lut_assets_retain_their_names_metadata_and_exact_bytes() -> None:
-    """v1-tonemap-aces13-analytic acceptance 10-12: the four packaged LUT archives remain byte-identical."""
-    data_dir = ROOT / "src" / "pixtreme" / "data"
-    for filename, expected_sha256 in _ASSET_SHA256.items():
-        path = data_dir / filename
-        assert hashlib.sha256(path.read_bytes()).hexdigest() == expected_sha256
-        with np.load(path, allow_pickle=False) as archive:
-            expected_version = "aces-1.3" if "aces-1.3" in filename else "aces-2.0"
-            assert str(archive["version"].item()) == expected_version
-
-
 def test_analytic_runtime_is_one_fused_pass_with_no_lut_or_ocio_dependency(monkeypatch: pytest.MonkeyPatch) -> None:
     """v1-tonemap-aces13-analytic acceptance 8-9 and 13: analytic routing is one pass and data-free."""
     import pixtreme._color.aces13_analytic as implementation
-    import pixtreme._color.view_transform as _view_transform
 
     calls = 0
     real_kernel_factory = implementation._aces13_transform_kernel
@@ -397,16 +326,12 @@ def test_analytic_runtime_is_one_fused_pass_with_no_lut_or_ocio_dependency(monke
         calls += 1
         return real_kernel_factory(input_gamma, output_gamma)
 
-    def forbidden_lut(*args: object, **kwargs: object) -> None:
-        raise AssertionError(f"analytic path touched LUT args={args!r}, kwargs={kwargs!r}")
-
     monkeypatch.setattr(implementation, "_aces13_transform_kernel", counted_kernel_factory)
-    monkeypatch.setattr(_view_transform, "_load_lut", forbidden_lut)
     result = px.color.rgb_to_rgb(
         _frame((0.4, 0.18, 0.1)),
         output_colorspace="sRGB",
-        output_gamma="srgb",
-        tonemap="aces-1.3",
+        output_gamma="sRGB",
+        tonemap="ACES-1.3",
     )
     assert np.isfinite(result.data.get()).all()
     assert calls == 1
@@ -417,6 +342,20 @@ def test_analytic_runtime_is_one_fused_pass_with_no_lut_or_ocio_dependency(monke
     assert "Frame(" not in apply_source
     for forbidden in ("PyOpenColorIO", "importlib.resources", "np.load", "_load_lut", "shaper", "tetrahedral"):
         assert forbidden not in module_source
+
+
+def test_spline_tables_use_packed_global_read_only_records_for_divergent_segments() -> None:
+    """v1-tonemap-aces13-analytic acceptance 8-9 and issue #1: divergent coefficients use packed global records."""
+    import pixtreme._color.aces13_analytic as implementation
+
+    source = implementation._ACES13_ANALYTIC_KERNEL
+    for curve, knot_count, coefficient_count in (("curve0", 9, 8), ("curve1", 15, 14)):
+        assert f"__device__ __constant__ float aces13_{curve}_knots[{knot_count}]" in source
+        assert f"__device__ const float4 aces13_{curve}_coefficients[{coefficient_count}]" in source
+        for coefficient in ("a", "b", "c"):
+            assert f"aces13_{curve}_{coefficient}[" not in source
+    assert source.count("__device__ __constant__ float") == 2
+    assert source.count("__device__ const float4") == 2
 
 
 def test_oracle_tool_recreates_the_committed_fixture_byte_for_byte(tmp_path: Path) -> None:
@@ -432,8 +371,8 @@ def test_oracle_tool_recreates_the_committed_fixture_byte_for_byte(tmp_path: Pat
     assert first.read_bytes() == second.read_bytes() == ORACLE_PATH.read_bytes()
 
 
-def test_docs_docstring_registry_and_visual_generator_expose_the_new_supply_boundary() -> None:
-    """v1-tonemap-aces20-analytic acceptance 18-19 and 22-23: public texts and tooling use the ten rows."""
+def test_docs_docstring_registry_and_visual_generator_expose_the_six_row_boundary() -> None:
+    """v1-view-transform-lut-removal acceptance 4 and 8: public texts and tooling use the six rows."""
     requirements_path = ROOT / "docs" / "requirements.md"
     if not requirements_path.is_file():
         pytest.skip("repo-only documentation contract: docs/requirements.md is absent from this distribution")
@@ -446,31 +385,30 @@ def test_docs_docstring_registry_and_visual_generator_expose_the_new_supply_boun
     normalized_docstring = " ".join(docstring.split())
 
     for text in (requirements, vocabulary, docstring):
-        for token in ("aces-1.3", "aces-1.3-lut", "aces-2.0", "aces-2.0-lut", "bt2408"):
+        for token in ("ACES-1.3", "ACES-2.0", "BT.2408"):
             assert token in text
-        for required in ("analytic", "LUT", "clip"):
+        for required in ("analytic", "clip"):
             assert required in text
     assert "Both ``output_colorspace`` and ``output_gamma`` must be supplied explicitly" in normalized_docstring
-    assert "``Rec.709`` / ``bt1886`` and ``sRGB`` / ``srgb``" in normalized_docstring
-    assert "Plain ``aces-2.0`` is not supplied" not in normalized_docstring
+    assert "``Rec.709`` / ``BT.1886`` and ``sRGB`` / ``sRGB``" in normalized_docstring
+    assert "Plain ``ACES-2.0`` is not supplied" not in normalized_docstring
     supply_table = vocabulary.split("## tonemap combinations", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
     for tonemap, output_colorspace, output_gamma in _SUPPLIED_COMBINATIONS:
         assert f"| `{tonemap}` | `{output_colorspace}` | `{output_gamma}` |" in supply_table
-    assert supply_table.count("| `aces-2.0` |") == 2
-    for required in ("absolute", "difference", "aces-1.3-lut", "gamut", "highlight"):
+    assert supply_table.count("| `ACES-2.0` |") == 2
+    for required in ("ACES-1.3", "ACES-2.0", "BT.2408", "gamut", "highlight"):
         assert required in visual_source
     for required in (
         "color-aces13-analytic-srgb",
         "color-aces20-analytic-srgb",
-        "color-aces20-lut-srgb",
         "color-bt2408-rec2020-pq",
     ):
         assert required in performance_source
 
 
 @pytest.mark.performance
-def test_analytic_fhd_median_is_within_lut_ratio_and_absolute_limits() -> None:
-    """v1-tonemap-aces13-analytic acceptance 24: same-run FHD median is <=1.5x LUT and <=0.20 ms.
+def test_analytic_fhd_median_is_within_the_absolute_limit() -> None:
+    """v1-view-transform-lut-removal acceptance 2: the unchanged ACES 1.3 path remains within 0.20 ms.
 
     Warmup is time-based (at least 0.5 seconds, matching the registry harness) so that measurement
     starts only after the GPU has ramped from idle to boost clocks. A fixed iteration count finishes
@@ -482,20 +420,18 @@ def test_analytic_fhd_median_is_within_lut_ratio_and_absolute_limits() -> None:
     def measure(tonemap: str) -> float:
         warmup_started_at = perf_counter()
         while perf_counter() - warmup_started_at < 0.5:
-            px.color.rgb_to_rgb(source, output_colorspace="sRGB", output_gamma="srgb", tonemap=tonemap)
+            px.color.rgb_to_rgb(source, output_colorspace="sRGB", output_gamma="sRGB", tonemap=tonemap)
             cp.cuda.Stream.null.synchronize()
         samples: list[float] = []
         for _ in range(31):
             start = cp.cuda.Event()
             end = cp.cuda.Event()
             start.record()
-            px.color.rgb_to_rgb(source, output_colorspace="sRGB", output_gamma="srgb", tonemap=tonemap)
+            px.color.rgb_to_rgb(source, output_colorspace="sRGB", output_gamma="sRGB", tonemap=tonemap)
             end.record()
             end.synchronize()
             samples.append(float(cp.cuda.get_elapsed_time(start, end)))
         return float(np.median(np.asarray(samples, dtype=np.float64)))
 
-    analytic_ms = measure("aces-1.3")
-    lut_ms = measure("aces-1.3-lut")
-    assert analytic_ms <= lut_ms * 1.5, (analytic_ms, lut_ms)
-    assert analytic_ms <= 0.20, (analytic_ms, lut_ms)
+    analytic_ms = measure("ACES-1.3")
+    assert analytic_ms <= 0.20, analytic_ms

@@ -21,7 +21,14 @@ from pixtreme._core.frame import (
 from pixtreme._core.interpolation import _POINT_INTERPOLATION_TOKENS, _specialized_point_weight_source
 from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._core.value_domain import _float32_conversion_guidance
-from pixtreme._core.vocabulary import _CHROMA_SITING_TOKENS
+from pixtreme._core.vocabulary import (
+    _CHROMA_SITING_TOKENS,
+    Colorspace,
+    Gamma,
+    Interpolation,
+    Matrix,
+    Range,
+)
 
 if TYPE_CHECKING:
     pass
@@ -44,8 +51,8 @@ _PLANAR_BIT_DEPTHS = {
     "to_yuva444p": (12,),
 }
 
-_PLACEHOLDER_COLORSPACE = "Rec.709"
-_PLACEHOLDER_GAMMA = "rec709"
+_PLACEHOLDER_COLORSPACE: Colorspace = "Rec.709"
+_PLACEHOLDER_GAMMA: Gamma = "Rec.709"
 _YCBCR_CHANNELS = ("Y", "Cb", "Cr")
 _YCBCRA_CHANNELS = ("Y", "Cb", "Cr", "A")
 _THREADS_PER_BLOCK = 256
@@ -598,7 +605,7 @@ def _validate_buffer(
     return buf.reshape(-1)
 
 
-def _range_parameters(value: str, *, bit_depth: int) -> tuple[np.float32, np.float32, np.float32, np.float32]:
+def _range_parameters(value: Range, *, bit_depth: int) -> tuple[np.float32, np.float32, np.float32, np.float32]:
     if value == "full":
         scale = np.float32(1.0 / ((1 << bit_depth) - 1))
         return np.float32(0.0), scale, np.float32(0.0), scale
@@ -615,7 +622,7 @@ def _launch_shape(pixel_count: int) -> tuple[tuple[int, ...], tuple[int, ...]]:
     return ((pixel_count + _THREADS_PER_BLOCK - 1) // _THREADS_PER_BLOCK,), (_THREADS_PER_BLOCK,)
 
 
-def _metadata(colorspace: str | None, gamma: str | None) -> tuple[str, str]:
+def _metadata(colorspace: Colorspace | None, gamma: Gamma | None) -> tuple[Colorspace, Gamma]:
     return (
         _PLACEHOLDER_COLORSPACE
         if colorspace is None
@@ -624,16 +631,16 @@ def _metadata(colorspace: str | None, gamma: str | None) -> tuple[str, str]:
     )
 
 
-def _matrix(value: str | None) -> str | None:
+def _matrix(value: Matrix | None) -> Matrix | None:
     return None if value is None else _token(value, axis="matrix", accepted=_MATRIX_TOKENS)
 
 
 def _frame(
     output: cp.ndarray,
     *,
-    colorspace: str,
-    gamma: str,
-    matrix: str | None,
+    colorspace: Colorspace,
+    gamma: Gamma,
+    matrix: Matrix | None,
     alpha: bool = False,
 ) -> Frame:
     return Frame(
@@ -653,10 +660,10 @@ def _from_subsampled(
     width: int,
     height: int,
     bit_depth: int,
-    range: str,
-    colorspace: str,
-    gamma: str,
-    matrix: str | None,
+    range: Range,
+    colorspace: Colorspace,
+    gamma: Gamma,
+    matrix: Matrix | None,
     row_words: int = 0,
 ) -> Frame:
     pixel_count = width * height
@@ -689,11 +696,11 @@ def _from_planar_444(
     width: int,
     height: int,
     bit_depth: int,
-    range: str,
+    range: Range,
     alpha: bool,
-    colorspace: str,
-    gamma: str,
-    matrix: str | None,
+    colorspace: Colorspace,
+    gamma: Gamma,
+    matrix: Matrix | None,
 ) -> Frame:
     pixel_count = width * height
     channel_count = 4 if alpha else 3
@@ -713,7 +720,7 @@ def _from_planar_444(
     return _frame(output, colorspace=colorspace, gamma=gamma, matrix=matrix, alpha=alpha)
 
 
-_TO_INTERPOLATION_TOKENS = (*_POINT_INTERPOLATION_TOKENS[:3], "area")
+_TO_INTERPOLATION_TOKENS: tuple[Interpolation, ...] = (*_POINT_INTERPOLATION_TOKENS[:3], "area")
 
 _TO_SUBSAMPLED_KERNEL_TEMPLATE = r"""
 typedef __OUTPUT_TYPE__ pixtreme_output_t;

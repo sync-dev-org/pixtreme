@@ -10,6 +10,7 @@ import numpy as np
 
 from pixtreme._core.border import _BORDER_PREAMBLE, _border_argument, _resolve_border
 from pixtreme._core.frame import Frame, _new_frame, _validate_float32_frame
+from pixtreme._core.vocabulary import Border
 from pixtreme._filter.common import (
     _RAW_KERNEL_SHARED_LIMIT,
     _shape_arguments,
@@ -198,7 +199,7 @@ def bilateral_blur(
     *,
     sigma_space: float,
     sigma_value: float,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Apply a bilateral blur using one all-channel value distance per neighbor.

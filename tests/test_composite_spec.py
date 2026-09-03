@@ -317,13 +317,13 @@ def test_composite_public_signature_metadata_and_private_storage() -> None:
         np.zeros((3, 5, 4), dtype=np.float32),
         channels=("B", "A", "R", "G"),
         colorspace="Rec.2020",
-        gamma="pq",
+        gamma="PQ",
     )
     foreground = _frame(
         np.zeros((2, 4, 4), dtype=np.float32),
         channels=("R", "G", "B", "A"),
         colorspace="Rec.2020",
-        gamma="pq",
+        gamma="PQ",
     )
     result = px.composite.merge(background, foreground)
 
@@ -410,9 +410,9 @@ def test_composite_label_mapping_is_order_independent_and_default_mismatches_nam
                 np.zeros((1, 1, 3), dtype=np.float32),
                 channels=("R", "G", "B"),
                 colorspace="ACEScg",
-                gamma="srgb",
+                gamma="sRGB",
             ),
-            ("gamma", "linear", "srgb"),
+            ("gamma", "linear", "sRGB"),
         ),
     )
     for mismatched, required in mismatches:
@@ -431,7 +431,7 @@ def test_composite_adapt_matches_public_channel_and_color_transform_composition(
         foreground_values,
         channels=("Y", "Cb", "Cr", "A"),
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
     )
     rgb = px.color.ycbcr_to_rgb(foreground)
     prepared = px.color.rgb_to_rgb(rgb, output_colorspace="ACEScg", output_gamma="linear")
@@ -475,13 +475,13 @@ def test_composite_adapt_unassociates_and_reassociates_premultiplied_color() -> 
         straight_values,
         channels=("Y", "Cb", "Cr", "A"),
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
     )
     premultiplied = _frame(
         premultiplied_values,
         channels=("Y", "Cb", "Cr", "A"),
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
     )
 
     straight_result = px.composite.merge(
@@ -540,10 +540,10 @@ def test_composite_adapt_rejects_channel_pairs_without_a_deterministic_conversio
         ({"scale": float("inf")}, "scale"),
         ({"rotation": float("nan")}, "rotation"),
         ({"interpolation": "area"}, "interpolation"),
-        ({"interpolation": "Bilinear"}, "interpolation"),
-        ({"alpha": "Premultiplied"}, "alpha"),
+        ({"interpolation": "linear"}, "interpolation"),
+        ({"alpha": "opaque"}, "alpha"),
         ({"blend": "over"}, "blend"),
-        ({"blend": "Normal"}, "blend"),
+        ({"blend": "replace"}, "blend"),
         ({"opacity": True}, "opacity"),
         ({"opacity": -0.1}, "opacity"),
         ({"opacity": 1.1}, "opacity"),
@@ -551,7 +551,7 @@ def test_composite_adapt_rejects_channel_pairs_without_a_deterministic_conversio
     ),
 )
 def test_composite_control_axes_fail_fast_actionably(kwargs: dict[str, object], axis: str) -> None:
-    """v1-composite acceptance 7-9, 12-13, and 15: every control axis is finite, closed, and case-sensitive."""
+    """v1-composite acceptance 7-9, 12-13, and 15; v1-token-vocabulary acceptance 7: axes stay closed."""
     frame = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=("matte",))
 
     with pytest.raises(ValueError) as error:
@@ -655,7 +655,7 @@ def test_composite_mask_is_untransformed_unclamped_and_opacity_zero_is_bit_exact
     mask_values = np.asarray([[[-0.5], [0.25]], [[1.5], [2.0]]], dtype=np.float32)
     background = _frame(background_values, channels=("matte", "A"))
     foreground = _frame(foreground_values, channels=("matte", "A"))
-    mask = _frame(mask_values, channels=("custom-mask",), colorspace="sRGB", gamma="pq")
+    mask = _frame(mask_values, channels=("custom-mask",), colorspace="sRGB", gamma="PQ")
     expected = _composite_reference(
         background_values,
         foreground_values,

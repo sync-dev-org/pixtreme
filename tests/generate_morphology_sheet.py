@@ -63,13 +63,13 @@ def _display(frame: px.core.Frame) -> px.core.Frame:
     data = frame.data
     if data.shape[2] == 1:
         data = cp.repeat(data, 3, axis=2)
-    return px.io.from_array(cp.clip(data, 0.0, 1.0), colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(cp.clip(data, 0.0, 1.0), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def _label(frame: px.core.Frame, text: str) -> px.core.Frame:
     display = _display(frame)
     label_data = cp.full((_LABEL_HEIGHT, _WIDTH, 3), np.float32(0.015), dtype=cp.float32)
-    bar = px.io.from_array(label_data, colorspace="sRGB", gamma="srgb", channels="RGB")
+    bar = px.io.from_array(label_data, colorspace="sRGB", gamma="sRGB", channels="RGB")
     bar = px.draw.text(
         bar,
         text=text,
@@ -122,7 +122,7 @@ def generate_sheet(path: Path) -> None:
         direction="vertical",
     )
     code = cp.rint(cp.clip(sheet.data, 0.0, 1.0) * np.float32(255.0)).astype(cp.uint8)
-    output = px.io.from_array(code, colorspace="sRGB", gamma="srgb", channels="RGB")
+    output = px.io.from_array(code, colorspace="sRGB", gamma="sRGB", channels="RGB")
     path.parent.mkdir(parents=True, exist_ok=True)
     px.io.write_image(path, output, compression_level=6)
 

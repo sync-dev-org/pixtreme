@@ -399,7 +399,7 @@ def test_canny_rejects_reversed_thresholds_instead_of_swapping() -> None:
     ("border", "border_value"),
     (
         ("unknown", None),
-        ("Mirror", None),
+        ("reflect", None),
         (None, None),
         ("constant", None),
         ("constant", True),
@@ -443,12 +443,12 @@ def test_canny_rejects_non_float32_frames_with_conversion_guidance(
 
 
 def test_canny_returns_private_contiguous_binary_storage_and_preserves_metadata_and_input() -> None:
-    """v1-canny acceptance 2 and 4: output shape, storage, metadata, and input invariants are fixed."""
+    """v1-canny acceptance 2 and 4; v1-red-tokens acceptance 68: renamed ARRI metadata is fixed."""
     values = np.linspace(-0.5, 1.5, 6 * 7 * 4, dtype=np.float32).reshape(6, 7, 4)
     source = _frame(
         values,
         colorspace="ACEScg",
-        gamma="logc4",
+        gamma="ARRI-LogC4",
         channels=("R", "G", "custom", "A"),
         matrix="native",
     )

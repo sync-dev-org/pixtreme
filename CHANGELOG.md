@@ -2,6 +2,140 @@
 
 Notable changes to pixtreme are documented in this file.
 
+## 1.3.0 - 2026-09-03
+
+pixtreme 1.3.0 widens the camera and working colour vocabulary from 7 to 18 colorspace tokens and from 12 to 19
+gamma tokens (Sony, ARRI, Blackmagic Design, DaVinci, and RED families), canonicalizes token spellings behind a
+case- and separator-insensitive runtime that keeps every earlier spelling as a permanent alias, removes the pre-baked
+LUT tonemap tokens in favour of the analytic ACES renderings, adds optional `px.infer` / `px.transport` companion
+namespaces, and ships a round of bit-identical GPU kernel fusions. Absolute performance figures below are same-run
+medians on an NVIDIA RTX A6000 (WSL2, CUDA runtime 12.9, CuPy 14.1.1) at 1920x1080 fp32 RGB unless stated.
+
+### Added
+
+- Added the independent RED colorspace tokens `REDWideGamutRGB`, `DRAGONcolor`, `DRAGONcolor2`, `REDcolor2`,
+  `REDcolor3`, and `REDcolor4`, plus the `RED-Log3G10` and `REDlogFilm` gamma tokens. `RED-Log3G10` uses RED's
+  published piecewise curve without clipping or sign/magnitude mirroring. `REDlogFilm` is float32 bit-identical to
+  `Cineon` while preserving independent metadata. All six gamuts use coordinate-derived normalized primary matrices,
+  production D65, shared Bradford adaptation, and independent gamma selection. Existing token results remain
+  bit-identical.
+
+- Added the independent canonical colorspace tokens `Blackmagic-Wide-Gamut-Gen-5` and `DaVinci-Wide-Gamut`, plus
+  the `Blackmagic-Film-Gen-5` and `DaVinci-Intermediate` gamma tokens. The two gamuts use their published primaries
+  with production D65 and remain independent from gamma selection. Film Gen 5 uses Blackmagic Design's natural-log
+  transfer and published anchors; DaVinci Intermediate uses its base-2 transfer and the decode threshold derived from
+  its linear branch. Both curves extend directly to negative values and leave scene overshoot unclipped. Existing
+  camera-log token results remain bit-identical.
+
+- Added explicit optional companion namespaces for `px.infer` and `px.transport`. Separately installed
+  `pixtreme-infer` and `pixtreme-transport` distributions can contribute their matching `pixtreme` subpackages while
+  the root package keeps its existing constant public surface. Accessing an absent companion reports its matching
+  `pip install` command.
+
+- Added the independent canonical colorspace tokens `ARRI-Wide-Gamut-3` and `ARRI-Wide-Gamut-4`, plus the `ARRI-LogC3`
+  gamma token. ARRI-LogC3 is fixed to ARRI's EI 800 relative scene-exposure curve, maps 18% gray to `400 / 1023`,
+  extends its tangent-derived lower linear branch to negative values, and leaves scene overshoot unclipped. The two
+  gamut tokens publish their ARRI primaries with D65 white and remain independent from gamma selection. Existing
+  ARRI-LogC4 remains bit-identical.
+
+- Added the independent canonical tokens `S-Gamut`, `S-Log`, and `S-Log2`. S-Log and S-Log2 use Sony's published
+  scene-linear IRE equations with public reflectance normalization and legal-range code embedding; the S-Log
+  negative forward branch is the algebraic inverse of Sony's published decoder linear branch, not a separately
+  published Sony forward equation. Their 0% / 18% /
+  90% reflection anchors round to `90 / 394 / 636` and `90 / 347 / 582`, respectively. S-Gamut is numerically
+  identical to S-Gamut3 while retaining separate metadata identity. S-Gamut3 and S-Log3 remain unchanged.
+
+### Breaking
+
+- Removed the pre-baked LUT tonemap tokens `aces-1.3-lut` and `aces-2.0-lut` from `px.color.rgb_to_rgb`, together
+  with their four bundled 65^3 LUT archives (13,280,928 bytes) and the view-transform LUT runtime. The tonemap
+  vocabulary is now `ACES-1.3`, `ACES-2.0`, and `BT.2408` with six supply pairs (`Rec.709` / `BT.1886` and `sRGB` /
+  `sRGB` for both ACES renderings, `Rec.2020` / `HLG` and `Rec.2020` / `PQ` for BT.2408). The analytic paths keep
+  their float32 output bits for negative, reference-white, super-white, and saturated inputs. Passing a removed token
+  raises the existing closed-vocabulary `ValueError` before any pixel work, listing the six valid pairs.
+
+- The pre-release intermediate canonical gamma tokens `LogC3` and `LogC4` are renamed to `ARRI-LogC3` and
+  `ARRI-LogC4` before publication. No `LogC3` compatibility alias is added. Relative to v1.2.1, runtime input
+  `logc4` remains accepted through its permanent alias, canonical output changes from `logc4` to `ARRI-LogC4`, and
+  the static `Literal` aliases and public signatures replace `logc4` with `ARRI-LogC4`. Both ARRI curves retain the
+  same equations, branches, signed extensions, anchors, and float32 output bits.
+
+- `S-Log3` and `ARRI-LogC4` now apply their vendor-published piecewise equations directly to signed inputs instead of
+  sign/magnitude mirroring. S-Log3 applies the Sony piecewise formula directly to signed inputs, including the lower
+  linear branch below zero. ARRI-LogC4 applies the ARRI piecewise formula directly to signed inputs, selecting its log
+  branch at and above the negative cut and its lower linear branch below it. Negative encoded ARRI-LogC4 values decode
+  linearly. Negative-input results change. Results for nonnegative inputs remain float32 bit-identical.
+
+- Canonical token spellings now preserve standards and proper-name typography. Static `Literal` aliases, public
+  signatures, defaults, Frame metadata, representations, return values, and error recovery candidates expose only the
+  canonical spellings below. Runtime validation is case-insensitive and treats U+0020 SPACE, `.`, `-`, and `_` as
+  interchangeable separators. All earlier spellings are permanent runtime aliases.
+
+  | Family | Earlier spelling | Canonical spelling |
+  |---|---|---|
+  | Gamma | `srgb` | `sRGB` |
+  | Gamma | `rec709` | `Rec.709` |
+  | Gamma | `bt1886` | `BT.1886` |
+  | Gamma | `pq` | `PQ` |
+  | Gamma | `hlg` | `HLG` |
+  | Gamma | `s-log3` | `S-Log3` |
+  | Gamma | `logc4` | `ARRI-LogC4` |
+  | Gamma | `cineon` | `Cineon` |
+  | Gamma | `2.2` | `Gamma-2.2` |
+  | Gamma | `2.4` | `Gamma-2.4` |
+  | Gamma | `2.6` | `Gamma-2.6` |
+  | Matrix | `bt601` | `BT.601` |
+  | Matrix | `bt709` | `BT.709` |
+  | Matrix | `bt2020` | `BT.2020` |
+  | ChromaticAdaptation | `bradford` | `Bradford` |
+  | ChromaticAdaptation | `cat02` | `CAT02` |
+  | ChromaticAdaptation | `cat16` | `CAT16` |
+  | ChromaticAdaptation | `von-kries` | `von-Kries` |
+  | ReferenceWhite | `d65` | `D65` |
+  | ReferenceWhite | `d93` | `D93` |
+  | ReferenceWhite | `d50` | `D50` |
+  | ReferenceWhite | `aces` | `ACES` |
+  | Tonemap | `aces-1.3` | `ACES-1.3` |
+  | Tonemap | `aces-2.0` | `ACES-2.0` |
+  | Tonemap | `bt2408` | `BT.2408` |
+  | ColorBarsStandard | `arib-std-b28` | `ARIB-STD-B28` |
+  | ColorBarsStandard | `smpte-rp219` | `SMPTE-RP219` |
+  | ColorBarsStandard | `bt2111-hlg` | `BT.2111-HLG` |
+  | ColorBarsStandard | `bt2111-pq` | `BT.2111-PQ` |
+  | ColorBarsStandard | `bt2111-pq-full` | `BT.2111-PQ-full` |
+
+  The three numeric gamma spellings remain permanent runtime aliases. Their transfer implementation and GPU kernels
+  are unchanged. `BT.1886` is the Annex 1 ideal-black specialization and is numerically equivalent to `Gamma-2.4`,
+  while the two canonical tokens retain distinct meanings and metadata identities.
+
+### Changed
+
+- `px.color.rgb_to_rgb` with `tonemap="ACES-2.0"` moves the hue-dependent algorithm table from CUDA constant memory
+  to read-only global memory, reuses the CAM response powers, and resolves cusp intervals in two fixed steps. FHD RGB
+  shortens from 1.270 ms to 0.141 ms (Rec.709 / BT.1886) and from 1.276 ms to 0.144 ms (sRGB / sRGB); outputs are
+  bit-identical and the OCIO corpus statistics are unchanged. `tonemap="ACES-1.3"` moves its spline coefficient
+  arrays to packed read-only global memory; divergent FHD inputs shorten from 0.201 ms to 0.146 ms with bit-identical
+  output.
+- `px.values.recode_dtype` runs every conversion pair that involves an integer dtype in one fused RawKernel; same-dtype
+  and float-to-float pairs keep the `cast_dtype` delegation. All 25 dtype pairs remain bit-identical to the previous
+  composition, including NaN payloads and the `uint32` NaN code. Formerly multi-pass pairs shorten by up to 7.4 times
+  (`uint16` to `uint8` 7.39x, `uint8` to `uint16` 7.32x, `uint32` to `uint16` 6.22x, `float32` to `uint32` 4.53x);
+  the `uint8` / `float32` registry cases shorten from 0.104 ms and 0.097 ms to 0.083 ms.
+- EXR `UINT` channel decoding reuses the shared unpack RawKernel instead of a per-chunk CuPy composition. The unpack
+  stage shortens from 94.55 ms to 0.48 ms for an FHD-sized UINT scanline image and a full ZIP decode of the same
+  container from 98.90 ms to 22.33 ms; decoded bits are unchanged across all ten compressions.
+- Raster decode (channel gather, cast, normalization) and raster write (recode, canonical gather) boundary stages each
+  run as one fused RawKernel launch for every raster format. The boundary stages shorten by 2.2 to 3.0 times with
+  bit-identical results (signed zero and non-finite values included); end-to-end PNG timing is within measurement
+  noise because the codec dominates.
+- `px.channel.shuffle` assembles its output in one routing kernel launch instead of one full-frame pass per output
+  channel. FHD fp32 reorder shortens from 0.297 ms to 0.119 ms, multi-source with fill from 0.400 ms to 0.203 ms, and
+  `adapt=True` from 0.383 ms to 0.244 ms; the routing copies float32 bit patterns verbatim.
+- EXR DWAA / DWAB write fuses normalization, HALF rounding, forward transfer, mirror gather, and RGB to YCbCr into one
+  kernel, and read fuses YCbCr to RGB, inverse transfer, and HALF selection. Encoded bytes and decoded bits are
+  unchanged across compression levels, channel layouts, and input dtypes. Dedicated-GPU FHD medians shorten by 4.8%
+  for DWAA / DWAB read and by 2.2% / 3.3% for DWAA / DWAB write.
+
 ## 1.2.1 - 2026-08-17
 
 pixtreme 1.2.1 shortens seven morphology operations by 25 to 48 times, cuts `match_template`

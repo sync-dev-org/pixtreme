@@ -13,6 +13,7 @@ from pixtreme._core.border import _BORDER_PREAMBLE, _border_argument
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame
 from pixtreme._core.vocabulary import _BORDER_TOKENS as _BORDER_TOKENS
+from pixtreme._core.vocabulary import Border
 
 _RAW_KERNEL_BLOCK = (32, 8)
 
@@ -459,7 +460,7 @@ def _launch_separable_axis(
     *,
     frame: Frame,
     radius: int,
-    border: str,
+    border: Border,
     border_value: float,
     horizontal: bool,
     argument_builder: _SeparableAxisArgumentBuilder,
@@ -495,7 +496,7 @@ def _launch_box_axis(
     frame: Frame,
     radius: int,
     scale: float,
-    border: str,
+    border: Border,
     border_value: float,
     horizontal: bool,
 ) -> None:
@@ -536,7 +537,7 @@ def _launch_gaussian_axis(
     *,
     frame: Frame,
     radius: int,
-    border: str,
+    border: Border,
     border_value: float,
     horizontal: bool,
 ) -> None:

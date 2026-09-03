@@ -8,9 +8,9 @@ import cupy as cp
 import numpy as np
 
 from pixtreme._core.border import _BORDER_PREAMBLE, _border_argument, _resolve_border
-from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame, _new_frame, _validate_float32_frame
-from pixtreme._core.vocabulary import _SOBEL_DIRECTION_TOKENS
+from pixtreme._core.validation import _normalized_closed_token
+from pixtreme._core.vocabulary import _SOBEL_DIRECTION_TOKENS, Border, SobelDirection
 from pixtreme._filter.common import _validate_sigma
 from pixtreme._filter.gaussian import gaussian_blur
 
@@ -122,15 +122,7 @@ def _laplacian_kernel() -> cp.RawKernel:
 
 
 def _validate_direction(direction: object) -> str:
-    if direction not in _DIRECTION_TOKENS:
-        raise ValueError(
-            _actionable_error(
-                why="direction is a closed, case-sensitive Sobel token axis",
-                what=f"received direction={direction!r}",
-                how=f"pass one of {_DIRECTION_TOKENS!r}",
-            )
-        )
-    return str(direction)
+    return _normalized_closed_token(direction, axis="direction", accepted=_DIRECTION_TOKENS)
 
 
 def _block_count(frame: Frame) -> int:
@@ -141,8 +133,8 @@ def _block_count(frame: Frame) -> int:
 def sobel(
     frame: Frame,
     *,
-    direction: str = "magnitude",
-    border: str = "mirror",
+    direction: SobelDirection = "magnitude",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Apply the standard non-normalized 3x3 Sobel derivative to a float32 Frame.
@@ -185,7 +177,7 @@ def sobel(
 def laplacian(
     frame: Frame,
     *,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Apply the fixed non-normalized 3x3 Laplacian to a float32 Frame.
@@ -226,7 +218,7 @@ def difference_of_gaussians(
     *,
     sigma1: float,
     sigma2: float,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Subtract ``gaussian_blur(sigma2)`` from ``gaussian_blur(sigma1)``.

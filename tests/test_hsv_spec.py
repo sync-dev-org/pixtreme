@@ -250,8 +250,8 @@ def test_hsv_operations_preserve_claims_reset_matrix_and_leave_input_storage_unc
         ((0.25, 1.5, 0.75), (2.0, 0.5, 0.1)),
         channels=("B", "R", "G"),
         colorspace="S-Gamut3.Cine",
-        gamma="s-log3",
-        matrix="bt601",
+        gamma="S-Log3",
+        matrix="BT.601",
     )
     snapshot = source.data.copy()
     source_pointer = source.data.data.ptr
@@ -270,7 +270,7 @@ def test_hsv_operations_preserve_claims_reset_matrix_and_leave_input_storage_unc
     assert rgb.data.data.ptr != hsv.data.data.ptr
     cp.testing.assert_array_equal(source.data, snapshot)
     assert source.channels == ("B", "R", "G")
-    assert source.matrix == "bt601"
+    assert source.matrix == "BT.601"
 
 
 @pytest.mark.parametrize("operation", ("rgb_to_hsv", "hsv_to_rgb"))

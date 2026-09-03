@@ -350,12 +350,12 @@ def _parse_dpx_layout(source: Path | bytes) -> _DpxLayout:
 
 def _dpx_gamma(bit_depth: int, transfer: int) -> tuple[str, bool]:
     if transfer in (1, 3, 13):
-        return "cineon", True
+        return "Cineon", True
     if transfer == 2:
         return "linear", True
     if transfer in (4, 5, 6, 7, 8, 9, 10):
-        return "rec709", True
-    fallback = "cineon" if bit_depth == 10 else ("rec709" if bit_depth == 8 else "linear")
+        return "Rec.709", True
+    fallback = "Cineon" if bit_depth == 10 else ("Rec.709" if bit_depth == 8 else "linear")
     return fallback, False
 
 
@@ -524,11 +524,20 @@ def _validate_dpx_bit_depth(bit_depth: int) -> int:
 
 
 def _dpx_transfer_from_gamma(gamma: str) -> int:
-    if gamma == "cineon":
+    if gamma in ("Cineon", "REDlogFilm"):
         return 1
     if gamma == "linear":
         return 2
-    if gamma in ("s-log3", "logc4"):
+    if gamma in (
+        "S-Log",
+        "S-Log2",
+        "S-Log3",
+        "ARRI-LogC3",
+        "ARRI-LogC4",
+        "Blackmagic-Film-Gen-5",
+        "DaVinci-Intermediate",
+        "RED-Log3G10",
+    ):
         return 3
     return 6
 

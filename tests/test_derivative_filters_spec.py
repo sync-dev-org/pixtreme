@@ -310,9 +310,9 @@ def test_difference_of_gaussians_equals_the_public_blur_composition() -> None:
     )
 
 
-@pytest.mark.parametrize("direction", ("horizontal", "X", "Magnitude", None, 1))
+@pytest.mark.parametrize("direction", ("horizontal", "diagonal", "length", None, 1))
 def test_sobel_rejects_unknown_direction_actionably(direction: object) -> None:
-    """v1-derivative-filters acceptance 5 and 7: sobel direction is a closed case-sensitive token axis."""
+    """v1-derivative-filters acceptance 5 and 7; v1-token-vocabulary acceptance 7: direction stays closed."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=["signal"])
     with pytest.raises(ValueError) as error:
         px.filter.sobel(source, direction=direction)  # type: ignore[arg-type]
@@ -363,13 +363,13 @@ def test_derivative_filters_share_the_border_error_contract(name: str) -> None:
 
 
 def test_derivative_filters_preserve_metadata_channels_scene_values_and_input() -> None:
-    """v1-derivative-filters acceptance 1-3: per-channel results preserve shape, metadata, scene values, and input."""
+    """v1-derivative-filters acceptance 1-3; v1-red-tokens acceptance 68: ARRI metadata survives filters."""
     values = np.asarray(
         [[[-1.0, 2.0], [0.5, -0.5], [3.0, 1.0]], [[2.0, -1.0], [-2.0, 4.0], [1.5, 0.0]]],
         dtype=np.float32,
     )
-    source = _frame(values, colorspace="ACEScg", gamma="logc4", channels=["A", "application-mask"])
-    relabeled = _frame(values, colorspace="ACEScg", gamma="logc4", channels=["Z", "Y"])
+    source = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=["A", "application-mask"])
+    relabeled = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=["Z", "Y"])
     before = px.io.to_array(source, copy=True).get()
     operations = (
         lambda frame: px.filter.sobel(frame, direction="x", border="wrap"),
@@ -383,7 +383,7 @@ def test_derivative_filters_preserve_metadata_channels_scene_values_and_input() 
         assert result.data.data.ptr != source.data.data.ptr
         assert (result.colorspace, result.gamma, result.channels) == (
             "ACEScg",
-            "logc4",
+            "ARRI-LogC4",
             ("A", "application-mask"),
         )
         np.testing.assert_array_equal(

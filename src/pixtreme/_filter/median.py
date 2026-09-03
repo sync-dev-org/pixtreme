@@ -9,6 +9,7 @@ import numpy as np
 
 from pixtreme._core.border import _BORDER_PREAMBLE, _border_argument, _resolve_border
 from pixtreme._core.frame import Frame, _new_frame, _validate_float32_frame
+from pixtreme._core.vocabulary import Border
 from pixtreme._filter.common import (
     _RAW_KERNEL_BLOCK,
     _RAW_KERNEL_SHARED_LIMIT,
@@ -216,7 +217,7 @@ def median_blur(
     frame: Frame,
     *,
     size: int,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Replace each channel value with its square-window median.

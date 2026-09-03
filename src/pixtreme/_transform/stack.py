@@ -14,8 +14,9 @@ from pixtreme._color.semantics import rgb_to_ycbcr, ycbcr_to_rgb
 from pixtreme._color.transform import rgb_to_rgb
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame
+from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._core.value_domain import _float32_conversion_guidance
-from pixtreme._core.vocabulary import _STACK_DIRECTION_TOKENS
+from pixtreme._core.vocabulary import _STACK_DIRECTION_TOKENS, StackDirection
 from pixtreme._transform.resize import resize
 
 _RGB_CHANNELS = ("R", "G", "B")
@@ -53,15 +54,7 @@ def _normalize_images(images: Sequence[Frame]) -> tuple[Frame, ...]:
 
 
 def _validate_direction(direction: str) -> str:
-    if direction not in _STACK_DIRECTION_TOKENS:
-        raise ValueError(
-            _actionable_error(
-                why="stack direction is a closed case-sensitive token",
-                what=f"received direction={direction!r}",
-                how=f"choose one of {_STACK_DIRECTION_TOKENS!r}",
-            )
-        )
-    return direction
+    return _normalized_closed_token(direction, axis="direction", accepted=_STACK_DIRECTION_TOKENS)
 
 
 def _mismatch_error(
@@ -273,7 +266,7 @@ def _adapt_images(images: tuple[Frame, ...], *, direction: str) -> tuple[Frame, 
 def stack(
     images: Sequence[Frame],
     *,
-    direction: str = "vertical",
+    direction: StackDirection = "vertical",
     adapt: bool = False,
 ) -> Frame:
     """Concatenate Frames vertically or horizontally into a new Frame.

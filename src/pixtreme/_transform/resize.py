@@ -12,6 +12,8 @@ import numpy as np
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame, _validate_float32_frame
 from pixtreme._core.interpolation import _POINT_INTERPOLATION_DEVICE_SOURCE, _POINT_INTERPOLATION_TOKENS
+from pixtreme._core.validation import _normalized_closed_token
+from pixtreme._core.vocabulary import Interpolation
 
 _INTERPOLATION_TOKENS = (*_POINT_INTERPOLATION_TOKENS, "area")
 
@@ -462,15 +464,7 @@ def _resolve_output_size(
 def _resolve_interpolation(frame: Frame, *, width: int, height: int, interpolation: str | None) -> str:
     if interpolation is None:
         return "area" if width < frame.width or height < frame.height else "lanczos4"
-    if interpolation not in _INTERPOLATION_TOKENS:
-        raise ValueError(
-            _actionable_error(
-                why="resize interpolation is a closed, case-sensitive token axis",
-                what=f"received interpolation={interpolation!r}",
-                how=f"pass one of {_INTERPOLATION_TOKENS!r}",
-            )
-        )
-    return interpolation
+    return _normalized_closed_token(interpolation, axis="interpolation", accepted=_INTERPOLATION_TOKENS)
 
 
 def resize(
@@ -479,7 +473,7 @@ def resize(
     width: int | None = None,
     height: int | None = None,
     factor: float | None = None,
-    interpolation: str | None = None,
+    interpolation: Interpolation | None = None,
 ) -> Frame:
     """Resize a Frame geometrically without changing its metadata or colorimetry.
 

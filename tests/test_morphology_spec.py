@@ -149,7 +149,7 @@ def test_morphology_radius_is_a_built_in_int_of_at_least_one(radius: object) -> 
 
 
 def test_morphology_shape_is_the_exact_disk_square_axis() -> None:
-    """v1-morphology acceptance 2-3: shape accepts only case-sensitive disk and square tokens."""
+    """v1-morphology acceptance 2-3; v1-token-vocabulary acceptance 7: shape accepts only disk and square."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=["matte"])
     for shape in SHAPES:
         assert px.morphology.dilation(source, radius=1, shape=shape).shape == source.shape
@@ -322,17 +322,17 @@ def test_replicate_default_is_neutral_for_uniform_frames() -> None:
 
 
 def test_morphology_preserves_metadata_channels_scene_values_and_input_privately() -> None:
-    """v1-morphology acceptance 5-6: per-channel fp32 math preserves metadata, scene range, and input storage."""
+    """v1-morphology acceptance 5-6; v1-red-tokens acceptance 68: ARRI metadata survives privately."""
     values = np.asarray(
         [[[-1.0, 2.0], [-0.5, 4.0], [-0.2, 3.0]], [[-0.8, 5.0], [-0.4, 6.0], [-0.1, 7.0]]],
         dtype=np.float32,
     )
-    source = _frame(values, colorspace="ACEScg", gamma="logc4", channels=["A", "application-mask"])
+    source = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=["A", "application-mask"])
     original = px.io.to_array(source, copy=True).get()
     result = px.morphology.dilation(source, radius=1, border="wrap")
 
     assert result.data.data.ptr != source.data.data.ptr
-    assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "logc4", ("A", "application-mask"))
+    assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "ARRI-LogC4", ("A", "application-mask"))
     np.testing.assert_array_equal(
         px.io.to_array(
             source,

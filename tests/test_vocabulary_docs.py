@@ -70,7 +70,7 @@ def test_token_reference_is_the_english_canon_characterization() -> None:
 
 def test_documented_tokens_equal_the_validator_token_sets(vocabulary_markdown: str) -> None:
     """v1-format-boundary acceptance 39; v1-frame-core acceptance 16; v1-recode-dtype acceptance 8;
-    v1-white-balance acceptance 1.
+    v1-white-balance acceptance 1; v1-sony-tokens acceptance 1 and 12.
 
     Boundary/resizing/blurring docs, including v1-blur-vector acceptance 14 and
     v1-lut-extensions acceptance 27, match code token sets.
@@ -134,7 +134,9 @@ def test_documented_tokens_equal_the_validator_token_sets(vocabulary_markdown: s
 
 
 def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(vocabulary_markdown: str) -> None:
-    """v1-frame-core acceptance 16: foundational records retain their complete semantic axes."""
+    """v1-frame-core acceptance 16; v1-log-negative-extension acceptance 8; v1-sony-tokens acceptance 12;
+    v1-arri-tokens acceptance 16 and 29; v1-blackmagic-tokens acceptance 50; v1-red-tokens acceptance 54 and 72.
+    """
     assert _table_rows(
         vocabulary_markdown,
         "channels",
@@ -219,67 +221,109 @@ def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(voca
             "Identity extended naturally to all real values; fixed as **scene-referred** and never used to mean display-linear",
         ),
         (
-            "`srgb`",
+            "`sRGB`",
             "Piecewise sRGB transfer",
             "IEC 61966-2-1",
             "Linear and power branches extend naturally below 0 and above 1; the standard transfer for the `sRGB` colorspace",
         ),
         (
-            "`rec709`",
+            "`Rec.709`",
             "Rec.709 camera OETF",
             "ITU-R BT.709",
             "Linear and power branches extend naturally below 0 and above 1; independent of the `Rec.709` primaries token",
         ),
         (
-            "`bt1886`",
+            "`BT.1886`",
             "Reference-display EOTF",
             "ITU-R BT.1886",
-            "Display transfer naturally extended as a signed-power branch with nominal exponent 2.4",
+            "Annex 1 ideal-black (`L_B = 0`) specialization; pure 2.4 power with sign-preserving reflection, numerically equivalent to `Gamma-2.4` but semantically distinct; matches industry production and conversion practice",
         ),
         (
-            "`pq`",
+            "`PQ`",
             "Perceptual quantizer",
             "SMPTE ST 2084 / ITU-R BT.2100",
             "Apply the standard formula to the nonnegative magnitude and reflect the negative side with preserved sign, `f(-x) = -f(x)`; absolute-luminance encoding",
         ),
         (
-            "`hlg`",
+            "`HLG`",
             "Hybrid log-gamma",
             "ITU-R BT.2100",
             "Extend the piecewise low power and high logarithmic branches naturally with sign; scene-referred broadcast HDR transfer",
         ),
         (
-            "`s-log3`",
+            "`S-Log`",
+            "S-Log camera log transfer",
+            "Sony S-Log whitepaper; Sony S-Log2 technical paper (decoder branch)",
+            "Public scene-linear reflectance `r` uses `x = r / 0.9`; Sony encoded IRE `y` uses `e = (64 + 876 * y) / 1023`; the lower linear branch below zero is the algebraic inverse of Sony's published S-Log1 decoder linear branch, not a separately published Sony forward equation, and extends without clipping or sign/magnitude mirroring; 0% / 18% / 90% reflection rounds to 10-bit code `90 / 394 / 636`",
+        ),
+        (
+            "`S-Log2`",
+            "S-Log2 camera log transfer",
+            "Sony S-Log2 technical paper",
+            "Uses the same public reflectance and legal-range embedding as S-Log with Sony's distinct positive log scale and negative linear slope; the lower linear branch extends below zero without clipping or sign/magnitude mirroring; 0% / 18% / 90% reflection rounds to 10-bit code `90 / 347 / 582`",
+        ),
+        (
+            "`S-Log3`",
             "S-Log3 camera log transfer",
             "Sony S-Log3 specification",
-            "Apply the standard formula to nonnegative magnitude and reflect the negative side with preserved sign; validate independently of S-Gamut colorspaces",
+            "S-Log3 applies the Sony piecewise formula directly to signed inputs; the lower linear branch extends below zero, maps linear 0 to `95 / 1023`, and does not use sign/magnitude mirroring; validate independently of S-Gamut colorspaces",
         ),
         (
-            "`logc4`",
-            "LogC4 camera log transfer",
+            "`ARRI-LogC3`",
+            "ARRI-LogC3 EI 800 camera log transfer",
+            "ARRI Log C Curve Usage in VFX; OpenColorIO built-in transform",
+            "EI 800 relative scene exposure with 18% gray at `400 / 1023`; the high branch uses ARRI's logarithmic equation and the tangent-derived lower linear branch extends to negative values without clipping or sign/magnitude mirroring; values above 1 remain unclipped; specify colorspace independently",
+        ),
+        (
+            "`ARRI-LogC4`",
+            "ARRI-LogC4 camera log transfer",
             "ARRI LogC4 specification",
-            "Apply the standard formula to nonnegative magnitude and reflect the negative side with preserved sign; ARRI Wide Gamut 4 is not currently a colorspace token",
+            "ARRI-LogC4 applies the ARRI piecewise formula directly to signed inputs: the log branch covers `x >= t`, the lower linear branch covers `x < t`, and negative encoded values decode linearly without sign/magnitude mirroring; specify `ARRI-Wide-Gamut-4` independently",
         ),
         (
-            "`cineon`",
+            "`Blackmagic-Film-Gen-5`",
+            "Blackmagic Film Generation 5 camera log transfer",
+            "Blackmagic Design Generation 5 Color Science",
+            "Uses a natural logarithm above linear input `0.005`, with the published lower linear branch applied directly to negative values; decode uses the threshold derived from that branch; no clipping or sign/magnitude mirroring; specify colorspace independently",
+        ),
+        (
+            "`DaVinci-Intermediate`",
+            "DaVinci Intermediate working log transfer",
+            "Blackmagic Design DaVinci Wide Gamut / Intermediate",
+            "Uses a base-2 logarithm above linear input `0.00262409`, with the published lower linear branch applied directly to negative values; decode uses the derived decode threshold rather than the printed rounded cut; no clipping or sign/magnitude mirroring; specify colorspace independently",
+        ),
+        (
+            "`RED-Log3G10`",
+            "RED Log3G10 camera log transfer",
+            "RED Log3G10 whitepaper revision C",
+            "Uses the published `0.224282 / 155.975327 / 0.01 / 15.1927` piecewise constants; the lower linear branch applies directly below scene-linear `-0.01`, the logarithmic branch includes the boundary, and neither negative values nor scene overshoot are clipped or mirrored; specify colorspace independently",
+        ),
+        (
+            "`REDlogFilm`",
+            "RED Cineon-compatible printing-density transfer",
+            "RED logarithmic exposure paper; Kodak Cineon specification",
+            "Numerically identical to `Cineon`, including its sign-preserving mirror and zero offset, while preserving independent gamma metadata; specify colorspace independently",
+        ),
+        (
+            "`Cineon`",
             "Cineon printing-density log transfer",
             "Kodak Cineon specification",
             "Formula with black CV=95, white CV=685, 0.002 density/code, and film gamma=0.6; apply to nonnegative magnitude and reflect the negative side with preserved sign",
         ),
         (
-            "`2.2`",
+            "`Gamma-2.2`",
             "Power transfer with exponent 2.2",
             "Conventional value",
             "**Pure power**, reflected with preserved sign; not a piecewise function",
         ),
         (
-            "`2.4`",
+            "`Gamma-2.4`",
             "Power transfer with exponent 2.4",
             "Conventional value",
-            "**Pure power**, reflected with preserved sign; not BT.1886",
+            "**Pure power**, reflected with preserved sign; numerically equivalent to the ideal-black `BT.1886` implementation but semantically distinct",
         ),
         (
-            "`2.6`",
+            "`Gamma-2.6`",
             "Power transfer with exponent 2.6",
             "Conventional value",
             "Decode with `sign(x) * abs(x) ** 2.6` and encode with `sign(x) * abs(x) ** (1 / 2.6)`; no offset, piecewise branch, or clipping",
@@ -321,16 +365,82 @@ def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(voca
             "Scene-linear working colorspace",
         ),
         (
+            "`S-Gamut`",
+            "Sony S-Gamut primaries",
+            "Sony S-Log whitepaper",
+            "Numerically identical to `S-Gamut3`; token identity remains distinct; specify a transfer such as `S-Log` separately",
+        ),
+        (
             "`S-Gamut3`",
             "Sony S-Gamut3 primaries",
             "Sony technical specification",
-            "Camera gamut; specify a transfer such as `s-log3` separately",
+            "Camera gamut; specify a transfer such as `S-Log3` separately",
         ),
         (
             "`S-Gamut3.Cine`",
             "Sony S-Gamut3.Cine primaries",
             "Sony technical specification",
             "Cinema-oriented camera gamut",
+        ),
+        (
+            "`ARRI-Wide-Gamut-3`",
+            "ARRI Wide Gamut 3 primaries and D65 white",
+            "ARRI Wide Gamut 3 specification",
+            "Scene-referred camera gamut; selected independently from gamma, including `ARRI-LogC3`",
+        ),
+        (
+            "`ARRI-Wide-Gamut-4`",
+            "ARRI Wide Gamut 4 primaries and D65 white",
+            "ARRI Wide Gamut 4 specification",
+            "Scene-referred camera gamut; selected independently from gamma, including `ARRI-LogC4`",
+        ),
+        (
+            "`Blackmagic-Wide-Gamut-Gen-5`",
+            "Blackmagic Wide Gamut Generation 5 primaries and D65 white",
+            "Blackmagic Design Generation 5 Color Science",
+            "Scene-referred camera gamut; selected independently from gamma, including `Blackmagic-Film-Gen-5`; does not assert numerical identity with Gen 4",
+        ),
+        (
+            "`DaVinci-Wide-Gamut`",
+            "DaVinci Wide Gamut revision 1.1 primaries and D65 white",
+            "Blackmagic Design DaVinci Wide Gamut / Intermediate",
+            "Scene-referred working gamut; selected independently from gamma, including `DaVinci-Intermediate`",
+        ),
+        (
+            "`REDWideGamutRGB`",
+            "REDWideGamutRGB primaries and D65 white",
+            "REDWideGamutRGB / Log3G10 whitepaper revision C",
+            "Scene-referred IPP2 gamut; selected independently from gamma, including `RED-Log3G10`",
+        ),
+        (
+            "`DRAGONcolor`",
+            "Legacy RED DRAGONcolor-derived primaries and D65 white",
+            "ACES 1.0.3 OpenColorIO config",
+            "Scene-referred gamut reconstructed from the published RGB-to-ACES2065-1 matrix; selected independently from gamma",
+        ),
+        (
+            "`DRAGONcolor2`",
+            "Legacy RED DRAGONcolor2-derived primaries and D65 white",
+            "ACES 1.0.3 OpenColorIO config",
+            "Scene-referred gamut reconstructed from the published RGB-to-ACES2065-1 matrix; selected independently from gamma",
+        ),
+        (
+            "`REDcolor2`",
+            "Legacy REDcolor2-derived primaries and D65 white",
+            "ACES 1.0.3 OpenColorIO config",
+            "Scene-referred gamut reconstructed from the published RGB-to-ACES2065-1 matrix; selected independently from gamma",
+        ),
+        (
+            "`REDcolor3`",
+            "Legacy REDcolor3-derived primaries and D65 white",
+            "ACES 1.0.3 OpenColorIO config",
+            "Scene-referred gamut reconstructed from the published RGB-to-ACES2065-1 matrix; selected independently from gamma",
+        ),
+        (
+            "`REDcolor4`",
+            "Legacy REDcolor4-derived primaries and D65 white",
+            "ACES 1.0.3 OpenColorIO config",
+            "Scene-referred gamut reconstructed from the published RGB-to-ACES2065-1 matrix; selected independently from gamma",
         ),
     )
 
@@ -503,8 +613,12 @@ def test_vocabulary_documents_from_format_conventions(vocabulary_markdown: str) 
         ("Item", "Specification default", "Notes"),
     ) == (
         ("colorspace", "`Rec.709`", "Placeholder; an explicit per-call `colorspace=` token takes precedence"),
-        ("gamma", "`rec709`", "Placeholder; an explicit per-call `gamma=` token takes precedence"),
-        ("matrix", "`None`", "Unknown provenance; an explicit per-call `matrix=` token is stamped literally"),
+        ("gamma", "`Rec.709`", "Placeholder; an explicit per-call `gamma=` token takes precedence"),
+        (
+            "matrix",
+            "`None`",
+            "Unknown provenance; an explicit per-call `matrix=` token is normalized and stamped as its canonical spelling",
+        ),
         ("channels", '`("Y", "Cb", "Cr")`', "Fixed channel order after format resolution"),
         (
             "range",
@@ -699,7 +813,7 @@ def test_legal_to_full_docstring_contains_the_reverse_composition_recipe() -> No
     range_conversion = docstring.index("px.values.legal_to_full", first_transform)
     second_transform = docstring.index("px.color.ycbcr_to_rgb", range_conversion)
     assert first_transform < range_conversion < second_transform
-    for required in ('matrix="bt709"', "bit_depth=8"):
+    for required in ('matrix="BT.709"', "bit_depth=8"):
         assert required in docstring
 
 
@@ -714,28 +828,32 @@ def test_vocabulary_bit_depths_equal_the_shared_validator_set(vocabulary_markdow
 
 
 def test_vocabulary_documents_matrix_semantics_and_colorspace_derivation(vocabulary_markdown: str) -> None:
-    """v1-color-semantics acceptance 35: matrix tokens and own-row values are complete records."""
+    """v1-color-semantics acceptance 35; v1-arri-tokens acceptance 23-24 and 29;
+    v1-blackmagic-tokens acceptance 44-45 and 50; v1-red-tokens acceptance 64 and 72.
+
+    Matrix tokens and own-row values are complete records.
+    """
     assert _table_rows(
         vocabulary_markdown,
         "matrix",
         ("Token", "Formal name", "Definition", "Standard or convention", "Notes"),
     ) == (
         (
-            "`bt601`",
+            "`BT.601`",
             "BT.601",
             "Kr = 0.299, Kb = 0.114",
             "ITU-T H.273 / ITU-R BT.601",
             "SD-family non-constant-luminance coefficients",
         ),
         (
-            "`bt709`",
+            "`BT.709`",
             "BT.709",
             "Kr = 0.2126, Kb = 0.0722",
             "ITU-T H.273 / ITU-R BT.709",
             "Specification-fixed result for sRGB and Rec.709",
         ),
         (
-            "`bt2020`",
+            "`BT.2020`",
             "BT.2020",
             "Kr = 0.2627, Kb = 0.0593",
             "ITU-T H.273 / ITU-R BT.2020",
@@ -754,32 +872,59 @@ def test_vocabulary_documents_matrix_semantics_and_colorspace_derivation(vocabul
         "matrix own-row",
         ("Colorspace", "own-row `(Kr, Kg, Kb)`", "Relationship to a known H.273 basis"),
     ) == (
-        ("`sRGB`", "`(0.2126390059, 0.7151686788, 0.0721923154)`", "Numerically identical to `bt709`"),
-        ("`Rec.709`", "`(0.2126390059, 0.7151686788, 0.0721923154)`", "Numerically identical to `bt709`"),
-        ("`Rec.2020`", "`(0.2627002120, 0.6779980715, 0.0593017165)`", "Numerically identical to `bt2020`"),
+        ("`sRGB`", "`(0.2126390059, 0.7151686788, 0.0721923154)`", "Numerically identical to `BT.709`"),
+        ("`Rec.709`", "`(0.2126390059, 0.7151686788, 0.0721923154)`", "Numerically identical to `BT.709`"),
+        ("`Rec.2020`", "`(0.2627002120, 0.6779980715, 0.0593017165)`", "Numerically identical to `BT.2020`"),
         ("`ACES2065-1`", "`(0.3439664498, 0.7281660966, -0.0721325464)`", "AP0 own-row"),
         ("`ACEScg`", "`(0.2722287168, 0.6740817658, 0.0536895174)`", "AP1 own-row"),
+        ("`S-Gamut`", "`(0.2709796708, 0.7866064112, -0.0575860820)`", "Numerically identical to `S-Gamut3`"),
         ("`S-Gamut3`", "`(0.2709796708, 0.7866064112, -0.0575860820)`", "Sony S-Gamut3 own-row"),
         (
             "`S-Gamut3.Cine`",
             "`(0.2150758201, 0.8850685017, -0.1001443219)`",
             "Sony S-Gamut3.Cine own-row",
         ),
+        (
+            "`ARRI-Wide-Gamut-3`",
+            "`(0.2919537790, 0.8238410415, -0.1157948205)`",
+            "ARRI Wide Gamut 3 own-row",
+        ),
+        (
+            "`ARRI-Wide-Gamut-4`",
+            "`(0.2545241764, 0.7814777327, -0.0360019091)`",
+            "ARRI Wide Gamut 4 own-row",
+        ),
+        (
+            "`Blackmagic-Wide-Gamut-Gen-5`",
+            "`(0.2679929401, 0.8327484091, -0.1007413492)`",
+            "Blackmagic Wide Gamut Generation 5 own-row",
+        ),
+        (
+            "`DaVinci-Wide-Gamut`",
+            "`(0.2741185109, 0.8736318959, -0.1477504068)`",
+            "DaVinci Wide Gamut own-row",
+        ),
+        (
+            "`REDWideGamutRGB`",
+            "`(0.2866940995, 0.8429791340, -0.1296732335)`",
+            "REDWideGamutRGB own-row",
+        ),
+        ("`DRAGONcolor`", "`(0.2169921791, 0.8380223380, -0.0550145171)`", "DRAGONcolor own-row"),
+        ("`DRAGONcolor2`", "`(0.1909714594, 0.7375309361, 0.0714976045)`", "DRAGONcolor2 own-row"),
+        ("`REDcolor2`", "`(0.1657102643, 0.8636624823, -0.0293727466)`", "REDcolor2 own-row"),
+        ("`REDcolor3`", "`(0.2255112277, 0.7798000805, -0.0053113082)`", "REDcolor3 own-row"),
+        ("`REDcolor4`", "`(0.2088065893, 0.7220385248, 0.0691548859)`", "REDcolor4 own-row"),
     )
 
 
 def test_vocabulary_documents_view_versions_combinations_and_scope_boundary(vocabulary_markdown: str) -> None:
-    """v1-tonemap-aces20-analytic acceptance 18-19: five tonemap tokens and ten exits are explicit."""
-    from pixtreme._color.transform import _BT2408_COMBINATIONS
-    from pixtreme._color.view_transform import _PUBLIC_TO_INTERNAL_LUT, _SUPPORTED_COMBINATIONS
+    """v1-view-transform-lut-removal acceptance 4: three tonemap tokens and six exits are explicit."""
+    from pixtreme._color.transform import _SUPPORTED_COMBINATIONS
 
-    assert _PUBLIC_TO_INTERNAL_LUT == {"aces-1.3-lut": "aces-1.3", "aces-2.0-lut": "aces-2.0"}
     assert _table_tokens(vocabulary_markdown, "tonemap") == (
-        "aces-1.3",
-        "aces-1.3-lut",
-        "aces-2.0",
-        "aces-2.0-lut",
-        "bt2408",
+        "ACES-1.3",
+        "ACES-2.0",
+        "BT.2408",
     )
     rows = _table_rows(
         vocabulary_markdown,
@@ -787,22 +932,18 @@ def test_vocabulary_documents_view_versions_combinations_and_scope_boundary(voca
         ("Tonemap", "Output colorspace", "Output gamma", "Destination"),
     )
     assert rows == (
-        ("`aces-1.3`", "`Rec.709`", "`bt1886`", "Rec.1886 Rec.709 display"),
-        ("`aces-1.3`", "`sRGB`", "`srgb`", "sRGB display"),
-        ("`aces-1.3-lut`", "`Rec.709`", "`bt1886`", "Rec.1886 Rec.709 display"),
-        ("`aces-1.3-lut`", "`sRGB`", "`srgb`", "sRGB display"),
-        ("`aces-2.0`", "`Rec.709`", "`bt1886`", "Rec.1886 Rec.709 display"),
-        ("`aces-2.0`", "`sRGB`", "`srgb`", "sRGB display"),
-        ("`aces-2.0-lut`", "`Rec.709`", "`bt1886`", "Rec.1886 Rec.709 display"),
-        ("`aces-2.0-lut`", "`sRGB`", "`srgb`", "sRGB display"),
-        ("`bt2408`", "`Rec.2020`", "`hlg`", "BT.2100 HLG; SDR reference white = 75% signal"),
-        ("`bt2408`", "`Rec.2020`", "`pq`", "BT.2100 PQ; SDR reference white = 203 cd/m²"),
+        ("`ACES-1.3`", "`Rec.709`", "`BT.1886`", "Rec.1886 Rec.709 display"),
+        ("`ACES-1.3`", "`sRGB`", "`sRGB`", "sRGB display"),
+        ("`ACES-2.0`", "`Rec.709`", "`BT.1886`", "Rec.1886 Rec.709 display"),
+        ("`ACES-2.0`", "`sRGB`", "`sRGB`", "sRGB display"),
+        ("`BT.2408`", "`Rec.2020`", "`HLG`", "BT.2100 HLG; SDR reference white = 75% signal"),
+        ("`BT.2408`", "`Rec.2020`", "`PQ`", "BT.2100 PQ; SDR reference white = 203 cd/m²"),
     )
     documented = tuple(
         (tonemap.strip("`"), colorspace.strip("`"), gamma.strip("`"))
         for tonemap, colorspace, gamma, _destination in rows
     )
-    assert set(documented) == set((*_SUPPORTED_COMBINATIONS, *_BT2408_COMBINATIONS))
+    assert set(documented) == set(_SUPPORTED_COMBINATIONS)
 
 
 def test_vocabulary_documents_image_read_conventions_and_metadata_priority(vocabulary_markdown: str) -> None:
@@ -812,16 +953,16 @@ def test_vocabulary_documents_image_read_conventions_and_metadata_priority(vocab
         "image read conventions",
         ("Format", "Default colorspace", "Default gamma", "`channels=None`"),
     ) == (
-        ("PNG / JPEG / TIFF", "`sRGB`", "`srgb`", 'RGB or RGBA; grayscale is one-channel `("Y",)`'),
-        ("JPEG 2000", "`sRGB`", "`srgb`", "Y, RGB, or RGBA"),
-        ("WebP", "`sRGB`", "`srgb`", "RGB"),
-        ("BMP / PNM", "`sRGB`", "`srgb`", "Y or RGB"),
-        ("TGA", "`sRGB`", "`srgb`", "RGB or RGBA"),
+        ("PNG / JPEG / TIFF", "`sRGB`", "`sRGB`", 'RGB or RGBA; grayscale is one-channel `("Y",)`'),
+        ("JPEG 2000", "`sRGB`", "`sRGB`", "Y, RGB, or RGBA"),
+        ("WebP", "`sRGB`", "`sRGB`", "RGB"),
+        ("BMP / PNM", "`sRGB`", "`sRGB`", "Y or RGB"),
+        ("TGA", "`sRGB`", "`sRGB`", "RGB or RGBA"),
         ("HDR", "`Rec.709`", "`linear`", "RGB"),
         (
             "DPX",
             "`Rec.709`",
-            "Header transfer; unknown maps to `cineon` at 10 bit, `rec709` at 8 bit, and `linear` at 12 or 16 bit",
+            "Header transfer; unknown maps to `Cineon` at 10 bit, `Rec.709` at 8 bit, and `linear` at 12 or 16 bit",
             "RGB or RGBA",
         ),
         ("EXR", "`ACES2065-1`", "`linear`", "R, G, B, and A when present"),

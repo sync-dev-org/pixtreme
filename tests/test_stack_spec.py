@@ -132,16 +132,16 @@ def test_default_stack_preserves_uint32_identities_above_float32_exact_range() -
     np.testing.assert_array_equal(_host(result), expected)
 
 
-@pytest.mark.parametrize("direction", ("Vertical", "HORIZONTAL", "diagonal", "vertical "))
-def test_stack_direction_is_closed_case_sensitive_vocabulary(direction: str) -> None:
-    """v1-stack acceptance 2: direction accepts only the two case-sensitive vocabulary tokens."""
+@pytest.mark.parametrize("direction", ("diagonal", "row", "vertical\t", ""))
+def test_stack_direction_is_closed_vocabulary(direction: str) -> None:
+    """v1-stack acceptance 2; v1-token-vocabulary acceptance 7: direction accepts only its two-token family."""
     source = _frame([[[0.0]]], channels=("Y",))
 
     with pytest.raises(ValueError) as error:
         px.transform.stack([source], direction=direction)
 
     message = str(error.value)
-    assert direction in message
+    assert repr(direction) in message
     assert "vertical" in message
     assert "horizontal" in message
 
@@ -153,7 +153,7 @@ def test_stack_direction_is_closed_case_sensitive_vocabulary(direction: str) -> 
         ("horizontal", "height", 2, 3),
         ("vertical", "channels", ("R", "G", "B"), ("B", "G", "R")),
         ("vertical", "colorspace", "sRGB", "Rec.709"),
-        ("vertical", "gamma", "linear", "srgb"),
+        ("vertical", "gamma", "linear", "sRGB"),
         ("vertical", "dtype", "float32", "float16"),
     ),
 )
@@ -247,7 +247,7 @@ def test_adapt_matches_channel_color_channel_then_default_resize_composition() -
         np.asarray([[[0.30, 0.90, 0.02], [0.10, 0.04, 0.80]]], dtype=np.float32),
         channels=("Cb", "Cr", "Y"),
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
     )
     complete = px.color.ycbcr_to_rgb(source)
     transformed = px.color.rgb_to_rgb(
@@ -280,8 +280,8 @@ def test_adapt_matches_channel_color_channel_then_default_resize_composition() -
         "source_gamma",
     ),
     (
-        (("Cr", "A", "Y", "Cb"), ("A", "B", "R", "G"), "Rec.2020", "sRGB", "linear", "srgb"),
-        (("B", "R", "G"), ("Cb", "Cr", "Y"), "ACEScg", "Rec.709", "linear", "rec709"),
+        (("Cr", "A", "Y", "Cb"), ("A", "B", "R", "G"), "Rec.2020", "sRGB", "linear", "sRGB"),
+        (("B", "R", "G"), ("Cb", "Cr", "Y"), "ACEScg", "Rec.709", "linear", "Rec.709"),
     ),
 )
 def test_adapt_matches_public_channel_color_channel_composition_bit_exactly(
@@ -410,7 +410,7 @@ def test_adapt_preserves_dtype_and_color_conversion_fail_fast_boundaries() -> No
         px.transform.stack(
             [
                 _frame(y, gamma="linear", channels=("Y",)),
-                _frame(y, gamma="srgb", channels=("Y",)),
+                _frame(y, gamma="sRGB", channels=("Y",)),
             ],
             adapt=True,
         )

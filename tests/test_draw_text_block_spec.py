@@ -453,7 +453,7 @@ def test_draw_text_unification_uses_the_integrated_layout_path_for_default_singl
 def test_draw_text_empty_and_zero_opacity_preserve_metadata_in_new_storage() -> None:
     """v1-draw-text-unification acceptance 5-6: no-op paths preserve pixels and metadata but always allocate."""
     source_values = np.arange(7 * 9, dtype=np.float32).reshape(7, 9, 1) / np.float32(11.0)
-    source = _frame(source_values, colorspace="Rec.2020", gamma="pq", channels=("matte",))
+    source = _frame(source_values, colorspace="Rec.2020", gamma="PQ", channels=("matte",))
     for text, opacity in (("", 1.0), ("\n\n", 1.0), ("A\nB", 0.0)):
         result = px.draw.text(
             source,
@@ -526,7 +526,7 @@ def test_draw_text_default_single_line_covers_empty_notdef_matte_and_outside_pat
     "overrides,tokens",
     (
         ({"text": "A\rB"}, ()),
-        ({"align": "Left"}, ALIGNS),
+        ({"align": "start"}, ALIGNS),
         ({"line_spacing": 0.0}, ()),
         ({"line_spacing": -1.0}, ()),
         ({"line_spacing": True}, ()),

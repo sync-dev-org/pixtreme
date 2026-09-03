@@ -82,7 +82,7 @@ With uv:
 uv add pixtreme
 ```
 
-Upgrading from 0.x? 1.0.1 is a ground-up rewrite — see the [changelog](https://github.com/sync-dev-org/pixtreme/blob/main/CHANGELOG.md) for the migration summary.
+Upgrading from 0.x? The 1.x series is a ground-up rewrite — see the [changelog](https://github.com/sync-dev-org/pixtreme/blob/main/CHANGELOG.md) for the migration summary.
 
 ## Quickstart
 
@@ -159,7 +159,7 @@ captioned = px.draw.text(
 
 ## Full performance
 
-[the full performance report](https://sync-dev-org.github.io/pixtreme/performance/) contains all 190 measured cases, including mean, median, FPS, p5, p95,
+[the full performance report](https://sync-dev-org.github.io/pixtreme/performance/) contains the recorded measured cases, including mean, median, FPS, p5, p95,
 effective bandwidth, parameters, and the 90 cases whose median exceeds 1 ms. It also separates GPU-device throughput
 from temporary-file and encoded-byte I/O measurements.
 
@@ -171,8 +171,8 @@ Color processing is explicit, metadata-aware, and designed to preserve scene val
   gamut-compression, limiting-RGB, reference-range, and display-encoding chain in one fused CUDA pass. Its 363-record
   hue table is an algorithm parameter, not an RGB-grid output approximation; runtime evaluation uses no LUT
   interpolation and matches direct OpenColorIO 2.5.2 reference evaluation with `rtol=0`, `atol=2e-4`.
-- ACES 1.3 is also available as a formula-based one-pass transform. Explicit `aces-1.3-lut` and `aces-2.0-lut` tokens
-  remain available when a pre-baked 65^3 LUT is the desired supply mechanism.
+- ACES 1.3 is also available as a formula-based one-pass transform. Both ACES generations are exposed only through
+  their analytic tonemap tokens.
 - BT.2408 direct mapping places SDR reference white at 203 cd/m2 for Rec.2020 HLG or PQ output.
 - RGB/YCbCr conversion, legal/full-range code positions, and chroma siting follow H.273-aligned contracts, with the
   matrix basis carried in `Frame` metadata.
@@ -181,7 +181,7 @@ Color processing is explicit, metadata-aware, and designed to preserve scene val
 
 ## Status & license
 
-Version 1.0.1 is the current release. It is a ground-up implementation and does not connect to the 0.x codebase. The
+The 1.x series is the current release line. It is a ground-up implementation and does not connect to the 0.x codebase. The
 final 0.x release, 0.9.0, remains available from the [`v0.9.0` Git tag](https://github.com/sync-dev-org/pixtreme/tree/v0.9.0)
 and the [PyPI release history](https://pypi.org/project/pixtreme/#history). See the [changelog](https://github.com/sync-dev-org/pixtreme/blob/main/CHANGELOG.md) for the
 1.0 migration-impact summary.

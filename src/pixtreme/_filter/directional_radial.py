@@ -12,6 +12,7 @@ import numpy as np
 from pixtreme._core.border import _BORDER_PREAMBLE, _border_argument, _resolve_border
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame, _new_frame, _validate_float32_frame
+from pixtreme._core.vocabulary import Border
 
 _PATH_DIRECTIONAL = 0
 _PATH_ZOOM = 1
@@ -877,7 +878,7 @@ def _path_blur(
     extent: float,
     direction_radians: float,
     center: tuple[float, float],
-    border: str,
+    border: Border,
     border_value: float,
 ) -> Frame:
     output = cp.empty(frame.shape, dtype=cp.float32)
@@ -949,7 +950,7 @@ def directional_blur(
     *,
     angle: float,
     length: float,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Average a symmetric straight path through each pixel.
@@ -986,7 +987,7 @@ def zoom_blur(
     *,
     amount: float,
     center: tuple[float, float] | None = None,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Average a symmetric radial scale path through each pixel.
@@ -1024,7 +1025,7 @@ def spin_blur(
     *,
     angle: float,
     center: tuple[float, float] | None = None,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Average a symmetric circular arc around center through each pixel.

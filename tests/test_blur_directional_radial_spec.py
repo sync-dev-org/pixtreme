@@ -400,7 +400,7 @@ def test_zero_length_pixels_are_exactly_interpolating_and_allocated_privately() 
 
 
 def test_blur_directional_radial_is_label_independent_unclamped_and_preserves_metadata_privately() -> None:
-    """v1-blur-directional-radial acceptance 15-17: scene values and arbitrary metadata survive independently."""
+    """v1-blur-directional-radial acceptance 15-17; v1-red-tokens acceptance 68: ARRI metadata survives."""
     values = np.asarray(
         [
             [[-0.5, 1.5], [-0.5, 1.5]],
@@ -408,7 +408,7 @@ def test_blur_directional_radial_is_label_independent_unclamped_and_preserves_me
         ],
         dtype=np.float32,
     )
-    source = _frame(values, colorspace="ACEScg", gamma="logc4", channels=["depth", "confidence"])
+    source = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=["depth", "confidence"])
 
     result = px.filter.spin_blur(source, angle=70.0, center=(-2.0, 0.5), border="wrap")
 
@@ -416,7 +416,7 @@ def test_blur_directional_radial_is_label_independent_unclamped_and_preserves_me
     assert result is not source
     assert result.data.data.ptr != source.data.data.ptr
     assert result.shape == source.shape
-    assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "logc4", ("depth", "confidence"))
+    assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "ARRI-LogC4", ("depth", "confidence"))
     assert float(result.data.min()) < 0.0
     assert float(result.data.max()) > 1.0
 

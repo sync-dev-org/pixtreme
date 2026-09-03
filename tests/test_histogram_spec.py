@@ -281,12 +281,12 @@ def test_clahe_waterfill_saturates_the_cap_without_scan_order_remainder() -> Non
 
 @pytest.mark.parametrize("name", ("equalize_histogram", "clahe"))
 def test_histogram_operations_preserve_metadata_shape_storage_and_input(name: str) -> None:
-    """v1-histogram acceptance 3: both operations return private contiguous fp32 Frames without label semantics."""
+    """v1-histogram acceptance 3; v1-red-tokens acceptance 68: both operations retain ARRI metadata."""
     values = np.random.default_rng(4903).uniform(-0.2, 1.2, size=(8, 9, 4)).astype(np.float32)
     source = _frame(
         values,
         colorspace="ACEScg",
-        gamma="logc4",
+        gamma="ARRI-LogC4",
         channels=("A", "custom", "R", "Z"),
         matrix="native",
     )

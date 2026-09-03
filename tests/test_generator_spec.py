@@ -22,11 +22,11 @@ GENERATOR_NAMES = (
 KINDS = ("linear", "radial")
 AAS = ("distance", "supersample", "off")
 STANDARDS = (
-    "arib-std-b28",
-    "smpte-rp219",
-    "bt2111-hlg",
-    "bt2111-pq",
-    "bt2111-pq-full",
+    "ARIB-STD-B28",
+    "SMPTE-RP219",
+    "BT.2111-HLG",
+    "BT.2111-PQ",
+    "BT.2111-PQ-full",
     "full-100",
     "full-75",
 )
@@ -334,8 +334,8 @@ def test_generator_dimensions_are_positive_non_bool_integers(name: str, axis: st
     ("name", "axis", "token", "accepted"),
     (
         ("ramp", "kind", "conic", KINDS),
-        ("ramp", "colorspace", "acescg", ("sRGB", "Rec.709", "Rec.2020", "ACES2065-1", "ACEScg")),
-        ("grid", "gamma", "gamma22", ("linear", "srgb", "rec709", "pq", "hlg")),
+        ("ramp", "colorspace", "P3", ("sRGB", "Rec.709", "Rec.2020", "ACES2065-1", "ACEScg")),
+        ("grid", "gamma", "gamma/2.2", ("linear", "sRGB", "Rec.709", "PQ", "HLG")),
         ("grid", "aa", "nearest", AAS),
         ("checkerboard", "aa", "area", AAS),
         ("color_bars", "standard", "ebu", STANDARDS),
@@ -345,7 +345,7 @@ def test_generator_dimensions_are_positive_non_bool_integers(name: str, axis: st
 def test_generator_tokens_fail_fast_and_list_the_vocabulary(
     name: str, axis: str, token: str, accepted: tuple[str, ...]
 ) -> None:
-    """v1-generator acceptance 3-8: every named axis is closed, case-sensitive, and actionable."""
+    """v1-generator acceptance 3-8; v1-token-vocabulary acceptance 7: every named axis remains closed."""
     with pytest.raises(ValueError) as error:
         getattr(px.generate, name)(**(_base_kwargs(name) | {axis: token}))
     _assert_actionable(error)
@@ -414,7 +414,7 @@ def test_numeric_generators_allocate_private_fp32_hwc_and_derive_channels(
         start_color=colors,
         end_color=tuple(value + 1.0 for value in colors),
         colorspace="S-Gamut3",
-        gamma="s-log3",
+        gamma="S-Log3",
     )
     grid = px.generate.grid(
         width=4,
@@ -424,7 +424,7 @@ def test_numeric_generators_allocate_private_fp32_hwc_and_derive_channels(
         color=colors,
         background=tuple(value + 1.0 for value in colors),
         colorspace="S-Gamut3",
-        gamma="s-log3",
+        gamma="S-Log3",
         aa="off",
     )
     checker = px.generate.checkerboard(
@@ -433,7 +433,7 @@ def test_numeric_generators_allocate_private_fp32_hwc_and_derive_channels(
         cell=2.0,
         colors=(colors, tuple(value + 1.0 for value in colors)),
         colorspace="S-Gamut3",
-        gamma="s-log3",
+        gamma="S-Log3",
         aa="off",
     )
 
@@ -443,7 +443,7 @@ def test_numeric_generators_allocate_private_fp32_hwc_and_derive_channels(
             "float32",
             channels,
             "S-Gamut3",
-            "s-log3",
+            "S-Log3",
         )
         assert frame.data.flags.c_contiguous
         assert np.min(_host(frame)) < 0.0 or np.max(_host(frame)) > 1.0
@@ -462,7 +462,7 @@ def test_ramp_matches_independent_fp32_pixel_center_oracle(kind: str) -> None:
         "start_color": (-0.5, 0.25, 1.5),
         "end_color": (2.0, 1.25, -1.0),
         "colorspace": "ACEScg",
-        "gamma": "2.4",
+        "gamma": "Gamma-2.4",
     }
     expected = _ramp_reference(**{key: kwargs[key] for key in kwargs if key not in {"colorspace", "gamma"}})
     result = px.generate.ramp(**kwargs)
@@ -538,13 +538,13 @@ def test_periodic_generators_are_bit_identical_after_one_cell_offset(name: str) 
 @pytest.mark.parametrize(
     ("standard", "colorspace", "gamma"),
     (
-        ("arib-std-b28", "Rec.709", "rec709"),
-        ("smpte-rp219", "Rec.709", "rec709"),
-        ("bt2111-hlg", "Rec.2020", "hlg"),
-        ("bt2111-pq", "Rec.2020", "pq"),
-        ("bt2111-pq-full", "Rec.2020", "pq"),
-        ("full-100", "Rec.709", "rec709"),
-        ("full-75", "Rec.709", "rec709"),
+        ("ARIB-STD-B28", "Rec.709", "Rec.709"),
+        ("SMPTE-RP219", "Rec.709", "Rec.709"),
+        ("BT.2111-HLG", "Rec.2020", "HLG"),
+        ("BT.2111-PQ", "Rec.2020", "PQ"),
+        ("BT.2111-PQ-full", "Rec.2020", "PQ"),
+        ("full-100", "Rec.709", "Rec.709"),
+        ("full-75", "Rec.709", "Rec.709"),
     ),
 )
 def test_color_bar_standards_determine_metadata_dtype_and_deterministic_storage(
@@ -574,8 +574,8 @@ def test_color_bar_standards_determine_metadata_dtype_and_deterministic_storage(
 
 def test_std_b28_and_rp219_match_normative_code_geometry_and_normalization() -> None:
     """v1-generator acceptance 29-35: STD-B28/RP219 share the normative four-pattern geometry, codes, PLUGE, and ramp."""
-    arib = px.generate.color_bars(width=1920, height=1080, standard="arib-std-b28", output="code")
-    rp219 = px.generate.color_bars(width=1920, height=1080, standard="smpte-rp219", output="code")
+    arib = px.generate.color_bars(width=1920, height=1080, standard="ARIB-STD-B28", output="code")
+    rp219 = px.generate.color_bars(width=1920, height=1080, standard="SMPTE-RP219", output="code")
     code = _host(arib)
     np.testing.assert_array_equal(code, _host(rp219))
 
@@ -615,7 +615,7 @@ def test_std_b28_and_rp219_match_normative_code_geometry_and_normalization() -> 
         ((195, 195, 195), 240),
     ]
 
-    normalized = _host(px.generate.color_bars(width=1920, height=1080, standard="arib-std-b28"))
+    normalized = _host(px.generate.color_bars(width=1920, height=1080, standard="ARIB-STD-B28"))
     np.testing.assert_array_equal(normalized, _narrow_normalized(code))
     assert normalized[810, 1131, 0] < 0.0
 
@@ -624,21 +624,21 @@ def test_std_b28_and_rp219_match_normative_code_geometry_and_normalization() -> 
     ("standard", "main_high", "grey", "bottom_left", "bottom_right"),
     (
         (
-            "bt2111-hlg",
+            "BT.2111-HLG",
             721,
             414,
             ((713, 719, 316), (538, 709, 718), (512, 706, 296)),
             ((651, 286, 705), (639, 269, 164), (227, 147, 702)),
         ),
         (
-            "bt2111-pq",
+            "BT.2111-PQ",
             572,
             414,
             ((568, 571, 381), (484, 566, 571), (474, 564, 368)),
             ((536, 361, 564), (530, 350, 256), (317, 236, 562)),
         ),
         (
-            "bt2111-pq-full",
+            "BT.2111-PQ-full",
             593,
             409,
             ((589, 592, 370), (491, 586, 592), (478, 584, 355)),
@@ -655,8 +655,8 @@ def test_bt2111_variants_match_named_widths_levels_staircase_ramp_and_bottom_ref
 ) -> None:
     """v1-generator acceptance 30 and 32-35: BT.2111 variants follow the normative 2K regions and code tables."""
     code = _host(px.generate.color_bars(width=1920, height=1080, standard=standard, output="code"))
-    low = 0 if standard == "bt2111-pq-full" else 64
-    top_high = 1023 if standard == "bt2111-pq-full" else 940
+    low = 0 if standard == "BT.2111-PQ-full" else 64
+    top_high = 1023 if standard == "BT.2111-PQ-full" else 940
 
     assert _runs(code[0]) == [
         ((grey, grey, grey), 240),
@@ -682,7 +682,7 @@ def test_bt2111_variants_match_named_widths_levels_staircase_ramp_and_bottom_ref
     ]
 
     stair = code[630, :, 0]
-    if standard == "bt2111-pq-full":
+    if standard == "BT.2111-PQ-full":
         values = (0, 0, 102, 205, 307, 409, 512, 614, 716, 818, 921, 1023, 1023)
     else:
         values = (4, 64, 152, 239, 327, 414, 502, 590, 677, 765, 852, 940, 1019)
@@ -696,7 +696,7 @@ def test_bt2111_variants_match_named_widths_levels_staircase_ramp_and_bottom_ref
 
     ramp = code[720, :, 0]
     assert np.all(ramp[:240] == low)
-    if standard == "bt2111-pq-full":
+    if standard == "BT.2111-PQ-full":
         assert np.all(ramp[240:791] == 0)
         np.testing.assert_array_equal(ramp[791:1813], np.arange(1, 1023, dtype=np.uint16))
         assert np.all(ramp[1813:] == 1023)
@@ -711,7 +711,7 @@ def test_bt2111_variants_match_named_widths_levels_staircase_ramp_and_bottom_ref
     for index, expected in enumerate(bottom_right):
         left = 1680 + index * 80
         assert np.all(bottom[left : left + 80] == expected)
-    near_black = (0, 0, 20, 0, 41) if standard == "bt2111-pq-full" else (48, 64, 80, 64, 99)
+    near_black = (0, 0, 20, 0, 41) if standard == "BT.2111-PQ-full" else (48, 64, 80, 64, 99)
     cursor = 376
     for value, width in zip(near_black, (70, 68, 70, 68, 70), strict=True):
         assert np.all(bottom[cursor : cursor + width] == (value, value, value))

@@ -12,6 +12,7 @@ import numpy as np
 
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame
+from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._io.common import (
     _EXR_COMPRESSION_TOKENS,
     _EXR_DWA_COMPRESSION_TOKENS,
@@ -888,13 +889,13 @@ def _validate_exr_write_options(
         compression_level=compression_level,
         lossless=lossless,
     )
-    if compression is not None and (type(compression) is not str or compression not in _EXR_COMPRESSION_TOKENS):
-        raise ValueError(
-            _actionable_error(
-                why="EXR compression is not a supported token",
-                what=repr(compression),
-                how=f"use one of {_EXR_COMPRESSION_TOKENS!r}",
-            )
+    if compression is not None:
+        compression = _normalized_closed_token(
+            compression,
+            axis="compression",
+            accepted=_EXR_COMPRESSION_TOKENS,
+            why="EXR compression is not a supported token",
+            how=f"use one of the canonical tokens {_EXR_COMPRESSION_TOKENS!r}",
         )
     compression_token = "zip" if compression is None else compression
     if compression_token not in _EXR_DWA_COMPRESSION_TOKENS:

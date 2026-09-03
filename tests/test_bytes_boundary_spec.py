@@ -29,7 +29,7 @@ _VALUES = np.array(
 
 
 def _frame(values: np.ndarray = _VALUES) -> px.core.Frame:
-    return px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def _save_fixture(tmp_path: Path, format_token: str, values: np.ndarray = _VALUES) -> Path:
@@ -162,7 +162,7 @@ def test_decode_image_metadata_overrides_and_native_depth_match_read_image(tmp_p
     assert (decoded.colorspace, decoded.gamma) == ("ACEScg", "linear")
 
 
-@pytest.mark.parametrize("format_token", ("jpg", "JPEG", "jpeg2k", None, 1))
+@pytest.mark.parametrize("format_token", ("jpg", "jpeg-x", "jpeg2k", None, 1))
 def test_encode_image_requires_a_supported_format_token(format_token: object) -> None:
     """v1-io-formats acceptance 3: format remains required and its extended typed token set fails fast."""
     frame = _frame()
@@ -185,9 +185,9 @@ def test_jpeg_quality_is_typed_bounded_and_format_specific(quality: object) -> N
     assert isinstance(px.io.encode_image(frame, format="jpeg", quality=90), bytes)
 
 
-@pytest.mark.parametrize("compression", ("zip", "LZW", 1))
+@pytest.mark.parametrize("compression", ("zip", "deflate", 1))
 def test_tiff_compression_tokens_are_closed_and_format_specific(compression: object) -> None:
-    """v1-bytes-boundary acceptance 8: TIFF compression accepts only the case-sensitive none/lzw tokens."""
+    """v1-bytes-boundary acceptance 8; v1-token-vocabulary acceptance 7: TIFF rejects unknown compression tokens."""
     frame = _frame()
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.encode_image(frame, format="tiff", compression=compression)  # type: ignore[arg-type]

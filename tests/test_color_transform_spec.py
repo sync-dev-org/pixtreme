@@ -42,43 +42,57 @@ def _gray_frame(values: tuple[float, ...], *, gamma: str = "linear") -> px.core.
 _TRANSFER_FIXTURES = (
     ("linear", (0.0, 0.18, 1.0), (0.0, 0.18, 1.0), 2e-7),
     # IEC 61966-2-1: the 0.04045 encoded breakpoint maps to 0.003130805 linear.
-    ("srgb", (0.0, 0.04045, 0.5, 1.0), (0.0, 0.003130805, 0.21404114, 1.0), 2e-6),
+    ("sRGB", (0.0, 0.04045, 0.5, 1.0), (0.0, 0.003130805, 0.21404114, 1.0), 2e-6),
     # BT.709 using the published 10-bit constants alpha=1.099 and beta=0.018.
-    ("rec709", (0.0, 0.08124794, 0.5, 1.0), (0.0, 0.018, 0.2595894, 1.0), 2e-6),
-    ("bt1886", (0.0, 0.25, 0.5, 1.0), (0.0, 0.03589682, 0.18946457, 1.0), 2e-6),
+    ("Rec.709", (0.0, 0.08124794, 0.5, 1.0), (0.0, 0.018, 0.2595894, 1.0), 2e-6),
+    ("BT.1886", (0.0, 0.25, 0.5, 1.0), (0.0, 0.03589682, 0.18946457, 1.0), 2e-6),
     # SMPTE ST 2084 normalized by its 10,000 cd/m2 peak.
     (
-        "pq",
+        "PQ",
         (0.0, 0.25, 0.5, 0.75, 1.0),
         (0.0, 0.0005154176, 0.009224571, 0.098337786, 1.0),
         8e-5,
     ),
     # ARIB STD-B67 / BT.2100 inverse OETF, including the encoded 0.5 branch boundary.
-    ("hlg", (0.0, 0.5, 0.75, 1.0), (0.0, 1.0 / 12.0, 0.26496256, 1.0), 3e-6),
+    ("HLG", (0.0, 0.5, 0.75, 1.0), (0.0, 1.0 / 12.0, 0.26496256, 1.0), 3e-6),
+    # Sony's continuous S-Log legal-range embedding at 0%, 18%, and 90% reflection.
+    ("S-Log", (0.08825129151344577, 0.3849708159286703, 0.6221814507071066), (0.0, 0.18, 0.9), 6e-6),
+    # Sony's S-Log2 legal-range embedding uses a distinct positive logarithmic scale.
+    ("S-Log2", (0.08825129151344577, 0.33953252463377426, 0.5689503568370721), (0.0, 0.18, 0.9), 6e-6),
     # Sony's published normalized 10-bit code points: black, cut, 18% grey, and 90% white.
     (
-        "s-log3",
+        "S-Log3",
         (95.0 / 1023.0, 171.2102946929 / 1023.0, 420.0 / 1023.0, 598.0 / 1023.0),
         (0.0, 0.01125, 0.18, 0.90083967),
         4e-6,
     ),
     # ARRI LogC4 equations 2/3: c encodes scene-linear zero.
     (
-        "logc4",
+        "ARRI-LogC4",
         (95.0 / 1023.0, 0.2783958365, 0.4275193648),
         (0.0, 0.18, 1.0),
         5e-6,
     ),
+    # Blackmagic Design Generation 5 published anchors.
+    (
+        "Blackmagic-Film-Gen-5",
+        (0.0924657534246575, 0.3835616438356165, 0.5304896249573048),
+        (0.0, 0.18, 1.0),
+        2e-6,
+    ),
+    # Blackmagic Design DaVinci Intermediate published anchors.
+    # The vendor table prints six decimals; 5e-6 covers decoding its rounded 1.0 anchor (4.23e-6 observed).
+    ("DaVinci-Intermediate", (0.0, 0.336043, 0.513837), (0.0, 0.18, 1.0), 5e-6),
     # Kodak Cineon: black CV=95, 18% scene-linear grey, and white CV=685.
     (
-        "cineon",
+        "Cineon",
         (95.0 / 1023.0, 0.4573196130854184, 685.0 / 1023.0),
         (0.0, 0.18, 1.0),
         5e-6,
     ),
-    ("2.2", (0.0, 0.25, 0.5, 1.0), (0.0, 0.047366143, 0.21763764, 1.0), 2e-6),
-    ("2.4", (0.0, 0.25, 0.5, 1.0), (0.0, 0.035896824, 0.18946457, 1.0), 2e-6),
-    ("2.6", (0.0, 0.25, 0.5, 1.0), (0.0, 0.027204706, 0.16493849, 1.0), 2e-6),
+    ("Gamma-2.2", (0.0, 0.25, 0.5, 1.0), (0.0, 0.047366143, 0.21763764, 1.0), 2e-6),
+    ("Gamma-2.4", (0.0, 0.25, 0.5, 1.0), (0.0, 0.035896824, 0.18946457, 1.0), 2e-6),
+    ("Gamma-2.6", (0.0, 0.25, 0.5, 1.0), (0.0, 0.027204706, 0.16493849, 1.0), 2e-6),
 )
 
 
@@ -89,7 +103,9 @@ def test_every_gamma_decodes_and_encodes_published_representative_and_boundary_p
     linear: tuple[float, ...],
     atol: float,
 ) -> None:
-    """v1-color-semantics acceptance 26-28: all transfers match independent public-formula fixtures."""
+    """v1-color-semantics acceptance 26-28; v1-sony-tokens acceptance 4-7;
+    v1-blackmagic-tokens acceptance 36-43; v1-red-tokens acceptance 68: transfers match public fixtures.
+    """
     decoded = px.color.rgb_to_rgb(_gray_frame(encoded, gamma=gamma), output_gamma="linear")
     encoded_again = px.color.rgb_to_rgb(_gray_frame(linear), output_gamma=gamma)
 
@@ -126,8 +142,8 @@ def test_cineon_matches_independent_numpy_float64_kodak_equations() -> None:
         np.float64(300.0) * np.log10(linear * (np.float64(1.0) - black_offset) + black_offset) + np.float64(685.0)
     ) / np.float64(1023.0)
 
-    decoded = px.color.rgb_to_rgb(_gray_frame(tuple(encoded), gamma="cineon"), output_gamma="linear")
-    encoded_frame = px.color.rgb_to_rgb(_gray_frame(tuple(linear)), output_gamma="cineon")
+    decoded = px.color.rgb_to_rgb(_gray_frame(tuple(encoded), gamma="Cineon"), output_gamma="linear")
+    encoded_frame = px.color.rgb_to_rgb(_gray_frame(tuple(linear)), output_gamma="Cineon")
 
     np.testing.assert_allclose(
         px.io.to_array(
@@ -149,12 +165,15 @@ def test_cineon_matches_independent_numpy_float64_kodak_equations() -> None:
 
 @pytest.mark.parametrize("gamma", tuple(fixture[0] for fixture in _TRANSFER_FIXTURES))
 def test_every_gamma_decode_encode_round_trip_stays_within_float32_transfer_error(gamma: str) -> None:
-    """v1-color-semantics acceptance 26-28: decode then encode round-trips within float32 error."""
+    """v1-color-semantics acceptance 26-28; v1-sony-tokens acceptance 8; v1-red-tokens acceptance 68.
+
+    Every established transfer, including renamed ARRI tokens, round-trips in float32.
+    """
     fixture = next(candidate for candidate in _TRANSFER_FIXTURES if candidate[0] == gamma)
     # BT.709's published rounded 10-bit constants have a deliberate 0.000248
     # discontinuity at the branch boundary, so that boundary is tested against
     # each published branch above rather than treated as a round-trip point.
-    encoded = tuple(value for index, value in enumerate(fixture[1]) if not (gamma == "rec709" and index == 1))
+    encoded = tuple(value for index, value in enumerate(fixture[1]) if not (gamma == "Rec.709" and index == 1))
     source = _gray_frame(encoded, gamma=gamma)
 
     decoded = px.color.rgb_to_rgb(source, output_gamma="linear")
@@ -174,9 +193,9 @@ def test_every_gamma_decode_encode_round_trip_stays_within_float32_transfer_erro
     )
 
 
-@pytest.mark.parametrize("gamma", ("pq", "s-log3", "logc4", "cineon", "2.2", "2.4", "2.6"))
+@pytest.mark.parametrize("gamma", ("PQ", "Cineon", "Gamma-2.2", "Gamma-2.4", "Gamma-2.6"))
 def test_log_and_pure_power_extensions_are_sign_preserving_mirrors(gamma: str) -> None:
-    """v1-color-semantics acceptance 26-28: log and pure-power extensions are sign-preserving."""
+    """v1-color-semantics acceptance 26-28; v1-log-negative-extension acceptance 7: mirrored curves stay fixed."""
     source = _gray_frame((-0.18, 0.18))
 
     encoded = px.io.to_array(
@@ -200,10 +219,10 @@ def test_log_and_pure_power_extensions_are_sign_preserving_mirrors(gamma: str) -
 @pytest.mark.parametrize(
     ("gamma", "linear", "encoded"),
     (
-        ("srgb", -0.01, -0.1292),
-        ("rec709", -0.01, -0.045),
-        ("bt1886", -0.25, -0.561231),
-        ("hlg", -(1.0 / 12.0), -0.5),
+        ("sRGB", -0.01, -0.1292),
+        ("Rec.709", -0.01, -0.045),
+        ("BT.1886", -0.25, -0.561231),
+        ("HLG", -(1.0 / 12.0), -0.5),
     ),
 )
 def test_piecewise_transfer_extensions_follow_their_natural_negative_branch(
@@ -225,7 +244,7 @@ def test_transfer_functions_preserve_scene_overshoot_without_clipping() -> None:
     """v1-color-transform acceptance 7: negative and above-one scene values survive a transfer round trip."""
     source = _gray_frame((-0.25, 1.5))
 
-    encoded = px.color.rgb_to_rgb(source, output_gamma="2.2")
+    encoded = px.color.rgb_to_rgb(source, output_gamma="Gamma-2.2")
     assert (
         px.io.to_array(
             encoded,
@@ -254,7 +273,7 @@ def test_transfer_functions_preserve_scene_overshoot_without_clipping() -> None:
 
 @pytest.mark.parametrize("gamma", tuple(fixture[0] for fixture in _TRANSFER_FIXTURES))
 def test_every_transfer_preserves_negative_and_above_one_scene_values(gamma: str) -> None:
-    """v1-color-transform acceptance 7: every transfer token preserves signed scene-range excursions."""
+    """v1-color-transform acceptance 7; v1-red-tokens acceptance 68: renamed ARRI transfers preserve range."""
     source = _gray_frame((-0.18, 1.5))
 
     encoded = px.color.rgb_to_rgb(source, output_gamma=gamma)
@@ -283,6 +302,7 @@ _RED_TO_REC709_FIXTURES = (
     ("Rec.2020", (1.6604910, -0.12455047, -0.01815076)),
     ("ACES2065-1", (2.5216862, -0.2764799, -0.01537807)),
     ("ACEScg", (1.7050510, -0.13025641, -0.02400336)),
+    ("S-Gamut", (1.8779151, -0.17680699, -0.02620113)),
     ("S-Gamut3", (1.8779151, -0.17680699, -0.02620113)),
     ("S-Gamut3.Cine", (1.6269474, -0.17851552, -0.04443612)),
 )
@@ -292,7 +312,7 @@ _RED_TO_REC709_FIXTURES = (
 def test_every_colorspace_uses_its_published_primaries_and_bradford_white_adaptation(
     colorspace: str, expected_red: tuple[float, float, float]
 ) -> None:
-    """v1-color-transform acceptance 8: all primaries and white points match independent matrix fixtures."""
+    """v1-color-transform acceptance 8; v1-sony-tokens acceptance 9: primaries match independent fixtures."""
     red = _frame([1.0, 0.0, 0.0], colorspace=colorspace)
     white = _frame([1.0, 1.0, 1.0], colorspace=colorspace)
 
@@ -368,7 +388,7 @@ def test_input_claims_override_metadata_without_mutating_the_input_frame() -> No
         .copy()
     )
 
-    result = px.color.rgb_to_rgb(source, input_gamma="srgb", output_gamma="linear")
+    result = px.color.rgb_to_rgb(source, input_gamma="sRGB", output_gamma="linear")
 
     np.testing.assert_allclose(
         px.io.to_array(
@@ -408,12 +428,12 @@ def test_input_colorspace_claim_overrides_metadata_without_relabeling_the_input(
 
 def test_partial_output_changes_only_that_axis_and_updates_its_metadata() -> None:
     """v1-color-transform acceptance 3 and 4: output omission preserves the other axis and all channels."""
-    source = _gray_frame((0.5,), gamma="srgb")
+    source = _gray_frame((0.5,), gamma="sRGB")
 
     result = px.color.rgb_to_rgb(source, output_gamma="linear")
 
     assert (result.colorspace, result.gamma, result.channels) == ("sRGB", "linear", source.channels)
-    assert (source.colorspace, source.gamma, source.channels) == ("sRGB", "srgb", ("R", "G", "B"))
+    assert (source.colorspace, source.gamma, source.channels) == ("sRGB", "sRGB", ("R", "G", "B"))
 
 
 @pytest.mark.parametrize(
@@ -449,7 +469,7 @@ def test_omitted_or_equal_outputs_return_a_new_frame_no_op(kwargs: dict[str, str
 
 def test_combined_colorspace_and_gamma_transform_matches_decode_then_matrix_fixture() -> None:
     """v1-color-transform acceptance 11: a combined call applies decode, matrix, then encode in that order."""
-    source = _frame([0.5, 0.0, 0.0], colorspace="Rec.709", gamma="srgb")
+    source = _frame([0.5, 0.0, 0.0], colorspace="Rec.709", gamma="sRGB")
 
     result = px.color.rgb_to_rgb(source, output_colorspace="ACEScg", output_gamma="linear")
 
@@ -498,7 +518,7 @@ def test_color_transform_docstring_scopes_rendering_to_tonemap_selection() -> No
 
 def test_rgb_labels_drive_conversion_and_non_rgb_labels_pass_through_exactly() -> None:
     """v1-color-transform acceptance 12: RGB is transformed by label while Z and A remain bit-exact."""
-    source = _frame([9.0, 0.3, 0.8, 0.1, 0.2], gamma="2.2", channels=["Z", "B", "A", "R", "G"])
+    source = _frame([9.0, 0.3, 0.8, 0.1, 0.2], gamma="Gamma-2.2", channels=["Z", "B", "A", "R", "G"])
 
     result = px.color.rgb_to_rgb(source, output_gamma="linear")
     output = px.io.to_array(
@@ -533,13 +553,13 @@ def test_color_transform_rejects_frames_without_all_rgb_labels(channels: str | l
 @pytest.mark.parametrize(
     ("parameter", "value"),
     (
-        ("input_colorspace", "rec709"),
+        ("input_colorspace", "Rec/709"),
         ("output_colorspace", "ACES"),
-        ("input_gamma", "sRGB"),
-        ("output_gamma", "gamma2.2"),
+        ("input_gamma", "gamma-sRGB"),
+        ("output_gamma", "gamma/2.2"),
     ),
 )
-def test_color_transform_rejects_unknown_axis_tokens_case_sensitively(parameter: str, value: str) -> None:
-    """v1-color-transform acceptance 2 and 4: per-call axis tokens use the canonical case-sensitive vocabulary."""
+def test_color_transform_rejects_unknown_axis_tokens(parameter: str, value: str) -> None:
+    """v1-color-transform acceptance 2 and 4; v1-token-vocabulary acceptance 7: unknown axis tokens fail."""
     with pytest.raises(ValueError, match=parameter):
         px.color.rgb_to_rgb(_frame([0.1, 0.2, 0.3]), **{parameter: value})

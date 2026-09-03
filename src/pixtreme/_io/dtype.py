@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 
-from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import (
     Frame,
 )
-from pixtreme._core.vocabulary import _DTYPE_TOKENS
+from pixtreme._core.validation import _normalized_closed_token
+from pixtreme._core.vocabulary import _DTYPE_TOKENS, Dtype
 from pixtreme._values.cast import recode_dtype
 
 
@@ -17,11 +19,14 @@ def _is_exr_write_dtype(token: str) -> bool:
     return (dtype.kind == "f" and dtype.itemsize in (2, 4)) or (dtype.kind == "u" and dtype.itemsize == 4)
 
 
-_EXR_WRITE_DTYPES = tuple(
-    sorted(
-        (token for token in _DTYPE_TOKENS if _is_exr_write_dtype(token)),
-        key=lambda token: (np.dtype(token).kind != "f", np.dtype(token).itemsize),
-    )
+_EXR_WRITE_DTYPES = cast(
+    tuple[Dtype, ...],
+    tuple(
+        sorted(
+            (token for token in _DTYPE_TOKENS if _is_exr_write_dtype(token)),
+            key=lambda token: (np.dtype(token).kind != "f", np.dtype(token).itemsize),
+        )
+    ),
 )
 
 _WRITE_NATIVE_DTYPES = {
@@ -36,7 +41,7 @@ _WRITE_NATIVE_DTYPES = {
     "HDR": frozenset(("float32",)),
     "DPX": frozenset(("float32",)),
 }
-_WRITE_DEFAULT_DTYPES = {
+_WRITE_DEFAULT_DTYPES: dict[str, Dtype] = {
     "PNG": "uint8",
     "JPEG": "uint8",
     "TIFF": "uint8",
@@ -56,16 +61,20 @@ def _prepare_write_frame(format_name: str, frame: Frame) -> Frame:
     return recode_dtype(frame, dtype=_WRITE_DEFAULT_DTYPES[format_name])
 
 
-def _prepare_exr_write_frame(frame: Frame, *, dtype: str | None) -> Frame:
-    if dtype is not None and (type(dtype) is not str or dtype not in _EXR_WRITE_DTYPES):
-        raise ValueError(
-            _actionable_error(
-                why="EXR dtype is a closed, case-sensitive output storage token",
-                what=f"received dtype={dtype!r}",
-                how=f"pass one of {_EXR_WRITE_DTYPES!r}, or omit dtype to use the Frame-dependent default",
-            )
+def _prepare_exr_write_frame(frame: Frame, *, dtype: Dtype | None) -> Frame:
+    checked_dtype = (
+        None
+        if dtype is None
+        else _normalized_closed_token(
+            dtype,
+            axis="dtype",
+            accepted=_EXR_WRITE_DTYPES,
+            how=f"pass one of the canonical tokens {_EXR_WRITE_DTYPES!r}, or omit dtype to use the default",
         )
-    resolved = ("uint32" if frame.dtype.name == "uint32" else "float16") if dtype is None else dtype
+    )
+    resolved: Dtype = (
+        ("uint32" if frame.dtype.name == "uint32" else "float16") if checked_dtype is None else checked_dtype
+    )
     if frame.dtype.name == resolved:
         return frame
     return recode_dtype(frame, dtype=resolved)

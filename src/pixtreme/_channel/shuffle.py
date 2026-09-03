@@ -12,6 +12,8 @@ from pixtreme._color.transform import rgb_to_rgb
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame
 from pixtreme._core.value_domain import _float32_conversion_guidance
+from pixtreme._core.value_kernel import _route_float32_channels
+from pixtreme._core.vocabulary import Matrix
 
 _RGB_CHANNELS = frozenset(("R", "G", "B"))
 _YCBCR_CHANNELS = frozenset(("Y", "Cb", "Cr"))
@@ -196,7 +198,7 @@ def _prepare_sources(
     return prepared
 
 
-def _resolve_output_matrix(outputs: _NormalizedOutputs) -> str | None:
+def _resolve_output_matrix(outputs: _NormalizedOutputs) -> Matrix | None:
     output_labels = frozenset(output_label for output_label, _source in outputs)
     has_rgb = bool(output_labels & _RGB_CHANNELS)
     has_ycbcr = bool(output_labels & _YCBCR_CHANNELS)
@@ -227,15 +229,24 @@ def _build_frame(
     *,
     master: Frame,
     prepared: Mapping[int, Frame],
-    matrix: str | None,
+    matrix: Matrix | None,
 ) -> Frame:
-    output = cp.empty((master.height, master.width, len(outputs)), dtype=cp.float32)
-    for output_index, (_output_label, source) in enumerate(outputs):
+    source_slots: dict[int, int] = {}
+    source_arrays: list[cp.ndarray] = []
+    routes: list[tuple[int, int] | np.float32] = []
+    for _output_label, source in outputs:
         if isinstance(source, tuple):
             frame, source_index = source
-            output[..., output_index] = prepared[id(frame)].data[..., source_index]
+            identity = id(frame)
+            source_slot = source_slots.get(identity)
+            if source_slot is None:
+                source_slot = len(source_arrays)
+                source_slots[identity] = source_slot
+                source_arrays.append(prepared[identity].data)
+            routes.append((source_slot, source_index))
         else:
-            output[..., output_index].fill(source)
+            routes.append(source)
+    output = _route_float32_channels(tuple(source_arrays), tuple(routes))
 
     return Frame(
         data=output,

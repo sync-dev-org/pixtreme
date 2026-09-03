@@ -108,6 +108,77 @@ def _write_reference_dwa(path: Path, compression: str) -> dict[str, np.ndarray]:
     return {name: np.asarray(reference.channels()[name].pixels) for name in channels}
 
 
+def _eager_dwa_reconstruct_lossy_blocks(
+    spatial: cp.ndarray,
+    transfer_flags: np.ndarray,
+    csc_triplets: np.ndarray,
+) -> cp.ndarray:
+    """Test-side rendition of the pre-fusion read color, inverse-transfer, and HALF-selection path."""
+    if csc_triplets.size:
+        triplets = cp.asarray(csc_triplets)
+        y_plane = spatial[triplets[:, 0]].copy()
+        cb_plane = spatial[triplets[:, 1]].copy()
+        cr_plane = spatial[triplets[:, 2]].copy()
+        spatial[triplets[:, 0]] = y_plane + cp.float32(1.5747) * cr_plane
+        spatial[triplets[:, 1]] = y_plane - cp.float32(0.1873) * cb_plane - cp.float32(0.4682) * cr_plane
+        spatial[triplets[:, 2]] = y_plane + cp.float32(1.8556) * cb_plane
+    nonlinear = spatial.astype(cp.float16)
+    nonlinear_float = nonlinear.astype(cp.float32)
+    magnitude = cp.abs(nonlinear_float)
+    linear = cp.where(
+        magnitude <= cp.float32(1.0),
+        cp.power(magnitude, cp.float32(2.2)),
+        cp.exp(cp.float32(2.2) * (magnitude - cp.float32(1.0))),
+    )
+    linear = cp.copysign(linear, nonlinear_float)
+    linear = cp.where(cp.isfinite(nonlinear_float), linear, cp.float32(0.0))
+    reconstructed = cp.where(
+        cp.asarray(transfer_flags)[:, None, None],
+        linear.astype(cp.float16),
+        nonlinear,
+    )
+    return cp.ascontiguousarray(reconstructed).view(cp.uint16).reshape(-1)
+
+
+@pytest.mark.parametrize("compression", ("dwaa", "dwab"))
+def test_dwa_transfer_fusion_preserves_decode_output_characterization(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    compression: str,
+) -> None:
+    """characterization: issue #1 RawKernel trial acceptance 2 and 5 freezes eager DWA decode bits for partial,
+    compressed, and raw chunks until the transfer/color contract changes; OpenEXR remains the independent oracle.
+    """
+    fused_helper = exr_dwa._reconstruct_dwa_lossy_blocks_gpu
+    path = tmp_path / f"reference-{compression}.exr"
+    _write_reference_dwa(path, compression)
+    container = exr_container._parse_exr_container(path)
+    assert any(not chunk.raw_stored for chunk in container.chunks)
+    assert any(chunk.raw_stored for chunk in container.chunks)
+    assert container.chunks[-1].row_count < container.lines_per_chunk
+
+    selected = ("depth.Z", "beauty.A", "beauty.B", "beauty.R", "beauty.G", "luma.Y")
+    candidate = px.io.read_image(path, channels=selected, colorspace="Rec.709", gamma="linear")
+    candidate_half = px.io.read_image(
+        path,
+        channels=("beauty.R", "beauty.G", "beauty.B"),
+        unchanged=True,
+    )
+    monkeypatch.setattr(exr_dwa, "_reconstruct_dwa_lossy_blocks_gpu", _eager_dwa_reconstruct_lossy_blocks)
+    eager = px.io.read_image(path, channels=selected, colorspace="Rec.709", gamma="linear")
+    eager_half = px.io.read_image(
+        path,
+        channels=("beauty.R", "beauty.G", "beauty.B"),
+        unchanged=True,
+    )
+
+    assert fused_helper is not _eager_dwa_reconstruct_lossy_blocks
+    assert (candidate.channels, candidate.data.dtype) == (eager.channels, eager.data.dtype)
+    assert (candidate_half.channels, candidate_half.data.dtype) == (eager_half.channels, eager_half.data.dtype)
+    np.testing.assert_array_equal(candidate.data.get().view(np.uint32), eager.data.get().view(np.uint32))
+    np.testing.assert_array_equal(candidate_half.data.get().view(np.uint16), eager_half.data.get().view(np.uint16))
+
+
 @pytest.mark.parametrize("compression", ("dwaa", "dwab"))
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_reference_dwa_read_lanes_cover_lossy_lossless_partial_and_selected_channels(

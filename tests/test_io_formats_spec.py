@@ -175,8 +175,10 @@ def test_encode_image_accepts_the_extended_closed_token_set(token: str) -> None:
     assert isinstance(
         px.io.encode_image(frame, format=token, lossless=True if token in ("jpeg2000", "webp") else None), bytes
     )
-    with pytest.raises(ValueError, match=_ACTIONABLE):
-        px.io.encode_image(frame, format=token.upper())
+    assert isinstance(
+        px.io.encode_image(frame, format=token.upper(), lossless=True if token in ("jpeg2000", "webp") else None),
+        bytes,
+    )
 
 
 @pytest.mark.parametrize(
@@ -430,7 +432,7 @@ def test_webp_quality_controls_payload_and_independent_mse() -> None:
     """v1-io-formats acceptance 12: quality 1/50/100 changes WebP payloads and improves independent MSE."""
     generator = np.random.default_rng(20260806)
     values = generator.integers(0, 256, size=(64, 64, 3), dtype=np.uint8)
-    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     payloads = [px.io.encode_image(frame, format="webp", quality=quality) for quality in (1, 50, 100)]
     decoded = [np.asarray(Image.open(io.BytesIO(payload)).convert("RGB"), dtype=np.float32) for payload in payloads]
@@ -445,7 +447,7 @@ def test_lossless_true_is_exact_and_false_or_none_is_lossy(format_token: str) ->
     """v1-io-formats acceptance 13: explicit lossless is exact while default/False selects lossy coding."""
     generator = np.random.default_rng(20260807)
     values = generator.integers(0, 256, size=(64, 64, 3), dtype=np.uint8)
-    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     exact = px.io.decode_image(px.io.encode_image(frame, format=format_token, lossless=True), unchanged=True)
     default = px.io.decode_image(px.io.encode_image(frame, format=format_token), unchanged=True)
@@ -462,10 +464,10 @@ def test_new_format_metadata_defaults_overrides_and_channel_selection() -> None:
     payload = px.io.encode_image(frame, format="bmp")
 
     default = px.io.decode_image(payload)
-    selected = px.io.decode_image(payload, channels="BR", unchanged=True, colorspace="Rec.2020", gamma="pq")
+    selected = px.io.decode_image(payload, channels="BR", unchanged=True, colorspace="Rec.2020", gamma="PQ")
 
-    assert (default.colorspace, default.gamma, default.channels) == ("sRGB", "srgb", ("R", "G", "B"))
-    assert (selected.colorspace, selected.gamma, selected.channels) == ("Rec.2020", "pq", ("B", "R"))
+    assert (default.colorspace, default.gamma, default.channels) == ("sRGB", "sRGB", ("R", "G", "B"))
+    assert (selected.colorspace, selected.gamma, selected.channels) == ("Rec.2020", "PQ", ("B", "R"))
     cp.testing.assert_array_equal(selected.data, frame.data[..., [2, 0]])
 
 

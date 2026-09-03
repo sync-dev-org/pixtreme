@@ -742,72 +742,6 @@ def _gather_raw_chunks(
     )
 
 
-def _unpack_exr_uint_chunks(
-    container: _ExrContainer,
-    selected: Sequence[_ExrChannel],
-    decoded: cp.ndarray,
-    decoded_offsets: Sequence[int] | np.ndarray,
-    decoded_sizes: Sequence[int] | np.ndarray,
-    even_odd_grouped: Sequence[int] | np.ndarray,
-) -> cp.ndarray:
-    width = container.data_window[2] - container.data_window[0] + 1
-    height = container.data_window[3] - container.data_window[1] + 1
-    file_channels = container.parts[0].channels
-    if any(channel.pixel_type != 0 for channel in selected):
-        raise _gpu_error(
-            why="the native UINT unpack lane received a non-UINT selected channel",
-            what=f"channels={tuple((channel.name, channel.pixel_type) for channel in selected)!r}",
-            how="route only homogeneous EXR UINT selections to the uint32 output lane",
-        )
-    channel_offsets: dict[str, int] = {}
-    row_bytes = 0
-    for channel in file_channels:
-        channel_offsets[channel.name] = row_bytes
-        row_bytes += width * channel.bytes_per_sample
-    output = cp.empty((height, width, len(selected)), dtype=cp.uint32)
-    offsets = tuple(int(value) for value in decoded_offsets)
-    sizes = tuple(int(value) for value in decoded_sizes)
-    even_odd_flags = tuple(bool(value) for value in even_odd_grouped)
-    for chunk, offset, size, is_even_odd_grouped in zip(
-        container.chunks,
-        offsets,
-        sizes,
-        even_odd_flags,
-        strict=True,
-    ):
-        expected_size = chunk.row_count * row_bytes
-        if size != expected_size:
-            raise _gpu_error(
-                why="a native UINT chunk differs from its channel-derived row size",
-                what=f"chunk_y={chunk.y}, decoded={size}, expected={expected_size}",
-                how="materialize every file-order channel sample byte exactly once before UINT unpack",
-            )
-        chunk_bytes = decoded[offset : offset + size]
-        if is_even_odd_grouped:
-            original = cp.arange(size, dtype=cp.int64)
-            half = (size + 1) // 2
-            stored = cp.where(original & 1, half + original // 2, original // 2)
-            chunk_bytes = chunk_bytes[stored]
-        rows = chunk_bytes.reshape(chunk.row_count, row_bytes)
-        output_rows = slice(chunk.row_start, chunk.row_start + chunk.row_count)
-        for output_channel, channel in enumerate(selected):
-            channel_start = channel_offsets[channel.name]
-            channel_end = channel_start + width * 4
-            sample_bytes = cp.ascontiguousarray(rows[:, channel_start:channel_end]).reshape(
-                chunk.row_count,
-                width,
-                4,
-            )
-            bits = (
-                sample_bytes[..., 0].astype(cp.uint32)
-                | (sample_bytes[..., 1].astype(cp.uint32) << cp.uint32(8))
-                | (sample_bytes[..., 2].astype(cp.uint32) << cp.uint32(16))
-                | (sample_bytes[..., 3].astype(cp.uint32) << cp.uint32(24))
-            )
-            output[output_rows, :, output_channel] = bits
-    return output
-
-
 def _unpack_exr_chunks(
     container: _ExrContainer,
     selected: Sequence[_ExrChannel],
@@ -825,6 +759,21 @@ def _unpack_exr_chunks(
     for channel in container.parts[0].channels:
         channel_offsets_by_name[channel.name] = row_bytes
         row_bytes += width * channel.bytes_per_sample
+    if output_dtype == "uint32":
+        if any(channel.pixel_type != 0 for channel in selected):
+            raise _gpu_error(
+                why="the native UINT unpack lane received a non-UINT selected channel",
+                what=f"channels={tuple((channel.name, channel.pixel_type) for channel in selected)!r}",
+                how="route only homogeneous EXR UINT selections to the uint32 output lane",
+            )
+        for chunk, size in zip(container.chunks, decoded_sizes, strict=True):
+            expected_size = chunk.row_count * row_bytes
+            if int(size) != expected_size:
+                raise _gpu_error(
+                    why="a native UINT chunk differs from its channel-derived row size",
+                    what=f"chunk_y={chunk.y}, decoded={int(size)}, expected={expected_size}",
+                    how="materialize every file-order channel sample byte exactly once before UINT unpack",
+                )
     device_chunk_offsets = cp.asarray(decoded_offsets)
     device_chunk_sizes = cp.asarray(decoded_sizes)
     device_even_odd_grouped = cp.asarray(even_odd_grouped)
@@ -868,15 +817,6 @@ def _unpack_exr_output(
     *,
     output_dtype: str,
 ) -> cp.ndarray:
-    if output_dtype == "uint32":
-        return _unpack_exr_uint_chunks(
-            container,
-            selected,
-            decoded,
-            decoded_offsets,
-            decoded_sizes,
-            even_odd_grouped,
-        )
     return _unpack_exr_chunks(
         container,
         selected,

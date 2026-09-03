@@ -338,7 +338,7 @@ def test_resize_known_nearest_bilinear_and_area_solutions_fix_center_and_edge_ru
 
 
 def test_resize_is_per_channel_label_independent_and_preserves_metadata() -> None:
-    """v1-resize acceptance 9 and 16: arbitrary channels are independent and all metadata survives."""
+    """v1-resize acceptance 9 and 16; v1-red-tokens acceptance 68: renamed ARRI metadata survives."""
     values = np.asarray(
         [
             [[0.0, 100.0, -5.0], [1.0, 200.0, -4.0]],
@@ -349,7 +349,7 @@ def test_resize_is_per_channel_label_independent_and_preserves_metadata() -> Non
     source = _frame(
         values,
         colorspace="ACEScg",
-        gamma="logc4",
+        gamma="ARRI-LogC4",
         channels=["temperature", "confidence", "depth"],
     )
     expected = _resize_reference(values, width=5, height=3, interpolation="bilinear")
@@ -369,7 +369,7 @@ def test_resize_is_per_channel_label_independent_and_preserves_metadata() -> Non
     assert (result.width, result.height) == (5, 3)
     assert (result.colorspace, result.gamma, result.channels) == (
         "ACEScg",
-        "logc4",
+        "ARRI-LogC4",
         ("temperature", "confidence", "depth"),
     )
 
@@ -428,14 +428,14 @@ def test_resize_calculates_float32_and_same_size_kernel_classes_are_distinct() -
 def test_resize_always_returns_a_new_frame_and_private_allocation() -> None:
     """v1-resize acceptance 16 and 17: even an identity-sized call returns a new Frame and allocation."""
     values = np.arange(18, dtype=np.float32).reshape(2, 3, 3)
-    source = _frame(values, colorspace="Rec.2020", gamma="pq", channels="BGR")
+    source = _frame(values, colorspace="Rec.2020", gamma="PQ", channels="BGR")
 
     result = px.transform.resize(source, width=3, height=2, interpolation="nearest")
 
     assert isinstance(result, px.core.Frame)
     assert result is not source
     assert result.data.data.ptr != source.data.data.ptr
-    assert (result.colorspace, result.gamma, result.channels) == ("Rec.2020", "pq", ("B", "G", "R"))
+    assert (result.colorspace, result.gamma, result.channels) == ("Rec.2020", "PQ", ("B", "G", "R"))
     np.testing.assert_array_equal(
         px.io.to_array(
             result,

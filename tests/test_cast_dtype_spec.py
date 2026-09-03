@@ -65,9 +65,9 @@ def test_cast_dtype_always_allocates_and_preserves_metadata(dtype: str) -> None:
     )
 
 
-@pytest.mark.parametrize("invalid", ("fp32", "float64", "int32", "UINT8", "unknown"))
-def test_cast_dtype_rejects_unknown_tokens_case_sensitively(invalid: str) -> None:
-    """REQ-API-012 / v1-io acceptance 19: invalid dtype tokens fail actionably."""
+@pytest.mark.parametrize("invalid", ("fp32", "float64", "int32", "uint64", "unknown"))
+def test_cast_dtype_rejects_unknown_tokens(invalid: str) -> None:
+    """REQ-API-012 / v1-io acceptance 19; v1-token-vocabulary acceptance 7: invalid dtype tokens fail actionably."""
     with pytest.raises(ValueError, match="dtype") as error:
         px.values.cast_dtype(_frame([0, 1, 2], dtype="float32"), dtype=invalid)
     _assert_actionable(error)

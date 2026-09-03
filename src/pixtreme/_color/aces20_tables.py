@@ -11,7 +11,9 @@ _ACES20_TABLE_CONFIG = "studio-config-v4.0.0_aces-v2.0_ocio-v2.5"
 _ACES20_TABLE_VIEW = "ACES 2.0 - SDR 100 nits (Rec.709)"
 
 _ACES20_TABLE_CUDA_SOURCE = r"""
-__device__ __constant__ float aces20_reach_m[363] = {
+// Global read-only storage avoids serialized constant-cache loads for divergent per-pixel hues.
+
+__device__ const float aces20_reach_m[363] = {
     165.075684f, 166.790771f, 168.481445f, 170.135498f, 171.759033f, 173.345947f,
     174.884033f, 176.373291f, 177.807617f, 179.187012f, 180.511475f, 181.768799f,
     182.971191f, 184.112549f, 185.192871f, 186.218262f, 187.182617f, 188.092041f,
@@ -75,7 +77,7 @@ __device__ __constant__ float aces20_reach_m[363] = {
     165.075684f, 166.790771f, 168.481445f
 };
 
-__device__ __constant__ float aces20_gamut_hues[363] = {
+__device__ const float aces20_gamut_hues[363] = {
     -1.01858521f, 0.0f, 0.999435782f, 1.99887156f, 2.99830723f, 3.99774313f,
     4.99717903f, 5.99661446f, 6.99605036f, 7.99548626f, 8.99492168f, 9.99435806f,
     10.9937935f, 11.9932289f, 12.9926653f, 13.9921007f, 14.9915371f, 15.9909725f,
@@ -139,7 +141,7 @@ __device__ __constant__ float aces20_gamut_hues[363] = {
     358.981415f, 360.0f, 360.999451f
 };
 
-__device__ __constant__ float aces20_gamut_cusp[1089] = {
+__device__ const float aces20_gamut_cusp[1089] = {
     54.5407639f, 70.6442108f, 1.12447917f, 54.2507095f, 70.8334198f, 1.12561488f,
     53.9738312f, 71.0252991f, 1.12665212f, 53.7046242f, 71.2227554f, 1.12778437f,
     53.4431038f, 71.4255753f, 1.12877893f, 53.189312f, 71.6333237f, 1.12981415f,

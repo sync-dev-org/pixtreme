@@ -11,8 +11,9 @@ import numpy as np
 from pixtreme._core.border import _BORDER_PREAMBLE, _border_argument, _resolve_border
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame, _new_frame, _validate_frame
+from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._core.value_domain import _float32_conversion_guidance
-from pixtreme._core.vocabulary import _MORPHOLOGY_SHAPE_TOKENS
+from pixtreme._core.vocabulary import _MORPHOLOGY_SHAPE_TOKENS, Border, MorphologyShape
 
 _SHAPE_TOKENS = _MORPHOLOGY_SHAPE_TOKENS
 _THREADS_PER_BLOCK = 256
@@ -234,16 +235,8 @@ def _validate_radius(radius: object, *, operation: str) -> int:
     return radius
 
 
-def _validate_shape(shape: object) -> str:
-    if shape not in _SHAPE_TOKENS:
-        raise ValueError(
-            _actionable_error(
-                why="shape is a closed, case-sensitive morphology token axis",
-                what=f"received shape={shape!r}",
-                how=f"pass one of {_SHAPE_TOKENS!r}",
-            )
-        )
-    return str(shape)
+def _validate_shape(shape: object) -> MorphologyShape:
+    return _normalized_closed_token(shape, axis="shape", accepted=_SHAPE_TOKENS)
 
 
 def _validate_arguments(
@@ -254,7 +247,7 @@ def _validate_arguments(
     shape: object,
     border: object,
     border_value: object,
-) -> tuple[Frame, int, str, str, float]:
+) -> tuple[Frame, int, MorphologyShape, Border, float]:
     checked_frame = _validate_frame(frame, operation=operation)
     dtype = np.dtype(checked_frame.dtype)
     if dtype != np.dtype(np.float32):
@@ -277,7 +270,7 @@ def _launch_tiled(
     *,
     radius: int,
     shape: str,
-    border: str,
+    border: Border,
     border_value: float,
     operation: str,
     difference_source: cp.ndarray,
@@ -315,7 +308,7 @@ def _primitive(
     *,
     radius: int,
     shape: str,
-    border: str,
+    border: Border,
     border_value: float,
     dilate: bool,
     difference_source: cp.ndarray | None = None,
@@ -366,7 +359,7 @@ def _gradient_primitive(
     *,
     radius: int,
     shape: str,
-    border: str,
+    border: Border,
     border_value: float,
 ) -> Frame:
     output = cp.empty(frame.shape, dtype=cp.float32)
@@ -407,7 +400,7 @@ def _validated_primitive(
     operation: str,
     radius: int,
     shape: str,
-    border: str,
+    border: Border,
     border_value: float | None,
     dilate: bool,
 ) -> Frame:
@@ -433,8 +426,8 @@ def erosion(
     frame: Frame,
     *,
     radius: int,
-    shape: str = "disk",
-    border: str = "replicate",
+    shape: MorphologyShape = "disk",
+    border: Border = "replicate",
     border_value: float | None = None,
 ) -> Frame:
     """Replace every fp32 channel value with its structuring-element minimum.
@@ -461,8 +454,8 @@ def dilation(
     frame: Frame,
     *,
     radius: int,
-    shape: str = "disk",
-    border: str = "replicate",
+    shape: MorphologyShape = "disk",
+    border: Border = "replicate",
     border_value: float | None = None,
 ) -> Frame:
     """Replace every fp32 channel value with its structuring-element maximum.
@@ -489,8 +482,8 @@ def opening(
     frame: Frame,
     *,
     radius: int,
-    shape: str = "disk",
-    border: str = "replicate",
+    shape: MorphologyShape = "disk",
+    border: Border = "replicate",
     border_value: float | None = None,
 ) -> Frame:
     """Erode then dilate an fp32 Frame with one shared structuring element.
@@ -530,8 +523,8 @@ def closing(
     frame: Frame,
     *,
     radius: int,
-    shape: str = "disk",
-    border: str = "replicate",
+    shape: MorphologyShape = "disk",
+    border: Border = "replicate",
     border_value: float | None = None,
 ) -> Frame:
     """Dilate then erode an fp32 Frame with one shared structuring element.
@@ -571,8 +564,8 @@ def morphological_gradient(
     frame: Frame,
     *,
     radius: int,
-    shape: str = "disk",
-    border: str = "replicate",
+    shape: MorphologyShape = "disk",
+    border: Border = "replicate",
     border_value: float | None = None,
 ) -> Frame:
     """Return dilation minus erosion for an fp32 Frame.
@@ -603,8 +596,8 @@ def white_tophat(
     frame: Frame,
     *,
     radius: int,
-    shape: str = "disk",
-    border: str = "replicate",
+    shape: MorphologyShape = "disk",
+    border: Border = "replicate",
     border_value: float | None = None,
 ) -> Frame:
     """Return input minus opening to extract small bright detail.
@@ -646,8 +639,8 @@ def black_tophat(
     frame: Frame,
     *,
     radius: int,
-    shape: str = "disk",
-    border: str = "replicate",
+    shape: MorphologyShape = "disk",
+    border: Border = "replicate",
     border_value: float | None = None,
 ) -> Frame:
     """Return closing minus input to extract small dark detail.

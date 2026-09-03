@@ -226,7 +226,7 @@ def test_apply_lut_resolves_type_specific_defaults_and_rejects_mismatched_tokens
         (lut3d, "linear", ("trilinear", "tetrahedral")),
         (lut1d, "trilinear", ("linear",)),
         (lut1d, "tetrahedral", ("linear",)),
-        (lut1d, "Linear", ("linear",)),
+        (lut1d, "nearest", ("linear",)),
     ):
         with pytest.raises(ValueError) as error:
             px.color.apply_lut(source1d, lut=lut, interpolation=token)

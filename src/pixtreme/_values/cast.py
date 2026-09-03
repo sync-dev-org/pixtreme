@@ -2,31 +2,123 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 import cupy as cp
 import numpy as np
 
-from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame
-from pixtreme._core.vocabulary import _DTYPE_TOKENS
+from pixtreme._core.validation import _normalized_closed_token
+from pixtreme._core.vocabulary import _DTYPE_TOKENS, Dtype
 from pixtreme._values.common import _new_frame, _validate_frame
-from pixtreme._values.quantize import quantize
 
 _CONTAINER_MAXIMA = {"uint8": 255, "uint16": 65535, "uint32": 4294967295}
+_CUDA_STORAGE_TYPES = {
+    "float32": "float",
+    "float16": "unsigned short",
+    "uint8": "unsigned char",
+    "uint16": "unsigned short",
+    "uint32": "unsigned int",
+}
+_THREADS_PER_BLOCK = 512
 
 
-def _validate_dtype_token(value: object) -> str:
-    if not isinstance(value, str) or value not in _DTYPE_TOKENS:
-        raise ValueError(
-            _actionable_error(
-                why="dtype is a closed, case-sensitive storage token",
-                what=f"received dtype={value!r}",
-                how=f"pass one of {_DTYPE_TOKENS!r}",
-            )
+def _cuda_load_expression(dtype: str, value: str) -> str:
+    if dtype == "float32":
+        return value
+    if dtype == "float16":
+        return f"__half2float(__ushort_as_half({value}))"
+    return f"(float)({value})"
+
+
+def _cuda_store_expression(dtype: str, value: str) -> str:
+    if dtype == "float32":
+        return value
+    if dtype == "float16":
+        return f"__half_as_ushort(__float2half_rn({value}))"
+    return f"({_CUDA_STORAGE_TYPES[dtype]})({value})"
+
+
+def _recode_dtype_expression(
+    source_dtype: str,
+    target_dtype: str,
+    source: str = "source[element]",
+) -> str:
+    if source_dtype.startswith("uint") and target_dtype.startswith("uint"):
+        source_maximum = _CONTAINER_MAXIMA[source_dtype]
+        target_maximum = _CONTAINER_MAXIMA[target_dtype]
+        return (
+            f"(unsigned long long)((((unsigned long long){source}) * {target_maximum}ULL "
+            f"+ {source_maximum // 2}ULL) / {source_maximum}ULL)"
         )
-    return value
+
+    loaded = _cuda_load_expression(source_dtype, source)
+    if source_dtype.startswith("uint"):
+        return _cuda_store_expression(target_dtype, f"({loaded} * parameter)")
+
+    if target_dtype == "uint32":
+        clipped = f"fmin(fmax((double)({loaded}), 0.0), 1.0)"
+        rounded = f"floor(__dadd_rn(__dmul_rn({clipped}, 4294967295.0), 0.5))"
+        return _cuda_store_expression(target_dtype, f"(isnan((double)({loaded})) ? 2147483648.0 : {rounded})")
+
+    rounded = f"floorf(fminf(fmaxf({loaded}, 0.0f), 1.0f) * parameter + 0.5f)"
+    return _cuda_store_expression(target_dtype, rounded)
 
 
-def recode_dtype(frame: Frame, *, dtype: str) -> Frame:
+@lru_cache(maxsize=18)
+def _recode_dtype_kernel(source_dtype: str, target_dtype: str) -> cp.RawKernel:
+    expression = _recode_dtype_expression(source_dtype, target_dtype)
+    source = f"""
+#include <cuda_fp16.h>
+
+extern "C" __global__ void pixtreme_recode_dtype(
+    const {_CUDA_STORAGE_TYPES[source_dtype]}* __restrict__ source,
+    {_CUDA_STORAGE_TYPES[target_dtype]}* __restrict__ destination,
+    const long long element_count,
+    const float parameter
+) {{
+    const long long element = (long long)blockDim.x * blockIdx.x + threadIdx.x;
+    if (element >= element_count) {{
+        return;
+    }}
+    destination[element] = {expression};
+}}
+"""
+    return cp.RawKernel(source, "pixtreme_recode_dtype")
+
+
+def _recode_dtype_parameter(source_dtype: str, target_dtype: str) -> np.float32:
+    if source_dtype.startswith("uint") and target_dtype.startswith("float"):
+        return np.float32(1.0 / _CONTAINER_MAXIMA[source_dtype])
+    if source_dtype.startswith("float") and target_dtype in {"uint8", "uint16"}:
+        return np.float32(_CONTAINER_MAXIMA[target_dtype])
+    return np.float32(0.0)
+
+
+def _recode_dtype_rawkernel(frame: Frame, *, dtype: Dtype) -> Frame:
+    frame = _validate_frame(frame, operation="values.recode_dtype")
+    dtype = _validate_dtype_token(dtype)
+    source_dtype = frame.dtype.name
+
+    if source_dtype == dtype or (source_dtype.startswith("float") and dtype.startswith("float")):
+        return cast_dtype(frame, dtype=dtype)
+
+    output = cp.empty(frame.shape, dtype=dtype)
+    element_count = int(frame.data.size)
+    block_count = (element_count + _THREADS_PER_BLOCK - 1) // _THREADS_PER_BLOCK
+    _recode_dtype_kernel(source_dtype, dtype)(
+        (block_count,),
+        (_THREADS_PER_BLOCK,),
+        (frame.data, output, np.int64(element_count), _recode_dtype_parameter(source_dtype, dtype)),
+    )
+    return _new_frame(frame, output)
+
+
+def _validate_dtype_token(value: object) -> Dtype:
+    return _normalized_closed_token(value, axis="dtype", accepted=_DTYPE_TOKENS)
+
+
+def recode_dtype(frame: Frame, *, dtype: Dtype) -> Frame:
     """Recode storage while preserving normalized image meaning.
 
     Unsigned integer containers map their complete code range to ``[0, 1]``.
@@ -40,40 +132,10 @@ def recode_dtype(frame: Frame, *, dtype: str) -> Frame:
     bit-depth grid lane when effective code bits, rather than the storage
     container, define the scale.
     """
-    frame = _validate_frame(frame, operation="values.recode_dtype")
-    dtype = _validate_dtype_token(dtype)
-    source_dtype = frame.dtype.name
-
-    if source_dtype == dtype or (source_dtype.startswith("float") and dtype.startswith("float")):
-        return cast_dtype(frame, dtype=dtype)
-
-    if source_dtype.startswith("uint") and dtype.startswith("uint"):
-        source_maximum = _CONTAINER_MAXIMA[source_dtype]
-        target_maximum = _CONTAINER_MAXIMA[dtype]
-        source = frame.data.astype(cp.uint64)
-        scaled = (source * np.uint64(target_maximum) + np.uint64(source_maximum // 2)) // np.uint64(source_maximum)
-        return _new_frame(frame, scaled.astype(dtype))
-
-    if source_dtype.startswith("uint"):
-        source_maximum = _CONTAINER_MAXIMA[source_dtype]
-        normalized = _new_frame(frame, frame.data.astype(cp.float32) * np.float32(1.0 / source_maximum))
-        if dtype == "float32":
-            return normalized
-        if dtype == "float16":
-            return cast_dtype(normalized, dtype=dtype)
-        raise AssertionError(f"unreachable uint target dtype after integer branch: {dtype!r}")
-
-    normalized = frame if source_dtype == "float32" else cast_dtype(frame, dtype="float32")
-    if dtype == "uint32":
-        maximum = np.float64(_CONTAINER_MAXIMA[dtype])
-        output = cp.floor(cp.clip(normalized.data.astype(cp.float64), 0.0, 1.0) * maximum + np.float64(0.5)).astype(
-            cp.uint32
-        )
-        return _new_frame(frame, output)
-    return quantize(normalized, bit_depth=8 if dtype == "uint8" else 16)
+    return _recode_dtype_rawkernel(frame, dtype=dtype)
 
 
-def cast_dtype(frame: Frame, *, dtype: str) -> Frame:
+def cast_dtype(frame: Frame, *, dtype: Dtype) -> Frame:
     """Cast storage while preserving literal numeric values.
 
     This is a direct CuPy ``astype`` operation: it adds no scaling, clipping,

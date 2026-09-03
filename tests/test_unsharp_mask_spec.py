@@ -194,7 +194,7 @@ def test_unsharp_mask_preserves_halo_excursions_without_clipping() -> None:
 
 @pytest.mark.parametrize(
     ("border", "border_value"),
-    (("reflect", None), ("Mirror", None), ("constant", None), ("constant", float("inf")), ("mirror", 0.0)),
+    (("reflect", None), ("edge", None), ("constant", None), ("constant", float("inf")), ("mirror", 0.0)),
 )
 def test_unsharp_mask_uses_the_shared_border_error_contract(border: str, border_value: object) -> None:
     """v1-unsharp-mask acceptance 6: border tokens and border_value follow the blur contract exactly."""
@@ -226,10 +226,10 @@ def test_unsharp_mask_rejects_non_fp32_frames_with_conversion_guidance(
 
 
 def test_unsharp_mask_is_channel_label_independent_and_preserves_metadata_and_input() -> None:
-    """v1-unsharp-mask acceptance 7-8: all channels including A share one formula and metadata/input survive."""
+    """v1-unsharp-mask acceptance 7-8; v1-red-tokens acceptance 68: renamed ARRI metadata survives."""
     values = np.linspace(-0.5, 1.5, 48, dtype=np.float32).reshape(3, 4, 4)
-    source = _frame(values, colorspace="ACEScg", gamma="logc4", channels=("R", "G", "B", "A"))
-    relabeled = _frame(values, colorspace="ACEScg", gamma="logc4", channels=("Z", "Y", "Cb", "Cr"))
+    source = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=("R", "G", "B", "A"))
+    relabeled = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=("Z", "Y", "Cb", "Cr"))
     source_before = px.io.to_array(
         source,
     ).get()
@@ -253,7 +253,7 @@ def test_unsharp_mask_is_channel_label_independent_and_preserves_metadata_and_in
     )
     assert result.shape == source.shape
     assert result.dtype == np.dtype(np.float32)
-    assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "logc4", ("R", "G", "B", "A"))
+    assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "ARRI-LogC4", ("R", "G", "B", "A"))
 
 
 def test_unsharp_mask_docstring_is_a_self_contained_contract() -> None:

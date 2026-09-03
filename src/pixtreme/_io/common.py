@@ -9,7 +9,7 @@ from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from io import BytesIO
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, cast
 
 import numpy as np
 
@@ -23,7 +23,7 @@ from pixtreme._core.frame import (
     _validate_token,
 )
 from pixtreme._core.vocabulary import _EXR_COMPRESSION_TOKENS as _EXR_COMPRESSION_TOKENS
-from pixtreme._core.vocabulary import _IMAGE_FORMAT_TOKENS
+from pixtreme._core.vocabulary import _IMAGE_FORMAT_TOKENS, Colorspace, Gamma
 from pixtreme._core.vocabulary import _TIFF_COMPRESSION_TOKENS as _TIFF_COMPRESSION_TOKENS
 from pixtreme._io.models import (
     ImageHeader,
@@ -49,7 +49,7 @@ _SUPPORTED_EXTENSIONS: Mapping[str, str] = {
     ".hdr": "HDR",
     ".dpx": "DPX",
 }
-_RASTER_DEFAULTS = ("sRGB", "srgb")
+_RASTER_DEFAULTS = ("sRGB", "sRGB")
 _EXR_DEFAULTS = ("ACES2065-1", "linear")
 _HDR_DEFAULTS = ("Rec.709", "linear")
 _DPX_DEFAULTS = ("Rec.709", "linear")
@@ -148,7 +148,7 @@ def _resolve_metadata(
     *,
     colorspace: str | None,
     gamma: str | None,
-) -> tuple[str, str]:
+) -> tuple[Colorspace, Gamma]:
     if colorspace is not None:
         colorspace = _validate_token(colorspace, axis="colorspace", accepted=_COLORSPACE_TOKENS)
     if gamma is not None:
@@ -167,7 +167,10 @@ def _resolve_metadata(
             UserWarning,
             stacklevel=3,
         )
-    return colorspace or header.color.colorspace or defaults[0], gamma or header.color.gamma or defaults[1]
+    return (
+        cast(Colorspace, colorspace or header.color.colorspace or defaults[0]),
+        cast(Gamma, gamma or header.color.gamma or defaults[1]),
+    )
 
 
 def _resolve_channel_locations(

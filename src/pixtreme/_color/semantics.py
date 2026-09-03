@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import TypeVar
 
 import cupy as cp
 import numpy as np
@@ -21,8 +22,9 @@ from pixtreme._core.frame import (
     _MATRIX_TOKENS,
     Frame,
 )
+from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._core.value_domain import _BIT_DEPTHS, _float32_conversion_guidance, _legal_parameters
-from pixtreme._core.vocabulary import _RANGE_TOKENS
+from pixtreme._core.vocabulary import _RANGE_TOKENS, Colorspace, Gamma, Matrix, Range
 
 _RGB_CHANNELS = ("R", "G", "B")
 _YCBCR_CHANNELS = ("Y", "Cb", "Cr")
@@ -33,9 +35,9 @@ _OUTPUT_YCBCR = 1
 _OUTPUT_GRAYSCALE = 2
 
 _STANDARD_MATRIX_COEFFICIENTS = {
-    "bt601": (np.float32(0.299), np.float32(0.114)),
-    "bt709": (np.float32(0.2126), np.float32(0.0722)),
-    "bt2020": (np.float32(0.2627), np.float32(0.0593)),
+    "BT.601": (np.float32(0.299), np.float32(0.114)),
+    "BT.709": (np.float32(0.2126), np.float32(0.0722)),
+    "BT.2020": (np.float32(0.2627), np.float32(0.0593)),
 }
 
 _COLOR_SEMANTICS_KERNEL = (
@@ -160,33 +162,29 @@ def _error(*, why: str, what: str, how: str) -> ValueError:
     return ValueError(_actionable_error(why=why, what=what, how=how))
 
 
-def _validate_matrix(value: str | None, *, parameter: str) -> str | None:
-    if value is not None and value not in _MATRIX_TOKENS:
-        raise _error(
+def _validate_matrix(value: str | None, *, parameter: str) -> Matrix | None:
+    return (
+        None
+        if value is None
+        else _normalized_closed_token(
+            value,
+            axis=parameter,
+            accepted=_MATRIX_TOKENS,
             why=f"{parameter} accepts only documented matrix bases",
-            what=f"received {value!r}",
-            how=f"use one of {_MATRIX_TOKENS!r} or None",
+            how=f"use one of the canonical tokens {_MATRIX_TOKENS!r} or None",
         )
-    return value
+    )
 
 
-def _validate_axis(value: str | None, *, parameter: str, accepted: tuple[str, ...]) -> str | None:
-    if value is not None and value not in accepted:
-        raise _error(
-            why=f"{parameter} is a closed, case-sensitive color axis",
-            what=f"received {parameter}={value!r}",
-            how=f"use one of {accepted!r} or None",
-        )
-    return value
+_Token = TypeVar("_Token", bound=str)
 
 
-def _validate_range_and_bit_depth(range_value: str, bit_depth: int, *, operation: str) -> tuple[str, int]:
-    if range_value not in _RANGE_TOKENS:
-        raise _error(
-            why=f"{operation} range is a case-sensitive token",
-            what=f"received range={range_value!r}",
-            how=f"use one of {_RANGE_TOKENS!r}",
-        )
+def _validate_axis(value: str | None, *, parameter: str, accepted: tuple[_Token, ...]) -> _Token | None:
+    return None if value is None else _normalized_closed_token(value, axis=parameter, accepted=accepted)
+
+
+def _validate_range_and_bit_depth(range_value: str, bit_depth: int, *, operation: str) -> tuple[Range, int]:
+    range_value = _normalized_closed_token(range_value, axis="range", accepted=_RANGE_TOKENS)
     if type(bit_depth) is not int or bit_depth not in _BIT_DEPTHS:
         raise _error(
             why=f"{operation} bit_depth selects an H.273 code grid",
@@ -257,38 +255,38 @@ def _replace_triplet(
     return tuple(replacements.get(label, label) for label in channels)
 
 
-def _matrix_coefficients(matrix: str, *, colorspace: str) -> tuple[np.float32, np.float32]:
+def _matrix_coefficients(matrix: Matrix, *, colorspace: Colorspace) -> tuple[np.float32, np.float32]:
     if matrix != "native":
         return _STANDARD_MATRIX_COEFFICIENTS[matrix]
     own_row = _RGB_TO_XYZ[colorspace][1]
     return np.float32(own_row[0]), np.float32(own_row[2])
 
 
-def _resolve_encode_matrix(matrix: str | None, *, colorspace: str, gamma: str) -> str:
+def _resolve_encode_matrix(matrix: str | None, *, colorspace: Colorspace, gamma: Gamma) -> Matrix:
     validated = _validate_matrix(matrix, parameter="matrix")
     if validated is not None:
         return validated
     if colorspace in {"sRGB", "Rec.709"}:
-        return "bt709"
+        return "BT.709"
     if colorspace == "Rec.2020":
-        return "bt2020"
-    return "native" if gamma == "linear" else "bt709"
+        return "BT.2020"
+    return "native" if gamma == "linear" else "BT.709"
 
 
-def _resolve_decode_matrix(matrix: str | None, *, frame: Frame, parameter: str = "matrix") -> str:
+def _resolve_decode_matrix(matrix: str | None, *, frame: Frame, parameter: str = "matrix") -> Matrix:
     validated = _validate_matrix(matrix, parameter=parameter)
     if validated is not None:
         return validated
     if frame.matrix is not None:
         return frame.matrix
     if frame.colorspace in {"sRGB", "Rec.709"}:
-        return "bt709"
+        return "BT.709"
     if frame.colorspace == "Rec.2020":
-        return "bt2020"
+        return "BT.2020"
     raise _error(
         why=f"{parameter} cannot be inferred from colorspace {frame.colorspace!r}",
         what="the Frame has no matrix provenance",
-        how=f"pass {parameter}= explicitly; for camera material bt709 is the most common practical starting point",
+        how=f"pass {parameter}= explicitly; for camera material BT.709 is the most common practical starting point",
     )
 
 
@@ -309,15 +307,15 @@ def _run_transform(
     *,
     input_mode: int,
     output_mode: int,
-    input_colorspace: str,
-    input_gamma: str,
-    output_colorspace: str,
-    output_gamma: str,
-    input_matrix: str | None = None,
-    output_matrix: str | None = None,
-    input_range: str = "full",
+    input_colorspace: Colorspace,
+    input_gamma: Gamma,
+    output_colorspace: Colorspace,
+    output_gamma: Gamma,
+    input_matrix: Matrix | None = None,
+    output_matrix: Matrix | None = None,
+    input_range: Range = "full",
     input_bit_depth: int = 8,
-    output_range: str = "full",
+    output_range: Range = "full",
     output_bit_depth: int = 8,
 ) -> cp.ndarray:
     output_shape = (frame.height, frame.width, 1 if output_mode == _OUTPUT_GRAYSCALE else len(frame.channels))
@@ -389,10 +387,10 @@ def _run_transform(
 def rgb_to_ycbcr(
     frame: Frame,
     *,
-    colorspace: str | None = None,
-    gamma: str | None = None,
-    matrix: str | None = None,
-    range: str = "full",
+    colorspace: Colorspace | None = None,
+    gamma: Gamma | None = None,
+    matrix: Matrix | None = None,
+    range: Range = "full",
     bit_depth: int = 8,
 ) -> Frame:
     """Encode RGB as full- or legal-range YCbCr in one fused GPU pass.
@@ -400,13 +398,14 @@ def rgb_to_ycbcr(
     ``frame`` must be a float32 Frame containing exactly one R, G, and B and no
     YCbCr destination labels. ``colorspace`` and ``gamma`` declare the output
     representation; ``None`` inherits the corresponding Frame metadata. They use
-    the same closed, case-sensitive vocabularies as Frame, including ``sRGB`` /
+    the same case- and separator-insensitive closed vocabularies as Frame, including ``sRGB`` /
     ``Rec.709`` / ``Rec.2020`` / ACES and S-Gamut colorspaces and ``linear`` /
-    ``srgb`` / ``rec709`` / ``bt1886`` / ``pq`` / ``hlg`` / ``s-log3`` /
-    ``logc4`` / ``2.2`` / ``2.4`` / ``2.6`` transfers.
+    ``sRGB`` / ``Rec.709`` / ``BT.1886`` / ``PQ`` / ``HLG`` / ``S-Log`` / ``S-Log2`` /
+    ``S-Log3`` / ``ARRI-LogC3`` / ``ARRI-LogC4`` / ``Blackmagic-Film-Gen-5`` / ``DaVinci-Intermediate`` /
+    ``RED-Log3G10`` / ``REDlogFilm`` / ``Cineon`` / ``Gamma-2.2`` / ``Gamma-2.4`` / ``Gamma-2.6`` transfers.
 
-    ``matrix`` accepts ``"bt601"``, ``"bt709"``, ``"bt2020"``, or ``"native"``.
-    When omitted, the target representation resolves it to bt709, bt2020, native,
+    ``matrix`` accepts ``"BT.601"``, ``"BT.709"``, ``"BT.2020"``, or ``"native"``.
+    When omitted, the target representation resolves it to BT.709, BT.2020, native,
     or the documented non-linear fallback. ``range`` is ``"full"`` or ``"legal"``;
     ``bit_depth`` is 8, 10, 12, 14, or 16 and affects only legal-range scaling.
 
@@ -447,10 +446,10 @@ def rgb_to_ycbcr(
 def ycbcr_to_rgb(
     frame: Frame,
     *,
-    colorspace: str | None = None,
-    gamma: str | None = None,
-    matrix: str | None = None,
-    range: str = "full",
+    colorspace: Colorspace | None = None,
+    gamma: Gamma | None = None,
+    matrix: Matrix | None = None,
+    range: Range = "full",
     bit_depth: int = 8,
 ) -> Frame:
     """Decode full- or legal-range YCbCr to a declared RGB representation.
@@ -458,15 +457,17 @@ def ycbcr_to_rgb(
     ``frame`` must be a float32 Frame containing exactly one Y, Cb, and Cr and no
     RGB destination labels. ``range`` accepts ``"full"`` or ``"legal"`` and
     ``bit_depth`` accepts 8, 10, 12, 14, or 16; legal code values are expanded
-    before matrix decoding. ``matrix`` accepts ``"bt601"``, ``"bt709"``,
-    ``"bt2020"``, or ``"native"`` and resolves in order from the explicit value,
+    before matrix decoding. ``matrix`` accepts ``"BT.601"``, ``"BT.709"``,
+    ``"BT.2020"``, or ``"native"`` and resolves in order from the explicit value,
     ``frame.matrix``, or the sRGB/Rec.709/Rec.2020 convention. Other colorspaces
     require an explicit matrix when provenance is absent.
 
     ``colorspace`` and ``gamma`` declare the output RGB representation, with
     ``None`` inheriting Frame metadata. They accept the Frame colorspace vocabulary
-    and the ``linear``, ``srgb``, ``rec709``, ``bt1886``, ``pq``, ``hlg``,
-    ``s-log3``, ``logc4``, ``2.2``, ``2.4``, and ``2.6`` transfer tokens.
+    and the ``linear``, ``sRGB``, ``Rec.709``, ``BT.1886``, ``PQ``, ``HLG``,
+    ``S-Log``, ``S-Log2``, ``S-Log3``, ``ARRI-LogC3``, ``ARRI-LogC4``, ``Blackmagic-Film-Gen-5``,
+    ``DaVinci-Intermediate``, ``RED-Log3G10``, ``REDlogFilm``, ``Cineon``, ``Gamma-2.2``, ``Gamma-2.4``, and
+    ``Gamma-2.6`` transfer tokens.
 
     The result replaces Y/Cb/Cr labels in place with R/G/B, preserves auxiliary
     channels bit for bit, stamps the declared colorspace and gamma, and clears
@@ -506,18 +507,20 @@ def ycbcr_to_rgb(
 def rgb_to_grayscale(
     frame: Frame,
     *,
-    colorspace: str | None = None,
-    gamma: str | None = None,
-    matrix: str | None = None,
+    colorspace: Colorspace | None = None,
+    gamma: Gamma | None = None,
+    matrix: Matrix | None = None,
 ) -> Frame:
     """Project RGB to the Y channel of a declared full-range representation.
 
     ``frame`` must be a float32 Frame containing exactly one R, G, and B and no
     YCbCr destination labels. ``colorspace`` and ``gamma`` declare the projection
     representation; ``None`` inherits Frame metadata. They use the closed Frame
-    colorspace vocabulary and the ``linear``, ``srgb``, ``rec709``, ``bt1886``,
-    ``pq``, ``hlg``, ``s-log3``, ``logc4``, ``2.2``, ``2.4``, and ``2.6`` gamma
-    tokens. ``matrix`` accepts ``"bt601"``, ``"bt709"``, ``"bt2020"``, or
+    colorspace vocabulary and the ``linear``, ``sRGB``, ``Rec.709``, ``BT.1886``,
+    ``PQ``, ``HLG``, ``S-Log``, ``S-Log2``, ``S-Log3``, ``ARRI-LogC3``, ``ARRI-LogC4``, ``Blackmagic-Film-Gen-5``,
+    ``DaVinci-Intermediate``, ``RED-Log3G10``, ``REDlogFilm``, ``Cineon``, ``Gamma-2.2``, ``Gamma-2.4``, and
+    ``Gamma-2.6`` gamma tokens. ``matrix`` accepts
+    ``"BT.601"``, ``"BT.709"``, ``"BT.2020"``, or
     ``"native"`` and otherwise resolves from the declared representation.
 
     The GPU result is a new C-contiguous float32 Frame with only the ``("Y",)``
@@ -552,13 +555,15 @@ def rgb_to_grayscale(
     )
 
 
-def gamma_to_linear(frame: Frame, *, gamma: str | None = None) -> Frame:
+def gamma_to_linear(frame: Frame, *, gamma: Gamma | None = None) -> Frame:
     """Decode a claimed RGB transfer to scene-linear values on the GPU.
 
     ``frame`` must be a float32 Frame containing exactly one R, G, and B.
     ``gamma`` is an input metadata claim; ``None`` uses ``frame.gamma``. Explicit
-    values are case-sensitive ``linear``, ``srgb``, ``rec709``, ``bt1886``,
-    ``pq``, ``hlg``, ``s-log3``, ``logc4``, ``2.2``, ``2.4``, or ``2.6`` tokens.
+    canonical values are ``linear``, ``sRGB``, ``Rec.709``, ``BT.1886``,
+    ``PQ``, ``HLG``, ``S-Log``, ``S-Log2``, ``S-Log3``, ``ARRI-LogC3``, ``ARRI-LogC4``, ``Blackmagic-Film-Gen-5``,
+    ``DaVinci-Intermediate``, ``RED-Log3G10``, ``REDlogFilm``, ``Cineon``, ``Gamma-2.2``, ``Gamma-2.4``, or
+    ``Gamma-2.6`` tokens.
     The claim controls interpretation without mutating the input Frame metadata.
 
     Only R/G/B values are decoded. Auxiliary channels and channel order are
@@ -567,6 +572,17 @@ def gamma_to_linear(frame: Frame, *, gamma: str | None = None) -> Frame:
     each transfer's documented extension and are not clipped. A new Frame and GPU
     allocation are returned even for a linear claim. Invalid frame types, dtypes,
     RGB labels, or gamma tokens raise :class:`ValueError`.
+
+    S-Log / S-Log2 / S-Log3 apply their lower linear branches directly to signed inputs. For S-Log and S-Log2,
+    public scene-linear reflectance uses x = r / 0.9 and Sony encoded IRE uses the public embedding
+    e = (64 + 876 * y) / 1023. S-Log3 / ARRI-LogC4 do not use sign/magnitude mirroring; ARRI-LogC4 retains its negative
+    scene cut. Established S-Log3 and ARRI-LogC4 results for nonnegative inputs remain float32 bit-identical.
+    ARRI-LogC3 is the ARRI EI 800 relative scene-exposure curve, maps 18% gray to 400 / 1023, and extends its lower
+    linear branch to negative values without clipping or sign/magnitude mirroring.
+    Blackmagic Film Gen 5 uses its published natural-log branches. DaVinci Intermediate uses its published base-2
+    branches and a derived decode threshold. Both apply their lower linear branches directly to negative values.
+    RED-Log3G10 uses RED's published base-10 curve with a directly extended lower branch below scene-linear -0.01.
+    REDlogFilm uses the Cineon sign-preserving mirror and exact float32 bits while preserving its own metadata.
     """
     frame = _validate_rgb_transfer_frame(frame, operation="gamma_to_linear")
     gamma = _validate_axis(gamma, parameter="gamma", accepted=_GAMMA_TOKENS)
@@ -583,13 +599,14 @@ def gamma_to_linear(frame: Frame, *, gamma: str | None = None) -> Frame:
     return Frame(data=data, colorspace=frame.colorspace, gamma="linear", channels=frame.channels, matrix=None)
 
 
-def linear_to_gamma(frame: Frame, *, gamma: str) -> Frame:
+def linear_to_gamma(frame: Frame, *, gamma: Gamma) -> Frame:
     """Encode scene-linear RGB with an explicit transfer on the GPU.
 
     ``frame`` must be a float32 Frame with ``frame.gamma == "linear"`` and exactly
-    one R, G, and B. ``gamma`` is a required, case-sensitive output token:
-    ``linear``, ``srgb``, ``rec709``, ``bt1886``, ``pq``, ``hlg``, ``s-log3``,
-    ``logc4``, ``2.2``, ``2.4``, or ``2.6``. Passing ``None`` or an unknown token
+    one R, G, and B. ``gamma`` is a required normalized output token:
+    ``linear``, ``sRGB``, ``Rec.709``, ``BT.1886``, ``PQ``, ``HLG``, ``S-Log``, ``S-Log2``, ``S-Log3``,
+    ``ARRI-LogC3``, ``ARRI-LogC4``, ``Blackmagic-Film-Gen-5``, ``DaVinci-Intermediate``, ``RED-Log3G10``,
+    ``REDlogFilm``, ``Cineon``, ``Gamma-2.2``, ``Gamma-2.4``, or ``Gamma-2.6``. Passing ``None`` or an unknown token
     is rejected rather than inferred.
 
     Only R/G/B values are encoded. Auxiliary channels and channel order are
@@ -598,6 +615,17 @@ def linear_to_gamma(frame: Frame, *, gamma: str) -> Frame:
     follow each transfer's documented extension and are not clipped; a new Frame
     and GPU allocation are always returned. Invalid frame types, dtypes, RGB
     labels, gamma tokens, or non-linear input metadata raise :class:`ValueError`.
+
+    S-Log / S-Log2 / S-Log3 apply their lower linear branches directly to signed inputs. For S-Log and S-Log2,
+    public scene-linear reflectance uses x = r / 0.9 and Sony encoded IRE uses the public embedding
+    e = (64 + 876 * y) / 1023. S-Log3 / ARRI-LogC4 do not use sign/magnitude mirroring; ARRI-LogC4 retains its negative
+    scene cut. Established S-Log3 and ARRI-LogC4 results for nonnegative inputs remain float32 bit-identical.
+    ARRI-LogC3 is the ARRI EI 800 relative scene-exposure curve, maps 18% gray to 400 / 1023, and extends its lower
+    linear branch to negative values without clipping or sign/magnitude mirroring.
+    Blackmagic Film Gen 5 uses its published natural-log branches. DaVinci Intermediate uses its published base-2
+    branches and a derived decode threshold. Both apply their lower linear branches directly to negative values.
+    RED-Log3G10 uses RED's published base-10 curve with a directly extended lower branch below scene-linear -0.01.
+    REDlogFilm uses the Cineon sign-preserving mirror and exact float32 bits while preserving its own metadata.
     """
     frame = _validate_rgb_transfer_frame(frame, operation="linear_to_gamma")
     validated_gamma = _validate_axis(gamma, parameter="gamma", accepted=_GAMMA_TOKENS)
@@ -634,18 +662,18 @@ def linear_to_gamma(frame: Frame, *, gamma: str) -> Frame:
 def ycbcr_to_ycbcr(
     frame: Frame,
     *,
-    colorspace: str | None = None,
-    gamma: str | None = None,
-    input_matrix: str | None = None,
-    output_matrix: str | None = None,
-    input_range: str = "full",
+    colorspace: Colorspace | None = None,
+    gamma: Gamma | None = None,
+    input_matrix: Matrix | None = None,
+    output_matrix: Matrix | None = None,
+    input_range: Range = "full",
     input_bit_depth: int = 8,
-    output_range: str = "full",
+    output_range: Range = "full",
     output_bit_depth: int = 8,
 ) -> Frame:
     """Re-express YCbCr in one fused pass without exposing an RGB Frame.
 
-    For example, ``input_matrix="bt709", output_matrix="native"`` converts a
+    For example, ``input_matrix="BT.709", output_matrix="native"`` converts a
     Rec.709 container convention to the working colorspace's own-row basis.
     Reversing those arguments performs the inverse rematrix.
 
@@ -659,7 +687,7 @@ def ycbcr_to_ycbcr(
         Output representation tokens. ``None`` independently inherits the
         corresponding input Frame metadata.
     input_matrix:
-        Input YCbCr basis: ``"bt601"``, ``"bt709"``, ``"bt2020"``, or
+        Input YCbCr basis: ``"BT.601"``, ``"BT.709"``, ``"BT.2020"``, or
         ``"native"``. Omission resolves in order from ``frame.matrix``, the
         sRGB/Rec.709/Rec.2020 convention, or an error when provenance is absent.
     input_range, input_bit_depth:
@@ -668,8 +696,8 @@ def ycbcr_to_ycbcr(
     output_matrix:
         Output YCbCr basis from the same four-token set. When omitted, the same
         colorspace retains the resolved input basis; a changed colorspace uses
-        the encode resolver (bt709, bt2020, native for other linear output, or
-        bt709 for other encoded output).
+        the encode resolver (BT.709, BT.2020, native for other linear output, or
+        BT.709 for other encoded output).
     output_range, output_bit_depth:
         Independent output code grid with the same range and bit-depth domains.
 

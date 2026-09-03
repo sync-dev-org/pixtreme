@@ -922,7 +922,7 @@ def test_draw_supersample_softness_matches_per_sample_feather_oracle() -> None:
 def test_draw_preserves_metadata_and_always_allocates_private_output() -> None:
     """v1-draw-shape acceptance 13 and 29: metadata is unchanged and every result owns new data, including no-op opacity."""
     source_values = np.arange(4 * 5 * 2, dtype=np.float32).reshape(4, 5, 2)
-    source = _frame(source_values, colorspace="S-Gamut3", gamma="s-log3", channels=("depth", "matte"))
+    source = _frame(source_values, colorspace="S-Gamut3", gamma="S-Log3", channels=("depth", "matte"))
     result = _draw("circle")(
         source,
         center=(2.0, 2.0),

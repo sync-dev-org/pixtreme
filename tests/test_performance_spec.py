@@ -601,7 +601,7 @@ _SHUFFLE_CASES = (
     _case(
         "shuffle-adapt-fhd",
         "shuffle",
-        "2 FHD fp32 RGB Frames, sRGB/srgb source adapted to ACEScg/linear",
+        "2 FHD fp32 RGB Frames, sRGB/sRGB source adapted to ACEScg/linear",
         lambda **outputs: px.channel.shuffle(**outputs),
         input_attribute=None,
         kwargs={"adapt": True},
@@ -1048,7 +1048,7 @@ _GENERATOR_CASES = (
         kwargs={
             "width": _WIDTH,
             "height": _HEIGHT,
-            "standard": "arib-std-b28",
+            "standard": "ARIB-STD-B28",
         },
         transferred_bytes=_FHD_FP32_RGB_BYTES,
     ),
@@ -1156,37 +1156,30 @@ _TRANSFORM_BOUNDARY_CASES = (
     _case(
         "color-acescg-srgb",
         "rgb_to_rgb",
-        "ACEScg linear -> sRGB srgb",
+        "ACEScg linear -> sRGB sRGB",
         px.color.rgb_to_rgb,
-        kwargs={"output_colorspace": "sRGB", "output_gamma": "srgb"},
+        kwargs={"output_colorspace": "sRGB", "output_gamma": "sRGB"},
     ),
     _case(
         "color-aces13-analytic-srgb",
         "rgb_to_rgb",
-        "ACES 1.3 analytic -> sRGB srgb",
+        "ACES 1.3 analytic -> sRGB sRGB",
         px.color.rgb_to_rgb,
-        kwargs={"output_colorspace": "sRGB", "output_gamma": "srgb", "tonemap": "aces-1.3"},
+        kwargs={"output_colorspace": "sRGB", "output_gamma": "sRGB", "tonemap": "ACES-1.3"},
     ),
     _case(
         "color-aces20-analytic-srgb",
         "rgb_to_rgb",
-        "ACES 2.0 analytic -> sRGB srgb",
+        "ACES 2.0 analytic -> sRGB sRGB",
         px.color.rgb_to_rgb,
-        kwargs={"output_colorspace": "sRGB", "output_gamma": "srgb", "tonemap": "aces-2.0"},
-    ),
-    _case(
-        "color-aces20-lut-srgb",
-        "rgb_to_rgb",
-        "ACES 2.0 LUT -> sRGB srgb",
-        px.color.rgb_to_rgb,
-        kwargs={"output_colorspace": "sRGB", "output_gamma": "srgb", "tonemap": "aces-2.0-lut"},
+        kwargs={"output_colorspace": "sRGB", "output_gamma": "sRGB", "tonemap": "ACES-2.0"},
     ),
     _case(
         "color-bt2408-rec2020-pq",
         "rgb_to_rgb",
         "BT.2408 direct mapping -> Rec.2020 pq",
         px.color.rgb_to_rgb,
-        kwargs={"output_colorspace": "Rec.2020", "output_gamma": "pq", "tonemap": "bt2408"},
+        kwargs={"output_colorspace": "Rec.2020", "output_gamma": "PQ", "tonemap": "BT.2408"},
     ),
     _case(
         "color-chromatic-adaptation",
@@ -1207,7 +1200,7 @@ _TRANSFORM_BOUNDARY_CASES = (
         "white_point_simulation",
         "FHD fp32 RGB, D65 input display -> D93 output display",
         px.color.white_point_simulation,
-        kwargs={"input_white": "d65", "output_white": "d93"},
+        kwargs={"input_white": "D65", "output_white": "D93"},
     ),
     _case(
         "color-rgb-ycbcr",
@@ -1235,7 +1228,7 @@ _TRANSFORM_BOUNDARY_CASES = (
         "YCbCr -> RGB, matrix=bt709",
         px.color.ycbcr_to_rgb,
         input_attribute="ycbcr_frame",
-        kwargs={"matrix": "bt709"},
+        kwargs={"matrix": "BT.709"},
     ),
     _case(
         "color-rgb-grayscale",
@@ -1248,16 +1241,16 @@ _TRANSFORM_BOUNDARY_CASES = (
     _case(
         "color-gamma-linear",
         "gamma_to_linear",
-        "gamma=2.6 claim -> linear",
+        "gamma=Gamma-2.6 claim -> linear",
         px.color.gamma_to_linear,
-        kwargs={"gamma": "2.6"},
+        kwargs={"gamma": "Gamma-2.6"},
     ),
     _case(
         "color-linear-gamma",
         "linear_to_gamma",
-        "linear -> gamma=2.6",
+        "linear -> gamma=Gamma-2.6",
         px.color.linear_to_gamma,
-        kwargs={"gamma": "2.6"},
+        kwargs={"gamma": "Gamma-2.6"},
     ),
     _case(
         "color-ycbcr-ycbcr",
@@ -1265,7 +1258,7 @@ _TRANSFORM_BOUNDARY_CASES = (
         "YCbCr bt709 -> native rematrix",
         px.color.ycbcr_to_ycbcr,
         input_attribute="ycbcr_frame",
-        kwargs={"input_matrix": "bt709", "output_matrix": "native"},
+        kwargs={"input_matrix": "BT.709", "output_matrix": "native"},
     ),
     _case(
         "full-to-legal-10",
@@ -2223,7 +2216,7 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
     shuffle_adapt_source = px.io.from_array(
         generator.random((_HEIGHT, _WIDTH, _CHANNELS), dtype=cp.float32),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
     )
     shuffle_adapt_outputs: dict[str, tuple[px.core.Frame, str] | float] = {
@@ -2237,9 +2230,9 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
         gamma="linear",
         channels="RGB",
     )
-    ycbcr_frame = px.io.from_array(data, colorspace="Rec.709", gamma="rec709", channels="YCbCr")
+    ycbcr_frame = px.io.from_array(data, colorspace="Rec.709", gamma="Rec.709", channels="YCbCr")
     data4 = generator.random((_HEIGHT, _WIDTH, 4), dtype=cp.float32)
-    ycbcra_frame = px.io.from_array(data4, colorspace="Rec.709", gamma="rec709", channels=("Y", "Cb", "Cr", "A"))
+    ycbcra_frame = px.io.from_array(data4, colorspace="Rec.709", gamma="Rec.709", channels=("Y", "Cb", "Cr", "A"))
     chw_data = cp.ascontiguousarray(data.transpose(2, 0, 1))
     chw_code10 = generator.integers(0, 1024, size=(_CHANNELS, _HEIGHT, _WIDTH), dtype=cp.uint16)
     code8_data = generator.integers(0, 256, size=(_HEIGHT, _WIDTH, _CHANNELS), dtype=cp.uint8)
@@ -2480,8 +2473,8 @@ def test_performance_registry_covers_every_public_gpu_pixel_operation() -> None:
 
 @pytest.mark.performance
 def test_performance_registry_covers_each_color_semantics_path() -> None:
-    """v1-tonemap-aces20-analytic acceptance 23; v1-color-semantics acceptance 37: registry includes
-    technical, both analytics, LUT, and BT.2408.
+    """v1-view-transform-lut-removal acceptance 8; v1-color-semantics acceptance 37: registry includes
+    technical, both ACES analytics, and BT.2408.
     """
     color_cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.startswith("color-"))
     assert {case.target for case in color_cases} == {
@@ -2500,22 +2493,18 @@ def test_performance_registry_covers_each_color_semantics_path() -> None:
     }
     rgb_to_rgb_cases = tuple(case for case in color_cases if case.target == "rgb_to_rgb")
     assert tuple((case.case_id, dict(case.kwargs)) for case in rgb_to_rgb_cases) == (
-        ("color-acescg-srgb", {"output_colorspace": "sRGB", "output_gamma": "srgb"}),
+        ("color-acescg-srgb", {"output_colorspace": "sRGB", "output_gamma": "sRGB"}),
         (
             "color-aces13-analytic-srgb",
-            {"output_colorspace": "sRGB", "output_gamma": "srgb", "tonemap": "aces-1.3"},
+            {"output_colorspace": "sRGB", "output_gamma": "sRGB", "tonemap": "ACES-1.3"},
         ),
         (
             "color-aces20-analytic-srgb",
-            {"output_colorspace": "sRGB", "output_gamma": "srgb", "tonemap": "aces-2.0"},
-        ),
-        (
-            "color-aces20-lut-srgb",
-            {"output_colorspace": "sRGB", "output_gamma": "srgb", "tonemap": "aces-2.0-lut"},
+            {"output_colorspace": "sRGB", "output_gamma": "sRGB", "tonemap": "ACES-2.0"},
         ),
         (
             "color-bt2408-rec2020-pq",
-            {"output_colorspace": "Rec.2020", "output_gamma": "pq", "tonemap": "bt2408"},
+            {"output_colorspace": "Rec.2020", "output_gamma": "PQ", "tonemap": "BT.2408"},
         ),
     )
 
@@ -2542,7 +2531,7 @@ def test_performance_registry_includes_one_white_point_simulation_case() -> None
         (
             "color-white-point-simulation",
             "frame",
-            {"input_white": "d65", "output_white": "d93"},
+            {"input_white": "D65", "output_white": "D93"},
         ),
     )
 
@@ -3585,7 +3574,7 @@ def test_performance_registry_includes_representative_shuffle_cases() -> None:
         (
             "shuffle-adapt-fhd",
             "shuffle",
-            "2 FHD fp32 RGB Frames, sRGB/srgb source adapted to ACEScg/linear",
+            "2 FHD fp32 RGB Frames, sRGB/sRGB source adapted to ACEScg/linear",
             None,
             "shuffle_adapt_outputs",
             {"adapt": True},

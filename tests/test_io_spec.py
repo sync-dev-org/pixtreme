@@ -43,7 +43,7 @@ def test_read_image_returns_normalized_contiguous_rgb_alpha_and_gray(
     assert result.dtype == np.dtype(np.float32)
     assert result.channels == labels
     assert result.data.flags.c_contiguous
-    assert (result.colorspace, result.gamma) == ("sRGB", "srgb")
+    assert (result.colorspace, result.gamma) == ("sRGB", "sRGB")
     expected = values.reshape(*values.shape[:2], -1).astype(np.float32) / np.float32(255.0)
     np.testing.assert_array_equal(
         px.io.to_array(
@@ -106,10 +106,10 @@ def test_png_file_metadata_and_per_call_claims_follow_the_fixed_priority(tmp_pat
     call_claim = px.io.read_image(path, colorspace="ACEScg", gamma="linear")
     header = px.io.read_header(path)
 
-    assert (file_claim.colorspace, file_claim.gamma) == ("Rec.2020", "pq")
+    assert (file_claim.colorspace, file_claim.gamma) == ("Rec.2020", "PQ")
     assert (call_claim.colorspace, call_claim.gamma) == ("ACEScg", "linear")
     assert header.color.raw == {"cICP": (9, 16, 0, 1)}
-    assert (header.color.colorspace, header.color.gamma, header.color.mappable) == ("Rec.2020", "pq", True)
+    assert (header.color.colorspace, header.color.gamma, header.color.mappable) == ("Rec.2020", "PQ", True)
 
 
 def test_png_srgb_gama_and_unmappable_metadata_have_deterministic_mapping(tmp_path: Path) -> None:
@@ -122,11 +122,11 @@ def test_png_srgb_gama_and_unmappable_metadata_have_deterministic_mapping(tmp_pa
     _save_png(gama_path, values, chunks={b"gAMA": struct.pack(">I", 45455)})
     _save_png(unknown_path, values, chunks={b"cICP": bytes((99, 99, 0, 1))})
 
-    assert (px.io.read_image(srgb_path).colorspace, px.io.read_image(srgb_path).gamma) == ("sRGB", "srgb")
-    assert px.io.read_image(gama_path).gamma == "2.2"
+    assert (px.io.read_image(srgb_path).colorspace, px.io.read_image(srgb_path).gamma) == ("sRGB", "sRGB")
+    assert px.io.read_image(gama_path).gamma == "Gamma-2.2"
     with pytest.warns(UserWarning, match="file color metadata"):
         result = px.io.read_image(unknown_path)
-    assert (result.colorspace, result.gamma) == ("sRGB", "srgb")
+    assert (result.colorspace, result.gamma) == ("sRGB", "sRGB")
     assert px.io.read_header(unknown_path).color.mappable is False
 
 
@@ -136,7 +136,7 @@ def test_write_image_uint8_returns_none_and_external_reader_opens_output(tmp_pat
     import cupy as cp
 
     values = np.array([[[10, 20, 30], [40, 50, 60]]], dtype=np.uint8)
-    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels="RGB")
     path = tmp_path / f"output{suffix}"
 
     result = px.io.write_image(path, frame, quality=95 if suffix == ".jpg" else None)
@@ -153,7 +153,7 @@ def test_write_image_preserves_uint16_gray_depth_round_trip(tmp_path: Path, suff
     import cupy as cp
 
     values = np.array([[[0], [1], [32768], [65535]]], dtype=np.uint16)
-    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="srgb", channels="Y")
+    frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels="Y")
     path = tmp_path / f"output{suffix}"
 
     px.io.write_image(path, frame)
@@ -173,7 +173,7 @@ def test_write_image_validates_named_quality_and_writes_no_raster_color_chunks(t
     """v1-io acceptance 13 and 16: quality is named and non-EXR writes add no color metadata chunks."""
     import cupy as cp
 
-    frame = px.io.from_array(cp.zeros((1, 1, 3), dtype=cp.uint8), colorspace="sRGB", gamma="srgb", channels="RGB")
+    frame = px.io.from_array(cp.zeros((1, 1, 3), dtype=cp.uint8), colorspace="sRGB", gamma="sRGB", channels="RGB")
     png_path = tmp_path / "output.png"
     with pytest.raises(ValueError, match="quality"):
         px.io.write_image(tmp_path / "output.jpg", frame, quality=0)

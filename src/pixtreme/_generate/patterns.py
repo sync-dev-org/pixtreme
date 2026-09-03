@@ -23,6 +23,12 @@ from pixtreme._core.vocabulary import (
     _COLOR_BARS_OUTPUT_TOKENS,
     _COLOR_BARS_STANDARD_TOKENS,
     _GENERATOR_KIND_TOKENS,
+    Antialiasing,
+    ColorBarsOutput,
+    ColorBarsStandard,
+    Colorspace,
+    Gamma,
+    GeneratorKind,
 )
 from pixtreme._draw.shapes import _AA_TOKENS
 
@@ -733,7 +739,7 @@ def _checker_colors(value: object) -> tuple[tuple[float, ...], tuple[float, ...]
     return _matching_colors(sequence[0], sequence[1], first_name="colors[0]", second_name="colors[1]")
 
 
-def _metadata(colorspace: object, gamma: object) -> tuple[str, str]:
+def _metadata(colorspace: object, gamma: object) -> tuple[Colorspace, Gamma]:
     return (
         _normalized_closed_token(colorspace, axis="colorspace", accepted=_COLORSPACE_TOKENS),
         _normalized_closed_token(gamma, axis="gamma", accepted=_GAMMA_TOKENS),
@@ -759,8 +765,8 @@ def _generate_geometry(
     geometry: int,
     aa: str,
     parameters: tuple[float, float, float, float, float],
-    colorspace: str,
-    gamma: str,
+    colorspace: Colorspace,
+    gamma: Gamma,
 ) -> Frame:
     output = cp.empty((height, width, len(first_color)), dtype=cp.float32)
     grid = (
@@ -795,13 +801,13 @@ def ramp(
     *,
     width: int,
     height: int,
-    kind: str = "linear",
+    kind: GeneratorKind = "linear",
     start: Sequence[float],
     end: Sequence[float],
     start_color: Sequence[float],
     end_color: Sequence[float],
-    colorspace: str,
-    gamma: str = "linear",
+    colorspace: Colorspace,
+    gamma: Gamma = "linear",
 ) -> Frame:
     """Generate a two-color ramp in continuous pixel coordinates.
 
@@ -854,9 +860,9 @@ def grid(
     color: Sequence[float],
     background: Sequence[float],
     offset: Sequence[float] = (0.0, 0.0),
-    colorspace: str,
-    gamma: str = "linear",
-    aa: str = "distance",
+    colorspace: Colorspace,
+    gamma: Gamma = "linear",
+    aa: Antialiasing = "distance",
 ) -> Frame:
     """Generate a periodic grid in continuous pixel coordinates.
 
@@ -899,9 +905,9 @@ def checkerboard(
     cell: float | Sequence[float],
     colors: Sequence[Sequence[float]],
     offset: Sequence[float] = (0.0, 0.0),
-    colorspace: str,
-    gamma: str = "linear",
-    aa: str = "distance",
+    colorspace: Colorspace,
+    gamma: Gamma = "linear",
+    aa: Antialiasing = "distance",
 ) -> Frame:
     """Generate a periodic two-color checkerboard in continuous coordinates.
 
@@ -935,8 +941,8 @@ def color_bars(
     *,
     width: int,
     height: int,
-    standard: str,
-    output: str = "normalized",
+    standard: ColorBarsStandard,
+    output: ColorBarsOutput = "normalized",
 ) -> Frame:
     """Generate one standards-bound RGB color-bar Frame.
 
@@ -969,11 +975,11 @@ def color_bars(
             np.int32(standard_index),
         ),
     )
-    colorspace = "Rec.2020" if checked_standard.startswith("bt2111") else "Rec.709"
-    if checked_standard == "bt2111-hlg":
-        gamma = "hlg"
-    elif checked_standard.startswith("bt2111-pq"):
-        gamma = "pq"
+    colorspace: Colorspace = "Rec.2020" if checked_standard.startswith("BT.2111") else "Rec.709"
+    if checked_standard == "BT.2111-HLG":
+        gamma: Gamma = "HLG"
+    elif checked_standard.startswith("BT.2111-PQ"):
+        gamma = "PQ"
     else:
-        gamma = "rec709"
+        gamma = "Rec.709"
     return Frame(data=data, colorspace=colorspace, gamma=gamma, channels=("R", "G", "B"))

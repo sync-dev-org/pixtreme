@@ -11,6 +11,7 @@ from pixtreme._core.border import _resolve_border
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame, _new_frame, _validate_frame
 from pixtreme._core.value_domain import _float32_conversion_guidance
+from pixtreme._core.vocabulary import Border
 from pixtreme._filter.common import _validate_amount, _validate_sigma
 from pixtreme._filter.gaussian import gaussian_blur
 
@@ -30,7 +31,7 @@ def unsharp_mask(
     *,
     sigma: float,
     amount: float,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Sharpen a float32 Frame with ``input + amount * (input - G(input))``.

@@ -12,6 +12,8 @@ from pixtreme._core.frame import (
     ChannelInput,
     Frame,
 )
+from pixtreme._core.validation import _normalized_closed_token
+from pixtreme._core.vocabulary import Colorspace, Dtype, ExrCompression, Gamma, ImageFormat, TiffCompression
 from pixtreme._io.common import (
     _ENCODE_FORMAT_NAMES,
     _ENCODE_FORMAT_TOKENS,
@@ -57,8 +59,8 @@ def read_image(
     *,
     channels: ChannelInput | None = None,
     unchanged: bool = False,
-    colorspace: str | None = None,
-    gamma: str | None = None,
+    colorspace: Colorspace | None = None,
+    gamma: Gamma | None = None,
 ) -> Frame:
     """Decode a supported image file into an HWC GPU Frame.
 
@@ -77,7 +79,7 @@ def read_image(
     representable, including exact EXR UINT sample bits. HDR is natively decoded to float32,
     so ``unchanged=True`` returns the same values and dtype as its default read.
     Explicit ``colorspace`` and ``gamma``
-    tokens override mapped file metadata, which overrides the fixed sRGB/srgb
+    tokens override mapped file metadata, which overrides the fixed sRGB/sRGB
     raster, ACES2065-1/linear EXR, or Rec.709/linear HDR defaults; these are metadata claims and do not
     transform pixel values.
 
@@ -172,8 +174,8 @@ def decode_image(
     *,
     channels: ChannelInput | None = None,
     unchanged: bool = False,
-    colorspace: str | None = None,
-    gamma: str | None = None,
+    colorspace: Colorspace | None = None,
+    gamma: Gamma | None = None,
 ) -> Frame:
     """Decode supported raster bytes into an HWC GPU Frame.
 
@@ -217,29 +219,22 @@ def _require_frame(frame: Frame, *, operation: str) -> None:
 def encode_image(
     frame: Frame,
     *,
-    format: str,
+    format: ImageFormat,
     quality: int | None = None,
-    compression: str | None = None,
+    compression: TiffCompression | None = None,
     compression_level: int | None = None,
     lossless: bool | None = None,
 ) -> bytes:
     """Encode a Frame as a supported raster byte stream.
 
-    ``format`` is a case-sensitive image-format token. ``quality`` applies to
+    ``format`` uses the shared case- and separator-insensitive image-format vocabulary. ``quality`` applies to
     JPEG and lossy WebP, ``compression`` is TIFF-only with ``"none"``/``"lzw"``,
     ``compression_level`` is PNG-only from 0 through 9, and ``lossless`` applies
     to JPEG 2000 and WebP. JPEG 2000 bytes use a JP2 container. Every format
     accepts all five Frame storage dtypes; native uint dtypes are preserved and
     other inputs are meaning-preservingly converted to uint8 on the GPU.
     """
-    if type(format) is not str or format not in _ENCODE_FORMAT_TOKENS:
-        raise ValueError(
-            _actionable_error(
-                why="format is not a supported encoded image token",
-                what=repr(format),
-                how=f"use one of {_ENCODE_FORMAT_TOKENS!r}",
-            )
-        )
+    format = _normalized_closed_token(format, axis="format", accepted=_ENCODE_FORMAT_TOKENS)
     _require_frame(frame, operation="encode_image")
     format_name = _ENCODE_FORMAT_NAMES[format]
     return _encode_raster(
@@ -257,12 +252,12 @@ def write_image(
     frame: Frame,
     *,
     quality: int | None = None,
-    compression: str | None = None,
+    compression: TiffCompression | ExrCompression | None = None,
     compression_level: int | None = None,
     lossless: bool | None = None,
     dwa_level: float | None = None,
     bit_depth: int | None = None,
-    dtype: str | None = None,
+    dtype: Dtype | None = None,
 ) -> None:
     """Write a Frame using the format selected from ``path``'s extension.
 

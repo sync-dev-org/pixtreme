@@ -42,17 +42,10 @@ __device__ __forceinline__ float aces20_reach_sample(const float hue) {
 }
 
 __device__ __forceinline__ float3 aces20_cusp_sample(const float hue) {
-    int index = (int)hue + 1;
-    int lower = max(0, index);
-    int upper = min(361, index + 2);
-    while (lower + 1 < upper) {
-        if (hue > aces20_gamut_hues[index]) {
-            lower = index;
-        } else {
-            upper = index;
-        }
-        index = (lower + upper) >> 1;
-    }
+    // The pinned table's bracketing record is at most two positions above the integer-degree hint.
+    int upper = (int)hue + 1;
+    upper += hue > aces20_gamut_hues[upper];
+    upper += hue > aces20_gamut_hues[upper];
     const float weight = (hue - aces20_gamut_hues[upper - 1])
         / (aces20_gamut_hues[upper] - aces20_gamut_hues[upper - 1]);
     const int lower_base = (upper - 1) * 3;
@@ -213,12 +206,12 @@ __device__ __forceinline__ float3 aces20_render(float red, float green, float bl
     const float lms_red = 0.445181042f * red + 0.34964928f * green - 0.00112973212f * blue;
     const float lms_green = 0.123734146f * red + 0.613643706f * green + 0.0563228019f * blue;
     const float lms_blue = 0.0117007261f * red + 0.0280607939f * green + 0.753939033f * blue;
-    const float response_red = aces20_sign(lms_red) * powf(fabsf(lms_red), 0.419999987f)
-        / (27.1299992f + powf(fabsf(lms_red), 0.419999987f));
-    const float response_green = aces20_sign(lms_green) * powf(fabsf(lms_green), 0.419999987f)
-        / (27.1299992f + powf(fabsf(lms_green), 0.419999987f));
-    const float response_blue = aces20_sign(lms_blue) * powf(fabsf(lms_blue), 0.419999987f)
-        / (27.1299992f + powf(fabsf(lms_blue), 0.419999987f));
+    const float response_red_power = powf(fabsf(lms_red), 0.419999987f);
+    const float response_green_power = powf(fabsf(lms_green), 0.419999987f);
+    const float response_blue_power = powf(fabsf(lms_blue), 0.419999987f);
+    const float response_red = aces20_sign(lms_red) * response_red_power / (27.1299992f + response_red_power);
+    const float response_green = aces20_sign(lms_green) * response_green_power / (27.1299992f + response_green_power);
+    const float response_blue = aces20_sign(lms_blue) * response_blue_power / (27.1299992f + response_blue_power);
     const float achromatic = 20.25881f * response_red + 10.129405f * response_green + 0.506470263f * response_blue;
     const float opponent_a = 15480.0f * response_red - 16887.2734f * response_green + 1407.27271f * response_blue;
     const float opponent_b = 1720.0f * response_red + 1720.0f * response_green - 3440.0f * response_blue;
@@ -232,8 +225,9 @@ __device__ __forceinline__ float3 aces20_render(float red, float green, float bl
     hue -= floorf(hue / 360.0f) * 360.0f;
     hue = hue < 0.0f ? hue + 360.0f : hue;
     const float hue_radians = hue * 0.0174532924f;
-    const float cosine = cosf(hue_radians);
-    const float sine = sinf(hue_radians);
+    float sine;
+    float cosine;
+    sincosf(hue_radians, &sine, &cosine);
     const float mapped_lightness = aces20_tonescale(lightness);
     const float reach_maximum = aces20_reach_sample(hue);
 
@@ -366,7 +360,7 @@ void aces20_analytic_kernel(
 def _aces20_transform_kernel(input_gamma: str, output_gamma: str) -> cp.RawKernel:
     options = (
         f"-DPIXTREME_INPUT_GAMMA={_GAMMA_CODES[input_gamma]}",
-        f"-DPIXTREME_ACES20_SRGB={int(output_gamma == 'srgb')}",
+        f"-DPIXTREME_ACES20_SRGB={int(output_gamma == 'sRGB')}",
         "--use_fast_math",
     )
     return cp.RawKernel(_ACES20_ANALYTIC_KERNEL, "aces20_analytic_kernel", options=options)

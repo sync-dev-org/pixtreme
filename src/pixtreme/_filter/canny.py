@@ -12,6 +12,7 @@ import numpy as np
 from pixtreme._core.border import _BORDER_PREAMBLE, _border_argument, _resolve_border
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame, _new_frame, _validate_float32_frame
+from pixtreme._core.vocabulary import Border
 from pixtreme._filter.derivative import _block_count, sobel
 
 _THREADS_PER_BLOCK = 256
@@ -187,7 +188,7 @@ def canny(
     *,
     threshold_low: float,
     threshold_high: float,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Detect binary edges in a float32 Frame with a deterministic Canny pipeline.

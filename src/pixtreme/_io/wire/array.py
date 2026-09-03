@@ -23,6 +23,7 @@ from pixtreme._core.frame import (
 from pixtreme._core.frame import (
     _validate_frame as _validate_core_frame,
 )
+from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._core.value_domain import (
     _bit_depth_maximum,
     _bit_depth_scale,
@@ -31,6 +32,7 @@ from pixtreme._core.value_domain import (
     _validate_bit_depth,
 )
 from pixtreme._core.value_kernel import _from_array_kernel, _to_array_kernel
+from pixtreme._core.vocabulary import Colorspace, Dtype, Gamma, Layout, Matrix
 
 _DLPACK_DEVICE_CUDA = 2
 _FROM_ARRAY_THREADS_PER_BLOCK = 512
@@ -48,8 +50,8 @@ def to_array(
     frame: Frame,
     *,
     channels: ChannelInput | None = None,
-    layout: str | None = None,
-    dtype: str | None = None,
+    layout: Layout | None = None,
+    dtype: Dtype | None = None,
     bit_depth: int | None = None,
     scale: object | None = None,
     mean: object | None = None,
@@ -84,7 +86,10 @@ def to_array(
 
     The returned ``cupy.ndarray`` is itself a DLPack producer. Frame is also
     a DLPack producer through its protocol methods; no to_tensor or
-    to_dlpack helper is needed.
+    to_dlpack helper is needed. Any copy or fused export is enqueued on the
+    current CuPy stream and does not perform host synchronization. Consume the
+    result on that stream, or make another stream wait on an event recorded
+    after this call before it reads the result.
     """
     frame = _validate_core_frame(frame, operation="io.to_array")
     _validate_copy(copy)
@@ -254,37 +259,14 @@ def _validate_copy(copy: bool | None) -> None:
 
 def _validate_layout(layout: str | None) -> str:
     token = "HWC" if layout is None else layout
-    if token not in _LAYOUT_TOKENS:
-        raise ValueError(
-            _actionable_error(
-                why="layout accepts only canonical, case-sensitive axis-order tokens",
-                what=f"received layout={token!r}",
-                how=f"pass layout=<token> with one of {_LAYOUT_TOKENS!r}",
-            )
-        )
-    return token
+    return _normalized_closed_token(token, axis="layout", accepted=_LAYOUT_TOKENS)
 
 
 def _resolve_dtype(dtype: str | None, *, default: np.dtype[np.generic]) -> np.dtype[np.generic]:
     if dtype is None:
         return default
-    if not isinstance(dtype, str):
-        raise ValueError(
-            _actionable_error(
-                why="dtype must be a string token so the requested storage type is unambiguous",
-                what=f"received dtype={dtype!r} ({type(dtype).__module__}.{type(dtype).__qualname__})",
-                how=f"pass dtype=<token> with one of {tuple(_DTYPE_TOKENS)!r}",
-            )
-        )
-    resolved = _DTYPE_TOKENS.get(dtype)
-    if resolved is None:
-        raise ValueError(
-            _actionable_error(
-                why="dtype accepts only supported canonical storage tokens",
-                what=f"received dtype={dtype!r}",
-                how=f"pass dtype=<token> with one of {tuple(_DTYPE_TOKENS)!r}",
-            )
-        )
+    canonical = _normalized_closed_token(dtype, axis="dtype", accepted=tuple(_DTYPE_TOKENS))
+    resolved = _DTYPE_TOKENS[canonical]
     return cast(np.dtype[np.generic], resolved)
 
 
@@ -515,12 +497,12 @@ def _from_array_index_mode(logical: cp.ndarray) -> tuple[str, tuple[int, int, in
 def from_array(
     data: object,
     *,
-    colorspace: str,
-    gamma: str,
+    colorspace: Colorspace,
+    gamma: Gamma,
     channels: ChannelInput,
-    matrix: str | None = None,
-    layout: str | None = None,
-    dtype: str | None = None,
+    matrix: Matrix | None = None,
+    layout: Layout | None = None,
+    dtype: Dtype | None = None,
     bit_depth: int | None = None,
     scale: object | None = None,
     mean: object | None = None,
@@ -545,7 +527,11 @@ def from_array(
     ``copy=True`` always gives the Frame private storage. Host arrays and CPU
     DLPack producers are rejected rather than transferred implicitly.
     ``matrix`` stamps YCbCr basis provenance only; it never changes array
-    values, ownership, layout, dtype, or affine processing.
+    values, ownership, layout, dtype, or affine processing. DLPack import asks
+    the producer to make its data ready on the current CuPy stream; any
+    repacking kernel is enqueued on that same stream. The function does not
+    perform host synchronization, so direct CuPy inputs must already be ordered
+    for that stream and a different consumer stream must wait on a CUDA event.
     """
     _validate_copy(copy)
     array = data if isinstance(data, cp.ndarray) else _from_cuda_dlpack(data)

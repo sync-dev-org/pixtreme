@@ -116,17 +116,17 @@ def test_from_array_constructs_from_hwc_cupy_and_checks_channel_count_and_rank()
     import cupy as cp
 
     data = _sample_data()
-    result = px.io.from_array(data, colorspace="sRGB", gamma="srgb", channels="RGB")
+    result = px.io.from_array(data, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     assert isinstance(result, px.core.Frame)
     assert result.data is data
 
     with pytest.raises(ValueError, match="channel"):
-        px.io.from_array(data, colorspace="sRGB", gamma="srgb", channels="RGBA")
+        px.io.from_array(data, colorspace="sRGB", gamma="sRGB", channels="RGBA")
     with pytest.raises(ValueError, match="HWC"):
-        px.io.from_array(cp.zeros((2, 3), dtype=cp.float32), colorspace="sRGB", gamma="srgb", channels="RGB")
+        px.io.from_array(cp.zeros((2, 3), dtype=cp.float32), colorspace="sRGB", gamma="sRGB", channels="RGB")
     with pytest.raises(ValueError, match="HWC"):
-        px.io.from_array(cp.zeros((1, 2, 3, 4), dtype=cp.float32), colorspace="sRGB", gamma="srgb", channels="RGBA")
+        px.io.from_array(cp.zeros((1, 2, 3, 4), dtype=cp.float32), colorspace="sRGB", gamma="sRGB", channels="RGBA")
 
 
 def test_from_array_makes_non_contiguous_input_c_contiguous() -> None:
@@ -137,7 +137,7 @@ def test_from_array_makes_non_contiguous_input_c_contiguous() -> None:
     expected = cp.asnumpy(source)
     assert not source.flags.c_contiguous
 
-    result = px.io.from_array(source, colorspace="sRGB", gamma="srgb", channels="RGB")
+    result = px.io.from_array(source, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     assert result.data.flags.c_contiguous
     assert result.data.data.ptr != source.data.ptr
@@ -155,49 +155,94 @@ def test_frame_accepts_only_the_specified_storage_dtypes() -> None:
 
     for dtype in (cp.float32, cp.float16, cp.uint8, cp.uint16, cp.uint32):
         data = cp.zeros((1, 2, 3), dtype=dtype)
-        assert px.io.from_array(data, colorspace="sRGB", gamma="srgb", channels="RGB").dtype == data.dtype
+        assert px.io.from_array(data, colorspace="sRGB", gamma="sRGB", channels="RGB").dtype == data.dtype
 
     for dtype in (cp.float64, cp.int32, cp.int8, cp.bool_):
         with pytest.raises(ValueError, match="dtype"):
-            px.io.from_array(cp.zeros((1, 2, 3), dtype=dtype), colorspace="sRGB", gamma="srgb", channels="RGB")
+            px.io.from_array(cp.zeros((1, 2, 3), dtype=dtype), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 @pytest.mark.parametrize(
     "colorspace",
-    ("sRGB", "Rec.709", "Rec.2020", "ACES2065-1", "ACEScg", "S-Gamut3", "S-Gamut3.Cine"),
+    (
+        "sRGB",
+        "Rec.709",
+        "Rec.2020",
+        "ACES2065-1",
+        "ACEScg",
+        "S-Gamut",
+        "S-Gamut3",
+        "S-Gamut3.Cine",
+        "ARRI-Wide-Gamut-3",
+        "ARRI-Wide-Gamut-4",
+        "Blackmagic-Wide-Gamut-Gen-5",
+        "DaVinci-Wide-Gamut",
+        "REDWideGamutRGB",
+        "DRAGONcolor",
+        "DRAGONcolor2",
+        "REDcolor2",
+        "REDcolor3",
+        "REDcolor4",
+    ),
 )
 def test_frame_accepts_each_colorspace_token(colorspace: str) -> None:
-    """v1-frame-core acceptance 7: each canonical colorspace token is accepted exactly as written."""
+    """v1-frame-core acceptance 7; v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 17;
+    v1-red-tokens acceptance 54-55.
+
+    Every colorspace token is accepted canonically.
+    """
     result = px.io.from_array(_sample_data(), colorspace=colorspace, gamma="linear", channels=["R", "G", "B"])
     assert result.colorspace == colorspace
 
 
 @pytest.mark.parametrize(
     "gamma",
-    ("linear", "srgb", "rec709", "bt1886", "pq", "hlg", "s-log3", "logc4", "cineon", "2.2", "2.4", "2.6"),
+    (
+        "linear",
+        "sRGB",
+        "Rec.709",
+        "BT.1886",
+        "PQ",
+        "HLG",
+        "S-Log",
+        "S-Log2",
+        "S-Log3",
+        "ARRI-LogC3",
+        "ARRI-LogC4",
+        "Blackmagic-Film-Gen-5",
+        "DaVinci-Intermediate",
+        "RED-Log3G10",
+        "REDlogFilm",
+        "Cineon",
+        "Gamma-2.2",
+        "Gamma-2.4",
+        "Gamma-2.6",
+    ),
 )
 def test_frame_accepts_each_gamma_token(gamma: str) -> None:
-    """v1-color-semantics acceptance 27: Frame accepts the complete gamma vocabulary including 2.6."""
+    """v1-color-semantics acceptance 27; v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 17;
+    v1-red-tokens acceptance 54-55.
+
+    Frame accepts every gamma token.
+    """
     result = px.io.from_array(_sample_data(), colorspace="sRGB", gamma=gamma, channels=["red", "green", "blue"])
     assert result.gamma == gamma
     assert result.channels == ("red", "green", "blue")
 
 
-def test_frame_rejects_unknown_or_wrong_case_metadata_tokens() -> None:
-    """v1-frame-core acceptance 7: unknown colorspace/gamma tokens fail fast and matching is case-sensitive."""
+def test_frame_rejects_unknown_metadata_tokens() -> None:
+    """v1-frame-core acceptance 7; v1-token-vocabulary acceptance 7: unknown metadata tokens fail fast."""
     data = _sample_data()
 
-    for colorspace in ("srgb", "ACESCG", "unknown"):
-        with pytest.raises(ValueError, match="colorspace"):
-            px.io.from_array(data, colorspace=colorspace, gamma="linear", channels="RGB")
-    for gamma in ("Linear", "sRGB", "unknown"):
-        with pytest.raises(ValueError, match="gamma"):
-            px.io.from_array(data, colorspace="sRGB", gamma=gamma, channels="RGB")
+    with pytest.raises(ValueError, match="colorspace"):
+        px.io.from_array(data, colorspace="unknown", gamma="linear", channels="RGB")
+    with pytest.raises(ValueError, match="gamma"):
+        px.io.from_array(data, colorspace="sRGB", gamma="unknown", channels="RGB")
 
 
 def test_metadata_assignment_revalidates_transactionally_without_touching_data() -> None:
-    """v1-frame-core acceptance 8: metadata assignment validates and a failed assignment preserves state."""
-    result = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="srgb", channels="RGB")
+    """v1-frame-core acceptance 8; v1-token-vocabulary acceptance 3,6: assignment canonicalizes or preserves state."""
+    result = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="sRGB", channels="RGB")
     data_pointer = result.data.data.ptr
 
     result.colorspace = "ACEScg"
@@ -205,11 +250,15 @@ def test_metadata_assignment_revalidates_transactionally_without_touching_data()
     result.channels = "BGR"
     assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "linear", ("B", "G", "R"))
 
+    result.colorspace = "acescg"
+    assert result.colorspace == "ACEScg"
+    result.gamma = "Linear"
+    assert result.gamma == "linear"
     with pytest.raises(ValueError, match="colorspace"):
-        result.colorspace = "acescg"
+        result.colorspace = "unknown"
     assert result.colorspace == "ACEScg"
     with pytest.raises(ValueError, match="gamma"):
-        result.gamma = "Linear"
+        result.gamma = "unknown"
     assert result.gamma == "linear"
     with pytest.raises(ValueError, match="channel"):
         result.channels = "RGBA"
@@ -252,7 +301,7 @@ def test_channels_normalizes_compact_and_sequence_inputs() -> None:
 
 def test_all_channel_entry_points_accept_the_same_input_forms() -> None:
     """v1-boundary-api acceptance 1 and 11: constructor, assignment, and exit share channel normalization."""
-    result = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="srgb", channels="RGB")
+    result = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="sRGB", channels="RGB")
     assert result.channels == px.core.channels("RGB")
 
     result.channels = ["B", "G", "R"]
@@ -263,7 +312,7 @@ def test_all_channel_entry_points_accept_the_same_input_forms() -> None:
 
 def test_channels_read_as_tuple_and_repr_uses_compact_form_only_for_known_labels() -> None:
     """v1-frame-core acceptance 11: channels are tuples and repr compacts only entirely known labels."""
-    known = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="srgb", channels="RGB")
+    known = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="sRGB", channels="RGB")
     unknown = px.io.from_array(
         _sample_data(channel_count=2),
         colorspace="sRGB",
@@ -278,7 +327,7 @@ def test_channels_read_as_tuple_and_repr_uses_compact_form_only_for_known_labels
 
 def test_frame_exposes_read_only_geometry_and_dtype_without_operator_forwarding() -> None:
     """v1-frame-core acceptance 15: read-only geometry/dtype properties do not make Frame array-like."""
-    source = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="srgb", channels="RGB")
+    source = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     assert source.width == 3
     assert source.height == 2

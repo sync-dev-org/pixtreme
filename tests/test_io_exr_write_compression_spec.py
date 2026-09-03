@@ -78,7 +78,7 @@ def test_exr_compression_tokens_are_a_case_sensitive_closed_set() -> None:
     )
 
 
-@pytest.mark.parametrize("compression", ("NONE", "lzw", "htj2k256", 1, True))
+@pytest.mark.parametrize("compression", ("gzip", "lzw", "htj2k256", 1, True))
 def test_exr_compression_rejects_unknown_tokens_and_non_strings_before_writing(
     tmp_path: Path, compression: object
 ) -> None:
@@ -242,7 +242,7 @@ def test_exr_and_raster_encode_options_remain_format_specific(tmp_path: Path) ->
     raster_frame = px.io.from_array(
         cp.arange(4 * 4 * 3, dtype=cp.uint8).reshape(4, 4, 3),
         colorspace="sRGB",
-        gamma="srgb",
+        gamma="sRGB",
         channels="RGB",
     )
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from functools import lru_cache
-from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -25,7 +24,7 @@ from pixtreme._core.vocabulary import (
 _Float64Matrix = NDArray[np.float64]
 
 _CAT_BASES: Mapping[ChromaticAdaptation, _Float64Matrix] = {
-    "bradford": np.asarray(
+    "Bradford": np.asarray(
         (
             (0.8951000, 0.2664000, -0.1614000),
             (-0.7502000, 1.7135000, 0.0367000),
@@ -33,7 +32,7 @@ _CAT_BASES: Mapping[ChromaticAdaptation, _Float64Matrix] = {
         ),
         dtype=np.float64,
     ),
-    "cat02": np.asarray(
+    "CAT02": np.asarray(
         (
             (0.7328, 0.4296, -0.1624),
             (-0.7036, 1.6975, 0.0061),
@@ -41,7 +40,7 @@ _CAT_BASES: Mapping[ChromaticAdaptation, _Float64Matrix] = {
         ),
         dtype=np.float64,
     ),
-    "cat16": np.asarray(
+    "CAT16": np.asarray(
         (
             (0.401288, 0.650173, -0.051461),
             (-0.250268, 1.204414, 0.045854),
@@ -49,7 +48,7 @@ _CAT_BASES: Mapping[ChromaticAdaptation, _Float64Matrix] = {
         ),
         dtype=np.float64,
     ),
-    "von-kries": np.asarray(
+    "von-Kries": np.asarray(
         (
             (0.4002400, 0.7076000, -0.0808100),
             (-0.2263000, 1.1653200, 0.0457000),
@@ -103,15 +102,12 @@ def _error(*, why: str, what: str, how: str) -> ValueError:
 
 
 def _validate_cat(value: object) -> ChromaticAdaptation:
-    return cast(
-        ChromaticAdaptation,
-        _closed_str_token(
-            value,
-            axis="cat",
-            accepted=_CHROMATIC_ADAPTATION_TOKENS,
-            why="cat selects one documented chromatic adaptation transform",
-            how=f"pass cat as one of {_CHROMATIC_ADAPTATION_TOKENS!r}",
-        ),
+    return _closed_str_token(
+        value,
+        axis="cat",
+        accepted=_CHROMATIC_ADAPTATION_TOKENS,
+        why="cat selects one documented chromatic adaptation transform",
+        how=f"pass cat as one of {_CHROMATIC_ADAPTATION_TOKENS!r}",
     )
 
 
@@ -123,10 +119,10 @@ def _xy_to_xyz(xy: tuple[float, float]) -> _Float64Matrix:
 def _chromatic_adaptation_matrix(
     input_white: tuple[float, float],
     output_white: tuple[float, float],
-    cat: str,
+    cat: ChromaticAdaptation,
 ) -> _Float64Matrix:
     """Compose one full-adaptation XYZ matrix in host float64."""
-    basis = _CAT_BASES[cast(ChromaticAdaptation, cat)]
+    basis = _CAT_BASES[cat]
     input_xyz = _xy_to_xyz(input_white)
     output_xyz = _xy_to_xyz(output_white)
     input_response = basis @ input_xyz
@@ -168,7 +164,7 @@ def _compose_adaptation_rgb_matrix(
     colorspace: str,
     input_white: tuple[float, float],
     output_white: tuple[float, float],
-    cat: str,
+    cat: ChromaticAdaptation,
 ) -> NDArray[np.float32]:
     adaptation = _chromatic_adaptation_matrix(input_white, output_white, cat)
     if input_white == output_white:
@@ -269,7 +265,7 @@ def chromatic_adaptation(
     *,
     input_white: ReferenceWhite | Sequence[float],
     output_white: ReferenceWhite | Sequence[float],
-    cat: ChromaticAdaptation = "cat02",
+    cat: ChromaticAdaptation = "CAT02",
 ) -> Frame:
     """Adapt a float32 RGB Frame between explicit CIE 1931 xy white points.
 
@@ -295,7 +291,7 @@ def white_balance(
     *,
     temperature: float,
     tint: float = 0.0,
-    cat: ChromaticAdaptation = "cat02",
+    cat: ChromaticAdaptation = "CAT02",
 ) -> Frame:
     """Correct a source illuminant described by Kelvin and signed raw Duv.
 

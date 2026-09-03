@@ -13,8 +13,9 @@ import numpy as np
 from pixtreme._core.border import _border_argument, _resolve_border
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame, _validate_float32_frame
+from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._core.value_domain import _float32_conversion_guidance
-from pixtreme._core.vocabulary import _TEMPLATE_MATCHING_METHOD_TOKENS
+from pixtreme._core.vocabulary import _TEMPLATE_MATCHING_METHOD_TOKENS, Border, TemplateMatchingMethod
 from pixtreme._feature.common import _ANALYZE_KERNEL_SOURCE, _THREADS_PER_BLOCK, _block_count
 
 _METHOD_TOKENS = _TEMPLATE_MATCHING_METHOD_TOKENS
@@ -143,15 +144,7 @@ def _validate_match_geometry(frame: Frame, template: Frame) -> None:
 
 
 def _validate_method(value: object) -> str:
-    if not isinstance(value, str) or value not in _METHOD_TOKENS:
-        raise ValueError(
-            _actionable_error(
-                why="method is a closed, case-sensitive template matching token axis",
-                what=f"received method={value!r}",
-                how=f"pass one of {_METHOD_TOKENS!r}",
-            )
-        )
-    return value
+    return _normalized_closed_token(value, axis="method", accepted=_METHOD_TOKENS)
 
 
 def _window_sums(
@@ -354,7 +347,7 @@ def corner_harris(
     *,
     block_size: int = 3,
     k: float = 0.04,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> cp.ndarray:
     """Return the color-structure Harris response of a float32 Frame.
@@ -415,7 +408,7 @@ def corner_harris(
     return output
 
 
-def match_template(frame: Frame, template: Frame, *, method: str = "ccoeff_normed") -> cp.ndarray:
+def match_template(frame: Frame, template: Frame, *, method: TemplateMatchingMethod = "ccoeff_normed") -> cp.ndarray:
     """Return a valid 2D template response map for two compatible float32 Frames.
 
     Output ``(y, x)`` compares the template with the frame window whose top-left

@@ -11,7 +11,7 @@ from pixtreme._io.common import _binary_stream, _empty_color, _read_exact
 from pixtreme._io.models import ImageHeader, _ImageColorInfo, _ImagePart
 
 _CICP_COLORSPACES = {1: "Rec.709", 9: "Rec.2020"}
-_CICP_GAMMAS = {1: "rec709", 6: "rec709", 13: "srgb", 16: "pq", 18: "hlg"}
+_CICP_GAMMAS = {1: "Rec.709", 6: "Rec.709", 13: "sRGB", 16: "PQ", 18: "HLG"}
 
 
 def _png_color_info(raw: dict[str, object]) -> _ImageColorInfo:
@@ -22,16 +22,16 @@ def _png_color_info(raw: dict[str, object]) -> _ImageColorInfo:
         mappable = colorspace is not None and mapped_gamma is not None and matrix == 0 and full_range in (0, 1)
         return _ImageColorInfo(raw=raw, colorspace=colorspace, gamma=mapped_gamma, mappable=mappable)
     if "sRGB" in raw:
-        return _ImageColorInfo(raw=raw, colorspace="sRGB", gamma="srgb", mappable=True)
+        return _ImageColorInfo(raw=raw, colorspace="sRGB", gamma="sRGB", mappable=True)
     if "gAMA" in raw:
         gamma_value = cast(int, raw["gAMA"])
         gamma: str | None
         if abs(gamma_value - 100000) <= 1:
             gamma = "linear"
         elif abs(gamma_value - 45455) <= 1:
-            gamma = "2.2"
+            gamma = "Gamma-2.2"
         elif abs(gamma_value - 41667) <= 1:
-            gamma = "2.4"
+            gamma = "Gamma-2.4"
         else:
             gamma = None
         return _ImageColorInfo(raw=raw, colorspace=None, gamma=gamma, mappable=gamma is not None)

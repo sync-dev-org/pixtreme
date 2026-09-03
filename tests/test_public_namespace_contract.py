@@ -163,14 +163,53 @@ _ERROR_PATH_CASES = (
 )
 
 ALIAS_TOKENS = {
-    "ChromaticAdaptation": ("bradford", "cat02", "cat16", "von-kries"),
-    "ReferenceWhite": ("d65", "d93", "d50", "aces"),
-    "Colorspace": ("sRGB", "Rec.709", "Rec.2020", "ACES2065-1", "ACEScg", "S-Gamut3", "S-Gamut3.Cine"),
-    "Gamma": ("linear", "srgb", "rec709", "bt1886", "pq", "hlg", "s-log3", "logc4", "cineon", "2.2", "2.4", "2.6"),
-    "Matrix": ("bt601", "bt709", "bt2020", "native"),
+    "ChromaticAdaptation": ("Bradford", "CAT02", "CAT16", "von-Kries"),
+    "ReferenceWhite": ("D65", "D93", "D50", "ACES"),
+    "Colorspace": (
+        "sRGB",
+        "Rec.709",
+        "Rec.2020",
+        "ACES2065-1",
+        "ACEScg",
+        "S-Gamut",
+        "S-Gamut3",
+        "S-Gamut3.Cine",
+        "ARRI-Wide-Gamut-3",
+        "ARRI-Wide-Gamut-4",
+        "Blackmagic-Wide-Gamut-Gen-5",
+        "DaVinci-Wide-Gamut",
+        "REDWideGamutRGB",
+        "DRAGONcolor",
+        "DRAGONcolor2",
+        "REDcolor2",
+        "REDcolor3",
+        "REDcolor4",
+    ),
+    "Gamma": (
+        "linear",
+        "sRGB",
+        "Rec.709",
+        "BT.1886",
+        "PQ",
+        "HLG",
+        "S-Log",
+        "S-Log2",
+        "S-Log3",
+        "ARRI-LogC3",
+        "ARRI-LogC4",
+        "Blackmagic-Film-Gen-5",
+        "DaVinci-Intermediate",
+        "RED-Log3G10",
+        "REDlogFilm",
+        "Cineon",
+        "Gamma-2.2",
+        "Gamma-2.4",
+        "Gamma-2.6",
+    ),
+    "Matrix": ("BT.601", "BT.709", "BT.2020", "native"),
     "Dtype": ("float32", "float16", "uint8", "uint16", "uint32"),
     "Layout": ("HWC", "NHWC", "CHW", "NCHW"),
-    "Tonemap": ("aces-1.3", "aces-1.3-lut", "aces-2.0", "aces-2.0-lut", "bt2408"),
+    "Tonemap": ("ACES-1.3", "ACES-2.0", "BT.2408"),
     "Range": ("legal", "full"),
     "Interpolation": (
         "nearest",
@@ -224,11 +263,11 @@ ALIAS_TOKENS = {
     "TextFont": ("sans", "mono"),
     "GeneratorKind": ("linear", "radial"),
     "ColorBarsStandard": (
-        "arib-std-b28",
-        "smpte-rp219",
-        "bt2111-hlg",
-        "bt2111-pq",
-        "bt2111-pq-full",
+        "ARIB-STD-B28",
+        "SMPTE-RP219",
+        "BT.2111-HLG",
+        "BT.2111-PQ",
+        "BT.2111-PQ-full",
         "full-100",
         "full-75",
     ),
@@ -393,7 +432,11 @@ def test_frame_is_data_metadata_properties_and_dlpack_only() -> None:
 
 
 def test_literal_aliases_and_vocabulary_tables_are_identical() -> None:
-    """v1-public-namespace acceptance 9 and 12: aliases, runtime tokens, and parsed docs tables stay identical."""
+    """v1-public-namespace acceptance 9 and 12; v1-view-transform-lut-removal acceptance 8;
+    v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 16-17 and 29;
+    v1-blackmagic-tokens acceptance 34; v1-red-tokens acceptance 54-55: aliases, runtime tokens,
+    and parsed docs tables stay identical.
+    """
     from pixtreme._core import vocabulary as runtime_vocabulary
 
     vocabulary_path = Path(__file__).resolve().parents[1] / "docs_site" / "tokens.md"

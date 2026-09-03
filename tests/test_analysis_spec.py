@@ -608,9 +608,9 @@ def test_match_template_score_direction_offset_scale_and_channel_means_are_fixed
     assert not np.array_equal(ccoeff, ccorr)
 
 
-@pytest.mark.parametrize("method", ("SQDIFF", "ccoeff-NORMED", "tm_ccorr", 0, None, object()))
+@pytest.mark.parametrize("method", ("difference", "ccoeff-extra", "tm_ccorr", 0, None, object()))
 def test_match_template_rejects_unknown_methods_actionably(method: object) -> None:
-    """v1-analysis-pair acceptance 21: method is a case-sensitive six-token axis, never an integer constant."""
+    """v1-analysis-pair acceptance 21; v1-token-vocabulary acceptance 7: unknown methods fail actionably."""
     source = _frame(np.zeros((2, 2, 1)), channels=["Y"])
     with pytest.raises(ValueError) as error:
         px.feature.match_template(source, source, method=method)  # type: ignore[arg-type]
@@ -625,8 +625,8 @@ def test_match_template_rejects_unknown_methods_actionably(method: object) -> No
         ("channel count", {"channels": ("R", "G")}, {"channels": ("R",)}),
         ("channels", {"channels": ("R", "G")}, {"channels": ("G", "R")}),
         ("colorspace", {"colorspace": "ACEScg"}, {"colorspace": "sRGB"}),
-        ("gamma", {"gamma": "linear"}, {"gamma": "srgb"}),
-        ("matrix", {"matrix": None}, {"matrix": "bt709"}),
+        ("gamma", {"gamma": "linear"}, {"gamma": "sRGB"}),
+        ("matrix", {"matrix": None}, {"matrix": "BT.709"}),
     ),
 )
 def test_match_template_rejects_metadata_and_channel_mismatches_actionably(
@@ -667,14 +667,14 @@ def test_match_template_rejects_oversized_valid_geometry_actionably(
 
 
 def test_analysis_preserves_both_inputs_and_returns_private_storage_every_time() -> None:
-    """v1-analysis-pair acceptance 4 and 7: data, metadata, and storage are immutable and never shared."""
+    """v1-analysis-pair acceptance 4 and 7; v1-red-tokens acceptance 68: inputs and storage stay immutable."""
     values = np.arange(60, dtype=np.float32).reshape(4, 5, 3) / np.float32(7.0) - np.float32(2.0)
     template_values = values[1:3, 2:5, :].copy()
-    source = _frame(values, colorspace="ACEScg", gamma="logc4", channels=("A", "custom", "Z"), matrix="native")
+    source = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=("A", "custom", "Z"), matrix="native")
     template = _frame(
         template_values,
         colorspace="ACEScg",
-        gamma="logc4",
+        gamma="ARRI-LogC4",
         channels=("A", "custom", "Z"),
         matrix="native",
     )

@@ -14,8 +14,9 @@ from pixtreme._core.border import _BORDER_PREAMBLE
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame
 from pixtreme._core.interpolation import _POINT_INTERPOLATION_DEVICE_SOURCE, _POINT_INTERPOLATION_TOKENS
+from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._core.value_domain import _float32_conversion_guidance
-from pixtreme._core.vocabulary import _BORDER_TOKENS
+from pixtreme._core.vocabulary import _BORDER_TOKENS, Border, Interpolation
 
 _INTERPOLATION_TOKENS = (*_POINT_INTERPOLATION_TOKENS, "area")
 
@@ -607,27 +608,16 @@ def _resolve_interpolation(effective: np.ndarray, interpolation: object) -> str:
         scale_x = float(np.hypot(effective[0, 0], effective[1, 0]))
         scale_y = float(np.hypot(effective[0, 1], effective[1, 1]))
         return "area" if scale_x < 1.0 or scale_y < 1.0 else "lanczos4"
-    if not isinstance(interpolation, str) or interpolation not in _INTERPOLATION_TOKENS:
-        raise ValueError(
-            _actionable_error(
-                why="warp_affine interpolation is a closed, case-sensitive token axis",
-                what=f"received interpolation={interpolation!r}",
-                how=f"pass one of {_INTERPOLATION_TOKENS!r}, or omit interpolation for matrix-driven auto selection",
-            )
-        )
-    return str(interpolation)
+    return _normalized_closed_token(
+        interpolation,
+        axis="interpolation",
+        accepted=_INTERPOLATION_TOKENS,
+        how=f"pass one of the canonical tokens {_INTERPOLATION_TOKENS!r}, or omit interpolation for auto selection",
+    )
 
 
 def _resolve_border(border: object, border_value: object) -> tuple[str, float]:
-    if not isinstance(border, str) or border not in _BORDER_TOKENS:
-        raise ValueError(
-            _actionable_error(
-                why="warp_affine border is a closed, case-sensitive token axis",
-                what=f"received border={border!r}",
-                how=f"pass one of {_BORDER_TOKENS!r}",
-            )
-        )
-    checked_border = str(border)
+    checked_border = _normalized_closed_token(border, axis="border", accepted=_BORDER_TOKENS)
     if checked_border == "constant":
         if border_value is None:
             return checked_border, 0.0
@@ -679,8 +669,8 @@ def warp_affine(
     inverse: bool = False,
     width: int | None = None,
     height: int | None = None,
-    interpolation: str | None = None,
-    border: str = "constant",
+    interpolation: Interpolation | None = None,
+    border: Border = "constant",
     border_value: float | None = None,
 ) -> Frame:
     """Warp a float32 Frame with a declared forward 2x3 affine matrix.

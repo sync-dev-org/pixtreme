@@ -53,9 +53,9 @@ def test_recode_dtype_is_public_with_the_exact_dtype_signature() -> None:
     assert signature.parameters["dtype"].default is inspect.Parameter.empty
 
 
-@pytest.mark.parametrize("invalid", ("fp32", "float64", "int32", "UINT8", None, 1, True, ("float32",)))
+@pytest.mark.parametrize("invalid", ("fp32", "float64", "int32", "uint64", None, 1, True, ("float32",)))
 def test_recode_dtype_rejects_values_outside_the_five_token_closed_set(invalid: object) -> None:
-    """v1-exr-runtime-independence acceptance 9: dtype accepts exactly five case-sensitive string tokens."""
+    """v1-exr-runtime-independence acceptance 9; v1-token-vocabulary acceptance 7: dtype stays a five-token family."""
     with pytest.raises(ValueError, match=r"float32.*float16.*uint8.*uint16.*uint32"):
         getattr(px.values, "recode_dtype")(_frame([0.0, 0.5, 1.0], dtype="float32"), dtype=invalid)
 
@@ -236,7 +236,7 @@ def test_every_dtype_pair_returns_private_storage_and_preserves_metadata(
         values,
         dtype=source_dtype,
         colorspace="Rec.2020",
-        gamma="pq",
+        gamma="PQ",
         channels=["signal-0", "signal-1", "signal-2"],
     )
     original = _host(source).copy()

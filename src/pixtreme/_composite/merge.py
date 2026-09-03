@@ -24,7 +24,7 @@ from pixtreme._core.validation import (
     _strict_bool,
 )
 from pixtreme._core.value_domain import _float32_conversion_guidance
-from pixtreme._core.vocabulary import _ALPHA_TOKENS
+from pixtreme._core.vocabulary import _ALPHA_TOKENS, Alpha, Blend, Interpolation
 
 _COMPOSITE_INTERPOLATION_TOKENS = _POINT_INTERPOLATION_TOKENS
 _RGB_CHANNELS = ("R", "G", "B")
@@ -450,14 +450,14 @@ def merge(
     background: Frame,
     foreground: Frame,
     *,
-    blend: str = "normal",
+    blend: Blend = "normal",
     opacity: float = 1.0,
     mask: Frame | None = None,
-    alpha: str = "premultiplied",
+    alpha: Alpha = "premultiplied",
     position: tuple[float, float] | None = None,
     scale: float | tuple[float, float] = 1.0,
     rotation: float = 0.0,
-    interpolation: str = "bilinear",
+    interpolation: Interpolation = "bilinear",
     adapt: bool = False,
 ) -> Frame:
     """Transform and composite a foreground Frame over a background Frame.

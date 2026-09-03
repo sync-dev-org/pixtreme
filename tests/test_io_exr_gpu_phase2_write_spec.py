@@ -6,6 +6,7 @@ import struct
 import zlib
 from pathlib import Path
 
+import cupy as cp
 import exr_test_harness as exr_harness
 import numpy as np
 import pytest
@@ -700,6 +701,102 @@ def _write_frame(dtype: type[np.generic], *, height: int, width: int) -> tuple[p
     labels = ("beauty.R", "beauty.G", "beauty.B", "beauty.A", "depth.Z")
     frame = px.io.from_array(cp.asarray(stored), colorspace="ACES2065-1", gamma="linear", channels=labels)
     return frame, expected
+
+
+def _eager_dwa_lossy_components(
+    data: cp.ndarray,
+    source_rows: cp.ndarray,
+    input_indices: tuple[int, ...],
+    padded_width: int,
+) -> tuple[cp.ndarray, ...]:
+    """Test-side rendition of the pre-fusion write transfer and color path."""
+    width = int(data.shape[1])
+    batched_data = data[source_rows]
+    x_indices = exr_dwa._dwa_mirror_indices(width, padded_width)
+    components: list[cp.ndarray] = []
+    for input_index in input_indices:
+        values = batched_data[..., input_index]
+        if data.dtype.name == "uint8":
+            values = values.astype(cp.float32) * np.float32(1.0 / 255.0)
+        elif data.dtype.name == "uint16":
+            values = values.astype(cp.float32) * np.float32(1.0 / 65535.0)
+        elif data.dtype.name == "float32":
+            maximum = np.float32(65504.0)
+            values = cp.where(cp.isfinite(values), cp.clip(values, -maximum, maximum), values)
+        half_values = cp.ascontiguousarray(values, dtype=cp.float16)
+        linear = half_values.astype(cp.float32)
+        magnitude = cp.abs(linear)
+        nonlinear = cp.where(
+            magnitude <= np.float32(1.0),
+            cp.power(magnitude, np.float32(1.0 / 2.2)),
+            cp.log(magnitude) / np.float32(2.2) + np.float32(1.0),
+        )
+        nonlinear = cp.copysign(nonlinear, linear)
+        nonlinear = cp.where(cp.isfinite(linear), nonlinear, np.float32(0.0))
+        components.append(nonlinear.astype(cp.float16).astype(cp.float32)[:, :, x_indices])
+    if len(components) == 3:
+        red, green, blue = components
+        components = [
+            np.float32(0.2126) * red + np.float32(0.7152) * green + np.float32(0.0722) * blue,
+            np.float32(-0.1146) * red - np.float32(0.3854) * green + np.float32(0.5) * blue,
+            np.float32(0.5) * red - np.float32(0.4542) * green - np.float32(0.0458) * blue,
+        ]
+    return tuple(components)
+
+
+def _dwa_transfer_trial_frame(
+    dtype: type[np.generic], *, height: int, width: int, channels: tuple[str, ...]
+) -> px.core.Frame:
+    y, x = np.mgrid[:height, :width]
+    planes = (
+        np.float32(-0.375) + x / np.float32(width + 3) + y / np.float32(height + 7),
+        np.float32(0.125) + x / np.float32(width * 2 + 1) - y / np.float32(height + 11),
+        np.float32(1.75) - x / np.float32(width + 5) + y / np.float32(height * 3 + 1),
+        np.where((x + y) % 5, np.float32(1.0), np.float32(0.25)),
+    )
+    values = np.stack(planes[: len(channels)], axis=2)
+    if np.issubdtype(dtype, np.integer):
+        maximum = np.float32(np.iinfo(dtype).max)
+        values = np.rint(np.clip(values, 0.0, 1.0) * maximum).astype(dtype)
+    else:
+        values = values.astype(dtype)
+    return px.io.from_array(cp.asarray(values), colorspace="ACEScg", gamma="linear", channels=channels)
+
+
+@pytest.mark.parametrize(
+    ("compression", "dwa_level", "dtype", "channels"),
+    (
+        ("dwaa", 45.0, np.uint8, ("R", "G", "B")),
+        ("dwab", 45.0, np.float32, ("R", "G", "B", "A")),
+        ("dwaa", 10.0, np.uint16, ("Y",)),
+        ("dwab", 100.0, np.float16, ("R", "G", "B")),
+        ("dwaa", 23.5, np.float32, ("R", "G", "B", "A")),
+        ("dwab", 23.5, np.uint8, ("Y",)),
+    ),
+)
+def test_dwa_transfer_fusion_preserves_encode_bitstream_characterization(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    compression: str,
+    dwa_level: float,
+    dtype: type[np.generic],
+    channels: tuple[str, ...],
+) -> None:
+    """characterization: issue #1 RawKernel trial acceptance 1 and 5 freezes the eager DWA bytes until the
+    transfer/color contract changes; Phase 2 wire and cross-decode tests independently establish correctness.
+    """
+    fused_helper = exr_dwa._prepare_dwa_lossy_components_gpu
+    height = 33 if compression == "dwaa" else 257
+    frame = _dwa_transfer_trial_frame(dtype, height=height, width=9, channels=channels)
+    candidate_path = tmp_path / "candidate.exr"
+    eager_path = tmp_path / "eager.exr"
+
+    px.io.write_image(candidate_path, frame, compression=compression, dwa_level=dwa_level)
+    monkeypatch.setattr(exr_dwa, "_prepare_dwa_lossy_components_gpu", _eager_dwa_lossy_components)
+    px.io.write_image(eager_path, frame, compression=compression, dwa_level=dwa_level)
+
+    assert fused_helper is not _eager_dwa_lossy_components
+    assert candidate_path.read_bytes() == eager_path.read_bytes()
 
 
 def test_hybrid_dwaa_writer_clamps_finite_float_samples_to_the_half_range(

@@ -14,6 +14,7 @@ from cupyx.scipy.fft import next_fast_len
 from pixtreme._core.border import _BORDER_PREAMBLE, _border_argument, _resolve_border
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame, _new_frame, _validate_float32_frame
+from pixtreme._core.vocabulary import Border
 from pixtreme._filter.common import _shape_arguments
 
 _SUBSAMPLES = 16
@@ -392,7 +393,7 @@ def _launch_lens_blur(
     *,
     frame: Frame,
     bound: int,
-    border: str,
+    border: Border,
     border_value: float,
 ) -> None:
     block_x, block_y = _RAW_KERNEL_BLOCK
@@ -429,7 +430,7 @@ def _launch_lens_blur_fft(
     frame: Frame,
     fft_shape: tuple[int, int],
     bound: int,
-    border: str,
+    border: Border,
     border_value: float,
 ) -> cp.ndarray:
     padded_shape = (len(frame.channels), frame.height + 2 * bound, frame.width + 2 * bound)
@@ -466,7 +467,7 @@ def lens_blur(
     radius: float,
     blades: int | None = None,
     rotation: float | None = None,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Convolve with a flat uniform aperture for spatially invariant bokeh.

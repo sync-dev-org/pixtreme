@@ -28,16 +28,12 @@ _BRADFORD = np.asarray(
     dtype=np.float64,
 )
 _ACES_COMBINATIONS = (
-    ("aces-1.3", "Rec.709", "bt1886"),
-    ("aces-1.3", "sRGB", "srgb"),
-    ("aces-2.0", "Rec.709", "bt1886"),
-    ("aces-2.0", "sRGB", "srgb"),
-    ("aces-1.3-lut", "Rec.709", "bt1886"),
-    ("aces-1.3-lut", "sRGB", "srgb"),
-    ("aces-2.0-lut", "Rec.709", "bt1886"),
-    ("aces-2.0-lut", "sRGB", "srgb"),
+    ("ACES-1.3", "Rec.709", "BT.1886"),
+    ("ACES-1.3", "sRGB", "sRGB"),
+    ("ACES-2.0", "Rec.709", "BT.1886"),
+    ("ACES-2.0", "sRGB", "sRGB"),
 )
-_BT2408_COMBINATIONS = (("bt2408", "Rec.2020", "hlg"), ("bt2408", "Rec.2020", "pq"))
+_BT2408_COMBINATIONS = (("BT.2408", "Rec.2020", "HLG"), ("BT.2408", "Rec.2020", "PQ"))
 
 
 def _frame(
@@ -90,7 +86,7 @@ def _decode_srgb(values: np.ndarray) -> np.ndarray:
 
 
 def _bt2408_gain(output_gamma: str) -> np.float64:
-    if output_gamma == "pq":
+    if output_gamma == "PQ":
         return np.float64(203) / np.float64(10000)
     a = np.float64(0.17883277)
     b = np.float64(1) - np.float64(4) * a
@@ -129,16 +125,15 @@ def _oracle(
     input_gamma: str,
     output_gamma: str,
 ) -> np.ndarray:
-    decoded = _decode_srgb(values) if input_gamma == "srgb" else values
+    decoded = _decode_srgb(values) if input_gamma == "sRGB" else values
     linear_rec2020 = decoded @ _matrix_to_rec2020(input_colorspace).T
     scaled = linear_rec2020 * _bt2408_gain(output_gamma)
-    return _encode_hlg(scaled) if output_gamma == "hlg" else _encode_pq(scaled)
+    return _encode_hlg(scaled) if output_gamma == "HLG" else _encode_pq(scaled)
 
 
-def test_bt2408_coexists_with_the_fixed_signature_and_exact_ten_combination_table() -> None:
-    """v1-tonemap-aces20-analytic acceptance 1-3: signature is fixed and the runtime supplies ten exits."""
+def test_bt2408_coexists_with_the_fixed_signature_and_exact_six_combination_table() -> None:
+    """v1-view-transform-lut-removal acceptance 2 and 4: signature is fixed and runtime supplies six exits."""
     import pixtreme._color.transform as implementation
-    import pixtreme._color.view_transform as view_implementation
 
     assert tuple(inspect.signature(px.color.rgb_to_rgb).parameters) == (
         "frame",
@@ -148,7 +143,7 @@ def test_bt2408_coexists_with_the_fixed_signature_and_exact_ten_combination_tabl
         "output_gamma",
         "tonemap",
     )
-    assert (*view_implementation._SUPPORTED_COMBINATIONS, *implementation._BT2408_COMBINATIONS) == (
+    assert implementation._SUPPORTED_COMBINATIONS == (
         *_ACES_COMBINATIONS,
         *_BT2408_COMBINATIONS,
     )
@@ -174,13 +169,13 @@ def test_every_tonemap_combination_is_operational(tonemap: str, output_colorspac
 @pytest.mark.parametrize(
     ("tonemap", "output_colorspace", "output_gamma"),
     (
-        ("bt2408", None, None),
-        ("bt2408", "Rec.2020", None),
-        ("bt2408", None, "pq"),
-        ("bt2408", "Rec.709", "pq"),
-        ("bt2408", "Rec.2020", "linear"),
-        ("BT2408", "Rec.2020", "pq"),
-        ("unknown", "Rec.2020", "pq"),
+        ("BT.2408", None, None),
+        ("BT.2408", "Rec.2020", None),
+        ("BT.2408", None, "PQ"),
+        ("BT.2408", "Rec.709", "PQ"),
+        ("BT.2408", "Rec.2020", "linear"),
+        ("BT.2408", "Rec.2020", "sRGB"),
+        ("BT.2408", "sRGB", "PQ"),
     ),
 )
 def test_bt2408_missing_unknown_and_table_external_combinations_fail_with_actionable_guidance(
@@ -195,10 +190,10 @@ def test_bt2408_missing_unknown_and_table_external_combinations_fail_with_action
             tonemap=tonemap,
         )
     message = str(error.value)
-    assert all(part in message for part in ("why=", "what=", "how=", "bt2408", "Rec.2020", "hlg", "pq"))
+    assert all(part in message for part in ("why=", "what=", "how=", "BT.2408", "Rec.2020", "HLG", "PQ"))
 
 
-@pytest.mark.parametrize(("output_gamma", "expected"), (("hlg", 0.75), ("pq", None)))
+@pytest.mark.parametrize(("output_gamma", "expected"), (("HLG", 0.75), ("PQ", None)))
 def test_bt2408_places_rec709_linear_reference_white_from_independent_published_equations(
     output_gamma: str, expected: float | None
 ) -> None:
@@ -207,7 +202,7 @@ def test_bt2408_places_rec709_linear_reference_white_from_independent_published_
         _frame([1.0, 1.0, 1.0]),
         output_colorspace="Rec.2020",
         output_gamma=output_gamma,
-        tonemap="bt2408",
+        tonemap="BT.2408",
     )
     oracle = (
         np.full(3, expected, dtype=np.float64)
@@ -224,7 +219,7 @@ def test_bt2408_places_rec709_linear_reference_white_from_independent_published_
     )
 
 
-@pytest.mark.parametrize("output_gamma", ("hlg", "pq"))
+@pytest.mark.parametrize("output_gamma", ("HLG", "PQ"))
 def test_bt2408_matches_independent_decode_matrix_gain_encode_oracle_for_signed_scene_values(
     output_gamma: str,
 ) -> None:
@@ -237,14 +232,14 @@ def test_bt2408_matches_independent_decode_matrix_gain_encode_oracle_for_signed_
         ),
         dtype=np.float64,
     )
-    source = _frame(values.astype(np.float32), colorspace="ACEScg", gamma="srgb")
+    source = _frame(values.astype(np.float32), colorspace="ACEScg", gamma="sRGB")
     result = px.color.rgb_to_rgb(
         source,
         output_colorspace="Rec.2020",
         output_gamma=output_gamma,
-        tonemap="bt2408",
+        tonemap="BT.2408",
     )
-    expected = _oracle(values, input_colorspace="ACEScg", input_gamma="srgb", output_gamma=output_gamma)
+    expected = _oracle(values, input_colorspace="ACEScg", input_gamma="sRGB", output_gamma=output_gamma)
 
     # 1e-4 covers one fp32 3x3 FMA and device exp/log/pow against host float64,
     # including ST 2084's steep near-black exponent, without masking a gain/order error.
@@ -252,12 +247,12 @@ def test_bt2408_matches_independent_decode_matrix_gain_encode_oracle_for_signed_
         result,
     ).get()[0]
     np.testing.assert_allclose(output, expected, rtol=0.0, atol=1e-4)
-    white_signal = 0.75 if output_gamma == "hlg" else float(_encode_pq(np.asarray((203 / 10000,)))[0])
+    white_signal = 0.75 if output_gamma == "HLG" else float(_encode_pq(np.asarray((203 / 10000,)))[0])
     assert output.min() < 0.0
     assert output[1].max() > white_signal
 
 
-@pytest.mark.parametrize("output_gamma", ("hlg", "pq"))
+@pytest.mark.parametrize("output_gamma", ("HLG", "PQ"))
 def test_bt2408_input_claims_override_metadata_and_equivalent_rec2020_linear_inputs_converge(
     output_gamma: str,
 ) -> None:
@@ -274,17 +269,17 @@ def test_bt2408_input_claims_override_metadata_and_equivalent_rec2020_linear_inp
     claimed = px.color.rgb_to_rgb(
         source,
         input_colorspace="Rec.709",
-        input_gamma="srgb",
+        input_gamma="sRGB",
         output_colorspace="Rec.2020",
         output_gamma=output_gamma,
-        tonemap="bt2408",
+        tonemap="BT.2408",
     )
     rec2020_linear = _decode_srgb(encoded) @ _matrix_to_rec2020("Rec.709").T
     reference = px.color.rgb_to_rgb(
         _frame(rec2020_linear, colorspace="Rec.2020", gamma="linear"),
         output_colorspace="Rec.2020",
         output_gamma=output_gamma,
-        tonemap="bt2408",
+        tonemap="BT.2408",
     )
 
     np.testing.assert_array_equal(
@@ -307,16 +302,39 @@ def test_bt2408_input_claims_override_metadata_and_equivalent_rec2020_linear_inp
 
 
 @pytest.mark.parametrize(
-    "input_colorspace", ("sRGB", "Rec.709", "Rec.2020", "ACES2065-1", "ACEScg", "S-Gamut3", "S-Gamut3.Cine")
+    "input_colorspace",
+    (
+        "sRGB",
+        "Rec.709",
+        "Rec.2020",
+        "ACES2065-1",
+        "ACEScg",
+        "S-Gamut",
+        "S-Gamut3",
+        "S-Gamut3.Cine",
+        "ARRI-Wide-Gamut-3",
+        "ARRI-Wide-Gamut-4",
+        "Blackmagic-Wide-Gamut-Gen-5",
+        "DaVinci-Wide-Gamut",
+        "REDWideGamutRGB",
+        "DRAGONcolor",
+        "DRAGONcolor2",
+        "REDcolor2",
+        "REDcolor3",
+        "REDcolor4",
+    ),
 )
 def test_bt2408_accepts_every_input_colorspace_token(input_colorspace: str) -> None:
-    """v1-tonemap-bt2408 acceptance 2 and 7: every existing input colorspace token remains legal."""
+    """v1-tonemap-bt2408 acceptance 2 and 7; v1-sony-tokens acceptance 1-2;
+    v1-arri-tokens acceptance 17 and 25; v1-blackmagic-tokens acceptance 34 and 46;
+    v1-red-tokens acceptance 54 and 69: every colorspace token is legal.
+    """
     result = px.color.rgb_to_rgb(
         _frame([0.18, 0.18, 0.18]),
         input_colorspace=input_colorspace,
         output_colorspace="Rec.2020",
-        output_gamma="pq",
-        tonemap="bt2408",
+        output_gamma="PQ",
+        tonemap="BT.2408",
     )
     assert np.isfinite(
         px.io.to_array(
@@ -327,16 +345,39 @@ def test_bt2408_accepts_every_input_colorspace_token(input_colorspace: str) -> N
 
 @pytest.mark.parametrize(
     "input_gamma",
-    ("linear", "srgb", "rec709", "bt1886", "pq", "hlg", "s-log3", "logc4", "cineon", "2.2", "2.4", "2.6"),
+    (
+        "linear",
+        "sRGB",
+        "Rec.709",
+        "BT.1886",
+        "PQ",
+        "HLG",
+        "S-Log",
+        "S-Log2",
+        "S-Log3",
+        "ARRI-LogC3",
+        "ARRI-LogC4",
+        "Blackmagic-Film-Gen-5",
+        "DaVinci-Intermediate",
+        "RED-Log3G10",
+        "REDlogFilm",
+        "Cineon",
+        "Gamma-2.2",
+        "Gamma-2.4",
+        "Gamma-2.6",
+    ),
 )
 def test_bt2408_accepts_every_input_gamma_token(input_gamma: str) -> None:
-    """v1-tonemap-bt2408 acceptance 2 and 7: every existing input transfer token remains legal."""
+    """v1-tonemap-bt2408 acceptance 2 and 7; v1-sony-tokens acceptance 1-2;
+    v1-arri-tokens acceptance 17 and 25; v1-blackmagic-tokens acceptance 34 and 46;
+    v1-red-tokens acceptance 54 and 69: every gamma token is legal.
+    """
     result = px.color.rgb_to_rgb(
         _frame([0.18, 0.18, 0.18]),
         input_gamma=input_gamma,
         output_colorspace="Rec.2020",
-        output_gamma="hlg",
-        tonemap="bt2408",
+        output_gamma="HLG",
+        tonemap="BT.2408",
     )
     assert np.isfinite(
         px.io.to_array(
@@ -359,8 +400,8 @@ def test_bt2408_is_label_driven_preserves_auxiliary_bits_and_returns_private_met
     result = px.color.rgb_to_rgb(
         source,
         output_colorspace="Rec.2020",
-        output_gamma="pq",
-        tonemap="bt2408",
+        output_gamma="PQ",
+        tonemap="BT.2408",
     )
     output = px.io.to_array(
         result,
@@ -368,7 +409,7 @@ def test_bt2408_is_label_driven_preserves_auxiliary_bits_and_returns_private_met
 
     assert (result.colorspace, result.gamma, result.channels, result.matrix) == (
         "Rec.2020",
-        "pq",
+        "PQ",
         ("Z", "A", "B", "R", "G"),
         None,
     )
@@ -391,8 +432,8 @@ def test_bt2408_rejects_frames_without_all_rgb_labels(channels: str | list[str])
         px.color.rgb_to_rgb(
             source,
             output_colorspace="Rec.2020",
-            output_gamma="pq",
-            tonemap="bt2408",
+            output_gamma="PQ",
+            tonemap="BT.2408",
         )
 
 
@@ -412,8 +453,8 @@ def test_bt2408_rejects_non_float32_with_dtype_specific_guidance(
         px.color.rgb_to_rgb(
             _frame([0, 0, 0], dtype=dtype),
             output_colorspace="Rec.2020",
-            output_gamma="pq",
-            tonemap="bt2408",
+            output_gamma="PQ",
+            tonemap="BT.2408",
         )
     message = str(error.value)
     assert "float32" in message
@@ -421,41 +462,33 @@ def test_bt2408_rejects_non_float32_with_dtype_specific_guidance(
 
 
 def test_bt2408_rejects_non_frame_and_unknown_axis_tokens_before_pixel_processing() -> None:
-    """v1-tonemap-bt2408 acceptance 11: public type and case-sensitive axis boundaries remain fail-fast."""
+    """v1-tonemap-bt2408 acceptance 11; v1-token-vocabulary acceptance 7: unknown axis inputs fail fast."""
     with pytest.raises(ValueError, match="must be a Frame"):
         px.color.rgb_to_rgb(  # type: ignore[arg-type]
             np.zeros((1, 1, 3), dtype=np.float32),
             output_colorspace="Rec.2020",
-            output_gamma="pq",
-            tonemap="bt2408",
+            output_gamma="PQ",
+            tonemap="BT.2408",
         )
     with pytest.raises(ValueError, match="input_gamma"):
         px.color.rgb_to_rgb(
             _frame([0.18, 0.18, 0.18]),
-            input_gamma="sRGB",
+            input_gamma="gamma",
             output_colorspace="Rec.2020",
-            output_gamma="pq",
-            tonemap="bt2408",
+            output_gamma="PQ",
+            tonemap="BT.2408",
         )
 
 
-def test_bt2408_uses_one_fused_analytic_pass_without_touching_the_aces_lut_path(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """v1-tonemap-bt2408 acceptance 8 and 15: direct mapping is one analytic pass with no ACES LUT contact."""
+def test_bt2408_uses_one_fused_analytic_pass() -> None:
+    """v1-tonemap-bt2408 acceptance 8 and 15: direct mapping is one analytic pass."""
     import pixtreme._color.transform as implementation
-    import pixtreme._color.view_transform as view_implementation
 
-    def fail(*args: object, **kwargs: object) -> None:
-        raise AssertionError(f"BT.2408 touched the LUT path: {args!r}, {kwargs!r}")
-
-    monkeypatch.setattr(view_implementation, "_load_lut", fail)
-    monkeypatch.setattr(view_implementation, "_apply_lut_data", fail)
     result = px.color.rgb_to_rgb(
         _frame([0.18, 0.18, 0.18]),
         output_colorspace="Rec.2020",
-        output_gamma="pq",
-        tonemap="bt2408",
+        output_gamma="PQ",
+        tonemap="BT.2408",
     )
     transform_source = inspect.getsource(implementation._transform_data)
     gain_source = inspect.getsource(implementation._bt2408_gain)
@@ -478,8 +511,8 @@ def test_bt2408_uses_one_fused_analytic_pass_without_touching_the_aces_lut_path(
     assert kernel_source.index("* gain") < kernel_source.index("encode_transfer(scaled_red")
 
 
-def test_bt2408_docs_and_public_docstring_are_self_contained_and_list_the_ten_rows() -> None:
-    """v1-tonemap-aces20-analytic acceptance 18-19: requirements, vocabulary, and docstring expose the contract."""
+def test_bt2408_docs_and_public_docstring_are_self_contained_and_list_the_six_rows() -> None:
+    """v1-view-transform-lut-removal acceptance 4: requirements, vocabulary, and docstring expose the contract."""
     requirements_path = ROOT / "docs" / "requirements.md"
     vocabulary_path = ROOT / "docs_site" / "tokens.md"
     if not requirements_path.exists() or not vocabulary_path.exists():
@@ -490,13 +523,11 @@ def test_bt2408_docs_and_public_docstring_are_self_contained_and_list_the_ten_ro
 
     assert docstring is not None
     for text in (requirements, vocabulary, docstring):
-        for required in ("bt2408", "Rec.2020", "hlg", "pq", "203", "clip"):
+        for required in ("BT.2408", "Rec.2020", "HLG", "PQ", "203", "clip"):
             assert required in text
     for required in ("direct mapping", "inverse tone mapping", "0.75", "203 / 10000", "approximately 58%"):
         assert required in vocabulary
     supply_table = vocabulary.split("## tonemap combinations", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    assert supply_table.count("| `aces-1.3` |") == 2
-    assert supply_table.count("| `aces-1.3-lut` |") == 2
-    assert supply_table.count("| `aces-2.0` |") == 2
-    assert supply_table.count("| `aces-2.0-lut` |") == 2
-    assert supply_table.count("| `bt2408` |") == 2
+    assert supply_table.count("| `ACES-1.3` |") == 2
+    assert supply_table.count("| `ACES-2.0` |") == 2
+    assert supply_table.count("| `BT.2408` |") == 2

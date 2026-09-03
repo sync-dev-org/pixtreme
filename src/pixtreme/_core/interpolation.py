@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, cast
 
 from pixtreme._core.vocabulary import _INTERPOLATION_TOKENS as _ALL_INTERPOLATION_TOKENS
+from pixtreme._core.vocabulary import Interpolation
 
 type _PointInterpolationFamily = Literal["nearest", "linear", "keys", "mitchell", "lanczos"]
 
@@ -29,7 +30,7 @@ _POINT_INTERPOLATION_SPECS = {
     "lanczos3": _PointInterpolationSpec(6, "lanczos", lobes=3),
     "lanczos4": _PointInterpolationSpec(7, "lanczos", lobes=4),
 }
-_POINT_INTERPOLATION_TOKENS = tuple(_POINT_INTERPOLATION_SPECS)
+_POINT_INTERPOLATION_TOKENS = cast(tuple[Interpolation, ...], tuple(_POINT_INTERPOLATION_SPECS))
 
 if _POINT_INTERPOLATION_TOKENS != _ALL_INTERPOLATION_TOKENS[: len(_POINT_INTERPOLATION_TOKENS)]:
     raise RuntimeError("point interpolation indices must match the public vocabulary order")

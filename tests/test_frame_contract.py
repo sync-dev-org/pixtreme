@@ -90,7 +90,7 @@ def test_dlpack_protocol_delegates_consumer_arguments_to_data() -> None:
             return (2, 7)
 
     probe = DLPackProbe()
-    source = px.core.Frame.model_construct(data=probe, colorspace="sRGB", gamma="srgb", channels=("R", "G", "B"))
+    source = px.core.Frame.model_construct(data=probe, colorspace="sRGB", gamma="sRGB", channels=("R", "G", "B"))
 
     assert source.__dlpack__(stream=23, max_version=(1, 0), dl_device=(2, 7), copy=False) is probe.capsule
     assert probe.received == (23, (1, 0), (2, 7), False)
@@ -477,7 +477,7 @@ def test_frame_rejects_extra_model_fields() -> None:
         px.core.Frame(
             data=cp.zeros((1, 1, 3), dtype=cp.float32),
             colorspace="sRGB",
-            gamma="srgb",
+            gamma="sRGB",
             channels=("R", "G", "B"),
             range="full",
         )

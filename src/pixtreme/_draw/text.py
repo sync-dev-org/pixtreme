@@ -34,7 +34,11 @@ from pixtreme._core.vocabulary import (
     _TEXT_ANCHOR_TOKENS,
     _TEXT_FONT_TOKENS,
     _TEXT_LANGUAGE_TOKENS,
+    Blend,
+    TextAlign,
+    TextAnchor,
     TextFont,
+    TextLanguage,
 )
 from pixtreme._draw.shapes import _device_values
 
@@ -632,7 +636,7 @@ def _composite_layer(
     atlas_left: int,
     atlas_top: int,
     opacity: float,
-    blend: str,
+    blend: Blend,
 ) -> None:
     if coverage.size == 0 or opacity == 0.0:
         return
@@ -741,7 +745,7 @@ _TOKEN_FONT_AXES = {
 def _font_reference(value: object) -> _FontReference:
     if isinstance(value, Font):
         return value
-    return cast(TextFont, _normalized_closed_token(value, axis="font", accepted=_FONT_TOKENS))
+    return _normalized_closed_token(value, axis="font", accepted=_FONT_TOKENS)
 
 
 def _font_axes(font: _FontReference) -> tuple[_VariationAxis, ...]:
@@ -1160,12 +1164,12 @@ def text(
     size: float,
     color: Sequence[float],
     weight: float = 400.0,
-    language: str = "ja",
-    anchor: str = "baseline-left",
+    language: TextLanguage = "ja",
+    anchor: TextAnchor = "baseline-left",
     outlines: Sequence[tuple[Sequence[float], float]] | None = None,
     opacity: float = 1.0,
-    blend: str = "normal",
-    align: str = "left",
+    blend: Blend = "normal",
+    align: TextAlign = "left",
     line_spacing: float = 1.0,
     tracking: float = 0.0,
     kerning: bool = True,

@@ -9,6 +9,7 @@ import numpy as np
 
 from pixtreme._core.frame import Frame
 from pixtreme._core.value_domain import _RANGE_TOKENS
+from pixtreme._core.vocabulary import Colorspace, Gamma, Interpolation, Matrix, Range
 from pixtreme._io.wire.sampling import (
     _INTERPOLATION_TOKENS,
     _TO_INTERPOLATION_TOKENS,
@@ -42,11 +43,11 @@ def from_v210(
     *,
     width: int,
     height: int,
-    colorspace: str | None = None,
-    gamma: str | None = None,
-    matrix: str | None = None,
-    range: str = "legal",
-    interpolation: str = "bilinear",
+    colorspace: Colorspace | None = None,
+    gamma: Gamma | None = None,
+    matrix: Matrix | None = None,
+    range: Range = "legal",
+    interpolation: Interpolation = "bilinear",
 ) -> Frame:
     """Construct a full-range fp32 YCbCr444 Frame from v210 uint32 words.
 
@@ -88,8 +89,8 @@ def from_v210(
 def to_v210(
     frame: Frame,
     *,
-    range: str = "legal",
-    interpolation: str = "area",
+    range: Range = "legal",
+    interpolation: Interpolation = "area",
 ) -> cp.ndarray:
     """Pack ``frame`` into little-endian v210 uint32 words.
 

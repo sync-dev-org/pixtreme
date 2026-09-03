@@ -26,7 +26,7 @@ def _frame(values: np.ndarray, *, channels: tuple[str, ...] = ("Y", "Cb", "Cr"))
     return px.core.Frame(
         data=cp.asarray(np.ascontiguousarray(values)),
         colorspace="Rec.709",
-        gamma="rec709",
+        gamma="Rec.709",
         channels=channels,
     )
 
@@ -425,7 +425,7 @@ def test_to_formats_reject_non_frame_input_actionably(name: str) -> None:
 def test_420_to_formats_reject_unknown_tokens_and_odd_dimensions(name: str) -> None:
     """v1-format-boundary acceptance 10, 11, 21, and 37: closed tokens and even 420 dimensions fail fast."""
     valid = _frame(np.zeros((2, 2, 3), dtype=np.float32))
-    for axis, value in (("range", "FULL"), ("siting", "top-left"), ("interpolation", "lanczos3")):
+    for axis, value in (("range", "studio"), ("siting", "bottom"), ("interpolation", "lanczos3")):
         with pytest.raises(ValueError) as token_error:
             getattr(px.io, name)(valid, **{axis: value})
         _actionable(token_error)

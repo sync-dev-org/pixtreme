@@ -466,7 +466,7 @@ def test_warp_affine_accepts_all_interpolations_and_auto_uses_effective_forward_
     explicit_enlarge = px.transform.warp_affine(source, enlarge, interpolation="lanczos4")
     np.testing.assert_array_equal(automatic_enlarge.data.get(), explicit_enlarge.data.get())
 
-    for invalid in ("Nearest", "linear", 1, None):
+    for invalid in ("nearest-neighbor", "linear", 1, None):
         if invalid is None:
             continue
         with pytest.raises(ValueError) as error:
@@ -713,9 +713,9 @@ def test_warp_affine_preserves_metadata_channels_scene_values_and_all_inputs() -
     source = _frame(
         values,
         colorspace="Rec.2020",
-        gamma="pq",
+        gamma="PQ",
         channels=("temperature", "confidence", "Z"),
-        matrix="bt2020",
+        matrix="BT.2020",
     )
     declared = np.eye(2, 3, dtype=np.float32)
     data_before = source.data.copy()

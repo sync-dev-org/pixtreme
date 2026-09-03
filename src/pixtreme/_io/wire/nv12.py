@@ -9,6 +9,7 @@ import numpy as np
 
 from pixtreme._core.frame import Frame
 from pixtreme._core.value_domain import _RANGE_TOKENS
+from pixtreme._core.vocabulary import ChromaSiting, Colorspace, Gamma, Interpolation, Matrix, Range
 from pixtreme._io.wire.sampling import (
     _INTERPOLATION_TOKENS,
     _SITING_TOKENS,
@@ -43,12 +44,12 @@ def from_nv12(
     *,
     width: int,
     height: int,
-    colorspace: str | None = None,
-    gamma: str | None = None,
-    matrix: str | None = None,
-    range: str = "legal",
-    siting: str = "left",
-    interpolation: str = "bilinear",
+    colorspace: Colorspace | None = None,
+    gamma: Gamma | None = None,
+    matrix: Matrix | None = None,
+    range: Range = "legal",
+    siting: ChromaSiting = "left",
+    interpolation: Interpolation = "bilinear",
 ) -> Frame:
     """Construct a full-range fp32 YCbCr444 Frame from uint8 NV12.
 
@@ -58,6 +59,9 @@ def from_nv12(
     eight resize-family point kernels at that phase with replicate edges.
     ``range`` expands legal code positions without clipping or maps full uint8.
     ``colorspace`` / ``gamma`` override placeholders and ``matrix`` stamps basis provenance only.
+    The conversion kernel is enqueued on the current CuPy stream and the call
+    does not perform host synchronization. Order the decoder surface onto that
+    stream before calling; a different consumer stream must wait on a CUDA event.
     """
     colorspace, gamma = _metadata(colorspace, gamma)
     matrix = _matrix(matrix)
@@ -91,14 +95,16 @@ def from_nv12(
 def to_nv12(
     frame: Frame,
     *,
-    range: str = "legal",
-    siting: str = "left",
-    interpolation: str = "area",
+    range: Range = "legal",
+    siting: ChromaSiting = "left",
+    interpolation: Interpolation = "area",
 ) -> cp.ndarray:
     """Pack ``frame`` as an 8-bit Y plane followed by interleaved Cb/Cr.
 
     ``range`` selects code-value mapping, ``siting`` selects the 4:2:0 chroma
     phase, and ``interpolation`` selects the chroma downsampling filter.
+    Packing is enqueued on the current CuPy stream without host synchronization;
+    consume on that stream or pass its handle/event to the encoder.
     """
     _validate_frame(frame, operation="to_nv12")
     _dimensions(frame.width, frame.height, even_width=True, even_height=True)

@@ -71,7 +71,7 @@ def _label(frame: px.core.Frame, text: str) -> px.core.Frame:
 
 def _display_frame(frame: px.core.Frame) -> px.core.Frame:
     display = cp.rint(cp.clip(frame.data, 0.0, 1.0) * np.float32(255.0)).astype(cp.uint8)
-    return px.io.from_array(display, colorspace="sRGB", gamma="srgb", channels="RGB")
+    return px.io.from_array(display, colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
 def generate_sheet(path: Path) -> None:

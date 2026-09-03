@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 from typing import cast
 
 import cupy as cp
+import numpy as np
 
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import ChannelInput, Frame
+from pixtreme._core.validation import _normalized_closed_token
+from pixtreme._core.value_kernel import _cuda_load_expression, _cuda_storage_type, _cuda_store_expression
 from pixtreme._io.common import (
     _DTYPE_MAXIMA,
     _ENCODE_CODEC_EXTENSIONS,
@@ -17,8 +21,11 @@ from pixtreme._io.common import (
     _resolve_channel_locations,
     _resolve_metadata,
 )
-from pixtreme._io.dtype import _prepare_write_frame
+from pixtreme._io.dtype import _WRITE_DEFAULT_DTYPES, _WRITE_NATIVE_DTYPES
 from pixtreme._io.models import ImageHeader, _ImagePart
+from pixtreme._values.cast import _recode_dtype_expression, _recode_dtype_parameter
+
+_RASTER_REPACK_THREADS_PER_BLOCK = 256
 
 
 def _new_raster_header(
@@ -94,6 +101,151 @@ def _read_raster_pixels(source: Path | bytes, header: ImageHeader) -> cp.ndarray
     return cast(cp.ndarray, array)
 
 
+@lru_cache(maxsize=128)
+def _raster_repack_kernel(
+    source_dtype: str,
+    destination_dtype: str,
+    source_channels: int,
+    output_channels: int,
+    conversion: str,
+    index_mode: str,
+) -> cp.RawKernel:
+    if conversion == "copy" and source_dtype != destination_dtype:
+        raise ValueError("raster copy conversion requires matching dtypes")
+    assignments: list[str] = []
+    for output_channel in range(output_channels):
+        source_index = (
+            f"pixel * {source_channels} + channel_index_{output_channel}"
+            if index_mode == "hwc"
+            else f"source_base + channel_index_{output_channel} * channel_stride"
+        )
+        if conversion == "copy":
+            stored = f"source[{source_index}]"
+        elif conversion == "normalize":
+            loaded = _cuda_load_expression(source_dtype, f"source[{source_index}]")
+            stored = _cuda_store_expression(destination_dtype, f"({loaded} / parameter)")
+        elif conversion == "cast":
+            loaded = _cuda_load_expression(source_dtype, f"source[{source_index}]")
+            stored = _cuda_store_expression(destination_dtype, loaded)
+        elif conversion == "recode":
+            stored = _recode_dtype_expression(source_dtype, destination_dtype, f"source[{source_index}]")
+        else:
+            raise ValueError(f"unsupported raster repack conversion: {conversion}")
+        assignments.append(f"    destination[pixel * {output_channels} + {output_channel}] = {stored};")
+
+    strided_prelude = ""
+    if index_mode == "strided":
+        strided_prelude = """
+    const long long row = pixel / width;
+    const long long column = pixel - row * width;
+    const long long source_base = row * row_stride + column * column_stride;
+"""
+    channel_parameters = ",\n    ".join(
+        f"const int channel_index_{output_channel}" for output_channel in range(output_channels)
+    )
+    source = f"""
+#include <cuda_fp16.h>
+
+extern "C" __global__ void pixtreme_raster_repack(
+    const {_cuda_storage_type(source_dtype)}* __restrict__ source,
+    {_cuda_storage_type(destination_dtype)}* __restrict__ destination,
+    const long long pixel_count,
+    const long long width,
+    const long long row_stride,
+    const long long column_stride,
+    const long long channel_stride,
+    const float parameter,
+    {channel_parameters}
+) {{
+    const long long pixel = (long long)blockDim.x * blockIdx.x + threadIdx.x;
+    if (pixel >= pixel_count) {{
+        return;
+    }}
+{strided_prelude}
+{chr(10).join(assignments)}
+}}
+"""
+    return cp.RawKernel(source, "pixtreme_raster_repack")
+
+
+def _repack_raster_data(
+    source: cp.ndarray,
+    channel_indices: tuple[int, ...],
+    *,
+    destination_dtype: str,
+    conversion: str,
+    parameter: np.float32 = np.float32(0.0),
+) -> cp.ndarray:
+    output = cp.empty((*source.shape[:2], len(channel_indices)), dtype=destination_dtype)
+    pixel_count = int(source.shape[0] * source.shape[1])
+    if pixel_count == 0:
+        return output
+    source_dtype = np.dtype(source.dtype).name
+    source_channels = int(source.shape[2])
+    if any(index < 0 or index >= source_channels for index in channel_indices):
+        raise ValueError("raster repack channel index is outside the source layout")
+    itemsize = int(source.dtype.itemsize)
+    row_stride, column_stride, channel_stride = (np.int64(stride // itemsize) for stride in source.strides)
+    index_mode = "hwc" if source.flags.c_contiguous else "strided"
+    block_count = (pixel_count + _RASTER_REPACK_THREADS_PER_BLOCK - 1) // _RASTER_REPACK_THREADS_PER_BLOCK
+    _raster_repack_kernel(
+        source_dtype,
+        destination_dtype,
+        source_channels,
+        len(channel_indices),
+        conversion,
+        index_mode,
+    )(
+        (block_count,),
+        (_RASTER_REPACK_THREADS_PER_BLOCK,),
+        (
+            source,
+            output,
+            np.int64(pixel_count),
+            np.int64(source.shape[1]),
+            row_stride,
+            column_stride,
+            channel_stride,
+            parameter,
+            *(np.int32(index) for index in channel_indices),
+        ),
+    )
+    return output
+
+
+def _decode_raster_data(decoded: cp.ndarray, indices: tuple[int, ...], *, unchanged: bool) -> cp.ndarray:
+    dtype_name = np.dtype(decoded.dtype).name
+    if unchanged or dtype_name == "float32":
+        return _repack_raster_data(
+            decoded,
+            indices,
+            destination_dtype=dtype_name,
+            conversion="copy",
+        )
+    if dtype_name in _DTYPE_MAXIMA:
+        return _repack_raster_data(
+            decoded,
+            indices,
+            destination_dtype="float32",
+            conversion="normalize",
+            parameter=_DTYPE_MAXIMA[dtype_name],
+        )
+    if dtype_name == "float16":
+        return _repack_raster_data(
+            decoded,
+            indices,
+            destination_dtype="float32",
+            conversion="cast",
+        )
+    raise ValueError(
+        _actionable_error(
+            why="decoded raster dtype is outside the supported Frame dtype set",
+            what=dtype_name,
+            how="use an 8/16-bit integer or float32 source image",
+        )
+    )
+
+
 def _decode_raster_frame(
     source: Path | bytes,
     header: ImageHeader,
@@ -106,25 +258,11 @@ def _decode_raster_frame(
     resolved_colorspace, resolved_gamma = _resolve_metadata(header, colorspace=colorspace, gamma=gamma)
     locations = _resolve_channel_locations(header, channels)
     decoded = _read_raster_pixels(source, header)
-    indices = [tuple(header.parts[0].channels).index(channel) for _, channel, _ in locations]
-    output = decoded[..., indices]
-    if not unchanged:
-        dtype_name = str(output.dtype)
-        if dtype_name in _DTYPE_MAXIMA:
-            output = output.astype(cp.float32) / _DTYPE_MAXIMA[dtype_name]
-        elif dtype_name == "float16":
-            output = output.astype(cp.float32)
-        elif dtype_name != "float32":
-            raise ValueError(
-                _actionable_error(
-                    why="decoded raster dtype is outside the supported Frame dtype set",
-                    what=dtype_name,
-                    how="use an 8/16-bit integer or float32 source image",
-                )
-            )
+    indices = tuple(tuple(header.parts[0].channels).index(channel) for _, channel, _ in locations)
+    output = _decode_raster_data(decoded, indices, unchanged=unchanged)
     output_labels = tuple(label for _, _, label in locations)
     return Frame(
-        data=cp.ascontiguousarray(output),
+        data=output,
         colorspace=resolved_colorspace,
         gamma=resolved_gamma,
         channels=output_labels,
@@ -173,7 +311,7 @@ def _validate_new_format_layout(
         )
 
 
-def _raster_write_data(frame: Frame) -> cp.ndarray:
+def _raster_write_data(frame: Frame, *, format_name: str) -> cp.ndarray:
     canonical = {
         frozenset(("R", "G", "B")): ("R", "G", "B"),
         frozenset(("R", "G", "B", "A")): ("R", "G", "B", "A"),
@@ -188,8 +326,18 @@ def _raster_write_data(frame: Frame) -> cp.ndarray:
                 how="select and order standard output channels before writing",
             )
         )
-    indices = [frame.channels.index(label) for label in canonical]
-    return cp.ascontiguousarray(frame.data[..., indices])
+    indices = tuple(frame.channels.index(label) for label in canonical)
+    source_dtype = frame.dtype.name
+    destination_dtype = (
+        source_dtype if source_dtype in _WRITE_NATIVE_DTYPES[format_name] else _WRITE_DEFAULT_DTYPES[format_name]
+    )
+    return _repack_raster_data(
+        frame.data,
+        indices,
+        destination_dtype=destination_dtype,
+        conversion="copy" if source_dtype == destination_dtype else "recode",
+        parameter=_recode_dtype_parameter(source_dtype, destination_dtype),
+    )
 
 
 def _validate_raster_encode_options(
@@ -224,13 +372,13 @@ def _validate_raster_encode_options(
                 how="omit compression or select TIFF output",
             )
         )
-    if compression is not None and (type(compression) is not str or compression not in _TIFF_COMPRESSION_TOKENS):
-        raise ValueError(
-            _actionable_error(
-                why="TIFF compression is not a supported token",
-                what=repr(compression),
-                how=f"use one of {_TIFF_COMPRESSION_TOKENS!r}",
-            )
+    if compression is not None:
+        compression = _normalized_closed_token(
+            compression,
+            axis="compression",
+            accepted=_TIFF_COMPRESSION_TOKENS,
+            why="TIFF compression is not a supported token",
+            how=f"use one of the canonical tokens {_TIFF_COMPRESSION_TOKENS!r}",
         )
     if compression_level is not None and format_name != "PNG":
         raise ValueError(
@@ -302,7 +450,6 @@ def _encode_raster(
         compression_level=compression_level,
         lossless=lossless,
     )
-    write_frame = _prepare_write_frame(format_name, frame)
     try:
         from nvidia import nvimgcodec
 
@@ -316,7 +463,7 @@ def _encode_raster(
             parameter_options["jpeg2k_encode_params"] = nvimgcodec.Jpeg2kEncodeParams(bitstream_type=bitstream_type)
         params = nvimgcodec.EncodeParams(**parameter_options) if parameter_options else None
         encoded = nvimgcodec.Encoder().encode(
-            _raster_write_data(write_frame),
+            _raster_write_data(frame, format_name=format_name),
             _ENCODE_CODEC_EXTENSIONS[format_name],
             params=params,
         )

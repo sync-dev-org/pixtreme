@@ -180,7 +180,7 @@ def test_quality_metrics_reject_non_frame_and_non_float32_inputs_actionably(name
         ("channel count", lambda: _frame(np.zeros((11, 12, 2), dtype=np.float32), channels="RG")),
         ("channels", lambda: _frame(np.zeros((11, 12, 3), dtype=np.float32), channels="BGR")),
         ("colorspace", lambda: _frame(np.zeros((11, 12, 3), dtype=np.float32), colorspace="sRGB")),
-        ("gamma", lambda: _frame(np.zeros((11, 12, 3), dtype=np.float32), gamma="srgb")),
+        ("gamma", lambda: _frame(np.zeros((11, 12, 3), dtype=np.float32), gamma="sRGB")),
         ("matrix", lambda: _frame(np.zeros((11, 12, 3), dtype=np.float32), matrix="native")),
     ),
 )

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from functools import lru_cache
-from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -20,10 +19,10 @@ from pixtreme._core.vocabulary import _REFERENCE_WHITE_TOKENS, ReferenceWhite
 _Float64Matrix = NDArray[np.float64]
 
 _REFERENCE_WHITE_COORDINATES: Mapping[ReferenceWhite, tuple[float, float]] = {
-    "d65": (0.3127, 0.3290),
-    "d93": (0.2831, 0.2971),
-    "d50": (0.3457, 0.3585),
-    "aces": (0.32168, 0.33767),
+    "D65": (0.3127, 0.3290),
+    "D93": (0.2831, 0.2971),
+    "D50": (0.3457, 0.3585),
+    "ACES": (0.32168, 0.33767),
 }
 
 
@@ -51,7 +50,7 @@ def _resolve_reference_white(value: object, *, name: str) -> tuple[float, float]
             why=f"{name} must be a documented reference-white token or CIE 1931 xy pair",
             how=f"pass {name} as one of {_REFERENCE_WHITE_TOKENS!r} or as a valid (x, y) pair",
         )
-        return _REFERENCE_WHITE_COORDINATES[cast(ReferenceWhite, token)]
+        return _REFERENCE_WHITE_COORDINATES[token]
     return _validate_xy(value, name=name)
 
 

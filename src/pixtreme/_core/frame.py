@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from functools import lru_cache
-from typing import cast
+from typing import TypeVar, cast
 
 import cupy as cp
 import numpy as np
 from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
 
 from pixtreme._core.errors import _actionable_error as _actionable_error
+from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._core.value_domain import _float32_conversion_guidance
 from pixtreme._core.vocabulary import (
     _COLORSPACE_TOKENS as _COLORSPACE_TOKENS,
@@ -24,6 +25,11 @@ from pixtreme._core.vocabulary import (
 from pixtreme._core.vocabulary import _LAYOUT_TOKENS as _LAYOUT_TOKENS
 from pixtreme._core.vocabulary import (
     _MATRIX_TOKENS as _MATRIX_TOKENS,
+)
+from pixtreme._core.vocabulary import (
+    Colorspace,
+    Gamma,
+    Matrix,
 )
 
 _CHANNEL_LABELS = ("R", "G", "B", "H", "S", "V", "A", "Y", "Cb", "Cr", "Z")
@@ -108,16 +114,11 @@ def channels(value: ChannelInput) -> tuple[str, ...]:
 _normalize_channels = channels
 
 
-def _validate_token(value: str, *, axis: str, accepted: tuple[str, ...]) -> str:
-    if value not in accepted:
-        raise ValueError(
-            _actionable_error(
-                why=f"{axis} accepts only canonical case-sensitive tokens",
-                what=f"received {axis}={value!r}",
-                how=f"pass {axis}=<token> with one of {accepted!r}",
-            )
-        )
-    return value
+_Token = TypeVar("_Token", bound=str)
+
+
+def _validate_token(value: object, *, axis: str, accepted: tuple[_Token, ...]) -> _Token:
+    return _normalized_closed_token(value, axis=axis, accepted=accepted)
 
 
 class Frame(BaseModel):
@@ -132,10 +133,10 @@ class Frame(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid", validate_assignment=True)
 
     data: cp.ndarray
-    colorspace: str
-    gamma: str
+    colorspace: Colorspace
+    gamma: Gamma
     channels: tuple[str, ...]
-    matrix: str | None = None
+    matrix: Matrix | None = None
 
     @field_validator("data")
     @classmethod
@@ -190,19 +191,19 @@ class Frame(BaseModel):
             )
         return contiguous
 
-    @field_validator("colorspace")
+    @field_validator("colorspace", mode="before")
     @classmethod
-    def _validate_colorspace(cls, value: str) -> str:
+    def _validate_colorspace(cls, value: object) -> Colorspace:
         return _validate_token(value, axis="colorspace", accepted=_COLORSPACE_TOKENS)
 
-    @field_validator("gamma")
+    @field_validator("gamma", mode="before")
     @classmethod
-    def _validate_gamma(cls, value: str) -> str:
+    def _validate_gamma(cls, value: object) -> Gamma:
         return _validate_token(value, axis="gamma", accepted=_GAMMA_TOKENS)
 
-    @field_validator("matrix")
+    @field_validator("matrix", mode="before")
     @classmethod
-    def _validate_matrix(cls, value: str | None) -> str | None:
+    def _validate_matrix(cls, value: object) -> Matrix | None:
         return None if value is None else _validate_token(value, axis="matrix", accepted=_MATRIX_TOKENS)
 
     @field_validator("channels", mode="before")

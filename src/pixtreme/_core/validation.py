@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from functools import lru_cache
 from numbers import Real
 from typing import TypeVar, cast
 
@@ -10,8 +11,10 @@ import cupy as cp
 import numpy as np
 
 from pixtreme._core.errors import _actionable_error
+from pixtreme._core.vocabulary import _PERMANENT_TOKEN_ALIASES
 
-_Token = TypeVar("_Token")
+_Token = TypeVar("_Token", bound=str)
+_TOKEN_KEY_TRANSLATION = str.maketrans("", "", " .-_")
 
 
 def _finite_real(value: object, *, name: str) -> float:
@@ -164,18 +167,75 @@ def _closed_token_error(
 ) -> ValueError:
     return ValueError(
         _actionable_error(
-            why=f"{axis} is a closed, case-sensitive token axis" if why is None else why,
+            why=f"{axis} is a closed token axis with case-insensitive separator-normalized matching"
+            if why is None
+            else why,
             what=f"received {axis}={value!r}",
-            how=f"pass one of {accepted!r}" if how is None else how,
+            how=(f"pass one of {accepted!r}" if how is None else how),
         )
     )
+
+
+def _token_key(value: str) -> str:
+    """Return the runtime comparison key for one closed token spelling."""
+    return value.translate(_TOKEN_KEY_TRANSLATION).casefold()
+
+
+@lru_cache(maxsize=None)
+def _canonical_token_map(accepted: tuple[str, ...]) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for canonical in accepted:
+        key = _token_key(canonical)
+        previous = mapping.setdefault(key, canonical)
+        if previous != canonical:
+            raise RuntimeError(f"canonical token key collision: {previous!r} and {canonical!r} both resolve to {key!r}")
+    return mapping
+
+
+@lru_cache(maxsize=None)
+def _permanent_alias_map(accepted: tuple[str, ...]) -> dict[str, str]:
+    canonical_keys = _canonical_token_map(accepted)
+    aliases: dict[str, str] = {}
+    for alias, canonical in _PERMANENT_TOKEN_ALIASES:
+        if canonical not in accepted:
+            continue
+        key = _token_key(alias)
+        if key in canonical_keys:
+            raise RuntimeError(f"permanent alias {alias!r} shadows canonical token {canonical_keys[key]!r}")
+        previous = aliases.setdefault(key, canonical)
+        if previous != canonical:
+            raise RuntimeError(
+                f"permanent alias key collision: {previous!r} and {canonical!r} both resolve from {key!r}"
+            )
+    return aliases
+
+
+def _canonical_closed_token(
+    value: object,
+    *,
+    axis: str,
+    accepted: tuple[_Token, ...],
+    why: str | None,
+    how: str | None,
+) -> _Token:
+    if not isinstance(value, str):
+        raise _closed_token_error(value, axis=axis, accepted=accepted, why=why, how=how)
+    key = _token_key(value)
+    if not key:
+        raise _closed_token_error(value, axis=axis, accepted=accepted, why=why, how=how)
+    canonical = _canonical_token_map(accepted).get(key)
+    if canonical is None:
+        canonical = _permanent_alias_map(accepted).get(key)
+    if canonical is None:
+        raise _closed_token_error(value, axis=axis, accepted=accepted, why=why, how=how)
+    return cast(_Token, canonical)
 
 
 def _closed_token(
     value: _Token,
     *,
     axis: str,
-    accepted: tuple[str, ...],
+    accepted: tuple[_Token, ...],
     why: str | None = None,
     how: str | None = None,
 ) -> _Token:
@@ -188,21 +248,19 @@ def _normalized_closed_token(
     value: object,
     *,
     axis: str,
-    accepted: tuple[str, ...],
+    accepted: tuple[_Token, ...],
     why: str | None = None,
     how: str | None = None,
-) -> str:
-    return str(_closed_token(value, axis=axis, accepted=accepted, why=why, how=how))
+) -> _Token:
+    return _canonical_closed_token(value, axis=axis, accepted=accepted, why=why, how=how)
 
 
 def _closed_str_token(
     value: object,
     *,
     axis: str,
-    accepted: tuple[str, ...],
+    accepted: tuple[_Token, ...],
     why: str | None = None,
     how: str | None = None,
-) -> str:
-    if not isinstance(value, str) or value not in accepted:
-        raise _closed_token_error(value, axis=axis, accepted=accepted, why=why, how=how)
-    return value
+) -> _Token:
+    return _canonical_closed_token(value, axis=axis, accepted=accepted, why=why, how=how)

@@ -6,6 +6,7 @@ import numpy as np
 
 from pixtreme._core.border import _resolve_border
 from pixtreme._core.frame import Frame, _new_frame, _validate_float32_frame
+from pixtreme._core.vocabulary import Border
 from pixtreme._filter.common import _validate_amount
 from pixtreme._filter.derivative import laplacian
 
@@ -14,7 +15,7 @@ def sharpen(
     frame: Frame,
     *,
     amount: float,
-    border: str = "mirror",
+    border: Border = "mirror",
     border_value: float | None = None,
 ) -> Frame:
     """Sharpen a float32 Frame with ``input - amount * laplacian(input)``.
