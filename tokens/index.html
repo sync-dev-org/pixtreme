@@ -25,7 +25,7 @@
     
     
       
-        <title>Token Reference - pixtreme 1.3.0</title>
+        <title>Token Reference - pixtreme 1.4.0</title>
       
     
     
@@ -84,7 +84,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="pixtreme 1.3.0" class="md-header__button md-logo" aria-label="pixtreme 1.3.0" data-md-component="logo">
+    <a href=".." title="pixtreme 1.4.0" class="md-header__button md-logo" aria-label="pixtreme 1.4.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -98,7 +98,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            pixtreme 1.3.0
+            pixtreme 1.4.0
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -194,13 +194,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="pixtreme 1.3.0" class="md-nav__button md-logo" aria-label="pixtreme 1.3.0" data-md-component="logo">
+    <a href=".." title="pixtreme 1.4.0" class="md-nav__button md-logo" aria-label="pixtreme 1.4.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    pixtreme 1.3.0
+    pixtreme 1.4.0
   </label>
   
     <div class="md-nav__source">
@@ -1988,7 +1988,8 @@ subset named by the receiving parameter; it never crosses into another family. N
 unknown values raise <code>ValueError</code> before backend processing, with canonical recovery candidates.</p>
 <p>Every accepted spelling is normalized at the public boundary. Frame metadata, return values, object representations,
 defaults, and error recovery candidates use canonical output. The <code>what</code> field of an error preserves the raw rejected
-input. The 30 earlier spellings listed below are permanent aliases, so existing runtime calls remain valid.
+input. The 30 named closed-token families contain 188 canonical tokens, including 27 Colorspace and 33 Gamma tokens.
+The 30 earlier spellings listed below are permanent aliases, so existing runtime calls remain valid.
 Channel sequences are the only open-vocabulary exception: they may contain application-defined labels not listed here.</p>
 <h2 id="literal-aliases-and-synchronization-contract">Literal aliases and synchronization contract</h2>
 <p>Closed-vocabulary aliases use PascalCase and map to the sections below. When multiple APIs accept subsets of one
@@ -2585,6 +2586,18 @@ it may explicitly pass a CuPy view created with <code>cp.from_dlpack(tensor)</co
 <td>Extend the piecewise low power and high logarithmic branches naturally with sign; scene-referred broadcast HDR transfer</td>
 </tr>
 <tr>
+<td><code>ACEScc</code></td>
+<td>ACES logarithmic grading transfer</td>
+<td>Academy S-2014-003</td>
+<td>Applies the three published AP1 branches directly to scene-linear components; all nonpositive inputs collapse to one encoded value; decode extends analytically above 65504 without clipping; select <code>ACEScg</code> separately for the standard AP1 combination</td>
+</tr>
+<tr>
+<td><code>ACEScct</code></td>
+<td>ACES logarithmic grading transfer with linear toe</td>
+<td>Academy S-2016-001</td>
+<td>Applies the published AP1 linear and logarithmic branches directly, including an unbounded negative linear toe; decode extends analytically above 65504 without clipping; select <code>ACEScg</code> separately for the standard AP1 combination</td>
+</tr>
+<tr>
 <td><code>S-Log</code></td>
 <td>S-Log camera log transfer</td>
 <td>Sony S-Log whitepaper; Sony S-Log2 technical paper (decoder branch)</td>
@@ -2639,6 +2652,72 @@ it may explicitly pass a CuPy view created with <code>cp.from_dlpack(tensor)</co
 <td>Numerically identical to <code>Cineon</code>, including its sign-preserving mirror and zero offset, while preserving independent gamma metadata; specify colorspace independently</td>
 </tr>
 <tr>
+<td><code>Canon-Log</code></td>
+<td>Canon Log camera transfer</td>
+<td>Canon 2018 Canon Log whitepaper</td>
+<td>Maps reflectance with <code>x = r / 0.9</code>; uses the published <code>A = 0.45310179</code>, <code>B = 10.1596</code>, and <code>C = 0.12512248</code> positive and negative logarithmic branches around encoded black; no clipping or sign/magnitude mirroring; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>Canon-Log-2</code></td>
+<td>Canon Log 2 camera transfer</td>
+<td>Canon 2018 Canon Log whitepaper</td>
+<td>Maps reflectance with <code>x = r / 0.9</code>; uses the published <code>A = 0.24136077</code>, <code>B = 87.099375</code>, and <code>C = 0.092864125</code> positive and negative logarithmic branches around encoded black; no clipping or sign/magnitude mirroring; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>Canon-Log-3</code></td>
+<td>Canon Log 3 camera transfer</td>
+<td>Canon 2018 Canon Log whitepaper</td>
+<td>Maps reflectance with <code>x = r / 0.9</code>; uses published logarithmic branches outside <code>x = +/-0.014</code> and the published linear branch at both cuts; decode cuts are derived from that linear branch; no clipping or sign/magnitude mirroring; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>V-Log</code></td>
+<td>Panasonic V-Log camera transfer</td>
+<td>Panasonic V-Log/V-Gamut Reference Manual; OpenColorIO</td>
+<td>Applies the published logarithmic branch directly to reflectance <code>r</code>, without <code>r / 0.9</code> scaling; the lower branch and decode cut are tangent-derived for C1 continuity; negative values and scene overshoot extend without clipping or sign/magnitude mirroring; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>D-Log</code></td>
+<td>DJI D-Log camera transfer</td>
+<td>DJI Zenmuse X7/X9 D-Log and D-Gamut whitepapers</td>
+<td>Applies the printed linear and logarithmic branches directly to reflectance; their maximum real root defines the cut; negative values and scene overshoot extend without clipping or mirroring; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>F-Log</code></td>
+<td>Fujifilm F-Log camera transfer</td>
+<td>Fujifilm F-Log Data Sheet v1.2</td>
+<td>Applies the printed linear and logarithmic branches directly to reflectance; their maximum real root defines the cut instead of the printed threshold; negative values and scene overshoot extend without clipping or mirroring; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>F-Log2</code></td>
+<td>Fujifilm F-Log2 camera transfer</td>
+<td>Fujifilm F-Log2 Data Sheet v1.1</td>
+<td>Applies the printed linear and logarithmic branches directly to reflectance; their maximum real root defines the cut instead of the printed threshold; <code>F-Log2 C</code> uses this transfer plus <code>F-Gamut-C</code> independently</td>
+</tr>
+<tr>
+<td><code>N-Log</code></td>
+<td>Nikon N-Log camera transfer</td>
+<td>Nikon N-Log Specification Ver.1.0.0</td>
+<td>Applies Nikon's two printed branches directly to reflectance; the maximum real intersection defines the encode cut and its independently rounded encoded value defines the decode cut; the cube-root branch extends over all real values without clipping; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>L-Log</code></td>
+<td>Leica L-Log camera transfer</td>
+<td>Leica L-Log Reference Manual V1.6</td>
+<td>Applies Leica's logarithmic branch directly to reflectance and uses its tangent at the printed linear cut for a C1-continuous lower branch; negative values and scene overshoot extend without clipping; specify colorspace independently</td>
+</tr>
+<tr>
+<td><code>Apple-Log</code></td>
+<td>Apple Log camera transfer</td>
+<td>Apple Log Profile White Paper; Apple Log 2 White Paper</td>
+<td>Retains the published three branches: values below <code>R0</code> encode to zero and negative encoded values decode to <code>R0</code>; no upper clip; <code>Apple Log 2</code> uses this transfer plus <code>Apple-Wide-Gamut</code> independently</td>
+</tr>
+<tr>
+<td><code>Samsung-Log</code></td>
+<td>Samsung Log camera transfer</td>
+<td>Samsung Log White Paper</td>
+<td>Re-derives the printed lower offset from continuity at <code>xt</code>; extends the lower logarithmic branch and inverse without the published codec collapse at <code>x0</code> or encoded zero; no clipping; specify colorspace independently</td>
+</tr>
+<tr>
 <td><code>Cineon</code></td>
 <td>Cineon printing-density log transfer</td>
 <td>Kodak Cineon specification</td>
@@ -2657,6 +2736,12 @@ it may explicitly pass a CuPy view created with <code>cp.from_dlpack(tensor)</co
 <td><strong>Pure power</strong>, reflected with preserved sign; numerically equivalent to the ideal-black <code>BT.1886</code> implementation but semantically distinct</td>
 </tr>
 <tr>
+<td><code>Gamma-2.5</code></td>
+<td>Power transfer with exponent 2.5</td>
+<td>Conventional industry value</td>
+<td>Decode with <code>sign(x) * abs(x) ** 2.5</code> and encode with <code>sign(x) * abs(x) ** 0.4</code>; 18% gray encodes to <code>0.5036269964912325</code>; no offset, piecewise branch, or clipping; Resolve numerical parity is not guaranteed because its formula is unpublished</td>
+</tr>
+<tr>
 <td><code>Gamma-2.6</code></td>
 <td>Power transfer with exponent 2.6</td>
 <td>Conventional value</td>
@@ -2664,6 +2749,32 @@ it may explicitly pass a CuPy view created with <code>cp.from_dlpack(tensor)</co
 </tr>
 </tbody>
 </table>
+<p><code>ACEScc</code> and <code>ACEScct</code> take the scene-linear component <code>x</code> directly; they do not apply the Sony/Canon <code>x = r / 0.9</code>
+normalization. They are transfer tokens, so they neither force nor infer a colorspace and contain no AP0-to-AP1
+matrix, LUT, gamut mapping, or clip. The Academy-standard pairing is <code>ACEScg</code> (AP1 primaries and ACES white) with
+either transfer. Converting <code>ACES2065-1</code> AP0 to AP1 remains an ordinary colorspace conversion.</p>
+<p>ACEScc encode is constant <code>(-16 + 9.72) / 17.52 = -0.35844748858447484</code> for <code>x &lt;= 0</code>, is
+<code>(log2(2^-16 + x / 2) + 9.72) / 17.52</code> for <code>0 &lt; x &lt; 2^-15</code>, and is
+<code>(log2(x) + 9.72) / 17.52</code> for <code>x &gt;= 2^-15</code>. Zero belongs to the constant branch and <code>2^-15</code> to the upper log
+branch. Decode uses <code>2 * (2 ** (17.52*y - 9.72) - 2^-16)</code> through
+<code>y = (9.72 - 15) / 17.52 = -0.3013698630136986</code>, and <code>2 ** (17.52*y - 9.72)</code> above it. Encoded <code>0</code> and <code>1</code>
+decode to <code>0.0011857371917920374</code> and <code>222.8609442038076</code>. Its anchors for linear
+<code>0 / 2^-15 / 0.0078125 / 0.18 / 1 / 65504</code> are respectively
+<code>-0.35844748858447484 / -0.3013698630136986 / 0.15525114155251146 / 0.4135884024924423 /
+0.5547945205479452 / 1.4679963120447153</code>. Nonpositive encode input is intentionally many-to-one; use <code>ACEScct</code>
+when negative components must remain distinct. Round-trip is guaranteed only for finite, representable positive
+linear inputs and encoded inputs at or above the constant anchor.</p>
+<p>ACEScct encode is <code>10.5402377416545*x + 0.0729055341958355</code> through <code>x = 0.0078125</code> and
+<code>(log2(x) + 9.72) / 17.52</code> above it. Decode is <code>(y - 0.0729055341958355) / 10.5402377416545</code> through
+<code>y = 0.155251141552511</code> and <code>2 ** (17.52*y - 9.72)</code> above it. Its anchors at the same six linear inputs are
+<code>0.0729055341958355 / 0.07322719672457251 / 0.1552511415525113 / 0.4135884024924423 /
+0.5547945205479452 / 1.4679963120447153</code>; encoded <code>1</code> decodes to <code>222.8609442038076</code>. The Academy public decimal
+constants leave an encode cut residual of about <code>1.67e-16</code>, a decode cut residual of about <code>1.56e-17</code>, and an encode
+slope difference of about <code>2.67e-14</code>. They are retained verbatim. Float32 evaluation may therefore contain one
+cross-cut inversion of at most 1 ULP in ACEScct decode. Its finite, representable signed domain round-trips.</p>
+<p>Both ACES decoders deliberately omit Academy's normative upper clip at linear 65504 and continue the logarithmic
+branch beyond encoded <code>1.4679963120447153</code>; this no-upper-clip extension preserves pixtreme scene values and does not
+claim Academy parity outside the normative domain.</p>
 <p>S-Log / S-Log2 / S-Log3 apply their lower linear branches directly to signed inputs. S-Log and S-Log2 use
 <code>x = r / 0.9</code> to convert public scene-linear reflectance to Sony's older scene-linear IRE basis, then embed Sony
 encoded IRE with <code>e = (64 + 876 * y) / 1023</code>. S-Log3 instead uses its published reflection-to-full-range-code
@@ -2696,6 +2807,109 @@ difference at the boundary is retained; negative values and scene overshoot are 
 canonical metadata. Its black CV is 95, white CV is 685, density per code is 0.002, film gamma is 0.6, and derived
 black offset is <code>0.0107977516232771</code>. Scene-linear <code>0 / 0.18 / 1</code> encodes to <code>0.0928641251 / 0.4573196131 /
 0.6695992180</code>. Zero maps to the positive black offset, while the negative-side limit approaches its negative.</p>
+<p>The three Canon transfers convert pixtreme scene-linear reflectance <code>r</code> to the Canon equation coordinate with
+<code>x = r / 0.9</code>; encoded <code>y</code> is full-range normalized. <code>Canon-Log</code> uses <code>A = 0.45310179</code>, <code>B = 10.1596</code>, and
+<code>C = 0.12512248</code>: <code>y = A * log10(1 + B * x) + C</code> for nonnegative <code>x</code>, and
+<code>y = -A * log10(1 - B * x) + C</code> below zero. Its 0% / 18% / 90% / 720% reflectance anchors round to 10-bit
+codes <code>128 / 351 / 614 / 1016</code>. <code>Canon-Log-2</code> uses the same two-branch structure with <code>A = 0.24136077</code>,
+<code>B = 87.099375</code>, and <code>C = 0.092864125</code>; its 0% / 18% / 90% / 5760% anchors round to
+<code>95 / 407 / 575 / 1020</code>. Decode branches turn at each curve's encoded <code>C</code> value.</p>
+<p><code>Canon-Log-3</code> uses <code>A = 0.36726845</code>, <code>B = 14.98325</code>, <code>M = 1.9754798</code>, <code>C = 0.12512219</code>,
+<code>C_POS = 0.12240537</code>, <code>C_NEG = 0.12783901</code>, and <code>LINEAR_CUT = 0.014</code>. The linear branch
+<code>y = M * x + C</code> includes both cuts; the published positive and negative log branches own values outside them.
+Decode derives its thresholds from the linear branch as <code>C - M * LINEAR_CUT = 0.0974654728</code> and
+<code>C + M * LINEAR_CUT = 0.1527789072</code>. Its 0% / 18% / 90% / 1440% anchors round to
+<code>128 / 351 / 577 / 1020</code>. The printed constants are not adjusted to erase their roughly <code>2.56e-9</code> cut-value
+difference. All three curves apply the published branches directly to negative and above-one values without clipping
+or sign/magnitude mirroring. The guarantee covers pixels already represented by these public curves; <code>Canon Raw</code>,
+Cinema RAW Light decoding, and recovery of proprietary capture gamuts or OETFs are outside the token contract.</p>
+<p><code>V-Log</code> applies Panasonic's equation directly to scene-linear reflectance <code>r</code>, so 18% gray is <code>r = 0.18</code> and no
+<code>r / 0.9</code> scaling is used. The logarithmic branch has <code>A = 0.241514</code>, <code>B = 0.00873</code>, <code>C = 0.598206</code>, and
+<code>LINEAR_CUT = 0.01</code>. Its tangent-derived lower branch uses <code>M = 5.60001054470806</code> and
+<code>D = 0.124999583317922</code>; decode changes to the inverse logarithmic branch at
+<code>ENCODED_CUT = 0.180999688765003</code>, with equality on the logarithmic side. This continuous definition is identical
+to current OpenColorIO. Panasonic's printed <code>5.6 / 0.125 / 0.181</code> branch, the vendor IDT, and the ACES CSC are
+auxiliary comparisons and are not bit-parity targets. The float32 logarithm may leave a one-ULP reversal at the cut,
+but the normative float64 definition is C1 continuous. Negative values use the lower branch without a bound, and
+scene overshoot remains unclipped. The 0% / 18% / 90% anchors round to 10-bit full-range codes <code>128 / 433 / 602</code>.
+External labels such as <code>Panasonic V-Log</code>, the combined <code>Panasonic V-Gamut/V-Log</code> and <code>V-Log V-Gamut</code> labels, and
+the limited-range <code>V-Log L</code> name are outside the token and alias guarantee.</p>
+<p><code>D-Log</code>, <code>F-Log</code>, and <code>F-Log2</code> take scene-linear reflectance <code>r</code> directly: 18% gray is <code>0.18</code>, with no <code>r / 0.9</code>
+scaling. Each uses <code>y = e*r + f</code> below <code>X</code> and <code>y = c*log10(a*r + b) + d</code> at and above <code>X</code>. Decode uses
+<code>(y - f) / e</code> below <code>ENC_CUT</code> and <code>(10 ** ((y - d) / c) - b) / a</code> at and above it. In each case <code>X</code> is the
+maximum real root, within the logarithm's domain, where the two printed branches intersect; <code>ENC_CUT</code> is the same
+intersection's encoded value. The production binary64 literals are:</p>
+<table>
+<thead>
+<tr>
+<th>Transfer</th>
+<th><code>(a, b, c, d, e, f)</code></th>
+<th style="text-align: right;"><code>X</code></th>
+<th style="text-align: right;"><code>ENC_CUT</code></th>
+<th>0% / 18% / 90% 10-bit anchor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D-Log</td>
+<td><code>(0.9892, 0.0108, 0.256663, 0.584555, 6.025, 0.0929)</code></td>
+<td style="text-align: right;"><code>0.007827156200341792</code></td>
+<td style="text-align: right;"><code>0.1400586161070593</code></td>
+<td><code>95 / 408 / 586</code></td>
+</tr>
+<tr>
+<td>F-Log</td>
+<td><code>(0.555556, 0.009468, 0.344676, 0.790453, 8.735631, 0.092864)</code></td>
+<td style="text-align: right;"><code>0.0005663467969879701</code></td>
+<td style="text-align: right;"><code>0.09781139663651882</code></td>
+<td><code>95 / 470 / 705</code></td>
+</tr>
+<tr>
+<td>F-Log2</td>
+<td><code>(5.555556, 0.064829, 0.245281, 0.384316, 8.799461, 0.092864)</code></td>
+<td style="text-align: right;"><code>0.0008888881429483923</code></td>
+<td style="text-align: right;"><code>0.10068573654723681</code></td>
+<td><code>95 / 400 / 570</code></td>
+</tr>
+</tbody>
+</table>
+<p>The two branch formulae are retained as printed, but the printed cuts (<code>0.0078 / 0.14</code>, <code>0.00089 /
+0.100537775223865</code>, and <code>0.000889 / 0.100686685370811</code>) are not production thresholds. <code>ENC_CUT</code> is rounded
+independently from the abstract intersection rather than recomputed from the binary64 <code>X</code> literal. Negative input
+uses the linear branch without a lower bound; values above 1 use the logarithmic branch without an upper bound.
+There is no clip or sign/magnitude mirror. The float32 cut-window contract bounds the maximum downward excursion by
+<code>4e-7</code> for encode and <code>3e-8</code> for decode; abstract real-valued curves remain continuous and strictly increasing.
+DJI's rounded inverse, ACES CTL, OpenColorIO-Config-ACES, Fujifilm IDTs, and implementations using printed or
+tangent-derived cuts are comparison sources, not bit-parity targets.</p>
+<p><code>N-Log</code>, <code>L-Log</code>, <code>Apple-Log</code>, and <code>Samsung-Log</code> take scene-linear reflectance directly, so 18% gray is <code>0.18</code> and
+no Sony/Canon <code>r / 0.9</code> scaling is applied. Branch equality belongs to each upper branch, and the production
+threshold literals are used directly in float32 kernels rather than being recomputed from rounded input cuts.</p>
+<p><code>N-Log</code> encodes below <code>X = 0.3784157394368526</code> with <code>650*cbrt(r + 0.0075)/1023</code> and otherwise with
+<code>(150*ln(r) + 619)/1023</code>. Decode changes from the cubic inverse to the exponential inverse at
+<code>ENC_CUT = 0.4625960144726521</code>. The signed real cube root extends below <code>r = -0.0075</code>, where encoded zero occurs;
+there is no clip or mirror. The maximum-real-root intersection, rather than Nikon's printed <code>0.328 / 452</code> cuts or
+the smaller root, is the numeric identity. The 0% / 18% / 90% / 100% code anchors are
+<code>127.233198337988 / 372.032128829833 / 603.195922651326 / 619</code>.</p>
+<p><code>L-Log</code> keeps the published logarithmic branch and its <code>0.006</code> input cut. Its tangent-derived lower branch uses
+<code>M = 7.898308971401108</code> and <code>D = 0.08971061960369227</code>; decode changes branches at
+<code>ENC_CUT = 0.1371004734320989</code>. Both branches extend without clipping. This C1 definition intentionally has
+non-parity with Leica's printed <code>8 / 0.09 / 0.1380</code> lower segment and the current ACES CTL. Its 0% / 2% / 18% / 90%
+production code anchors are <code>91.7739638545772 / 219.933176459073 / 445.326123836937 / 633.806919449728</code>.</p>
+<p><code>Apple-Log</code> keeps the public constants <code>R0 = -0.05641088</code>, <code>Rt = 0.01</code>, <code>c = 47.28711236</code>,
+<code>beta = 0.00964052</code>, <code>gamma = 0.08550479</code>, and <code>delta = 0.69336945</code>. Its quadratic-to-log encode cut is <code>Rt</code> and
+its square-root-to-exponential decode cut is <code>Pt = 0.20855531595464208</code>. Encode below <code>R0</code> collapses to zero and
+decode below zero collapses to <code>R0</code>; those many-to-one regions remain part of the one-way definition. There is no
+upper clip. OpenColorIO and ACES use the same branches, but differing evaluation, LUT, range, and adaptation paths
+are not bit-parity guarantees. Apple Log 2 is represented by <code>Apple-Wide-Gamut</code> plus <code>Apple-Log</code>.</p>
+<p><code>Samsung-Log</code> uses <code>xt = 0.01</code> and upper coefficients <code>0.258984868 / 0.0003645 / 0.720504856</code>. Its lower branch
+uses <code>-0.20942 / 0.016904</code> with the continuity-derived <code>G2 = -0.245973605190997</code>; decode changes branches at
+<code>YT = 0.20656190889447099</code>. The lower logarithmic branch and its inverse extend to all finite signed inputs without
+the vendor's <code>x0 = -0.05</code> or encoded-zero codec collapse. The 0% / 1% / 18% / 90% / 1200% production code anchors
+are <code>127.998620 / 211.312832799044 / 539.999999481018 / 724.999999524348 / 1022.99988230712</code>.
+The printed <code>g2 / yt</code>, codec clipping, and vendor evaluation are explicit non-parity targets.</p>
+<p>Nikon N-Log, Leica L-Log, Apple Log, and Samsung Log publish Rec.2020 primaries with D65, represented by selecting
+the existing <code>Rec.2020</code> colorspace independently. The Leica SL Rec.709 combination is <code>Rec.709</code> plus <code>L-Log</code>.
+Vendor-prefixed, combined, and invented gamut labels are not aliases.</p>
 <p><code>BT.1886</code> remains a standards-meaning token distinct from the conventional <code>Gamma-2.4</code> power token. pixtreme fixes
 the BT.1886 white-normalized EOTF to the Annex 1 ideal-black specialization instead of accepting display-luminance
 parameters. Decode and encode are therefore bit-equivalent to <code>Gamma-2.4</code> across the sign-preserving extension, while
@@ -2864,6 +3078,30 @@ and usage contexts differ.</p>
 <td>Specify the HDR transfer separately with gamma</td>
 </tr>
 <tr>
+<td><code>P3-DCI</code></td>
+<td>P3 primaries and DCI calibration white</td>
+<td>SMPTE RP 431-2</td>
+<td>Uses white <code>(0.3140, 0.3510)</code>; selected independently from transfer</td>
+</tr>
+<tr>
+<td><code>P3-D60</code></td>
+<td>P3 primaries and ACES white</td>
+<td>OpenColorIO built-in / ACES canonical config</td>
+<td>Production white is <code>(0.32168, 0.33767)</code>; SMPTE EG 432-1's nominal four-decimal D60 is only an auxiliary comparison, and Resolve parity is not guaranteed</td>
+</tr>
+<tr>
+<td><code>P3-D65</code></td>
+<td>P3 primaries and D65 white</td>
+<td>SMPTE EG 432-1</td>
+<td>Use with the independent <code>sRGB</code> transfer to represent Display P3 values; <code>Display P3</code> is not an alias</td>
+</tr>
+<tr>
+<td><code>SMPTE-C</code></td>
+<td>SMPTE-C primaries and D65 white</td>
+<td>ITU-T H.273 ColourPrimaries 6</td>
+<td>Not 1953 NTSC primaries or white C; <code>SMPTE 170M</code> and <code>NTSC</code> are not aliases</td>
+</tr>
+<tr>
 <td><code>ACES2065-1</code></td>
 <td>ACES AP0 primaries and ACES white</td>
 <td>SMPTE ST 2065-1</td>
@@ -2953,12 +3191,66 @@ and usage contexts differ.</p>
 <td>ACES 1.0.3 OpenColorIO config</td>
 <td>Scene-referred gamut reconstructed from the published RGB-to-ACES2065-1 matrix; selected independently from gamma</td>
 </tr>
+<tr>
+<td><code>Canon-Cinema-Gamut</code></td>
+<td>Canon Cinema Gamut primaries and D65 white</td>
+<td>Canon Cinema Gamut and Canon Log whitepaper</td>
+<td>Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; Canon Raw decoding is outside the guarantee</td>
+</tr>
+<tr>
+<td><code>V-Gamut</code></td>
+<td>Panasonic V-Gamut primaries and D65 white</td>
+<td>Panasonic V-Log/V-Gamut Reference Manual</td>
+<td>Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; vendor-prefixed and combined external labels are not aliases</td>
+</tr>
+<tr>
+<td><code>D-Gamut</code></td>
+<td>DJI D-Gamut primaries and D65 white</td>
+<td>DJI Zenmuse X7/X9 D-Log and D-Gamut whitepapers</td>
+<td>Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; <code>DJI D-Gamut</code> and <code>D-Log M</code> are not aliases</td>
+</tr>
+<tr>
+<td><code>F-Gamut-C</code></td>
+<td>Fujifilm F-Gamut-C primaries and D65 white</td>
+<td>Fujifilm F-Log2 C IDT v1.10</td>
+<td>Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; <code>F-Log2 C</code> is represented by this gamut plus <code>F-Log2</code></td>
+</tr>
+<tr>
+<td><code>Apple-Wide-Gamut</code></td>
+<td>Apple Wide Gamut primaries and D65 white</td>
+<td>Apple Log 2 White Paper Ver.1.1</td>
+<td>Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; <code>Apple Log 2</code> is represented by this gamut plus <code>Apple-Log</code></td>
+</tr>
 </tbody>
 </table>
 <p><code>px.color.rgb_to_rgb</code> constructs normalized primary matrices from the published RGB primaries and white point in each
 row. Conversions between different white points, such as D65 and ACES white, use the <strong>Bradford</strong> CAT. A colorspace
 conversion between sRGB and Rec.709 is the identity because their primaries and white point match. This is a technical
 conversion and does not include a tone scale or display rendering.</p>
+<p>The three P3 tokens share R <code>(0.680, 0.320)</code>, G <code>(0.265, 0.690)</code>, and B <code>(0.150, 0.060)</code>. Their production whites
+are DCI <code>(0.3140, 0.3510)</code>, ACES <code>(0.32168, 0.33767)</code>, and D65 <code>(0.3127, 0.3290)</code>. Coordinate-derived normalized
+RGB-to-XYZ matrices are:</p>
+<pre><code class="language-text">P3-DCI  [[0.445169815564552, 0.277134409206778, 0.172282669815565],
+         [0.209491677912731, 0.721595254161044, 0.068913067926226],
+         [0.000000000000000, 0.047060560053981, 0.907355394361973]]
+P3-D60  [[0.504949534191744, 0.264681488895262, 0.183015051482840],
+         [0.237623310207880, 0.689170669198984, 0.073206020593136],
+         [0.000000000000000, 0.044945913208629, 0.963879271142956]]
+P3-D65  [[0.486570948648216, 0.265667693169093, 0.198217285234362],
+         [0.228974564069749, 0.691738521836506, 0.079286914093745],
+         [0.000000000000000, 0.045113381858903, 1.043944368900976]]
+</code></pre>
+<p><code>matrix="native"</code> uses each matrix's Y row. P3-D65 and other D65 gamuts convert without chromatic adaptation;
+P3-DCI and P3-D60 use Bradford when the destination white differs. P3-D60 deliberately uses the ACES white so its
+normalized XYZ white is <code>(0.95264607456985, 1, 1.00882518435159)</code>, matching OpenColorIO. EG 432-1's distinct
+<code>(0.3217, 0.3378)</code> nominal D60 and five-decimal matrix are not a second production definition. P3 tokens contain no
+transfer. Display P3 is expressed as <code>P3-D65</code> plus <code>sRGB</code>; a DCI white can be supplied directly as CIE xy to
+<code>white_point_simulation</code> or <code>chromatic_adaptation</code> without adding a <code>ReferenceWhite</code> token.</p>
+<p><code>SMPTE-C</code> uses R <code>(0.630, 0.340)</code>, G <code>(0.310, 0.595)</code>, B <code>(0.155, 0.070)</code>, and D65. Its coordinate-derived matrix is
+<code>[[0.393520903659390, 0.365258076717604, 0.191676946674678],
+[0.212376360705067, 0.701059856925723, 0.086563782369210],
+[0.018739090650447, 0.111933926736040, 0.958384733373392]]</code>; <code>native</code> uses the second row. Other D65 conversions
+use no adaptation and different whites use Bradford.</p>
 <p>S-Gamut and S-Gamut3 are numerically identical: both use R <code>(0.73, 0.28)</code>, G <code>(0.14, 0.855)</code>,
 B <code>(0.10, -0.05)</code>, and D65 <code>(0.3127, 0.3290)</code>. Their normalized primary matrices and <code>native</code> luma rows are bit
 identical. Conversion between them preserves pixel bits and updates only the canonical colorspace metadata.</p>
@@ -3024,6 +3316,44 @@ RGB-to-ACES2065-1 matrix within <code>2e-4</code>; the coordinate-derived Bradfo
 Bradford adaptation from ACES white to D65, and normalizing each primary column. Recomposition through the shared
 Bradford path agrees with the published six-decimal matrices within <code>3e-5</code>. All six RED colorspaces derive
 <code>matrix="native"</code> from the Y row of their normalized primary matrix and remain independent from gamma selection.</p>
+<p><code>Canon-Cinema-Gamut</code> uses R <code>(0.7400, 0.2700)</code>, G <code>(0.1700, 1.1400)</code>, B <code>(0.0800, -0.1000)</code>, and D65
+<code>(0.3127, 0.3290)</code>. Its production definition is these coordinates and white point, from which pixtreme constructs
+the normalized RGB-to-XYZ matrix. <code>matrix="native"</code> uses its Y row
+<code>(0.2612613575, 0.8696421458, -0.1309035033)</code>. Conversion to another D65 gamut inserts no adaptation; conversion
+to ACES white uses the shared Bradford path. The Canon-supervised public Cinema Gamut-to-ACES2065-1 matrix includes
+CAT02 and is an auxiliary cross-check only: CAT02 is not a second production definition or an alternative adaptation
+path. Canon monitoring matrices and Resolve's internal conversion are not scene-linear numeric oracles. Colorspace
+and gamma remain independently selectable.</p>
+<p><code>V-Gamut</code> uses R <code>(0.730, 0.280)</code>, G <code>(0.165, 0.840)</code>, B <code>(0.100, -0.030)</code>, and D65
+<code>(0.3127, 0.3290)</code>. Its production definition is these coordinates and white point. The normalized RGB-to-XYZ matrix
+is derived rather than stored, and <code>matrix="native"</code> uses its Y row
+<code>(0.2606855501, 0.7748944633, -0.0355800134)</code>. Conversion to another D65 gamut inserts no adaptation; conversion
+to ACES white uses the shared Bradford path. Panasonic's six-decimal RGB-to-XYZ and V-Gamut-to-BT.709 matrices and
+the current OpenColorIO Bradford V-Gamut-to-ACES2065-1 matrix are auxiliary checks, not additional production
+definitions. Panasonic's printed vendor-IDT ACES matrix uses an unspecified adaptation and is not a numeric oracle.
+<code>V-Gamut</code> and <code>V-Log</code> remain independently selectable. <code>Panasonic V-Gamut</code>, <code>Panasonic V-Log</code>,
+<code>Panasonic V-Gamut/V-Log</code>, <code>V-Log V-Gamut</code>, and <code>V-Log L</code> are not accepted aliases.</p>
+<p><code>D-Gamut</code> uses R <code>(0.71, 0.31)</code>, G <code>(0.21, 0.88)</code>, B <code>(0.09, -0.08)</code>, and D65
+<code>(0.3127, 0.3290)</code>. Its coordinate-derived normalized RGB-to-XYZ matrix has <code>native</code> Y row
+<code>(0.283004662361243, 0.813196056391736, -0.096200718752979)</code>. <code>F-Gamut-C</code> uses R <code>(0.7347, 0.2653)</code>,
+G <code>(0.0263, 0.9737)</code>, B <code>(0.1173, -0.0224)</code>, and the same D65, with <code>native</code> Y row
+<code>(0.285007008240737, 0.741945697114496, -0.026952705355233)</code>. Its red and green primaries lie on <code>x + y = 1</code>,
+so the first two elements of the normalized matrix's Z row are zero.</p>
+<p>Production stores only these primaries and D65. Conversion to another D65 gamut uses no chromatic adaptation;
+conversion to a different white uses the shared Bradford path. DJI's four-decimal D-Gamut matrices, the public
+D-Gamut-to-ACES2065-1 CAT02 matrix, and Fujifilm's F-Gamut-C IDT CAT02 matrix are auxiliary comparisons rather than
+production definitions. Colorspace and gamma stay independent. <code>F-Gamut</code> is represented by <code>Rec.2020</code> because its
+published primaries match; <code>F-Log2 C</code> is <code>F-Gamut-C</code> plus <code>F-Log2</code>. <code>DJI D-Log</code>, <code>DJI D-Gamut</code>,
+<code>Fujifilm F-Log</code>, <code>Fujifilm F-Log2</code>, <code>Fujifilm F-Gamut C</code>, <code>F-Log2 C</code>, <code>F-Log2C</code>, <code>F-Gamut</code>, <code>D-Log M</code>, and
+<code>DLogM</code> are outside the canonical token and alias guarantee.</p>
+<p><code>Apple-Wide-Gamut</code> uses R <code>(0.725, 0.301)</code>, G <code>(0.221, 0.814)</code>, B <code>(0.068, -0.076)</code>, and D65
+<code>(0.3127, 0.3290)</code>. Production stores only these coordinates and white and derives its normalized RGB-to-XYZ matrix;
+<code>matrix="native"</code> uses the Y row <code>(0.270481290386703, 0.816037258920130, -0.086518549306833)</code>. Conversion to a
+D65 gamut inserts no adaptation, while conversion to a different white uses the shared Bradford path. The current
+Apple Log 2 ACES CTL's independently derived CAT02 AWG-to-AP0 matrix is an auxiliary cross-check only and is not a
+second production definition. The CAT02 and Bradford AWG-to-AP0 matrices intentionally differ. Colorspace and gamma
+remain independent: Apple Log 2 is <code>Apple-Wide-Gamut</code> plus <code>Apple-Log</code>, while Apple Log values paired with Rec.2020
+are represented as <code>Rec.2020</code> plus <code>Apple-Log</code>.</p>
 <h2 id="golden-path">golden path</h2>
 <p>The recommended working state is <strong>ACEScg, linear, full-range, float32</strong>, preserving negative values and overshoots
 above 1.0. This golden path is a recommendation, not a requirement. It does not apply to non-color channels such as Z,
@@ -3277,6 +3607,31 @@ to which <code>native</code> resolves.</p>
 <td><code>REDcolor4</code></td>
 <td><code>(0.2088065893, 0.7220385248, 0.0691548859)</code></td>
 <td>REDcolor4 own-row</td>
+</tr>
+<tr>
+<td><code>Canon-Cinema-Gamut</code></td>
+<td><code>(0.2612613575, 0.8696421458, -0.1309035033)</code></td>
+<td>Canon Cinema Gamut own-row</td>
+</tr>
+<tr>
+<td><code>V-Gamut</code></td>
+<td><code>(0.2606855501, 0.7748944633, -0.0355800134)</code></td>
+<td>Panasonic V-Gamut own-row</td>
+</tr>
+<tr>
+<td><code>D-Gamut</code></td>
+<td><code>(0.2830046624, 0.8131960564, -0.0962007188)</code></td>
+<td>DJI D-Gamut own-row</td>
+</tr>
+<tr>
+<td><code>F-Gamut-C</code></td>
+<td><code>(0.2850070082, 0.7419456971, -0.0269527054)</code></td>
+<td>Fujifilm F-Gamut-C own-row</td>
+</tr>
+<tr>
+<td><code>Apple-Wide-Gamut</code></td>
+<td><code>(0.2704812904, 0.8160372589, -0.0865185493)</code></td>
+<td>Apple Wide Gamut own-row</td>
 </tr>
 </tbody>
 </table>
@@ -4759,8 +5114,11 @@ then clips to <code>[0, 1]</code>, scales by the depth maximum, rounds half away
 in one GPU pass. <code>bit_depth</code> defaults to 10 and accepts only 8, 10, 12, or 16. The writer fixes orientation 0, one
 unsigned element, no compression, and Method A filled for 10- and 12-bit output. Frame gamma records <code>Cineon</code> and
 <code>REDlogFilm</code> as printing density, <code>linear</code> as linear, <code>S-Log</code>, <code>S-Log2</code>, <code>S-Log3</code>, <code>ARRI-LogC3</code>, <code>ARRI-LogC4</code>,
-<code>Blackmagic-Film-Gen-5</code>, <code>DaVinci-Intermediate</code>, and <code>RED-Log3G10</code> as logarithmic, and video or power families as
-the BT.709 transfer characteristic.</p>
+<code>Blackmagic-Film-Gen-5</code>, <code>DaVinci-Intermediate</code>, <code>RED-Log3G10</code>, <code>Canon-Log</code>, <code>Canon-Log-2</code>, <code>Canon-Log-3</code>, <code>V-Log</code>,
+<code>D-Log</code>, <code>F-Log</code>, <code>F-Log2</code>, <code>N-Log</code>, <code>L-Log</code>, <code>Apple-Log</code>, <code>Samsung-Log</code>, <code>ACEScc</code>, and <code>ACEScct</code> as logarithmic,
+and video or power families including <code>Gamma-2.5</code> as the BT.709 transfer
+characteristic. Reading those generic DPX codes returns <code>Cineon</code> for code 3 and <code>Rec.709</code> for code 6; the original
+ACES or Gamma-2.5 identity is not recoverable from that header field.</p>
 <h2 id="tiff-compression">TIFF compression</h2>
 <p>Tokens accepted by <code>compression=</code> for TIFF output from <code>px.io.encode_image</code> or <code>px.io.write_image</code>, resolved under the
 shared case-insensitive, separator-insensitive contract above.</p>
