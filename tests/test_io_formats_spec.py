@@ -14,6 +14,7 @@ import cupy as cp
 import numpy as np
 import pytest
 from PIL import Image
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -504,12 +505,10 @@ assert "OpenEXR" not in sys.modules
 
 
 def test_canonical_docs_and_vocabulary_match_the_extended_format_contract() -> None:
-    """v1-io-formats acceptance 20: requirements, feature sheets, and vocabulary share the implementation tokens."""
-    requirements_path = ROOT / "docs" / "requirements.md"
-    io_feature_path = ROOT / "docs" / "features" / "v1-io.md"
-    bytes_feature_path = ROOT / "docs" / "features" / "v1-bytes-boundary.md"
-    if not (requirements_path.is_file() and io_feature_path.is_file() and bytes_feature_path.is_file()):
-        pytest.skip("repo-only documentation contract: docs canon is absent from this distribution")
+    """v1-io-formats acceptance 20: docs share the implementation tokens. GitHub #29."""
+    requirements_path = require_repo_file("docs/requirements.md")
+    io_feature_path = require_repo_file("docs/features/v1-io.md")
+    bytes_feature_path = require_repo_file("docs/features/v1-bytes-boundary.md")
     requirements = requirements_path.read_text(encoding="utf-8")
     vocabulary = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
     io_feature = io_feature_path.read_text(encoding="utf-8")

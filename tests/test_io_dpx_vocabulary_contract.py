@@ -12,7 +12,10 @@ def test_vocabulary_documents_dpx_tokens_layout_storage_and_transfer_contracts(
     vocabulary_markdown: str,
 ) -> None:
     """v1-dpx acceptance 11; v1-sony-tokens acceptance 12; v1-arri-tokens acceptance 27 and 29;
-    v1-blackmagic-tokens acceptance 48 and 50; v1-red-tokens acceptance 70 and 72.
+    v1-blackmagic-tokens acceptance 48 and 50; v1-red-tokens acceptance 70 and 72;
+    v1-canon-tokens acceptance 91 and 93; v1-panasonic-tokens acceptance 110 and 112;
+    v1-standard-tokens acceptance 133 and 135; v1-vendor-a-tokens acceptance 159 and 161;
+    v1-vendor-b-tokens acceptance 186 and 188.
 
     Docs and code agree on the DPX boundary.
     """
@@ -35,6 +38,8 @@ def test_vocabulary_documents_dpx_tokens_layout_storage_and_transfer_contracts(
         "big-endian `SDPX`",
         "`bit_depth` defaults to 10",
         "records `Cineon` and `REDlogFilm` as printing density",
+        "`D-Log`, `F-Log`, `F-Log2`, `N-Log`, `L-Log`, `Apple-Log`, `Samsung-Log`, `ACEScc`, and `ACEScct` as logarithmic",
+        "including `Gamma-2.5` as the BT.709 transfer",
     ):
         assert fragment in dpx_boundary
 
@@ -58,7 +63,21 @@ def test_vocabulary_documents_dpx_tokens_layout_storage_and_transfer_contracts(
             "DaVinci-Intermediate",
             "RED-Log3G10",
             "REDlogFilm",
+            "Canon-Log",
+            "Canon-Log-2",
+            "Canon-Log-3",
+            "V-Log",
+            "D-Log",
+            "F-Log",
+            "F-Log2",
+            "N-Log",
+            "L-Log",
+            "Apple-Log",
+            "Samsung-Log",
+            "ACEScc",
+            "ACEScct",
             "Rec.709",
+            "Gamma-2.5",
         )
     } == {
         "Cineon": 1,
@@ -72,5 +91,19 @@ def test_vocabulary_documents_dpx_tokens_layout_storage_and_transfer_contracts(
         "DaVinci-Intermediate": 3,
         "RED-Log3G10": 3,
         "REDlogFilm": 1,
+        "Canon-Log": 3,
+        "Canon-Log-2": 3,
+        "Canon-Log-3": 3,
+        "V-Log": 3,
+        "D-Log": 3,
+        "F-Log": 3,
+        "F-Log2": 3,
+        "N-Log": 3,
+        "L-Log": 3,
+        "Apple-Log": 3,
+        "Samsung-Log": 3,
+        "ACEScc": 3,
+        "ACEScct": 3,
         "Rec.709": 6,
+        "Gamma-2.5": 6,
     }

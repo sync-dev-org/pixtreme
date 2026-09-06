@@ -9,6 +9,7 @@ from typing import Literal, get_args, get_origin, get_type_hints
 
 import cupy as cp
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -19,6 +20,10 @@ EXPECTED_VOCABULARY: dict[str, tuple[str, ...]] = {
         "sRGB",
         "Rec.709",
         "Rec.2020",
+        "P3-DCI",
+        "P3-D60",
+        "P3-D65",
+        "SMPTE-C",
         "ACES2065-1",
         "ACEScg",
         "S-Gamut",
@@ -34,6 +39,11 @@ EXPECTED_VOCABULARY: dict[str, tuple[str, ...]] = {
         "REDcolor2",
         "REDcolor3",
         "REDcolor4",
+        "Canon-Cinema-Gamut",
+        "V-Gamut",
+        "D-Gamut",
+        "F-Gamut-C",
+        "Apple-Wide-Gamut",
     ),
     "Gamma": (
         "linear",
@@ -42,6 +52,8 @@ EXPECTED_VOCABULARY: dict[str, tuple[str, ...]] = {
         "BT.1886",
         "PQ",
         "HLG",
+        "ACEScc",
+        "ACEScct",
         "S-Log",
         "S-Log2",
         "S-Log3",
@@ -51,9 +63,21 @@ EXPECTED_VOCABULARY: dict[str, tuple[str, ...]] = {
         "DaVinci-Intermediate",
         "RED-Log3G10",
         "REDlogFilm",
+        "Canon-Log",
+        "Canon-Log-2",
+        "Canon-Log-3",
+        "V-Log",
+        "D-Log",
+        "F-Log",
+        "F-Log2",
+        "N-Log",
+        "L-Log",
+        "Apple-Log",
+        "Samsung-Log",
         "Cineon",
         "Gamma-2.2",
         "Gamma-2.4",
+        "Gamma-2.5",
         "Gamma-2.6",
     ),
     "Matrix": ("BT.601", "BT.709", "BT.2020", "native"),
@@ -298,16 +322,20 @@ def _documentation_tokens(markdown: str, heading: str) -> tuple[str, ...]:
 
 def test_literal_aliases_are_the_independent_canonical_vocabulary() -> None:
     """v1-token-vocabulary acceptance 1; v1-sony-tokens acceptance 1; v1-arri-tokens acceptance 16;
-    v1-blackmagic-tokens acceptance 33; v1-red-tokens acceptance 54-55.
+    v1-blackmagic-tokens acceptance 33; v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
+    v1-panasonic-tokens acceptance 99-100; v1-standard-tokens acceptance 117;
+    v1-vendor-a-tokens acceptance 140; v1-vendor-b-tokens acceptance 166.
     """
     assert len(EXPECTED_VOCABULARY) == 30
-    assert sum(map(len, EXPECTED_VOCABULARY.values())) == 165
+    assert sum(map(len, EXPECTED_VOCABULARY.values())) == 188
     assert {name: get_args(getattr(px.core, name)) for name in EXPECTED_VOCABULARY} == EXPECTED_VOCABULARY
 
 
 def test_public_token_annotations_use_only_canonical_literal_aliases() -> None:
     """v1-token-vocabulary acceptance 2; v1-sony-tokens acceptance 2;
-    v1-blackmagic-tokens acceptance 34; v1-red-tokens acceptance 55: annotations expose canonical literals.
+    v1-blackmagic-tokens acceptance 34; v1-red-tokens acceptance 55; v1-canon-tokens acceptance 77;
+    v1-panasonic-tokens acceptance 100; v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167:
+    annotations expose canonical literals.
     """
     frame_hints = get_type_hints(px.core.Frame)
     for parameter, family in (("colorspace", "Colorspace"), ("gamma", "Gamma"), ("matrix", "Matrix")):
@@ -353,7 +381,9 @@ def test_public_token_annotations_use_only_canonical_literal_aliases() -> None:
 
 def test_every_canonical_token_accepts_case_and_separator_variants() -> None:
     """v1-token-vocabulary acceptance 3; v1-sony-tokens acceptance 3;
-    v1-blackmagic-tokens acceptance 35; v1-red-tokens acceptance 56: canonical tokens resolve all variants.
+    v1-blackmagic-tokens acceptance 35; v1-red-tokens acceptance 56; v1-panasonic-tokens acceptance 101;
+    v1-vendor-a-tokens acceptance 142; v1-vendor-b-tokens acceptance 168:
+    canonical tokens resolve all variants.
     """
     from pixtreme._core.validation import _normalized_closed_token
 
@@ -377,7 +407,8 @@ def test_all_legacy_spellings_are_permanent_runtime_aliases() -> None:
 
 def test_token_keys_are_collision_free_per_family_and_never_cross_families() -> None:
     """v1-token-vocabulary acceptance 5; v1-sony-tokens acceptance 3;
-    v1-blackmagic-tokens acceptance 35: keys remain unique and family-local.
+    v1-blackmagic-tokens acceptance 35; v1-panasonic-tokens acceptance 101;
+    v1-vendor-a-tokens acceptance 142; v1-vendor-b-tokens acceptance 168: keys remain unique and family-local.
     """
     from pixtreme._core.validation import _normalized_closed_token
 
@@ -392,7 +423,9 @@ def test_token_keys_are_collision_free_per_family_and_never_cross_families() -> 
 
 
 def test_frame_and_array_boundary_expose_only_canonical_metadata() -> None:
-    """v1-token-vocabulary acceptance 6; v1-blackmagic-tokens acceptance 34-35: metadata is canonical."""
+    """v1-token-vocabulary acceptance 6; v1-blackmagic-tokens acceptance 34-35;
+    v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167: metadata is canonical.
+    """
     frame = px.io.from_array(
         cp.zeros((1, 2, 3), dtype=cp.float32),
         colorspace="REC_709",
@@ -416,7 +449,9 @@ def test_frame_and_array_boundary_expose_only_canonical_metadata() -> None:
 @pytest.mark.parametrize("rejected", ["unknown", "", " .-_ ", 709, None])
 def test_invalid_tokens_fail_with_raw_actionable_errors(rejected: object) -> None:
     """v1-token-vocabulary acceptance 7; v1-sony-tokens acceptance 11;
-    v1-blackmagic-tokens acceptance 49: invalid tokens fail with canonical errors.
+    v1-blackmagic-tokens acceptance 49; v1-panasonic-tokens acceptance 111;
+    v1-vendor-a-tokens acceptance 160; v1-vendor-b-tokens acceptance 187:
+    invalid tokens fail with canonical errors.
     """
     with pytest.raises(ValueError) as error:
         px.io.from_array(
@@ -456,11 +491,11 @@ def test_gamma_aliases_preserve_pixels_and_non_token_observables() -> None:
 
 def test_token_reference_matches_all_literal_aliases_in_order() -> None:
     """v1-token-vocabulary acceptance 9; v1-sony-tokens acceptance 12;
-    v1-blackmagic-tokens acceptance 50: token tables match all aliases in order.
+    v1-blackmagic-tokens acceptance 50; v1-panasonic-tokens acceptance 112;
+    v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188;
+    GitHub #29: token tables match all aliases in order.
     """
-    path = Path(__file__).resolve().parents[1] / "docs_site" / "tokens.md"
-    if not path.is_file():
-        pytest.skip("repo-only documentation contract: token reference is absent from this distribution")
+    path = require_repo_file("docs_site/tokens.md")
     markdown = path.read_text(encoding="utf-8")
     assert {
         family: _documentation_tokens(markdown, heading) for family, heading in DOC_HEADINGS.items()
@@ -477,10 +512,10 @@ def test_token_reference_matches_all_literal_aliases_in_order() -> None:
 
 
 def test_requirements_define_the_two_layer_token_contract() -> None:
-    """v1-token-vocabulary acceptance 10; v1-sony-tokens acceptance 12: requirements define current tokens."""
-    path = Path(__file__).resolve().parents[1] / "docs" / "requirements.md"
-    if not path.is_file():
-        pytest.skip("repo-only documentation contract: requirements are absent from this distribution")
+    """v1-token-vocabulary acceptance 10; v1-sony-tokens acceptance 12;
+    v1-vendor-b-tokens acceptance 188; GitHub #29: requirements define tokens.
+    """
+    path = require_repo_file("docs/requirements.md")
     requirements = path.read_text(encoding="utf-8")
     arch = requirements.split("**REQ-ARCH-003", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
     assert "case-sensitive" not in arch
@@ -492,12 +527,12 @@ def test_requirements_define_the_two_layer_token_contract() -> None:
 
 
 def test_changelog_records_all_breaking_renames_and_runtime_compatibility() -> None:
-    """v1-token-vocabulary acceptance 11: the changelog records every rename and permanent input compatibility."""
+    """v1-token-vocabulary acceptance 11; v1-canon-tokens acceptance 93; GitHub #29: preserve release history."""
     changelog = (Path(__file__).resolve().parents[1] / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = changelog.split("## Unreleased\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    assert "Breaking" in unreleased
-    assert "permanent" in unreleased
+    release_130 = changelog.split("## 1.3.0", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
+    assert "Breaking" in release_130
+    assert "permanent" in release_130
     for aliases in LEGACY_ALIASES.values():
         for legacy, canonical in aliases:
-            assert f"`{legacy}`" in unreleased
-            assert f"`{canonical}`" in unreleased
+            assert f"`{legacy}`" in release_130
+            assert f"`{canonical}`" in release_130

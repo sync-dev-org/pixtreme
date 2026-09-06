@@ -10,6 +10,7 @@ from typing import Any
 import cupy as cp
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -385,12 +386,10 @@ def test_quality_metric_docstrings_are_self_contained_operational_contracts() ->
 
 
 def test_quality_metric_requirements_preserve_module_and_vocabulary_boundaries() -> None:
-    """v1-quality-metrics acceptance 22 / v1-public-namespace acceptance 1 and 8: boundaries stay exact."""
+    """v1-quality-metrics acceptance 22 / v1-public-namespace acceptance 1 and 8. GitHub #29."""
     repository = Path(__file__).resolve().parents[1]
-    requirements_path = repository / "docs" / "requirements.md"
+    requirements_path = require_repo_file("docs/requirements.md")
     vocabulary_path = repository / "docs_site" / "tokens.md"
-    if not requirements_path.is_file() or not vocabulary_path.is_file():
-        pytest.skip("repo-only documentation contract: canonical docs are absent from this distribution")
     requirements = requirements_path.read_text(encoding="utf-8")
     vocabulary = vocabulary_path.read_text(encoding="utf-8")
     architecture = requirements.split("**REQ-ARCH-008:", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]

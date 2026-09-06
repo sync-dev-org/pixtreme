@@ -10,6 +10,7 @@ from typing import get_args, get_type_hints
 import cupy as cp
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -288,10 +289,8 @@ def test_apply_lut1d_enforces_the_shared_frame_contract(case: str) -> None:
 
 
 def test_lut1d_token_documentation_is_type_specific_and_complete() -> None:
-    """v1-lut-extensions acceptance 27: token reference documents linear and both type-specific LUT subsets."""
-    path = ROOT / "docs_site" / "tokens.md"
-    if not path.is_file():
-        pytest.skip("repo-only documentation contract: docs_site/tokens.md is absent from this distribution")
+    """v1-lut-extensions acceptance 27; GitHub #29: token docs cover linear and type-specific LUT subsets."""
+    path = require_repo_file("docs_site/tokens.md")
     section = path.read_text(encoding="utf-8").split("## interpolation\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
     for required in (
         "`linear`",

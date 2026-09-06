@@ -13,6 +13,7 @@ from typing import Any
 import cupy as cp
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -227,12 +228,10 @@ def test_algorithm_tables_are_exact_363_record_float32_source_constants() -> Non
 
 
 def test_table_tool_recreates_the_checked_in_source_byte_for_byte(tmp_path: Path) -> None:
-    """v1-tonemap-aces20-analytic acceptance 10-11 and 20-21: the pinned OCIO table tool is deterministic."""
+    """v1-tonemap-aces20-analytic acceptance 10-11 and 20-21; GitHub #29: the table tool is deterministic."""
     first = tmp_path / "first.py"
     second = tmp_path / "second.py"
-    tool_path = ROOT / "tools" / "bake_aces20_tables.py"
-    if not tool_path.is_file():
-        pytest.skip("repo-only tooling contract: tools/bake_aces20_tables.py is absent from this distribution")
+    tool_path = require_repo_file("tools/bake_aces20_tables.py")
     command = [sys.executable, str(tool_path)]
     subprocess.run([*command, str(first)], cwd=ROOT, check=True, capture_output=True, text=True, timeout=120)
     subprocess.run([*command, str(second)], cwd=ROOT, check=True, capture_output=True, text=True, timeout=120)
@@ -364,12 +363,10 @@ def test_remaining_routes_retain_their_exact_float32_bits_and_metadata() -> None
 
 
 def test_oracle_tool_recreates_the_committed_fixture_byte_for_byte(tmp_path: Path) -> None:
-    """v1-tonemap-aces20-analytic acceptance 6-7 and 20-21: the external OCIO oracle is deterministic."""
+    """v1-tonemap-aces20-analytic acceptance 6-7 and 20-21; GitHub #29: the OCIO oracle is deterministic."""
     first = tmp_path / "first.npz"
     second = tmp_path / "second.npz"
-    tool_path = ROOT / "tools" / "bake_aces20_analytic_oracle.py"
-    if not tool_path.is_file():
-        pytest.skip("repo-only tooling contract: tools/bake_aces20_analytic_oracle.py is absent from this distribution")
+    tool_path = require_repo_file("tools/bake_aces20_analytic_oracle.py")
     command = [sys.executable, str(tool_path)]
     subprocess.run([*command, str(first)], cwd=ROOT, check=True, capture_output=True, text=True, timeout=120)
     subprocess.run([*command, str(second)], cwd=ROOT, check=True, capture_output=True, text=True, timeout=120)
@@ -377,10 +374,8 @@ def test_oracle_tool_recreates_the_committed_fixture_byte_for_byte(tmp_path: Pat
 
 
 def test_docs_docstring_registry_and_visual_generator_expose_the_six_row_boundary() -> None:
-    """v1-view-transform-lut-removal acceptance 4 and 8: every public contract exposes six rows."""
-    requirements_path = ROOT / "docs" / "requirements.md"
-    if not requirements_path.is_file():
-        pytest.skip("repo-only documentation contract: docs/requirements.md is absent from this distribution")
+    """v1-view-transform-lut-removal acceptance 4 and 8; GitHub #29: public contracts expose six rows."""
+    requirements_path = require_repo_file("docs/requirements.md")
     requirements = requirements_path.read_text(encoding="utf-8")
     vocabulary = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
     docstring = inspect.getdoc(px.color.rgb_to_rgb)

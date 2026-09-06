@@ -8,6 +8,7 @@ from typing import Any
 
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -307,6 +308,10 @@ def test_bt2408_input_claims_override_metadata_and_equivalent_rec2020_linear_inp
         "sRGB",
         "Rec.709",
         "Rec.2020",
+        "P3-DCI",
+        "P3-D60",
+        "P3-D65",
+        "SMPTE-C",
         "ACES2065-1",
         "ACEScg",
         "S-Gamut",
@@ -322,12 +327,19 @@ def test_bt2408_input_claims_override_metadata_and_equivalent_rec2020_linear_inp
         "REDcolor2",
         "REDcolor3",
         "REDcolor4",
+        "Canon-Cinema-Gamut",
+        "V-Gamut",
+        "D-Gamut",
+        "F-Gamut-C",
+        "Apple-Wide-Gamut",
     ),
 )
 def test_bt2408_accepts_every_input_colorspace_token(input_colorspace: str) -> None:
     """v1-tonemap-bt2408 acceptance 2 and 7; v1-sony-tokens acceptance 1-2;
     v1-arri-tokens acceptance 17 and 25; v1-blackmagic-tokens acceptance 34 and 46;
-    v1-red-tokens acceptance 54 and 69: every colorspace token is legal.
+    v1-red-tokens acceptance 54 and 69; v1-canon-tokens acceptance 77; v1-panasonic-tokens acceptance 100;
+    v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167:
+    every colorspace token is legal.
     """
     result = px.color.rgb_to_rgb(
         _frame([0.18, 0.18, 0.18]),
@@ -352,6 +364,8 @@ def test_bt2408_accepts_every_input_colorspace_token(input_colorspace: str) -> N
         "BT.1886",
         "PQ",
         "HLG",
+        "ACEScc",
+        "ACEScct",
         "S-Log",
         "S-Log2",
         "S-Log3",
@@ -361,16 +375,30 @@ def test_bt2408_accepts_every_input_colorspace_token(input_colorspace: str) -> N
         "DaVinci-Intermediate",
         "RED-Log3G10",
         "REDlogFilm",
+        "Canon-Log",
+        "Canon-Log-2",
+        "Canon-Log-3",
+        "V-Log",
+        "D-Log",
+        "F-Log",
+        "F-Log2",
+        "N-Log",
+        "L-Log",
+        "Apple-Log",
+        "Samsung-Log",
         "Cineon",
         "Gamma-2.2",
         "Gamma-2.4",
+        "Gamma-2.5",
         "Gamma-2.6",
     ),
 )
 def test_bt2408_accepts_every_input_gamma_token(input_gamma: str) -> None:
     """v1-tonemap-bt2408 acceptance 2 and 7; v1-sony-tokens acceptance 1-2;
     v1-arri-tokens acceptance 17 and 25; v1-blackmagic-tokens acceptance 34 and 46;
-    v1-red-tokens acceptance 54 and 69: every gamma token is legal.
+    v1-red-tokens acceptance 54 and 69; v1-canon-tokens acceptance 77; v1-panasonic-tokens acceptance 100;
+    v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167:
+    every gamma token is legal.
     """
     result = px.color.rgb_to_rgb(
         _frame([0.18, 0.18, 0.18]),
@@ -512,11 +540,9 @@ def test_bt2408_uses_one_fused_analytic_pass() -> None:
 
 
 def test_bt2408_docs_and_public_docstring_are_self_contained_and_list_the_six_rows() -> None:
-    """v1-view-transform-lut-removal acceptance 4: requirements, vocabulary, and docstring expose the contract."""
-    requirements_path = ROOT / "docs" / "requirements.md"
+    """v1-view-transform-lut-removal acceptance 4; GitHub #29: requirements and public docs expose the contract."""
+    requirements_path = require_repo_file("docs/requirements.md")
     vocabulary_path = ROOT / "docs_site" / "tokens.md"
-    if not requirements_path.exists() or not vocabulary_path.exists():
-        pytest.skip("docs canon is intentionally absent from this distribution tree")
     requirements = requirements_path.read_text(encoding="utf-8")
     vocabulary = vocabulary_path.read_text(encoding="utf-8")
     docstring = inspect.getdoc(px.color.rgb_to_rgb)

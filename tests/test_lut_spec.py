@@ -9,6 +9,7 @@ from pathlib import Path
 import cupy as cp
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -477,11 +478,9 @@ def test_lut_transform_rejects_non_frame_and_non_lut_inputs() -> None:
 
 
 def test_lut_documentation_contracts_are_present() -> None:
-    """v1-lut acceptance 15-16; v1-lut-extensions acceptance 26: LUT boundary canon stays current."""
+    """v1-lut acceptance 15-16; v1-lut-extensions acceptance 26; GitHub #29: LUT boundary canon stays current."""
     vocabulary_path = ROOT / "docs_site" / "tokens.md"
-    requirements_path = ROOT / "docs" / "requirements.md"
-    if not vocabulary_path.is_file() or not requirements_path.is_file():
-        pytest.skip("repo-only documentation contract: canonical docs are absent from this distribution")
+    requirements_path = require_repo_file("docs/requirements.md")
 
     vocabulary = vocabulary_path.read_text(encoding="utf-8")
     interpolation = vocabulary.split("## interpolation\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]

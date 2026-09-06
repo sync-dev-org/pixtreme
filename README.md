@@ -7,7 +7,7 @@
 
 GPU-first image processing for Python, built on CUDA and CuPy.
 
-**[API reference and documentation](https://sync-dev-org.github.io/pixtreme/)** — the complete public API (13 modules, 89 operations) with per-function contracts, plus the full performance report.
+**[API reference and documentation](https://sync-dev-org.github.io/pixtreme/)** — the complete public API (13 modules, 94 operations) with per-function contracts, plus the full performance report.
 
 ## Why pixtreme
 
@@ -27,25 +27,25 @@ so color meaning travels with pixels instead of living in ambient configuration.
 
 ## Performance
 
-The following measurements are selected from the current 190-case registry. GPU pixel-operation rows come from the
-full run at commit `9bc236d`; the EXR file-boundary rows were measured at commit `713edde`. GPU cases use at least 1,000
-FHD frames and 3 seconds after warmup, while file boundaries use at least 20 iterations and the same 3-second floor.
-The test system used an NVIDIA RTX A6000, CUDA 12.9, CuPy 14.1.1, and Python 3.12 under WSL2.
+The following measurements are selected from the current 204-case registry, taken from the single full run at
+commit `ca83e10`. GPU cases use at least 1,000 FHD frames and 3 seconds after warmup, while file boundaries use at
+least 20 iterations and the same 3-second floor. The test system used an NVIDIA RTX A6000, CUDA 12.9, CuPy 14.1.1, and
+Python 3.12 under WSL2.
 
 | Operation | Representative parameters | Median (ms) | FPS | Effective GB/s |
 |---|---|---:|---:|---:|
-| `resize` | 1920x1080 -> 960x540, `nearest` | 0.067 | 15027.1 | 467.4 |
-| `resize` | 1920x1080 -> 3840x2160, `lanczos4` | 0.914 | 1093.7 | 136.1 |
-| `from_array` | CHW uint16, 10-bit -> float32 HWC | 0.114 | 8787.2 | 328.0 |
-| `px.io.to_yuva444p` | 12-bit legal, alpha full | 0.113 | 8876.7 | 441.8 |
-| `rgb_to_rgb` | ACEScg linear -> sRGB srgb | 0.124 | 8095.9 | 402.9 |
-| `rgb_to_hsv` | label-driven scene values | 0.170 | 5892.0 | 293.2 |
-| `rgb_to_rgb` | BT.2408 direct mapping -> Rec.2020 pq | 0.129 | 7742.6 | 385.3 |
-| `apply_lut` | 65^3 LUT, tetrahedral | 0.175 | 5720.3 | 284.7 |
-| `text` | single-line CJK, size 64, one outline | 0.399 | 2508.9 | 124.9 |
-| `color_bars` | FHD ARIB STD-B28 normalized | 0.079 | 12689.9 | 315.8 |
-| `read_image` | FHD HALF RGB EXR ZIP, unchanged, temporary-file I/O included | 30.925 | 32.3 | 0.8 |
-| `write_image` | FHD fp32 RGB to EXR ZIP/HALF, dtype omitted, temporary-file I/O included | 37.042 | 27.0 | 1.0 |
+| `resize` | 1920x1080 -> 960x540, `nearest` | 0.073 | 13755.0 | 427.8 |
+| `resize` | 1920x1080 -> 3840x2160, `lanczos4` | 0.935 | 1069.2 | 133.0 |
+| `from_array` | CHW uint16, 10-bit -> float32 HWC | 0.123 | 8162.1 | 304.6 |
+| `px.io.to_yuva444p` | 12-bit legal, alpha full | 0.111 | 8991.4 | 447.5 |
+| `rgb_to_rgb` | ACEScg linear -> sRGB sRGB | 0.134 | 7486.7 | 372.6 |
+| `rgb_to_hsv` | label-driven scene values | 0.113 | 8814.3 | 438.7 |
+| `rgb_to_rgb` | BT.2408 direct mapping -> Rec.2020 pq | 0.143 | 6990.0 | 347.9 |
+| `apply_lut` | 65^3 LUT, tetrahedral | 0.353 | 2831.3 | 140.9 |
+| `text` | single-line CJK, size 64, one outline, 4x supersampling | 0.391 | 2555.6 | 127.2 |
+| `color_bars` | FHD ARIB STD-B28 normalized | 0.085 | 11745.6 | 292.3 |
+| `read_image` | FHD HALF RGB EXR ZIP, unchanged, temporary-file I/O included | 37.909 | 26.4 | 0.7 |
+| `write_image` | FHD fp32 RGB to EXR ZIP/HALF, dtype omitted, temporary-file I/O included | 40.614 | 24.6 | 0.9 |
 
 These figures describe this system and workload, not a hardware-independent guarantee. File and encoded-byte
 boundaries have different I/O-inclusive conditions. See [the full performance report](https://sync-dev-org.github.io/pixtreme/performance/) for every
@@ -56,7 +56,7 @@ single-part scanline files for the same ten tokens. Every path uses a pixtreme-o
 runtime dependency or fallback. Routing is fixed in source rather than benchmarked at runtime: NONE uses the native
 read lane; ZIP, ZIPS, and PXR24 use custom CPU reads; the remaining reads and every write use GPU lanes. A float32
 Frame written without `dtype` stores HALF by default; pass `dtype="float32"` for explicit FLOAT storage. On the system
-above, the default ZIP/HALF path measured 30.925 ms to read unchanged and 37.042 ms to write, including temporary-file
+above, the default ZIP/HALF path measured 37.909 ms to read unchanged and 40.614 ms to write, including temporary-file
 I/O.
 
 ## Requirements
@@ -94,7 +94,7 @@ import pixtreme as px
 frame = px.io.read_image("input.png")
 working = px.color.rgb_to_rgb(frame, output_colorspace="ACEScg", output_gamma="linear")
 working = px.filter.sharpen(working, amount=0.5)
-output = px.color.rgb_to_rgb(working, output_colorspace="sRGB", output_gamma="srgb")
+output = px.color.rgb_to_rgb(working, output_colorspace="sRGB", output_gamma="sRGB")
 px.io.write_image("output.png", px.values.quantize(output, bit_depth=8))
 ```
 
@@ -103,17 +103,17 @@ unclipped; `px.values.quantize` is the explicit normalized-float-to-integer boun
 
 ## API tour
 
-The package root exposes 13 modules and `__version__`. Types, helpers, and all 89 operations live under one canonical
+The package root exposes 13 modules and `__version__`. Types, helpers, and all 94 operations live under one canonical
 two-level path; the root does not re-export them, and `Frame` has no operation methods:
 
 | Namespace | Public members | Responsibility |
 |---|---|---|
-| `px.core` | `Frame`, `Lut`, `channels`, and the named-token `Literal` aliases | Core types, channel normalization, and closed vocabulary |
-| `px.io` | `read_image`, `write_image`, `read_header`, `read_lut`, `decode_image`, `encode_image`, `from_array`, `to_array`, and eight named-format `from_*` / `to_*` pairs | File, byte, device-array, LUT, and wire-format boundaries |
-| `px.color` | `apply_lut`, `gamma_to_linear`, `hsv_to_rgb`, `linear_to_gamma`, `rgb_to_grayscale`, `rgb_to_hsv`, `rgb_to_rgb`, `rgb_to_ycbcr`, `ycbcr_to_rgb`, `ycbcr_to_ycbcr`, `equalize_histogram`, `clahe` | Colorimetry, transfer functions, YCbCr/HSV, LUTs, histogram operations, and explicit tonemapping |
+| `px.core` | `Frame`, `Lut`, `Lut1D`, `channels`, and the named-token `Literal` aliases | Core types, channel normalization, and closed vocabulary |
+| `px.io` | `read_image`, `write_image`, `read_header`, `read_lut`, `decode_lut`, `write_lut`, `decode_image`, `encode_image`, `from_array`, `to_array`, and eight named-format `from_*` / `to_*` pairs | File, byte, device-array, LUT, and wire-format boundaries |
+| `px.color` | `apply_lut`, `gamma_to_linear`, `hsv_to_rgb`, `linear_to_gamma`, `rgb_to_grayscale`, `rgb_to_hsv`, `rgb_to_rgb`, `rgb_to_ycbcr`, `ycbcr_to_rgb`, `ycbcr_to_ycbcr`, `equalize_histogram`, `clahe`, `chromatic_adaptation`, `white_balance`, `white_point_simulation` | Colorimetry, transfer functions, YCbCr/HSV, LUTs, histogram operations, white-point adaptation, and explicit tonemapping |
 | `px.filter` | `gaussian_blur`, `box_blur`, `median_blur`, `bilateral_blur`, `directional_blur`, `zoom_blur`, `spin_blur`, `vector_blur`, `lens_blur`, `sobel`, `laplacian`, `difference_of_gaussians`, `canny`, `sharpen`, `unsharp_mask`, `convolve_box` | Blur, derivatives, edges, sharpening, and convolution |
 | `px.transform` | `resize`, `warp_affine`, `stack` | Geometry and multi-image layout |
-| `px.draw` | `line`, `polyline`, `rectangle`, `circle`, `ellipse`, `polygon`, `text` | Shape and text drawing |
+| `px.draw` | `line`, `polyline`, `rectangle`, `circle`, `ellipse`, `polygon`, `text`, and the `Font` type | Shape and text drawing |
 | `px.generate` | `ramp`, `grid`, `checkerboard`, `color_bars`, `fractal_noise`, `turbulent_noise`, `grain` | Procedural frames, test patterns, and noise |
 | `px.morphology` | `erosion`, `dilation`, `opening`, `closing`, `morphological_gradient`, `white_tophat`, `black_tophat` | Morphological image operations |
 | `px.metrics` | `psnr`, `ssim`, `ssim_map` | Image-quality scalars and response maps |
@@ -128,8 +128,8 @@ Render the Quickstart's scene-linear `working` frame through the analytic ACES 2
 display = px.color.rgb_to_rgb(
     working,
     output_colorspace="sRGB",
-    output_gamma="srgb",
-    tonemap="aces-2.0",
+    output_gamma="sRGB",
+    tonemap="ACES-2.0",
 )
 ```
 
@@ -144,7 +144,8 @@ png_bytes = px.io.encode_image(
 round_trip = px.io.decode_image(png_bytes)
 ```
 
-Text shaping supports bundled CJK fonts and an opt-in 4x supersampled raster path:
+Text shaping supports bundled CJK fonts, user OpenType/TrueType fonts through `px.draw.Font`, and an opt-in 4x
+supersampled raster path:
 
 ```python
 captioned = px.draw.text(
@@ -160,13 +161,18 @@ captioned = px.draw.text(
 ## Full performance
 
 [the full performance report](https://sync-dev-org.github.io/pixtreme/performance/) contains the recorded measured cases, including mean, median, FPS, p5, p95,
-effective bandwidth, parameters, and the 90 cases whose median exceeds 1 ms. It also separates GPU-device throughput
+effective bandwidth, parameters, and the 88 cases whose median exceeds 1 ms. It also separates GPU-device throughput
 from temporary-file and encoded-byte I/O measurements.
 
 ## Color management
 
 Color processing is explicit, metadata-aware, and designed to preserve scene values until a declared output boundary.
 
+- The closed vocabulary carries 27 colorspace tokens and 33 transfer (gamma) tokens: the sRGB, Rec.709, Rec.2020,
+  P3, SMPTE-C, and ACES families plus the Sony, ARRI, Blackmagic Design, DaVinci, RED, Canon, Panasonic, DJI,
+  Fujifilm, Nikon, Leica, Apple, and Samsung camera encodings. Each token is derived from its published
+  specification and documented with its provenance and domain-extension rules in the
+  [token reference](https://sync-dev-org.github.io/pixtreme/tokens/).
 - The analytic ACES 2.0 SDR 100-nit Output Transform evaluates the complete AP1 limit, Hellwig JMh, tone, chroma,
   gamut-compression, limiting-RGB, reference-range, and display-encoding chain in one fused CUDA pass. Its 363-record
   hue table is an algorithm parameter, not an RGB-grid output approximation; runtime evaluation uses no LUT

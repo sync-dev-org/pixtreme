@@ -10,6 +10,7 @@ from typing import Literal, get_args, get_origin, get_type_hints
 import cupy as cp
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -19,6 +20,10 @@ _COLORSPACES = (
     "sRGB",
     "Rec.709",
     "Rec.2020",
+    "P3-DCI",
+    "P3-D60",
+    "P3-D65",
+    "SMPTE-C",
     "ACES2065-1",
     "ACEScg",
     "S-Gamut",
@@ -34,6 +39,11 @@ _COLORSPACES = (
     "REDcolor2",
     "REDcolor3",
     "REDcolor4",
+    "Canon-Cinema-Gamut",
+    "V-Gamut",
+    "D-Gamut",
+    "F-Gamut-C",
+    "Apple-Wide-Gamut",
 )
 _GAMMAS = (
     "linear",
@@ -42,6 +52,8 @@ _GAMMAS = (
     "BT.1886",
     "PQ",
     "HLG",
+    "ACEScc",
+    "ACEScct",
     "S-Log",
     "S-Log2",
     "S-Log3",
@@ -51,9 +63,21 @@ _GAMMAS = (
     "DaVinci-Intermediate",
     "RED-Log3G10",
     "REDlogFilm",
+    "Canon-Log",
+    "Canon-Log-2",
+    "Canon-Log-3",
+    "V-Log",
+    "D-Log",
+    "F-Log",
+    "F-Log2",
+    "N-Log",
+    "L-Log",
+    "Apple-Log",
+    "Samsung-Log",
     "Cineon",
     "Gamma-2.2",
     "Gamma-2.4",
+    "Gamma-2.5",
     "Gamma-2.6",
 )
 _ALIASES = (
@@ -278,12 +302,14 @@ def _conversion_matrix(
 
 def test_arri_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> None:
     """v1-arri-tokens acceptance 16-17; v1-blackmagic-tokens acceptance 33-34;
-    v1-red-tokens acceptance 54-55: canonical public surfaces.
+    v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
+    v1-panasonic-tokens acceptance 99-100; v1-standard-tokens acceptance 117;
+    v1-vendor-a-tokens acceptance 140-141; v1-vendor-b-tokens acceptance 166-167: canonical public surfaces.
     """
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 165
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 188
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -295,7 +321,8 @@ def test_arri_tokens_extend_canonical_vocabulary_and_public_static_surfaces() ->
 
 
 def test_arri_token_keys_are_collision_free_family_local_and_separator_normalized() -> None:
-    """v1-arri-tokens acceptance 18; v1-blackmagic-tokens acceptance 35; v1-red-tokens acceptance 68.
+    """v1-arri-tokens acceptance 18; v1-blackmagic-tokens acceptance 35; v1-red-tokens acceptance 68;
+    v1-vendor-a-tokens acceptance 142.
 
     Token keys remain local and unique after the ARRI rename.
     """
@@ -649,7 +676,9 @@ def test_invalid_arri_axis_values_fail_before_gpu_with_ordered_canonical_errors(
     candidates: tuple[str, ...],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-arri-tokens acceptance 28; v1-blackmagic-tokens acceptance 49: invalid values fail before GPU."""
+    """v1-arri-tokens acceptance 28; v1-blackmagic-tokens acceptance 49;
+    v1-vendor-a-tokens acceptance 160: invalid values fail before GPU.
+    """
     import pixtreme._color.semantics as semantics
     import pixtreme._color.transform as transform
 
@@ -670,12 +699,14 @@ def test_invalid_arri_axis_values_fail_before_gpu_with_ordered_canonical_errors(
 
 
 def test_arri_public_documents_docstrings_and_changelog_are_synchronized() -> None:
-    """v1-arri-tokens acceptance 29; v1-blackmagic-tokens acceptance 50; v1-red-tokens acceptance 72.
+    """v1-arri-tokens acceptance 29; v1-blackmagic-tokens acceptance 50; v1-red-tokens acceptance 72;
+    v1-canon-tokens acceptance 93; v1-panasonic-tokens acceptance 112; v1-vendor-a-tokens acceptance 161;
+    v1-vendor-b-tokens acceptance 188.
 
-    Public token documentation stays synchronized after the ARRI rename.
+    GitHub #29: public token documentation stays synchronized after the ARRI rename.
     """
     tokens = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    requirements = (ROOT / "docs" / "requirements.md").read_text(encoding="utf-8")
+    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     normalized_docstrings = {
         function.__name__: " ".join((inspect.getdoc(function) or "").split())
@@ -696,7 +727,7 @@ def test_arri_public_documents_docstrings_and_changelog_are_synchronized() -> No
         "`native`",
     ):
         assert claim in tokens
-    for claim in ("18 Colorspace", "19 Gamma", "165 canonical tokens"):
+    for claim in ("27 Colorspace", "33 Gamma", "188 canonical tokens"):
         assert claim in requirements
     for claim in (
         "ARRI-Wide-Gamut-3",

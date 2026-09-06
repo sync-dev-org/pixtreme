@@ -10,6 +10,7 @@ from typing import Literal, get_args, get_origin, get_type_hints
 import cupy as cp
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -20,6 +21,8 @@ _GAMMA_TOKENS = (
     "BT.1886",
     "PQ",
     "HLG",
+    "ACEScc",
+    "ACEScct",
     "S-Log",
     "S-Log2",
     "S-Log3",
@@ -29,9 +32,21 @@ _GAMMA_TOKENS = (
     "DaVinci-Intermediate",
     "RED-Log3G10",
     "REDlogFilm",
+    "Canon-Log",
+    "Canon-Log-2",
+    "Canon-Log-3",
+    "V-Log",
+    "D-Log",
+    "F-Log",
+    "F-Log2",
+    "N-Log",
+    "L-Log",
+    "Apple-Log",
+    "Samsung-Log",
     "Cineon",
     "Gamma-2.2",
     "Gamma-2.4",
+    "Gamma-2.5",
     "Gamma-2.6",
 )
 _RENAMES = (("2.2", "Gamma-2.2"), ("2.4", "Gamma-2.4"), ("2.6", "Gamma-2.6"))
@@ -90,10 +105,12 @@ def _table_rows(markdown: str, heading: str) -> tuple[tuple[str, ...], ...]:
 
 def test_gamma_literal_retains_named_numeric_tokens_in_the_sony_extended_vocabulary() -> None:
     """v1-gamma-named-tokens acceptance 1; v1-sony-tokens acceptance 1; v1-arri-tokens acceptance 16;
-    v1-blackmagic-tokens acceptance 33; v1-red-tokens acceptance 54-55.
+    v1-blackmagic-tokens acceptance 33; v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
+    v1-panasonic-tokens acceptance 99-100; v1-standard-tokens acceptance 117;
+    v1-vendor-a-tokens acceptance 140; v1-vendor-b-tokens acceptance 166.
     """
     assert get_args(px.core.Gamma) == _GAMMA_TOKENS
-    assert len(get_args(px.core.Gamma)) == 19
+    assert len(get_args(px.core.Gamma)) == 33
 
     aliases = (
         px.core.ChromaticAdaptation,
@@ -128,12 +145,14 @@ def test_gamma_literal_retains_named_numeric_tokens_in_the_sony_extended_vocabul
         px.core.VectorBlurShutter,
     )
     assert len(aliases) == 30
-    assert sum(len(get_args(alias)) for alias in aliases) == 165
+    assert sum(len(get_args(alias)) for alias in aliases) == 188
 
 
 def test_public_static_and_metadata_surfaces_expose_only_named_gamma_tokens() -> None:
     """v1-gamma-named-tokens acceptance 2; v1-sony-tokens acceptance 2;
-    v1-blackmagic-tokens acceptance 34; v1-red-tokens acceptance 54-55: static surfaces expose canonical names.
+    v1-blackmagic-tokens acceptance 34; v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 77;
+    v1-panasonic-tokens acceptance 100; v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167:
+    static surfaces expose canonical names.
     """
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMA_TOKENS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMA_TOKENS
@@ -177,7 +196,8 @@ def test_numeric_gamma_aliases_and_separator_variants_are_permanent_inputs() -> 
 
 def test_numeric_alias_keys_are_collision_free_subset_local_and_order_independent() -> None:
     """v1-gamma-named-tokens acceptance 5; v1-sony-tokens acceptance 3;
-    v1-blackmagic-tokens acceptance 35: keys stay collision-free and local.
+    v1-blackmagic-tokens acceptance 35; v1-panasonic-tokens acceptance 101;
+    v1-vendor-a-tokens acceptance 142: keys stay collision-free and local.
     """
     from pixtreme._core.validation import _normalized_closed_token
 
@@ -200,7 +220,10 @@ def test_numeric_alias_keys_are_collision_free_subset_local_and_order_independen
 def test_invalid_gamma_fails_before_gpu_with_raw_input_and_canonical_recovery(
     rejected: object, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """v1-gamma-named-tokens acceptance 6: invalid gamma fails before GPU with ordered raw actionable details."""
+    """v1-gamma-named-tokens acceptance 6; v1-panasonic-tokens acceptance 111;
+    v1-vendor-a-tokens acceptance 160:
+    invalid gamma fails before GPU with ordered raw actionable details.
+    """
     import pixtreme._color.semantics as semantics
 
     source = _frame((0.18,))
@@ -277,7 +300,8 @@ def test_bt1886_and_gamma_24_are_bit_identical_but_keep_distinct_token_identity(
 
 def test_token_reference_matches_named_gamma_and_bt1886_document_contract() -> None:
     """v1-gamma-named-tokens acceptance 9; v1-sony-tokens acceptance 12;
-    v1-blackmagic-tokens acceptance 50: gamma docs match code and semantics.
+    v1-blackmagic-tokens acceptance 50; v1-panasonic-tokens acceptance 112;
+    v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188: gamma docs match code and semantics.
     """
     markdown = (Path(__file__).resolve().parents[1] / "docs_site" / "tokens.md").read_text(encoding="utf-8")
     gamma_rows = _table_rows(markdown, "gamma")
@@ -302,21 +326,23 @@ def test_token_reference_matches_named_gamma_and_bt1886_document_contract() -> N
 
 
 def test_requirements_changelog_docstrings_and_supersede_traces_use_current_gamma_names() -> None:
-    """v1-gamma-named-tokens acceptance 10; v1-sony-tokens acceptance 12: canon and public docs are synchronized."""
-    root = Path(__file__).resolve().parents[1]
-    requirements = (root / "docs" / "requirements.md").read_text(encoding="utf-8")
+    """v1-gamma-named-tokens acceptance 10; v1-sony-tokens acceptance 12; v1-canon-tokens acceptance 93;
+    v1-panasonic-tokens acceptance 112; v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188;
+    GitHub #29: docs stay synchronized.
+    """
+    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
     arch = requirements.split("**REQ-ARCH-003", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
     api = requirements.split("**REQ-API-003", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
     assert "30 token" in arch
     for _legacy, canonical in _RENAMES:
         assert f"`{canonical}`" in api
 
-    changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = changelog.split("## Unreleased\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
+    changelog = (Path(__file__).resolve().parents[1] / "CHANGELOG.md").read_text(encoding="utf-8")
+    release_130 = changelog.split("## 1.3.0", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
     for legacy, canonical in _RENAMES:
-        assert f"| Gamma | `{legacy}` | `{canonical}` |" in unreleased
+        assert f"| Gamma | `{legacy}` | `{canonical}` |" in release_130
     for required in ("runtime", "numerically equivalent", "BT.1886", "unchanged"):
-        assert required in unreleased
+        assert required in release_130
 
     for operation in (
         px.color.rgb_to_ycbcr,
@@ -331,8 +357,8 @@ def test_requirements_changelog_docstrings_and_supersede_traces_use_current_gamm
             assert canonical in docstring
             assert re.search(rf"``{re.escape(legacy)}``", docstring) is None
 
-    token_sheet = (root / "docs" / "features" / "v1-token-vocabulary.md").read_text(encoding="utf-8")
-    color_sheet = (root / "docs" / "features" / "v1-color-semantics.md").read_text(encoding="utf-8")
+    token_sheet = require_repo_file("docs/features/v1-token-vocabulary.md").read_text(encoding="utf-8")
+    color_sheet = require_repo_file("docs/features/v1-color-semantics.md").read_text(encoding="utf-8")
     for number in (1, 3):
         assert re.search(rf"^{number}\. \[trace:superseded-by:v1-gamma-named-tokens\]", token_sheet, re.MULTILINE)
     for number in (27, 28):

@@ -44,6 +44,8 @@ _GAMMA_CODES: Mapping[str, int] = {
     "BT.1886": 3,
     "PQ": 4,
     "HLG": 5,
+    "ACEScc": 22,
+    "ACEScct": 23,
     "S-Log": 12,
     "S-Log2": 13,
     "S-Log3": 6,
@@ -53,9 +55,21 @@ _GAMMA_CODES: Mapping[str, int] = {
     "DaVinci-Intermediate": 16,
     "RED-Log3G10": 17,
     "REDlogFilm": 8,
+    "Canon-Log": 18,
+    "Canon-Log-2": 19,
+    "Canon-Log-3": 20,
+    "V-Log": 21,
+    "D-Log": 25,
+    "F-Log": 26,
+    "F-Log2": 27,
+    "N-Log": 28,
+    "L-Log": 29,
+    "Apple-Log": 30,
+    "Samsung-Log": 31,
     "Cineon": 8,
     "Gamma-2.2": 9,
     "Gamma-2.4": 10,
+    "Gamma-2.5": 24,
     "Gamma-2.6": 11,
 }
 
@@ -106,6 +120,140 @@ __device__ __forceinline__ float decode_transfer(const float value, const int ga
         return value < 0.0f
             ? value / 15.1927f - 0.01f
             : (powf(10.0f, value / 0.224282f) - 1.0f) / 155.975327f - 0.01f;
+    }
+    if (gamma == 18) {
+        const float a = 0.45310179f;
+        const float b = 10.1596f;
+        const float c = 0.12512248f;
+        const float x = value >= c
+            ? (powf(10.0f, (value - c) / a) - 1.0f) / b
+            : -(powf(10.0f, (c - value) / a) - 1.0f) / b;
+        return 0.9f * x;
+    }
+    if (gamma == 19) {
+        const float a = 0.24136077f;
+        const float b = 87.099375f;
+        const float c = 0.092864125f;
+        const float x = value >= c
+            ? (powf(10.0f, (value - c) / a) - 1.0f) / b
+            : -(powf(10.0f, (c - value) / a) - 1.0f) / b;
+        return 0.9f * x;
+    }
+    if (gamma == 20) {
+        const float a = 0.36726845f;
+        const float b = 14.98325f;
+        const float m = 1.9754798f;
+        const float c = 0.12512219f;
+        const float c_pos = 0.12240537f;
+        const float c_neg = 0.12783901f;
+        const float linear_cut = 0.014f;
+        const float lower_decode_cut = c - m * linear_cut;
+        const float upper_decode_cut = c + m * linear_cut;
+        float x;
+        if (value < lower_decode_cut) {
+            x = -(powf(10.0f, (c_neg - value) / a) - 1.0f) / b;
+        } else if (value > upper_decode_cut) {
+            x = (powf(10.0f, (value - c_pos) / a) - 1.0f) / b;
+        } else {
+            x = (value - c) / m;
+        }
+        return 0.9f * x;
+    }
+    if (gamma == 21) {
+        const float a = 0.241514f;
+        const float b = 0.00873f;
+        const float c = 0.598206f;
+        const float m = 5.60001054470806f;
+        const float d = 0.124999583317922f;
+        const float encoded_cut = 0.180999688765003f;
+        return value < encoded_cut
+            ? (value - d) / m
+            : powf(10.0f, (value - c) / a) - b;
+    }
+    if (gamma == 25) {
+        const float a = 0.9892f;
+        const float b = 0.0108f;
+        const float c = 0.256663f;
+        const float d = 0.584555f;
+        const float e = 6.025f;
+        const float f = 0.0929f;
+        const float encoded_cut = 0.1400586161070593f;
+        return value < encoded_cut
+            ? (value - f) / e
+            : (powf(10.0f, (value - d) / c) - b) / a;
+    }
+    if (gamma == 26) {
+        const float a = 0.555556f;
+        const float b = 0.009468f;
+        const float c = 0.344676f;
+        const float d = 0.790453f;
+        const float e = 8.735631f;
+        const float f = 0.092864f;
+        const float encoded_cut = 0.09781139663651882f;
+        return value < encoded_cut
+            ? (value - f) / e
+            : (powf(10.0f, (value - d) / c) - b) / a;
+    }
+    if (gamma == 27) {
+        const float a = 5.555556f;
+        const float b = 0.064829f;
+        const float c = 0.245281f;
+        const float d = 0.384316f;
+        const float e = 8.799461f;
+        const float f = 0.092864f;
+        const float encoded_cut = 0.10068573654723681f;
+        return value < encoded_cut
+            ? (value - f) / e
+            : (powf(10.0f, (value - d) / c) - b) / a;
+    }
+    if (gamma == 28) {
+        const float encoded_cut = 0.4625960144726521f;
+        if (value < encoded_cut) {
+            const float t = value * 1023.0f / 650.0f;
+            return t * t * t - 0.0075f;
+        }
+        return expf((value * 1023.0f - 619.0f) / 150.0f);
+    }
+    if (gamma == 29) {
+        const float m = 7.898308971401108f;
+        const float d = 0.08971061960369227f;
+        const float encoded_cut = 0.1371004734320989f;
+        return value < encoded_cut
+            ? (value - d) / m
+            : (powf(10.0f, (value - 0.6f) / 0.27f) - 0.0115f) / 1.3f;
+    }
+    if (gamma == 30) {
+        const float r0 = -0.05641088f;
+        const float pt = 0.20855531595464208f;
+        if (value < 0.0f) {
+            return r0;
+        }
+        if (value < pt) {
+            return sqrtf(value / 47.28711236f) + r0;
+        }
+        return exp2f((value - 0.69336945f) / 0.08550479f) - 0.00964052f;
+    }
+    if (gamma == 31) {
+        const float g2 = -0.245973605190997f;
+        const float yt = 0.20656190889447099f;
+        return value < yt
+            ? 0.016904f - powf(10.0f, (value - g2) / -0.20942f)
+            : powf(10.0f, (value - 0.720504856f) / 0.258984868f) - 0.0003645f;
+    }
+    if (gamma == 22) {
+        const float lower_decode_cut = (9.72f - 15.0f) / 17.52f;
+        return value <= lower_decode_cut
+            ? 2.0f * (exp2f(fmaf(17.52f, value, -9.72f)) - exp2f(-16.0f))
+            : exp2f(fmaf(17.52f, value, -9.72f));
+    }
+    if (gamma == 23) {
+        const float encoded_cut = 0.155251141552511f;
+        return value <= encoded_cut
+            ? (value - 0.0729055341958355f) / 10.5402377416545f
+            : exp2f(fmaf(17.52f, value, -9.72f));
+    }
+    if (gamma == 24) {
+        return signed_power(value, 2.5f);
     }
 
     const float sign = value < 0.0f ? -1.0f : 1.0f;
@@ -223,6 +371,124 @@ __device__ __forceinline__ float encode_transfer(const float value, const int ga
         return t < 0.0f
             ? 15.1927f * t
             : 0.224282f * log10f(155.975327f * t + 1.0f);
+    }
+    if (gamma == 18) {
+        const float x = value / 0.9f;
+        return x >= 0.0f
+            ? 0.45310179f * log10f(1.0f + 10.1596f * x) + 0.12512248f
+            : -0.45310179f * log10f(1.0f - 10.1596f * x) + 0.12512248f;
+    }
+    if (gamma == 19) {
+        const float x = value / 0.9f;
+        return x >= 0.0f
+            ? 0.24136077f * log10f(1.0f + 87.099375f * x) + 0.092864125f
+            : -0.24136077f * log10f(1.0f - 87.099375f * x) + 0.092864125f;
+    }
+    if (gamma == 20) {
+        const float x = value / 0.9f;
+        const float linear_cut = 0.014f;
+        if (x > linear_cut) {
+            return 0.36726845f * log10f(1.0f + 14.98325f * x) + 0.12240537f;
+        }
+        if (x < -linear_cut) {
+            return -0.36726845f * log10f(1.0f - 14.98325f * x) + 0.12783901f;
+        }
+        return 1.9754798f * x + 0.12512219f;
+    }
+    if (gamma == 21) {
+        const float a = 0.241514f;
+        const float b = 0.00873f;
+        const float c = 0.598206f;
+        const float m = 5.60001054470806f;
+        const float d = 0.124999583317922f;
+        const float linear_cut = 0.01f;
+        return value < linear_cut
+            ? m * value + d
+            : a * log10f(value + b) + c;
+    }
+    if (gamma == 25) {
+        const float a = 0.9892f;
+        const float b = 0.0108f;
+        const float c = 0.256663f;
+        const float d = 0.584555f;
+        const float e = 6.025f;
+        const float f = 0.0929f;
+        const float linear_cut = 0.007827156200341792f;
+        return value < linear_cut
+            ? e * value + f
+            : c * log10f(a * value + b) + d;
+    }
+    if (gamma == 26) {
+        const float a = 0.555556f;
+        const float b = 0.009468f;
+        const float c = 0.344676f;
+        const float d = 0.790453f;
+        const float e = 8.735631f;
+        const float f = 0.092864f;
+        const float linear_cut = 0.0005663467969879701f;
+        return value < linear_cut
+            ? e * value + f
+            : c * log10f(a * value + b) + d;
+    }
+    if (gamma == 27) {
+        const float a = 5.555556f;
+        const float b = 0.064829f;
+        const float c = 0.245281f;
+        const float d = 0.384316f;
+        const float e = 8.799461f;
+        const float f = 0.092864f;
+        const float linear_cut = 0.0008888881429483923f;
+        return value < linear_cut
+            ? e * value + f
+            : c * log10f(a * value + b) + d;
+    }
+    if (gamma == 28) {
+        const float linear_cut = 0.3784157394368526f;
+        return value < linear_cut
+            ? 650.0f * cbrtf(value + 0.0075f) / 1023.0f
+            : (150.0f * logf(value) + 619.0f) / 1023.0f;
+    }
+    if (gamma == 29) {
+        const float m = 7.898308971401108f;
+        const float d = 0.08971061960369227f;
+        const float linear_cut = 0.006f;
+        return value < linear_cut
+            ? m * value + d
+            : 0.27f * log10f(1.3f * value + 0.0115f) + 0.6f;
+    }
+    if (gamma == 30) {
+        const float r0 = -0.05641088f;
+        if (value < r0) {
+            return 0.0f;
+        }
+        if (value < 0.01f) {
+            const float offset = value - r0;
+            return 47.28711236f * offset * offset;
+        }
+        return 0.08550479f * log2f(value + 0.00964052f) + 0.69336945f;
+    }
+    if (gamma == 31) {
+        const float g2 = -0.245973605190997f;
+        return value < 0.01f
+            ? -0.20942f * log10f(0.016904f - value) + g2
+            : 0.258984868f * log10f(value + 0.0003645f) + 0.720504856f;
+    }
+    if (gamma == 22) {
+        if (value <= 0.0f) {
+            return (-16.0f + 9.72f) / 17.52f;
+        }
+        if (value < exp2f(-15.0f)) {
+            return (log2f(exp2f(-16.0f) + value / 2.0f) + 9.72f) / 17.52f;
+        }
+        return (log2f(value) + 9.72f) / 17.52f;
+    }
+    if (gamma == 23) {
+        return value <= 0.0078125f
+            ? 10.5402377416545f * value + 0.0729055341958355f
+            : (log2f(value) + 9.72f) / 17.52f;
+    }
+    if (gamma == 24) {
+        return signed_power(value, 1.0f / 2.5f);
     }
 
     const float sign = value < 0.0f ? -1.0f : 1.0f;
@@ -497,6 +763,32 @@ def rgb_to_rgb(
     RED-Log3G10 uses RED's published piecewise base-10 curve, applies its lower linear branch directly below -0.01,
     and leaves scene overshoot unclipped. REDlogFilm uses the Cineon sign-preserving mirror and exact float32 transfer
     bits while retaining independent gamma metadata. All RED colorspaces remain independent from transfer selection.
+    Canon-Log, Canon-Log-2, and Canon-Log-3 map public reflectance with x = r / 0.9 and apply Canon's 2018 signed
+    branches directly without clipping or sign/magnitude mirroring. Canon-Log-3 includes x = +/-0.014 in its linear
+    branch and derives both decode thresholds from that branch. Canon-Cinema-Gamut uses its published primaries and
+    D65 white, the shared Bradford adaptation path, and remains independent from transfer selection.
+    V-Log applies Panasonic's logarithmic branch directly to reflectance, with a tangent-derived lower branch and
+    decode threshold, without clipping or sign/magnitude mirroring. V-Gamut uses Panasonic's published primaries and
+    D65 white through the shared Bradford adaptation path and remains independent from transfer selection.
+    D-Log, F-Log, and F-Log2 apply their published linear and logarithmic branches directly to reflectance, using the
+    maximum-real-root intersection and its independently rounded encoded value as their cuts. D-Gamut and F-Gamut-C
+    use published primaries with D65 through the shared Bradford path. Transfer and colorspace selection remain
+    independent, equality belongs to the logarithmic branches, and signed and overshoot values remain unclipped.
+    N-Log uses the maximum-real-root intersection and signed cube-root extension. L-Log keeps its printed logarithmic
+    branch and uses the tangent at the printed input cut for its lower branch. Apple-Log preserves the published R0
+    and encoded-zero collapse, while Samsung-Log extends its continuity-derived lower logarithmic branch without
+    codec clipping. These four transfers take reflectance directly and remain independent from colorspace.
+    Apple-Wide-Gamut uses its published primaries with D65, derives ``native`` luma from the normalized primary
+    matrix, and uses the shared Bradford path for differing whites; Apple Log 2 is expressed by selecting it with
+    Apple-Log rather than by a combined token.
+    P3-DCI, P3-D60, and P3-D65 share P3 primaries with DCI, ACES, and D65 white respectively; SMPTE-C uses its
+    H.273 primaries and D65. Their normalized primary matrices, native luma rows, and differing-white Bradford
+    adaptation use the shared colorspace path. Transfer remains independent: Display P3 is expressed with P3-D65 and
+    sRGB, while the Academy AP1 grading combinations use ACEScg with ACEScc or ACEScct.
+    Gamma-2.5 is sign-preserving pure power. ACEScc applies the Academy three-branch analytic encode, including its
+    many-to-one nonpositive collapse, and ACEScct applies the Academy linear toe and log branch. Both take the
+    scene-linear component directly, add no gamut transform or LUT, and analytically extend decode above linear
+    65504 without an upper clip.
     """
     if not isinstance(frame, Frame):
         raise ValueError(

@@ -9,6 +9,7 @@ from typing import Callable
 import cupy as cp
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -395,10 +396,10 @@ def test_out_of_scope_transfers_keep_pre_correction_bits_characterization() -> N
 def test_public_docs_describe_vendor_piecewise_signed_extensions() -> None:
     """v1-log-negative-extension acceptance 8; v1-sony-tokens acceptance 12; v1-red-tokens acceptance 72.
 
-    Public docs state signed branches with the renamed ARRI token.
+    GitHub #29: public docs state signed branches with the renamed ARRI token.
     """
     token_reference = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    sony_tokens = (ROOT / "docs" / "features" / "v1-sony-tokens.md").read_text(encoding="utf-8")
+    sony_tokens = require_repo_file("docs/features/v1-sony-tokens.md").read_text(encoding="utf-8")
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     docstrings = {
         function.__name__: inspect.getdoc(function) or ""

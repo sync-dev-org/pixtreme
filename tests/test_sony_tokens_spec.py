@@ -10,6 +10,7 @@ from typing import Literal, get_args, get_origin, get_type_hints
 import cupy as cp
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -19,6 +20,10 @@ _COLORSPACES = (
     "sRGB",
     "Rec.709",
     "Rec.2020",
+    "P3-DCI",
+    "P3-D60",
+    "P3-D65",
+    "SMPTE-C",
     "ACES2065-1",
     "ACEScg",
     "S-Gamut",
@@ -34,6 +39,11 @@ _COLORSPACES = (
     "REDcolor2",
     "REDcolor3",
     "REDcolor4",
+    "Canon-Cinema-Gamut",
+    "V-Gamut",
+    "D-Gamut",
+    "F-Gamut-C",
+    "Apple-Wide-Gamut",
 )
 _GAMMAS = (
     "linear",
@@ -42,6 +52,8 @@ _GAMMAS = (
     "BT.1886",
     "PQ",
     "HLG",
+    "ACEScc",
+    "ACEScct",
     "S-Log",
     "S-Log2",
     "S-Log3",
@@ -51,9 +63,21 @@ _GAMMAS = (
     "DaVinci-Intermediate",
     "RED-Log3G10",
     "REDlogFilm",
+    "Canon-Log",
+    "Canon-Log-2",
+    "Canon-Log-3",
+    "V-Log",
+    "D-Log",
+    "F-Log",
+    "F-Log2",
+    "N-Log",
+    "L-Log",
+    "Apple-Log",
+    "Samsung-Log",
     "Cineon",
     "Gamma-2.2",
     "Gamma-2.4",
+    "Gamma-2.5",
     "Gamma-2.6",
 )
 _ALIASES = (
@@ -239,14 +263,16 @@ def _rgb_to_xyz(
 
 def test_sony_tokens_extend_the_canonical_vocabulary_and_public_static_surfaces() -> None:
     """v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 16-17; v1-blackmagic-tokens acceptance 33-34;
-    v1-red-tokens acceptance 54-55.
+    v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77; v1-panasonic-tokens acceptance 99-100;
+    v1-standard-tokens acceptance 117; v1-vendor-a-tokens acceptance 140-141;
+    v1-vendor-b-tokens acceptance 166-167.
 
     Canonical aliases and public surfaces expose only the feature token additions.
     """
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 165
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 188
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -258,7 +284,9 @@ def test_sony_tokens_extend_the_canonical_vocabulary_and_public_static_surfaces(
 
 
 def test_sony_token_keys_are_collision_free_family_local_and_separator_normalized() -> None:
-    """v1-sony-tokens acceptance 3; v1-blackmagic-tokens acceptance 35: token keys remain local and unique."""
+    """v1-sony-tokens acceptance 3; v1-blackmagic-tokens acceptance 35; v1-vendor-a-tokens acceptance 142:
+    token keys remain local and unique.
+    """
     from pixtreme._core.validation import _normalized_closed_token
     from pixtreme._core.vocabulary import _PERMANENT_TOKEN_ALIASES
 
@@ -471,7 +499,9 @@ def test_invalid_tokens_fail_before_gpu_with_raw_ordered_canonical_errors(
     candidates: tuple[str, ...],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-sony-tokens acceptance 11; v1-blackmagic-tokens acceptance 49: invalid values fail before GPU."""
+    """v1-sony-tokens acceptance 11; v1-blackmagic-tokens acceptance 49;
+    v1-vendor-a-tokens acceptance 160: invalid values fail before GPU.
+    """
     import pixtreme._color.semantics as semantics
     import pixtreme._color.transform as transform
 
@@ -494,12 +524,13 @@ def test_invalid_tokens_fail_before_gpu_with_raw_ordered_canonical_errors(
 
 def test_sony_public_documents_docstrings_and_changelog_are_synchronized() -> None:
     """v1-sony-tokens acceptance 12; v1-arri-tokens acceptance 29; v1-blackmagic-tokens acceptance 50;
-    v1-red-tokens acceptance 72.
+    v1-red-tokens acceptance 72; v1-canon-tokens acceptance 93; v1-panasonic-tokens acceptance 112;
+    v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188.
 
-    Docs expose normalization, signed branches, anchors, gamut equivalence, and current vocabulary counts.
+    GitHub #29: docs expose normalization, signed branches, anchors, gamut equivalence, and current counts.
     """
     tokens = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    requirements = (ROOT / "docs" / "requirements.md").read_text(encoding="utf-8")
+    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     normalized_docstrings = {
         function.__name__: " ".join((inspect.getdoc(function) or "").split())
@@ -517,7 +548,7 @@ def test_sony_public_documents_docstrings_and_changelog_are_synchronized() -> No
         "not a separately published Sony forward equation",
     ):
         assert claim in tokens
-    for claim in ("18 Colorspace", "19 Gamma", "165 canonical tokens"):
+    for claim in ("27 Colorspace", "33 Gamma", "188 canonical tokens"):
         assert claim in requirements
     for claim in (
         "S-Gamut",

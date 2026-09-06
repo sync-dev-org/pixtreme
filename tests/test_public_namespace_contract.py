@@ -7,12 +7,12 @@ import importlib.metadata
 import inspect
 import subprocess
 import sys
-from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Literal, get_args, get_origin
 
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -169,6 +169,10 @@ ALIAS_TOKENS = {
         "sRGB",
         "Rec.709",
         "Rec.2020",
+        "P3-DCI",
+        "P3-D60",
+        "P3-D65",
+        "SMPTE-C",
         "ACES2065-1",
         "ACEScg",
         "S-Gamut",
@@ -184,6 +188,11 @@ ALIAS_TOKENS = {
         "REDcolor2",
         "REDcolor3",
         "REDcolor4",
+        "Canon-Cinema-Gamut",
+        "V-Gamut",
+        "D-Gamut",
+        "F-Gamut-C",
+        "Apple-Wide-Gamut",
     ),
     "Gamma": (
         "linear",
@@ -192,6 +201,8 @@ ALIAS_TOKENS = {
         "BT.1886",
         "PQ",
         "HLG",
+        "ACEScc",
+        "ACEScct",
         "S-Log",
         "S-Log2",
         "S-Log3",
@@ -201,9 +212,21 @@ ALIAS_TOKENS = {
         "DaVinci-Intermediate",
         "RED-Log3G10",
         "REDlogFilm",
+        "Canon-Log",
+        "Canon-Log-2",
+        "Canon-Log-3",
+        "V-Log",
+        "D-Log",
+        "F-Log",
+        "F-Log2",
+        "N-Log",
+        "L-Log",
+        "Apple-Log",
+        "Samsung-Log",
         "Cineon",
         "Gamma-2.2",
         "Gamma-2.4",
+        "Gamma-2.5",
         "Gamma-2.6",
     ),
     "Matrix": ("BT.601", "BT.709", "BT.2020", "native"),
@@ -434,16 +457,15 @@ def test_frame_is_data_metadata_properties_and_dlpack_only() -> None:
 def test_literal_aliases_and_vocabulary_tables_are_identical() -> None:
     """v1-public-namespace acceptance 9 and 12; v1-view-transform-lut-removal acceptance 8;
     v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 16-17 and 29;
-    v1-blackmagic-tokens acceptance 34; v1-red-tokens acceptance 54-55: aliases, runtime tokens,
-    and parsed docs tables stay identical.
+    v1-blackmagic-tokens acceptance 34; v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
+    v1-panasonic-tokens acceptance 99-100 and 112; v1-vendor-a-tokens acceptance 140-141 and 161;
+    v1-vendor-b-tokens acceptance 166-167 and 188:
+    aliases, runtime tokens,
+    and parsed docs tables stay identical. GitHub #29.
     """
     from pixtreme._core import vocabulary as runtime_vocabulary
 
-    vocabulary_path = Path(__file__).resolve().parents[1] / "docs_site" / "tokens.md"
-    if not vocabulary_path.is_file():
-        import pytest
-
-        pytest.skip("repo-only documentation contract: docs_site/tokens.md is absent from this distribution")
+    vocabulary_path = require_repo_file("docs_site/tokens.md")
     markdown = vocabulary_path.read_text(encoding="utf-8")
 
     for alias_name, expected_tokens in ALIAS_TOKENS.items():

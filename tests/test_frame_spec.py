@@ -168,6 +168,10 @@ def test_frame_accepts_only_the_specified_storage_dtypes() -> None:
         "sRGB",
         "Rec.709",
         "Rec.2020",
+        "P3-DCI",
+        "P3-D60",
+        "P3-D65",
+        "SMPTE-C",
         "ACES2065-1",
         "ACEScg",
         "S-Gamut",
@@ -183,11 +187,17 @@ def test_frame_accepts_only_the_specified_storage_dtypes() -> None:
         "REDcolor2",
         "REDcolor3",
         "REDcolor4",
+        "Canon-Cinema-Gamut",
+        "V-Gamut",
+        "D-Gamut",
+        "F-Gamut-C",
+        "Apple-Wide-Gamut",
     ),
 )
 def test_frame_accepts_each_colorspace_token(colorspace: str) -> None:
     """v1-frame-core acceptance 7; v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 17;
-    v1-red-tokens acceptance 54-55.
+    v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 77; v1-panasonic-tokens acceptance 99-100;
+    v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167.
 
     Every colorspace token is accepted canonically.
     """
@@ -204,6 +214,8 @@ def test_frame_accepts_each_colorspace_token(colorspace: str) -> None:
         "BT.1886",
         "PQ",
         "HLG",
+        "ACEScc",
+        "ACEScct",
         "S-Log",
         "S-Log2",
         "S-Log3",
@@ -213,15 +225,28 @@ def test_frame_accepts_each_colorspace_token(colorspace: str) -> None:
         "DaVinci-Intermediate",
         "RED-Log3G10",
         "REDlogFilm",
+        "Canon-Log",
+        "Canon-Log-2",
+        "Canon-Log-3",
+        "V-Log",
+        "D-Log",
+        "F-Log",
+        "F-Log2",
+        "N-Log",
+        "L-Log",
+        "Apple-Log",
+        "Samsung-Log",
         "Cineon",
         "Gamma-2.2",
         "Gamma-2.4",
+        "Gamma-2.5",
         "Gamma-2.6",
     ),
 )
 def test_frame_accepts_each_gamma_token(gamma: str) -> None:
     """v1-color-semantics acceptance 27; v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 17;
-    v1-red-tokens acceptance 54-55.
+    v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 77; v1-panasonic-tokens acceptance 99-100;
+    v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167.
 
     Frame accepts every gamma token.
     """

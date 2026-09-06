@@ -9,9 +9,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+from repository_contracts import require_repo_file
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "tools" / "mirror_public.py"
 _TIMEOUT_SECONDS = 20
 
 
@@ -130,7 +130,8 @@ def _make_repository(tmp_path: Path, *, public_has_main: bool) -> _RepositoryFix
 
 
 def _run_script(repository: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
-    completed = _run([sys.executable, str(SCRIPT), *arguments], cwd=repository)
+    script = require_repo_file("tools/mirror_public.py")
+    completed = _run([sys.executable, str(script), *arguments], cwd=repository)
     assert isinstance(completed, subprocess.CompletedProcess)
     assert isinstance(completed.stdout, str)
     return completed
@@ -252,8 +253,9 @@ def test_tag_pushes_an_annotated_release_tag(repository: _RepositoryFixture) -> 
 
 
 def test_script_imports_only_python_standard_library_modules() -> None:
-    """v1-public-mirror acceptance 8: the implementation has a stdlib-only structural contract."""
-    tree = ast.parse(SCRIPT.read_text(encoding="utf-8"), filename=str(SCRIPT))
+    """v1-public-mirror acceptance 8; GitHub #29: the script has a stdlib-only structural contract."""
+    script = require_repo_file("tools/mirror_public.py")
+    tree = ast.parse(script.read_text(encoding="utf-8"), filename=str(script))
     imported: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):

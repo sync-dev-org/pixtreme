@@ -7,11 +7,12 @@ import inspect
 import re
 from pathlib import Path
 
+from repository_contracts import require_repo_file
+
 import pixtreme as px
 
 ROOT = Path(__file__).resolve().parents[1]
 RECIPE = ROOT / "docs_site" / "transport.md"
-FEATURE = ROOT / "docs" / "features" / "v1-transport-recipe.md"
 
 
 def _function(path: Path, name: str) -> ast.FunctionDef:
@@ -77,10 +78,10 @@ def test_transport_recipe_rejects_unproved_decoder_and_encoder_formats() -> None
 
 
 def test_transport_recipe_documents_signal_mapping_and_encoder_round_trip() -> None:
-    """v1-transport-recipe acceptance 2, 3, and 7: signal claims and the encode route stay explicit."""
+    """v1-transport-recipe acceptance 2, 3, and 7; GitHub #29: signal claims and encode route stay explicit."""
     recipe = RECIPE.read_text(encoding="utf-8")
     normalized_recipe = " ".join(recipe.split())
-    feature = FEATURE.read_text(encoding="utf-8")
+    feature = require_repo_file("docs/features/v1-transport-recipe.md").read_text(encoding="utf-8")
 
     for text in (
         "matrix_coefficients",

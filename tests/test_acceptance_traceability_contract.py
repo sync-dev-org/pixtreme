@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
+from repository_contracts import require_repo_file
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -66,13 +66,11 @@ assert primary_context_active() == 0
 
 
 def test_current_public_names_follow_the_documented_naming_rules_and_reservations() -> None:
-    """v1-public-namespace acceptance 11: current docs and leaves retain the naming grammar."""
+    """v1-public-namespace acceptance 11: current docs and leaves retain the naming grammar. GitHub #29."""
     import pixtreme as px
 
-    requirements_path = ROOT / "docs" / "requirements.md"
-    feature_path = ROOT / "docs" / "features" / "v1-public-namespace.md"
-    if not requirements_path.is_file() or not feature_path.is_file():
-        pytest.skip("repo-only documentation contract: docs canon is absent from this distribution")
+    requirements_path = require_repo_file("docs/requirements.md")
+    feature_path = require_repo_file("docs/features/v1-public-namespace.md")
     requirements = requirements_path.read_text(encoding="utf-8")
     feature = feature_path.read_text(encoding="utf-8")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")

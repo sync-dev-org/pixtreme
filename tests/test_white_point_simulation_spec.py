@@ -10,6 +10,7 @@ from typing import get_args, get_type_hints
 
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -123,7 +124,7 @@ def _expected(
 
 
 def test_public_surface_signature_alias_counts_and_docs_are_synchronized() -> None:
-    """v1-white-point-simulation acceptance 1 and 13: API, alias, counts, and public docs agree."""
+    """v1-white-point-simulation acceptance 1 and 13; GitHub #29: API, alias, counts, and public docs agree."""
     assert get_args(px.core.ReferenceWhite) == ("D65", "D93", "D50", "ACES")
     assert px.color.__all__[-1] == "white_point_simulation"
     assert len(px.color.__all__) == 15
@@ -149,7 +150,7 @@ def test_public_surface_signature_alias_counts_and_docs_are_synchronized() -> No
     assert adaptation_hints["output_white"] == px.core.ReferenceWhite | Sequence[float]
 
     root = Path(__file__).resolve().parents[1]
-    requirements = (root / "docs" / "requirements.md").read_text(encoding="utf-8")
+    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
     tokens = (root / "docs_site" / "tokens.md").read_text(encoding="utf-8")
     color_row = next(line for line in requirements.splitlines() if line.startswith("| `color` |"))
     assert "| 15 |" in color_row

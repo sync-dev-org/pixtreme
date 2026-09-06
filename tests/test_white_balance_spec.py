@@ -12,6 +12,7 @@ from typing import Any, get_args
 
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -149,7 +150,7 @@ def _encode_srgb(values: np.ndarray) -> np.ndarray:
 
 def test_public_surface_signatures_alias_counts_and_docs_are_synchronized() -> None:
     """v1-white-balance acceptance 1; v1-white-point-simulation acceptance 1:
-    API, Literal, operation counts, requirements, and token docs agree.
+    API, Literal, operation counts, requirements, and token docs agree. GitHub #29.
     """
     expected_tokens = ("Bradford", "CAT02", "CAT16", "von-Kries")
     assert get_args(px.core.ChromaticAdaptation) == expected_tokens
@@ -179,7 +180,7 @@ def test_public_surface_signatures_alias_counts_and_docs_are_synchronized() -> N
     assert balance_signature.parameters["cat"].default == "CAT02"
 
     root = Path(__file__).resolve().parents[1]
-    requirements = (root / "docs" / "requirements.md").read_text(encoding="utf-8")
+    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
     tokens = (root / "docs_site" / "tokens.md").read_text(encoding="utf-8")
     assert "| `color` |" in requirements and "| 15 |" in next(
         line for line in requirements.splitlines() if line.startswith("| `color` |")

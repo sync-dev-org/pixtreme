@@ -2,6 +2,61 @@
 
 Notable changes to pixtreme are documented in this file.
 
+## 1.4.0 - 2026-09-07
+
+pixtreme 1.4.0 widens the colour vocabulary from 18 to 27 colorspace tokens and from 19 to 33 gamma tokens by adding
+23 tokens across the Canon, Panasonic, DJI, Fujifilm, Nikon, Leica, Apple, and Samsung camera families and the
+P3 / SMPTE-C / ACEScc / ACEScct / Gamma-2.5 standard set. Every new token is an independent addition: existing token
+spellings, aliases, and float32 results are unchanged, and there are no breaking changes to the public API. The
+published performance baseline (`docs_site/performance.md` and the README table) is regenerated from a single
+same-run measurement of the current kernels on an NVIDIA RTX A6000 (WSL2, CUDA runtime 12.9, CuPy 14.1.1), replacing
+figures that predated the 1.3.0 kernel fusions.
+
+### Added
+
+- Added the independent `Apple-Wide-Gamut` colorspace and `N-Log`, `L-Log`, `Apple-Log`, and `Samsung-Log`
+  transfers. N-Log uses the maximum-real-root branch intersection, L-Log uses the printed cut's tangent, Apple Log
+  preserves its published lower collapse, and Samsung Log derives its lower offset at the upper-branch cut and
+  extends that branch without the vendor codec collapse. These numeric identities intentionally have non-parity
+  with printed cuts, ACES CTL, OpenColorIO-family evaluation, or codec clipping where those definitions differ.
+  Apple Wide Gamut uses its published primaries and D65 with the shared Bradford production path; its CAT02
+  ACES matrix remains an auxiliary check. Existing gamma and colorspace results remain float32 bit-identical.
+
+- Added the independent `D-Gamut` and `F-Gamut-C` colorspaces and `D-Log`, `F-Log`, and `F-Log2` transfers.
+  The transfers apply the vendor-published linear and logarithmic branches directly to reflectance, using each
+  branch intersection's maximum real root and separately rounded binary64 encode/decode cuts. Printed cuts, the
+  rounded D-Log inverse, ACES CTL, OpenColorIO-Config-ACES, and vendor IDTs are explicit non-parity targets.
+  D-Gamut and F-Gamut-C use their published primaries with D65 and the shared Bradford production path; vendor and
+  CAT02 matrices remain auxiliary checks. Existing gamma and colorspace results remain float32 bit-identical.
+
+- Added the independent `P3-DCI`, `P3-D60`, `P3-D65`, and `SMPTE-C` colorspaces and `ACEScc`, `ACEScct`, and
+  `Gamma-2.5` transfers. P3-D60 uses ACES white to align with the public ACES/OpenColorIO ecosystem; SMPTE EG 432-1's
+  distinct nominal D60 is an auxiliary comparison and Resolve parity is not claimed. Gamma-2.5 is the conventional
+  sign-preserving pure power because Resolve publishes no formula. ACEScc and ACEScct evaluate the Academy AP1
+  analytic curves without an upper 65504 clip (a documented no-upper-clip extension); `ACEScg` supplies the standard
+  AP1 colorimetry independently. ACEScc intentionally collapses nonpositive encode inputs, so ACEScct is the path for
+  preserving negative components. Existing token results remain float32 bit-identical.
+
+- Added the independent `V-Gamut` colorspace and `V-Log` gamma tokens. V-Gamut uses Panasonic's published CIE 1931
+  xy primaries with D65 and the shared Bradford adaptation path. V-Log applies Panasonic's public logarithmic branch
+  directly to reflectance and uses the cut-derived tangent for a C1-continuous lower branch, matching current
+  OpenColorIO. Panasonic's printed linear branch, vendor IDT, and ACES CSC are not bit-parity targets. The external
+  `Panasonic V-Gamut` / `Panasonic V-Log` labels, combined labels, and `V-Log L` remain outside the alias guarantee.
+  Existing token results remain float32 bit-identical.
+
+- Added the independent `Canon-Cinema-Gamut` colorspace and `Canon-Log`, `Canon-Log-2`, and `Canon-Log-3` gamma
+  tokens. The gamut uses Canon's published CIE 1931 xy primaries with D65 and the shared Bradford adaptation path.
+  The transfers use the Canon 2018 full-range equations after mapping public reflectance with `x = r / 0.9`, extend
+  their published signed branches without clipping or sign/magnitude mirroring, and retain values above 1.
+  `Canon Raw` decoding and proprietary capture-gamut or OETF recovery remain outside the guarantee. Existing token
+  results remain float32 bit-identical.
+
+### Changed
+
+- DPX writes tag frames whose gamma is `Canon-Log`, `Canon-Log-2`, `Canon-Log-3`, `V-Log`, `D-Log`, `F-Log`,
+  `F-Log2`, `N-Log`, `L-Log`, `Apple-Log`, `Samsung-Log`, `ACEScc`, or `ACEScct` with the logarithmic transfer
+  characteristic in the file header, matching the existing camera-log tokens. Pixel encoding is unchanged.
+
 ## 1.3.0 - 2026-09-03
 
 pixtreme 1.3.0 widens the camera and working colour vocabulary from 7 to 18 colorspace tokens and from 12 to 19

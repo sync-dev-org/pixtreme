@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import pytest
+from repository_contracts import require_repo_file
 
 PerformanceResult = tuple[str, str, float, float, float, float, float, float]
 
@@ -12,10 +12,8 @@ _PERFORMANCE_RESULTS: list[PerformanceResult] = []
 
 @pytest.fixture(scope="session")
 def vocabulary_markdown() -> str:
-    """REQ-TEST-008: load the repo-only token reference or skip in a docs-free distribution."""
-    vocabulary_path = Path(__file__).resolve().parents[1] / "docs_site" / "tokens.md"
-    if not vocabulary_path.is_file():
-        pytest.skip("repo-only documentation contract: docs_site/tokens.md is absent from this distribution")
+    """REQ-TEST-008; GitHub #29: load the repo-only token reference or skip when absent."""
+    vocabulary_path = require_repo_file("docs_site/tokens.md")
     return vocabulary_path.read_text(encoding="utf-8")
 
 

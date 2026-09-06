@@ -11,6 +11,7 @@ import cupy as cp
 import numpy as np
 import pytest
 from PIL import Image
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -265,10 +266,8 @@ def test_write_image_new_encode_parameters_share_fail_fast_validation(tmp_path: 
 
 
 def test_requirements_marks_the_encoded_bytes_boundary_as_implemented() -> None:
-    """v1-bytes-boundary acceptance 13: REQ-API-010 records the two implemented bytes APIs."""
-    requirements_path = Path(__file__).resolve().parents[1] / "docs" / "requirements.md"
-    if not requirements_path.is_file():
-        pytest.skip("repo-only documentation contract: docs/requirements.md is absent from this distribution")
+    """v1-bytes-boundary acceptance 13: REQ-API-010 records the implemented bytes APIs. GitHub #29."""
+    requirements_path = require_repo_file("docs/requirements.md")
     requirements = requirements_path.read_text(encoding="utf-8")
     assert "| bytes (encoded) | `px.io.decode_image` | `px.io.encode_image` |" in requirements
     assert "`px.io.decode_image` (名前予約)" not in requirements

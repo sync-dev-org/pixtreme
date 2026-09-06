@@ -14,6 +14,7 @@ from pathlib import Path
 import cupy as cp
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -557,8 +558,8 @@ def test_draw_text_user_font_bitmap_guard_identifies_selected_asset(monkeypatch:
 
 
 def test_draw_text_user_font_documentation_is_self_contained() -> None:
-    """v1-draw-text-user-font acceptance 23; v1-lut-extensions acceptance 26: public type counts stay current."""
-    requirements = (ROOT / "docs" / "requirements.md").read_text(encoding="utf-8")
+    """v1-draw-text-user-font acceptance 23; v1-lut-extensions acceptance 26; GitHub #29: counts stay current."""
+    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
     tokens = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
     text_doc = inspect.getdoc(px.draw.text) or ""
     font_doc = inspect.getdoc(px.draw.Font.from_file) or ""

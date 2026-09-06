@@ -537,6 +537,19 @@ def _dpx_transfer_from_gamma(gamma: str) -> int:
         "Blackmagic-Film-Gen-5",
         "DaVinci-Intermediate",
         "RED-Log3G10",
+        "Canon-Log",
+        "Canon-Log-2",
+        "Canon-Log-3",
+        "V-Log",
+        "D-Log",
+        "F-Log",
+        "F-Log2",
+        "N-Log",
+        "L-Log",
+        "Apple-Log",
+        "Samsung-Log",
+        "ACEScc",
+        "ACEScct",
     ):
         return 3
     return 6

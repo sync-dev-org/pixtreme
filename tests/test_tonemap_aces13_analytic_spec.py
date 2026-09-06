@@ -13,6 +13,7 @@ from typing import Any
 import cupy as cp
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -359,12 +360,10 @@ def test_spline_tables_use_packed_global_read_only_records_for_divergent_segment
 
 
 def test_oracle_tool_recreates_the_committed_fixture_byte_for_byte(tmp_path: Path) -> None:
-    """v1-tonemap-aces13-analytic acceptance 20-21: the external OCIO oracle is byte-deterministic."""
+    """v1-tonemap-aces13-analytic acceptance 20-21; GitHub #29: the OCIO oracle is byte-deterministic."""
     first = tmp_path / "first.npz"
     second = tmp_path / "second.npz"
-    tool_path = ROOT / "tools" / "bake_aces13_analytic_oracle.py"
-    if not tool_path.is_file():
-        pytest.skip("repo-only tooling contract: tools/bake_aces13_analytic_oracle.py is absent from this distribution")
+    tool_path = require_repo_file("tools/bake_aces13_analytic_oracle.py")
     command = [sys.executable, str(tool_path)]
     subprocess.run([*command, str(first)], cwd=ROOT, check=True, capture_output=True, text=True, timeout=120)
     subprocess.run([*command, str(second)], cwd=ROOT, check=True, capture_output=True, text=True, timeout=120)
@@ -372,10 +371,8 @@ def test_oracle_tool_recreates_the_committed_fixture_byte_for_byte(tmp_path: Pat
 
 
 def test_docs_docstring_registry_and_visual_generator_expose_the_six_row_boundary() -> None:
-    """v1-view-transform-lut-removal acceptance 4 and 8: public texts and tooling use the six rows."""
-    requirements_path = ROOT / "docs" / "requirements.md"
-    if not requirements_path.is_file():
-        pytest.skip("repo-only documentation contract: docs/requirements.md is absent from this distribution")
+    """v1-view-transform-lut-removal acceptance 4 and 8; GitHub #29: public texts use the six rows."""
+    requirements_path = require_repo_file("docs/requirements.md")
     requirements = requirements_path.read_text(encoding="utf-8")
     vocabulary = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
     docstring = inspect.getdoc(px.color.rgb_to_rgb)

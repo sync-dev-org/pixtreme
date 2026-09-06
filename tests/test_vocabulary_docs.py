@@ -70,7 +70,8 @@ def test_token_reference_is_the_english_canon_characterization() -> None:
 
 def test_documented_tokens_equal_the_validator_token_sets(vocabulary_markdown: str) -> None:
     """v1-format-boundary acceptance 39; v1-frame-core acceptance 16; v1-recode-dtype acceptance 8;
-    v1-white-balance acceptance 1; v1-sony-tokens acceptance 1 and 12.
+    v1-white-balance acceptance 1; v1-sony-tokens acceptance 1 and 12;
+    v1-vendor-a-tokens acceptance 140-141 and 161; v1-vendor-b-tokens acceptance 166 and 188.
 
     Boundary/resizing/blurring docs, including v1-blur-vector acceptance 14 and
     v1-lut-extensions acceptance 27, match code token sets.
@@ -135,7 +136,9 @@ def test_documented_tokens_equal_the_validator_token_sets(vocabulary_markdown: s
 
 def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(vocabulary_markdown: str) -> None:
     """v1-frame-core acceptance 16; v1-log-negative-extension acceptance 8; v1-sony-tokens acceptance 12;
-    v1-arri-tokens acceptance 16 and 29; v1-blackmagic-tokens acceptance 50; v1-red-tokens acceptance 54 and 72.
+    v1-arri-tokens acceptance 16 and 29; v1-blackmagic-tokens acceptance 50; v1-red-tokens acceptance 54 and 72;
+    v1-canon-tokens acceptance 76 and 93; v1-panasonic-tokens acceptance 99 and 112;
+    v1-vendor-a-tokens acceptance 140-141 and 161.
     """
     assert _table_rows(
         vocabulary_markdown,
@@ -251,6 +254,18 @@ def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(voca
             "Extend the piecewise low power and high logarithmic branches naturally with sign; scene-referred broadcast HDR transfer",
         ),
         (
+            "`ACEScc`",
+            "ACES logarithmic grading transfer",
+            "Academy S-2014-003",
+            "Applies the three published AP1 branches directly to scene-linear components; all nonpositive inputs collapse to one encoded value; decode extends analytically above 65504 without clipping; select `ACEScg` separately for the standard AP1 combination",
+        ),
+        (
+            "`ACEScct`",
+            "ACES logarithmic grading transfer with linear toe",
+            "Academy S-2016-001",
+            "Applies the published AP1 linear and logarithmic branches directly, including an unbounded negative linear toe; decode extends analytically above 65504 without clipping; select `ACEScg` separately for the standard AP1 combination",
+        ),
+        (
             "`S-Log`",
             "S-Log camera log transfer",
             "Sony S-Log whitepaper; Sony S-Log2 technical paper (decoder branch)",
@@ -305,6 +320,72 @@ def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(voca
             "Numerically identical to `Cineon`, including its sign-preserving mirror and zero offset, while preserving independent gamma metadata; specify colorspace independently",
         ),
         (
+            "`Canon-Log`",
+            "Canon Log camera transfer",
+            "Canon 2018 Canon Log whitepaper",
+            "Maps reflectance with `x = r / 0.9`; uses the published `A = 0.45310179`, `B = 10.1596`, and `C = 0.12512248` positive and negative logarithmic branches around encoded black; no clipping or sign/magnitude mirroring; specify colorspace independently",
+        ),
+        (
+            "`Canon-Log-2`",
+            "Canon Log 2 camera transfer",
+            "Canon 2018 Canon Log whitepaper",
+            "Maps reflectance with `x = r / 0.9`; uses the published `A = 0.24136077`, `B = 87.099375`, and `C = 0.092864125` positive and negative logarithmic branches around encoded black; no clipping or sign/magnitude mirroring; specify colorspace independently",
+        ),
+        (
+            "`Canon-Log-3`",
+            "Canon Log 3 camera transfer",
+            "Canon 2018 Canon Log whitepaper",
+            "Maps reflectance with `x = r / 0.9`; uses published logarithmic branches outside `x = +/-0.014` and the published linear branch at both cuts; decode cuts are derived from that linear branch; no clipping or sign/magnitude mirroring; specify colorspace independently",
+        ),
+        (
+            "`V-Log`",
+            "Panasonic V-Log camera transfer",
+            "Panasonic V-Log/V-Gamut Reference Manual; OpenColorIO",
+            "Applies the published logarithmic branch directly to reflectance `r`, without `r / 0.9` scaling; the lower branch and decode cut are tangent-derived for C1 continuity; negative values and scene overshoot extend without clipping or sign/magnitude mirroring; specify colorspace independently",
+        ),
+        (
+            "`D-Log`",
+            "DJI D-Log camera transfer",
+            "DJI Zenmuse X7/X9 D-Log and D-Gamut whitepapers",
+            "Applies the printed linear and logarithmic branches directly to reflectance; their maximum real root defines the cut; negative values and scene overshoot extend without clipping or mirroring; specify colorspace independently",
+        ),
+        (
+            "`F-Log`",
+            "Fujifilm F-Log camera transfer",
+            "Fujifilm F-Log Data Sheet v1.2",
+            "Applies the printed linear and logarithmic branches directly to reflectance; their maximum real root defines the cut instead of the printed threshold; negative values and scene overshoot extend without clipping or mirroring; specify colorspace independently",
+        ),
+        (
+            "`F-Log2`",
+            "Fujifilm F-Log2 camera transfer",
+            "Fujifilm F-Log2 Data Sheet v1.1",
+            "Applies the printed linear and logarithmic branches directly to reflectance; their maximum real root defines the cut instead of the printed threshold; `F-Log2 C` uses this transfer plus `F-Gamut-C` independently",
+        ),
+        (
+            "`N-Log`",
+            "Nikon N-Log camera transfer",
+            "Nikon N-Log Specification Ver.1.0.0",
+            "Applies Nikon's two printed branches directly to reflectance; the maximum real intersection defines the encode cut and its independently rounded encoded value defines the decode cut; the cube-root branch extends over all real values without clipping; specify colorspace independently",
+        ),
+        (
+            "`L-Log`",
+            "Leica L-Log camera transfer",
+            "Leica L-Log Reference Manual V1.6",
+            "Applies Leica's logarithmic branch directly to reflectance and uses its tangent at the printed linear cut for a C1-continuous lower branch; negative values and scene overshoot extend without clipping; specify colorspace independently",
+        ),
+        (
+            "`Apple-Log`",
+            "Apple Log camera transfer",
+            "Apple Log Profile White Paper; Apple Log 2 White Paper",
+            "Retains the published three branches: values below `R0` encode to zero and negative encoded values decode to `R0`; no upper clip; `Apple Log 2` uses this transfer plus `Apple-Wide-Gamut` independently",
+        ),
+        (
+            "`Samsung-Log`",
+            "Samsung Log camera transfer",
+            "Samsung Log White Paper",
+            "Re-derives the printed lower offset from continuity at `xt`; extends the lower logarithmic branch and inverse without the published codec collapse at `x0` or encoded zero; no clipping; specify colorspace independently",
+        ),
+        (
             "`Cineon`",
             "Cineon printing-density log transfer",
             "Kodak Cineon specification",
@@ -321,6 +402,12 @@ def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(voca
             "Power transfer with exponent 2.4",
             "Conventional value",
             "**Pure power**, reflected with preserved sign; numerically equivalent to the ideal-black `BT.1886` implementation but semantically distinct",
+        ),
+        (
+            "`Gamma-2.5`",
+            "Power transfer with exponent 2.5",
+            "Conventional industry value",
+            "Decode with `sign(x) * abs(x) ** 2.5` and encode with `sign(x) * abs(x) ** 0.4`; 18% gray encodes to `0.5036269964912325`; no offset, piecewise branch, or clipping; Resolve numerical parity is not guaranteed because its formula is unpublished",
         ),
         (
             "`Gamma-2.6`",
@@ -351,6 +438,30 @@ def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(voca
             "BT.2020 wide-gamut primaries and D65 white",
             "ITU-R BT.2020",
             "Specify the HDR transfer separately with gamma",
+        ),
+        (
+            "`P3-DCI`",
+            "P3 primaries and DCI calibration white",
+            "SMPTE RP 431-2",
+            "Uses white `(0.3140, 0.3510)`; selected independently from transfer",
+        ),
+        (
+            "`P3-D60`",
+            "P3 primaries and ACES white",
+            "OpenColorIO built-in / ACES canonical config",
+            "Production white is `(0.32168, 0.33767)`; SMPTE EG 432-1's nominal four-decimal D60 is only an auxiliary comparison, and Resolve parity is not guaranteed",
+        ),
+        (
+            "`P3-D65`",
+            "P3 primaries and D65 white",
+            "SMPTE EG 432-1",
+            "Use with the independent `sRGB` transfer to represent Display P3 values; `Display P3` is not an alias",
+        ),
+        (
+            "`SMPTE-C`",
+            "SMPTE-C primaries and D65 white",
+            "ITU-T H.273 ColourPrimaries 6",
+            "Not 1953 NTSC primaries or white C; `SMPTE 170M` and `NTSC` are not aliases",
         ),
         (
             "`ACES2065-1`",
@@ -441,6 +552,36 @@ def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(voca
             "Legacy REDcolor4-derived primaries and D65 white",
             "ACES 1.0.3 OpenColorIO config",
             "Scene-referred gamut reconstructed from the published RGB-to-ACES2065-1 matrix; selected independently from gamma",
+        ),
+        (
+            "`Canon-Cinema-Gamut`",
+            "Canon Cinema Gamut primaries and D65 white",
+            "Canon Cinema Gamut and Canon Log whitepaper",
+            "Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; Canon Raw decoding is outside the guarantee",
+        ),
+        (
+            "`V-Gamut`",
+            "Panasonic V-Gamut primaries and D65 white",
+            "Panasonic V-Log/V-Gamut Reference Manual",
+            "Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; vendor-prefixed and combined external labels are not aliases",
+        ),
+        (
+            "`D-Gamut`",
+            "DJI D-Gamut primaries and D65 white",
+            "DJI Zenmuse X7/X9 D-Log and D-Gamut whitepapers",
+            "Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; `DJI D-Gamut` and `D-Log M` are not aliases",
+        ),
+        (
+            "`F-Gamut-C`",
+            "Fujifilm F-Gamut-C primaries and D65 white",
+            "Fujifilm F-Log2 C IDT v1.10",
+            "Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; `F-Log2 C` is represented by this gamut plus `F-Log2`",
+        ),
+        (
+            "`Apple-Wide-Gamut`",
+            "Apple Wide Gamut primaries and D65 white",
+            "Apple Log 2 White Paper Ver.1.1",
+            "Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; `Apple Log 2` is represented by this gamut plus `Apple-Log`",
         ),
     )
 
@@ -829,7 +970,9 @@ def test_vocabulary_bit_depths_equal_the_shared_validator_set(vocabulary_markdow
 
 def test_vocabulary_documents_matrix_semantics_and_colorspace_derivation(vocabulary_markdown: str) -> None:
     """v1-color-semantics acceptance 35; v1-arri-tokens acceptance 23-24 and 29;
-    v1-blackmagic-tokens acceptance 44-45 and 50; v1-red-tokens acceptance 64 and 72.
+    v1-blackmagic-tokens acceptance 44-45 and 50; v1-red-tokens acceptance 64 and 72;
+    v1-canon-tokens acceptance 87 and 93; v1-panasonic-tokens acceptance 106 and 112;
+    v1-vendor-a-tokens acceptance 153-156 and 161; v1-vendor-b-tokens acceptance 182 and 188.
 
     Matrix tokens and own-row values are complete records.
     """
@@ -914,6 +1057,27 @@ def test_vocabulary_documents_matrix_semantics_and_colorspace_derivation(vocabul
         ("`REDcolor2`", "`(0.1657102643, 0.8636624823, -0.0293727466)`", "REDcolor2 own-row"),
         ("`REDcolor3`", "`(0.2255112277, 0.7798000805, -0.0053113082)`", "REDcolor3 own-row"),
         ("`REDcolor4`", "`(0.2088065893, 0.7220385248, 0.0691548859)`", "REDcolor4 own-row"),
+        (
+            "`Canon-Cinema-Gamut`",
+            "`(0.2612613575, 0.8696421458, -0.1309035033)`",
+            "Canon Cinema Gamut own-row",
+        ),
+        (
+            "`V-Gamut`",
+            "`(0.2606855501, 0.7748944633, -0.0355800134)`",
+            "Panasonic V-Gamut own-row",
+        ),
+        ("`D-Gamut`", "`(0.2830046624, 0.8131960564, -0.0962007188)`", "DJI D-Gamut own-row"),
+        (
+            "`F-Gamut-C`",
+            "`(0.2850070082, 0.7419456971, -0.0269527054)`",
+            "Fujifilm F-Gamut-C own-row",
+        ),
+        (
+            "`Apple-Wide-Gamut`",
+            "`(0.2704812904, 0.8160372589, -0.0865185493)`",
+            "Apple Wide Gamut own-row",
+        ),
     )
 
 

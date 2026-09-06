@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import inspect
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 from pixtreme._feature.features import _DIRECT_MATCH_OPERATION_LIMIT, _window_sums
@@ -740,10 +740,8 @@ def test_analysis_vocabulary_defines_methods_and_harris_border(vocabulary_markdo
 
 
 def test_analysis_requirements_define_modules_and_array_response_boundary() -> None:
-    """v1-analysis-pair acceptance 27 / v1-public-namespace acceptance 1 and 8: canon retains feature responses."""
-    requirements_path = Path(__file__).resolve().parents[1] / "docs" / "requirements.md"
-    if not requirements_path.is_file():
-        pytest.skip("repo-only documentation contract: docs/requirements.md is absent from this distribution")
+    """v1-analysis-pair acceptance 27 / v1-public-namespace acceptance 1 and 8. GitHub #29."""
+    requirements_path = require_repo_file("docs/requirements.md")
     requirements = requirements_path.read_text(encoding="utf-8")
     architecture = requirements.split("**REQ-ARCH-008:", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
     modules = requirements.split("**REQ-API-009:", maxsplit=1)[1].split("**REQ-API-010:", maxsplit=1)[0]

@@ -8,6 +8,7 @@ from pathlib import Path
 import cupy as cp
 import numpy as np
 import pytest
+from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -717,16 +718,14 @@ def test_write_lut_performs_one_device_to_host_transfer(
 def test_lut_io_public_signatures_and_documentation_contract_match_the_feature() -> None:
     """v1-lut-extensions acceptance 4 and 26; v1-white-balance acceptance 1;
     v1-white-point-simulation acceptance 1:
-    public signatures, counts, types, and boundary canon stay aligned.
+    public signatures, counts, types, and boundary canon stay aligned. GitHub #29.
     """
     assert tuple(inspect.signature(px.io.read_lut).parameters) == ("path",)
     assert tuple(inspect.signature(px.io.decode_lut).parameters) == ("data",)
     assert tuple(inspect.signature(px.io.write_lut).parameters) == ("path", "lut")
     assert len([name for name in px.io.__all__ if inspect.isfunction(getattr(px.io, name))]) == 26
 
-    requirements_path = ROOT / "docs" / "requirements.md"
-    if not requirements_path.is_file():
-        pytest.skip("repo-only documentation contract: canonical requirements are absent from this distribution")
+    requirements_path = require_repo_file("docs/requirements.md")
     requirements = requirements_path.read_text(encoding="utf-8")
     public_section = requirements.split("**REQ-API-009", maxsplit=1)[1].split("**REQ-API-010", maxsplit=1)[0]
     assert "| `io`" in public_section and "| 26 |" in public_section

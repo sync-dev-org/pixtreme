@@ -502,6 +502,19 @@ def test_dpx_write_float32_native_bypasses_recode_dtype(tmp_path: Path, monkeypa
         ("DaVinci-Intermediate", 3),
         ("RED-Log3G10", 3),
         ("REDlogFilm", 1),
+        ("Canon-Log", 3),
+        ("Canon-Log-2", 3),
+        ("Canon-Log-3", 3),
+        ("V-Log", 3),
+        ("D-Log", 3),
+        ("F-Log", 3),
+        ("F-Log2", 3),
+        ("N-Log", 3),
+        ("L-Log", 3),
+        ("Apple-Log", 3),
+        ("Samsung-Log", 3),
+        ("ACEScc", 3),
+        ("ACEScct", 3),
         ("Rec.709", 6),
         ("sRGB", 6),
         ("BT.1886", 6),
@@ -509,14 +522,16 @@ def test_dpx_write_float32_native_bypasses_recode_dtype(tmp_path: Path, monkeypa
         ("HLG", 6),
         ("Gamma-2.2", 6),
         ("Gamma-2.4", 6),
+        ("Gamma-2.5", 6),
         ("Gamma-2.6", 6),
     ),
 )
 def test_dpx_write_maps_frame_gamma_to_transfer_characteristic(tmp_path: Path, gamma: str, transfer: int) -> None:
     """v1-dpx acceptance 8; v1-sony-tokens acceptance 12; v1-arri-tokens acceptance 27;
-    v1-red-tokens acceptance 70.
+    v1-red-tokens acceptance 70; v1-canon-tokens acceptance 91; v1-panasonic-tokens acceptance 110;
+    v1-standard-tokens acceptance 133; v1-vendor-a-tokens acceptance 159; v1-vendor-b-tokens acceptance 186.
 
-    The header records the closed gamma mapping.
+    The header records the closed gamma mapping, including the vendor B camera-log transfers as logarithmic code 3.
     """
     frame = px.io.from_array(cp.ones((1, 1, 3), dtype=cp.float32), colorspace="Rec.709", gamma=gamma, channels="RGB")
     path = tmp_path / "transfer.dpx"

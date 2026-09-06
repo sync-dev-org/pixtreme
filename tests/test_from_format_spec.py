@@ -32,6 +32,10 @@ COLORSPACES = (
     "sRGB",
     "Rec.709",
     "Rec.2020",
+    "P3-DCI",
+    "P3-D60",
+    "P3-D65",
+    "SMPTE-C",
     "ACES2065-1",
     "ACEScg",
     "S-Gamut",
@@ -47,6 +51,11 @@ COLORSPACES = (
     "REDcolor2",
     "REDcolor3",
     "REDcolor4",
+    "Canon-Cinema-Gamut",
+    "V-Gamut",
+    "D-Gamut",
+    "F-Gamut-C",
+    "Apple-Wide-Gamut",
 )
 GAMMAS = (
     "linear",
@@ -55,6 +64,8 @@ GAMMAS = (
     "BT.1886",
     "PQ",
     "HLG",
+    "ACEScc",
+    "ACEScct",
     "S-Log",
     "S-Log2",
     "S-Log3",
@@ -64,9 +75,21 @@ GAMMAS = (
     "DaVinci-Intermediate",
     "RED-Log3G10",
     "REDlogFilm",
+    "Canon-Log",
+    "Canon-Log-2",
+    "Canon-Log-3",
+    "V-Log",
+    "D-Log",
+    "F-Log",
+    "F-Log2",
+    "N-Log",
+    "L-Log",
+    "Apple-Log",
+    "Samsung-Log",
     "Cineon",
     "Gamma-2.2",
     "Gamma-2.4",
+    "Gamma-2.5",
     "Gamma-2.6",
 )
 MATRICES = ("BT.601", "BT.709", "BT.2020", "native")
@@ -747,7 +770,8 @@ def test_from_format_metadata_tokens_match_frame_assignment_domains(
 ) -> None:
     """v1-from-format-metadata acceptance 3; v1-color-semantics acceptance 5 and 27;
     v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 17; v1-blackmagic-tokens acceptance 34;
-    v1-red-tokens acceptance 54-55.
+    v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 77; v1-panasonic-tokens acceptance 99-100;
+    v1-vendor-a-tokens acceptance 141 and 160; v1-vendor-b-tokens acceptance 167 and 187.
 
     Format metadata uses the Frame token domains and rejects values outside them.
     """
