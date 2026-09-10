@@ -44,6 +44,8 @@ _COLORSPACES = (
     "D-Gamut",
     "F-Gamut-C",
     "Apple-Wide-Gamut",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 _GAMMAS = (
     "linear",
@@ -75,10 +77,13 @@ _GAMMAS = (
     "Apple-Log",
     "Samsung-Log",
     "Cineon",
+    "Gamma-1.8",
     "Gamma-2.2",
     "Gamma-2.4",
     "Gamma-2.5",
     "Gamma-2.6",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 _ALIASES = (
     px.core.ChromaticAdaptation,
@@ -285,7 +290,8 @@ def _conversion(
 
 
 def test_red_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> None:
-    """v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
+    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 1;
+    v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
     v1-panasonic-tokens acceptance 99-100; v1-standard-tokens acceptance 117;
     v1-vendor-a-tokens acceptance 140-141; v1-vendor-b-tokens acceptance 166-167:
     expose exact canonical vocabulary.
@@ -293,7 +299,7 @@ def test_red_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> 
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 188
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 199
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -683,7 +689,9 @@ def test_red_dpx_transfer_codes_cover_logarithmic_and_printing_density_headers(t
 
 
 def test_red_token_reference_and_public_docstrings_are_synchronized() -> None:
-    """v1-red-tokens acceptance 72; v1-canon-tokens acceptance 93; v1-panasonic-tokens acceptance 112;
+    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 22;
+    v1-red-tokens acceptance 72; v1-canon-tokens acceptance 93;
+    v1-panasonic-tokens acceptance 112;
     v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188;
     GitHub #29: synchronize public prose.
     """
@@ -704,9 +712,9 @@ def test_red_token_reference_and_public_docstrings_are_synchronized() -> None:
         "DRAGONcolor",
     ):
         assert fragment in token_reference
-    assert "27 Colorspace" in requirements
-    assert "33 Gamma" in requirements
-    assert "188 canonical tokens" in requirements
+    assert "29 Colorspace" in requirements
+    assert "36 Gamma" in requirements
+    assert "199 canonical tokens" in requirements
     assert "REDWideGamutRGB" in changelog and "RED-Log3G10" in changelog and "REDlogFilm" in changelog
     assert "ARRI-LogC3" in changelog and "ARRI-LogC4" in changelog and "runtime input" in changelog
     for operation in (px.color.rgb_to_rgb, px.color.gamma_to_linear, px.color.linear_to_gamma):

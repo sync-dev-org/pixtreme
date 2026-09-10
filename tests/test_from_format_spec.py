@@ -27,6 +27,9 @@ SITING_OFFSETS = {
     "left": (0.0, 0.5),
     "center": (0.5, 0.5),
     "topleft": (0.0, 0.0),
+    "top": (0.5, 0.0),
+    "bottomleft": (0.0, 1.0),
+    "bottom": (0.5, 1.0),
 }
 COLORSPACES = (
     "sRGB",
@@ -56,6 +59,8 @@ COLORSPACES = (
     "D-Gamut",
     "F-Gamut-C",
     "Apple-Wide-Gamut",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 GAMMAS = (
     "linear",
@@ -87,10 +92,13 @@ GAMMAS = (
     "Apple-Log",
     "Samsung-Log",
     "Cineon",
+    "Gamma-1.8",
     "Gamma-2.2",
     "Gamma-2.4",
     "Gamma-2.5",
     "Gamma-2.6",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 MATRICES = ("BT.601", "BT.709", "BT.2020", "native")
 FROM_FORMAT_CASES = (
@@ -489,18 +497,37 @@ def test_from_yuv422p_replaces_the_old_name_and_preserves_ten_bit_range_headroom
     assert not hasattr(px, "from_yuv422p10le")
 
 
+@pytest.mark.parametrize(
+    ("name", "bit_depth", "dtype", "shift", "semiplanar"),
+    (
+        ("from_nv12", 8, np.uint8, 0, True),
+        ("from_p010", 10, np.uint16, 6, True),
+        ("from_yuv420p", 8, np.uint8, 0, False),
+        ("from_yuv420p", 10, np.uint16, 0, False),
+    ),
+)
 @pytest.mark.parametrize("siting", tuple(SITING_OFFSETS))
 @pytest.mark.parametrize("interpolation", INTERPOLATIONS)
-def test_from_yuv420p_filter_and_siting_match_the_independent_coordinate_oracle(
+def test_from_420_carrier_filter_and_siting_match_the_independent_coordinate_oracle(
+    name: str,
+    bit_depth: int,
+    dtype: type[np.generic],
+    shift: int,
+    semiplanar: bool,
     siting: str,
     interpolation: str,
 ) -> None:
-    """v1-format-boundary acceptance 17, 20-22, 24-26, and 35: every 420 filter/siting pair follows the sheet coordinates."""
+    """v1-chroma-siting-h273 acceptance 2, 4, and 6; v1-format-boundary acceptance 18, 20-22, 24-26, and 35:
+    every 420 carrier/filter/siting combination follows the independent H.273 coordinates.
+    """
     height, width = 6, 8
-    y = np.arange(height * width, dtype=np.uint8).reshape(height, width) + 32
-    cb = np.asarray([[16, 64, 128, 240], [32, 96, 160, 224], [48, 112, 176, 208]], dtype=np.uint8)
+    maximum = (1 << bit_depth) - 1
+    y = (np.arange(height * width, dtype=np.uint16).reshape(height, width) * 17 + 32) & maximum
+    cb = np.asarray([[16, 64, 128, 240], [32, 96, 160, 224], [48, 112, 176, 208]], dtype=np.uint16)
+    cb = (cb * (1 << (bit_depth - 8))) & maximum
     cr = np.flip(cb, axis=(0, 1)).copy()
-    source = np.concatenate((y.reshape(-1), cb.reshape(-1), cr.reshape(-1)))
+    chroma = np.stack((cb, cr), axis=2).reshape(-1) if semiplanar else np.concatenate((cb.reshape(-1), cr.reshape(-1)))
+    source = (np.concatenate((y.reshape(-1), chroma)) << shift).astype(dtype)
     expected_codes = _expected_frame(
         y,
         cb,
@@ -511,13 +538,15 @@ def test_from_yuv420p_filter_and_siting_match_the_independent_coordinate_oracle(
         subsample_y=2,
     )
 
-    result = px.io.from_yuv420p(
-        _device(source, dtype=np.uint8),
+    kwargs = {"bit_depth": bit_depth} if name == "from_yuv420p" else {}
+    result = getattr(px.io, name)(
+        _device(source, dtype=dtype),
         width=width,
         height=height,
         range="full",
         siting=siting,
         interpolation=interpolation,
+        **kwargs,
     )
 
     # 3e-6 covers fp32 CUDA weight evaluation versus the independent fp64
@@ -526,7 +555,7 @@ def test_from_yuv420p_filter_and_siting_match_the_independent_coordinate_oracle(
         px.io.to_array(
             result,
         ).get(),
-        _range_reference(expected_codes, bit_depth=8, range="full"),
+        _range_reference(expected_codes, bit_depth=bit_depth, range="full"),
         rtol=0.0,
         atol=3e-6,
     )
@@ -617,7 +646,9 @@ def test_semiplanar_formats_share_center_sited_lanczos_mapping(
 
 
 def test_siting_tokens_have_numerically_distinct_impulse_centroids() -> None:
-    """v1-format-boundary acceptance 17, 18, and 37: an interior chroma impulse distinguishes all three sample phases by centroid."""
+    """v1-chroma-siting-h273 acceptance 2 and 7; v1-format-boundary acceptance 18 and 37:
+    an interior chroma impulse distinguishes all six H.273 frame positions by centroid.
+    """
     height = width = 12
     y = np.zeros((height, width), dtype=np.uint8)
     cb = np.zeros((height // 2, width // 2), dtype=np.uint8)
@@ -642,7 +673,7 @@ def test_siting_tokens_have_numerically_distinct_impulse_centroids() -> None:
         centroids[siting] = (float((plane * xx).sum() / plane.sum()), float((plane * yy).sum() / plane.sum()))
         np.testing.assert_allclose(centroids[siting], (4.0 + offset_x, 4.0 + offset_y), rtol=0.0, atol=1e-6)
 
-    assert len(set(centroids.values())) == 3
+    assert len(set(centroids.values())) == 6
 
 
 @pytest.mark.parametrize(
@@ -768,7 +799,8 @@ def test_from_format_metadata_tokens_match_frame_assignment_domains(
     axis: str,
     accepted: tuple[str, ...],
 ) -> None:
-    """v1-from-format-metadata acceptance 3; v1-color-semantics acceptance 5 and 27;
+    """v1-io-icc acceptance 1 and 3; v1-from-format-metadata acceptance 3;
+    v1-color-semantics acceptance 5 and 27;
     v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 17; v1-blackmagic-tokens acceptance 34;
     v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 77; v1-panasonic-tokens acceptance 99-100;
     v1-vendor-a-tokens acceptance 141 and 160; v1-vendor-b-tokens acceptance 167 and 187.
@@ -875,14 +907,16 @@ def test_all_from_formats_reject_unknown_range_tokens_actionably(
 
 @pytest.mark.parametrize("name", ("from_yuv420p", "from_nv12", "from_p010"))
 def test_420_formats_reject_unknown_siting_and_interpolation_tokens_actionably(name: str) -> None:
-    """v1-format-boundary acceptance 11, 17, 18, and 21: 420 token axes enumerate accepted recovery values."""
+    """v1-chroma-siting-h273 acceptance 9; v1-format-boundary acceptance 11, 18, and 21:
+    420 token axes enumerate accepted recovery values.
+    """
     dtype = np.uint16 if name == "from_p010" else np.uint8
     source = _device(np.zeros(6), dtype=dtype)
 
     with pytest.raises(ValueError) as siting_error:
-        getattr(px.io, name)(source, width=2, height=2, siting="bottom")
+        getattr(px.io, name)(source, width=2, height=2, siting="diagonal")
     _actionable(siting_error)
-    assert tuple(SITING_OFFSETS) == ("left", "center", "topleft")
+    assert tuple(SITING_OFFSETS) == ("left", "center", "topleft", "top", "bottomleft", "bottom")
     assert repr(tuple(SITING_OFFSETS)) in str(siting_error.value)
 
     with pytest.raises(ValueError) as interpolation_error:

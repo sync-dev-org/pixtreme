@@ -386,7 +386,7 @@ def test_quality_metric_docstrings_are_self_contained_operational_contracts() ->
 
 
 def test_quality_metric_requirements_preserve_module_and_vocabulary_boundaries() -> None:
-    """v1-quality-metrics acceptance 22 / v1-public-namespace acceptance 1 and 8. GitHub #29."""
+    """v1-quality-metrics acceptance 22; v1-public-namespace acceptance 1 and 8; v1-fonts-module acceptance 1 and 14."""
     repository = Path(__file__).resolve().parents[1]
     requirements_path = require_repo_file("docs/requirements.md")
     vocabulary_path = repository / "docs_site" / "tokens.md"
@@ -395,10 +395,10 @@ def test_quality_metric_requirements_preserve_module_and_vocabulary_boundaries()
     architecture = requirements.split("**REQ-ARCH-008:", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
     modules = requirements.split("**REQ-API-009:", maxsplit=1)[1].split("**REQ-API-010:", maxsplit=1)[0]
     boundaries = requirements.split("**REQ-API-010:", maxsplit=1)[1].split("**REQ-API-011:", maxsplit=1)[0]
-    assert "13 module" in architecture
+    assert "14 module" in architecture
     assert "`px.io.from_array`" in architecture
     assert "`px.io.to_array`" in architecture
-    assert "13 module" in modules
+    assert "14 module" in modules
     assert "`metrics`" in modules
     for path in ("px.metrics.psnr", "px.metrics.ssim", "px.metrics.ssim_map"):
         assert path in boundaries

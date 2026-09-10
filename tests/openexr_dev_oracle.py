@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from importlib import import_module
 from pathlib import Path
 from typing import Protocol
@@ -26,9 +27,8 @@ class _FrameLike(Protocol):
     colorspace: str
 
 
-def write_frame(path: Path, frame: _FrameLike, *, compression: str, dwa_level: float | None) -> None:
-    """Write a Frame through the independent OpenEXR dev oracle."""
-    compression_values = {
+def _compression_value(compression: str) -> object:
+    return {
         "none": OpenEXR.NO_COMPRESSION,
         "rle": OpenEXR.RLE_COMPRESSION,
         "zip": OpenEXR.ZIP_COMPRESSION,
@@ -39,17 +39,45 @@ def write_frame(path: Path, frame: _FrameLike, *, compression: str, dwa_level: f
         "b44a": OpenEXR.B44A_COMPRESSION,
         "dwaa": OpenEXR.DWAA_COMPRESSION,
         "dwab": OpenEXR.DWAB_COMPRESSION,
-    }
+    }[compression]
+
+
+def write_frame(path: Path, frame: _FrameLike, *, compression: str, dwa_level: float | None) -> None:
+    """Write a Frame through the independent OpenEXR dev oracle."""
     host = cp.asnumpy(frame.data)
     channels = {label: np.ascontiguousarray(host[..., index]) for index, label in enumerate(frame.channels)}
     header: dict[str, object] = {
         "type": OpenEXR.scanlineimage,
-        "compression": compression_values[compression],
+        "compression": _compression_value(compression),
         "chromaticities": _colorspace_chromaticities(frame.colorspace),
     }
     if dwa_level is not None:
         header["dwaCompressionLevel"] = dwa_level
     if frame.colorspace == "ACES2065-1":
+        header["acesImageContainerFlag"] = 1
+    OpenEXR.File(header, channels).write(str(path))
+
+
+def write_frames(
+    path: Path,
+    frames: Sequence[_FrameLike],
+    *,
+    compression: str,
+    dwa_level: float | None,
+) -> None:
+    """Write native mixed-dtype channels through the independent OpenEXR dev oracle."""
+    channels: dict[str, np.ndarray] = {}
+    for frame in frames:
+        host = cp.asnumpy(frame.data)
+        channels.update((label, np.ascontiguousarray(host[..., index])) for index, label in enumerate(frame.channels))
+    header: dict[str, object] = {
+        "type": OpenEXR.scanlineimage,
+        "compression": _compression_value(compression),
+        "chromaticities": _colorspace_chromaticities(frames[0].colorspace),
+    }
+    if dwa_level is not None:
+        header["dwaCompressionLevel"] = dwa_level
+    if frames[0].colorspace == "ACES2065-1":
         header["acesImageContainerFlag"] = 1
     OpenEXR.File(header, channels).write(str(path))
 

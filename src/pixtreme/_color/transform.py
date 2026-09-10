@@ -71,6 +71,9 @@ _GAMMA_CODES: Mapping[str, int] = {
     "Gamma-2.4": 10,
     "Gamma-2.5": 24,
     "Gamma-2.6": 11,
+    "Gamma-1.8": 32,
+    "Adobe-RGB": 33,
+    "ProPhoto-RGB": 34,
 }
 
 _BT2408_COMBINATIONS = tuple(
@@ -254,6 +257,15 @@ __device__ __forceinline__ float decode_transfer(const float value, const int ga
     }
     if (gamma == 24) {
         return signed_power(value, 2.5f);
+    }
+    if (gamma == 32) {
+        return signed_power(value, 1.8f);
+    }
+    if (gamma == 33) {
+        return signed_power(value, 563.0f / 256.0f);
+    }
+    if (gamma == 34) {
+        return value < (1.0f / 32.0f) ? value / 16.0f : powf(value, 1.8f);
     }
 
     const float sign = value < 0.0f ? -1.0f : 1.0f;
@@ -489,6 +501,15 @@ __device__ __forceinline__ float encode_transfer(const float value, const int ga
     }
     if (gamma == 24) {
         return signed_power(value, 1.0f / 2.5f);
+    }
+    if (gamma == 32) {
+        return signed_power(value, 1.0f / 1.8f);
+    }
+    if (gamma == 33) {
+        return signed_power(value, 256.0f / 563.0f);
+    }
+    if (gamma == 34) {
+        return value < (1.0f / 512.0f) ? 16.0f * value : powf(value, 1.0f / 1.8f);
     }
 
     const float sign = value < 0.0f ? -1.0f : 1.0f;
@@ -785,6 +806,10 @@ def rgb_to_rgb(
     H.273 primaries and D65. Their normalized primary matrices, native luma rows, and differing-white Bradford
     adaptation use the shared colorspace path. Transfer remains independent: Display P3 is expressed with P3-D65 and
     sRGB, while the Academy AP1 grading combinations use ACEScg with ACEScc or ACEScct.
+    Adobe-RGB and ProPhoto-RGB use their published primaries with D65 and D50 respectively and remain independent
+    from transfer selection. Gamma-1.8 is sign-preserving pure power, Adobe-RGB uses the sign-preserving
+    563/256 exponent, and ProPhoto-RGB uses its published 1/16 linear toe with 1.8 power branch. Negative and
+    above-one values remain unclipped; same-named gamut and transfer tokens never force or infer one another.
     Gamma-2.5 is sign-preserving pure power. ACEScc applies the Academy three-branch analytic encode, including its
     many-to-one nonpositive collapse, and ACEScct applies the Academy linear toe and log branch. Both take the
     scene-linear component directly, add no gamut transform or LUT, and analytically extend decode above linear

@@ -9,7 +9,7 @@ from typing import Literal, get_args, get_origin, get_type_hints
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import latest_changelog_section, require_repo_file
+from repository_contracts import changelog_section, require_repo_file
 
 import pixtreme as px
 
@@ -43,6 +43,8 @@ _COLORSPACES = (
     "D-Gamut",
     "F-Gamut-C",
     "Apple-Wide-Gamut",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 _GAMMAS = (
     "linear",
@@ -74,10 +76,13 @@ _GAMMAS = (
     "Apple-Log",
     "Samsung-Log",
     "Cineon",
+    "Gamma-1.8",
     "Gamma-2.2",
     "Gamma-2.4",
     "Gamma-2.5",
     "Gamma-2.6",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 _ALIASES = (
     px.core.ChromaticAdaptation,
@@ -302,14 +307,15 @@ def _adjacent_float32(center: np.float32, radius: int = 3000) -> np.ndarray:
 
 
 def test_standard_tokens_extend_only_the_canonical_vocabulary_and_public_surfaces() -> None:
-    """v1-standard-tokens acceptance 117-119 and 134; v1-vendor-a-tokens acceptance 140-142;
-    v1-vendor-b-tokens acceptance 166-168:
+    """v1-chroma-siting-h273 acceptance 10; v1-standard-tokens acceptance 117-119 and 134;
+    v1-vendor-a-tokens acceptance 140-142;
+    v1-vendor-b-tokens acceptance 166-168; v1-io-icc acceptance 1:
     expose and normalize only current canonical tokens.
     """
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 188
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 199
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -756,16 +762,17 @@ def test_standard_transfer_dpx_codes_preserve_existing_mapping(tmp_path: Path) -
 
 
 def test_standard_token_reference_requirements_changelog_and_docstrings_are_synchronized() -> None:
-    """v1-standard-tokens acceptance 135; v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188:
+    """v1-chroma-siting-h273 acceptance 10; v1-standard-tokens acceptance 135;
+    v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188:
     synchronize every public vocabulary and numeric contract surface.
     """
     token_reference = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
     requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    latest = latest_changelog_section(changelog)
+    release_section = changelog_section(changelog, "1.4.0 - 2026-09-07")
     for token in ("P3-DCI", "P3-D60", "P3-D65", "SMPTE-C", "ACEScc", "ACEScct", "Gamma-2.5"):
         assert f"`{token}`" in token_reference
-        assert token in latest
+        assert token in release_section
     for fragment in (
         "0.3140",
         "0.3510",
@@ -787,11 +794,11 @@ def test_standard_token_reference_requirements_changelog_and_docstrings_are_sync
         "native",
     ):
         assert fragment in token_reference
-    assert "27 Colorspace" in requirements
-    assert "33 Gamma" in requirements
-    assert "188 canonical tokens" in requirements
+    assert "29 Colorspace" in requirements
+    assert "36 Gamma" in requirements
+    assert "199 canonical tokens" in requirements
     for fragment in ("P3-D60", "Resolve", "Gamma-2.5", "no-upper-clip", "AP1", "bit-identical"):
-        assert fragment in latest
+        assert fragment in release_section
     for operation in (
         px.color.rgb_to_rgb,
         px.color.rgb_to_ycbcr,

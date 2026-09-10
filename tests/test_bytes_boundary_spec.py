@@ -68,11 +68,26 @@ def _sentence_containing(docstring: str, fragment: str) -> str:
 
 
 def test_bytes_boundary_public_signatures_are_exact() -> None:
-    """v1-bytes-boundary acceptance 1, 5, and 14: both public APIs expose the fixed keyword grammar."""
+    """v1-io-orientation acceptance 1; v1-bytes-boundary acceptance 5 and 14:
+    both public APIs expose the fixed keyword grammar.
+    """
     decode = inspect.signature(px.io.decode_image)
-    assert tuple(decode.parameters) == ("data", "channels", "unchanged", "colorspace", "gamma")
+    assert tuple(decode.parameters) == (
+        "data",
+        "channels",
+        "unchanged",
+        "colorspace",
+        "gamma",
+        "apply_exif_orientation",
+    )
     assert decode.parameters["data"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
-    for name, default in (("channels", None), ("unchanged", False), ("colorspace", None), ("gamma", None)):
+    for name, default in (
+        ("channels", None),
+        ("unchanged", False),
+        ("colorspace", None),
+        ("gamma", None),
+        ("apply_exif_orientation", True),
+    ):
         assert decode.parameters[name].kind is inspect.Parameter.KEYWORD_ONLY
         assert decode.parameters[name].default is default
 

@@ -2,6 +2,98 @@
 
 Notable changes to pixtreme are documented in this file.
 
+## 1.5.0 - 2026-09-10
+
+pixtreme 1.5.0 adds six public capabilities and changes two raster decode defaults. The additions are the
+per-channel `px.color.grade` operation, the `px.fonts` module and its `pixtreme.fonts` entry-point contract for
+installable font packages, H.273 chroma sample location types 3 through 5 for the 4:2:0 wire formats, embedded ICC
+profile inspection with the `Adobe-RGB`, `ProPhoto-RGB`, and `Gamma-1.8` tokens, `px.io.write_exr_channels` for
+mixed-dtype EXR output, and the antialiased `lanczos2-aa` / `lanczos3-aa` / `lanczos4-aa` resize tokens. The two
+default changes are that a mappable embedded ICC profile now sets file-explicit colorspace and gamma metadata, and
+that JPEG, PNG, TIFF, and WebP decodes now apply EXIF orientation; both keep pixel decoding unchanged, both carry a
+migration note below, and both can be restored to the former behavior with explicit keyword arguments. Existing token
+spellings, aliases, signatures, and float32 results are otherwise unchanged, and there are no breaking changes to the
+public API. Frame construction no longer repeats validation on the common output path, which removes most of the
+per-call host overhead introduced by the 1.3.0 token acceptance layer, and the published performance baseline
+(`docs_site/performance.md` and the README table) is regenerated from a single same-run measurement of the current
+implementation on an NVIDIA RTX A6000 (WSL2, CUDA runtime 12.9, CuPy 14.1.1).
+
+### Added
+
+- Added `px.color.grade`, a per-channel Lift / Gamma / Gain operation that applies
+  `z = gain * x + lift * (1 - x)` followed by a sign-preserving pure power `1 / gamma` to every stored sample
+  without clipping. Each parameter accepts a scalar that broadcasts to every storage channel or a mapping keyed by
+  exact channel labels that leaves unspecified channels bit-preserved. Parameters are converted to binary32 and
+  validated before pixel processing; Frame metadata is inherited unchanged. The affine-power core matches Nuke Grade
+  on its default-control `0 <= z <= 1` interval and converts to ASC CDL slope / offset / power; DaVinci Resolve
+  numeric compatibility is not claimed.
+
+- Added H.273 chroma sample location types 3 through 5 as the canonical `ChromaSiting` tokens `top`, `bottomleft`,
+  and `bottom`. The NV12, P010, and planar YUV420 input and output boundaries now accept all six progressive-frame
+  positions while retaining the existing `left` default and existing-token output bits.
+
+- Added embedded ICC profile inspection for PNG `iCCP`, JPEG APP2, TIFF InterColorProfile, and WebP `ICCP` at
+  `read_image`, `decode_image`, and `read_header`. RGB matrix/TRC profiles are mapped numerically to existing
+  colorspace and gamma vocabulary without transforming pixel values. The five canonical additions are the
+  `Adobe-RGB` and `ProPhoto-RGB` colorspace tokens, the same two gamma tokens, and pure-power `Gamma-1.8`.
+
+- Added `px.fonts`, whose `available()` and `font_path(name)` functions expose bundled fonts and filesystem assets
+  declared by installed font packages through the `pixtreme.fonts` entry-point contract. Discovery is lazy, atomic,
+  deterministic, and cached for the process lifetime. Existing `px.draw.text` `sans` / `mono` tokens and their
+  rendering behavior remain unchanged.
+
+- `px.io.write_exr_channels(path, frames, *, compression=None, dwa_level=None)` writes same-shape, same-device,
+  same-colorspace `float16`, `float32`, and `uint32` Frame channel groups into one single-part scanline EXR while
+  retaining each channel's native HALF, FLOAT, or UINT storage. All ten EXR compression modes operate per channel,
+  so exact UINT object IDs can share a file with HALF or FLOAT imagery. Existing `px.io.write_image` and
+  `px.io.encode_image` remain single-Frame, single-output-dtype APIs.
+
+- `px.transform.resize` accepts three new interpolation tokens, `lanczos2-aa`, `lanczos3-aa`, and `lanczos4-aa`.
+  They are Lanczos kernels whose support widens by the reduction scale on each shrinking axis (the Pillow /
+  ImageMagick family), with replicate edges and normalized weights; on a same-size or enlarging axis they are
+  bit-identical to `lanczos2` / `lanczos3` / `lanczos4`. Existing tokens and the automatic `area` / `lanczos4` choice
+  are unchanged, and no other API accepts the new tokens.
+
+### Changed
+
+- Frame construction on the common metadata-inheriting output path and in `px.io.from_array` now skips the
+  duplicate pydantic validation pass when the output array and metadata are already verified at construction
+  time, and canonical token spellings return early from normalization. This removes most of the per-call host
+  overhead that the token acceptance layer added in 1.3.0 for small frames; public API, accepted and rejected
+  inputs, exception types, output bits, and attribute-assignment validation are unchanged.
+
+- Raster images with a supported embedded ICC profile now receive file-explicit colorspace and gamma metadata
+  instead of the sRGB defaults. Decoded pixel samples are unchanged, but later color transforms driven by Frame
+  metadata can now produce a different result that follows the file's intended color representation. Unmappable
+  selected metadata warns once and falls back component by component unless the caller supplies an explicit claim.
+  **Migration note:** existing code that reads PNG, JPEG, TIFF, or WebP files carrying an `Adobe-RGB`,
+  `ProPhoto-RGB`, or other mappable RGB matrix/TRC profile and then converts by Frame metadata (for example
+  `px.color.rgb_to_rgb` or `px.color.rgb_to_grayscale` without explicit source tokens) now produces different output
+  for those files; files without a mappable profile are unaffected. To keep the previous behavior, pass the former
+  defaults explicitly, `read_image(path, colorspace="sRGB", gamma="sRGB")` or the same keywords on `decode_image`;
+  explicit tokens always override file metadata. `read_header(path).color.mappable` reports whether a file carries
+  mappable profile metadata.
+
+- `px.io.read_image` and `px.io.decode_image` now expose a trailing keyword-only
+  `apply_exif_orientation: bool = True` argument. JPEG, PNG, TIFF, and WebP apply EXIF orientation 1 through 8 by
+  default; invalid optional orientation metadata emits a warning and falls back to identity, while `False` preserves
+  stored pixel order.
+- `ImageHeader` now includes `orientation`, defaulting to 1. For JPEG, PNG, TIFF, and WebP, `width` and `height` now
+  describe the default oriented decode, so orientations 5 through 8 exchange the former stored-dimension meaning.
+  **Migration note:** existing code that reads JPEG, PNG, TIFF, or WebP files whose EXIF orientation is 2 through 8
+  now receives rotated or flipped pixels, and for orientations 5 through 8 the Frame and `ImageHeader` width and
+  height are exchanged relative to the stored raster; files with orientation 1 or without orientation metadata are
+  unaffected. To keep the previous behavior, pass `apply_exif_orientation=False` to `read_image` or `decode_image`,
+  which preserves the stored pixel order. The stored dimensions of a file can be recovered from `read_header` by
+  exchanging `width` and `height` when `orientation` is 5 through 8.
+
+### Fixed
+
+- `px.io.from_array` now validates the `matrix` token at the entry, together with `layout`, `colorspace`, `gamma`,
+  and `channels`, before any repacking kernel, contiguity conversion, or copy runs. An unknown or non-string
+  `matrix` raises a plain actionable `ValueError` instead of a pydantic `ValidationError` after the GPU pass. The
+  accepted spellings, their canonical results, and every other argument contract are unchanged.
+
 ## 1.4.0 - 2026-09-07
 
 pixtreme 1.4.0 widens the colour vocabulary from 18 to 27 colorspace tokens and from 19 to 33 gamma tokens by adding

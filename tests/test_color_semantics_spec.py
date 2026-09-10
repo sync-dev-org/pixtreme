@@ -117,7 +117,7 @@ def test_from_format_entry_points_accept_matrix_none_by_default() -> None:
 
 def test_color_public_surface_uses_semantic_operation_names_only() -> None:
     """Color semantics and HSV namespace acceptances, v1-white-balance acceptance 1, and
-    v1-white-point-simulation acceptance 1: names are exact.
+    v1-white-point-simulation acceptance 1; v1-grade acceptance 1: names are exact.
     """
     assert px.color.__all__ == (
         "apply_lut",
@@ -135,6 +135,7 @@ def test_color_public_surface_uses_semantic_operation_names_only() -> None:
         "chromatic_adaptation",
         "white_balance",
         "white_point_simulation",
+        "grade",
     )
     assert not hasattr(px.color, "view_transform")
     assert not hasattr(px.color, "channel_transform")

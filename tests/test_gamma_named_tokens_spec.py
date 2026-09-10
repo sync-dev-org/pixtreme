@@ -44,10 +44,13 @@ _GAMMA_TOKENS = (
     "Apple-Log",
     "Samsung-Log",
     "Cineon",
+    "Gamma-1.8",
     "Gamma-2.2",
     "Gamma-2.4",
     "Gamma-2.5",
     "Gamma-2.6",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 _RENAMES = (("2.2", "Gamma-2.2"), ("2.4", "Gamma-2.4"), ("2.6", "Gamma-2.6"))
 _SEPARATORS = " .-_"
@@ -104,13 +107,14 @@ def _table_rows(markdown: str, heading: str) -> tuple[tuple[str, ...], ...]:
 
 
 def test_gamma_literal_retains_named_numeric_tokens_in_the_sony_extended_vocabulary() -> None:
-    """v1-gamma-named-tokens acceptance 1; v1-sony-tokens acceptance 1; v1-arri-tokens acceptance 16;
+    """v1-chroma-siting-h273 acceptance 10; v1-gamma-named-tokens acceptance 1;
+    v1-sony-tokens acceptance 1; v1-arri-tokens acceptance 16;
     v1-blackmagic-tokens acceptance 33; v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
     v1-panasonic-tokens acceptance 99-100; v1-standard-tokens acceptance 117;
-    v1-vendor-a-tokens acceptance 140; v1-vendor-b-tokens acceptance 166.
+    v1-vendor-a-tokens acceptance 140; v1-vendor-b-tokens acceptance 166; v1-io-icc acceptance 1.
     """
     assert get_args(px.core.Gamma) == _GAMMA_TOKENS
-    assert len(get_args(px.core.Gamma)) == 33
+    assert len(get_args(px.core.Gamma)) == 36
 
     aliases = (
         px.core.ChromaticAdaptation,
@@ -145,7 +149,7 @@ def test_gamma_literal_retains_named_numeric_tokens_in_the_sony_extended_vocabul
         px.core.VectorBlurShutter,
     )
     assert len(aliases) == 30
-    assert sum(len(get_args(alias)) for alias in aliases) == 188
+    assert sum(len(get_args(alias)) for alias in aliases) == 199
 
 
 def test_public_static_and_metadata_surfaces_expose_only_named_gamma_tokens() -> None:

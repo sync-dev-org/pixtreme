@@ -5,7 +5,7 @@ from __future__ import annotations
 
 def test_latest_changelog_section_accepts_development_and_release_headings() -> None:
     """REQ-TEST-004 and REQ-TEST-008; GitHub #29: latest changelog selection ignores the heading name."""
-    from repository_contracts import latest_changelog_section
+    from repository_contracts import changelog_section, latest_changelog_section
 
     development = """# Changelog
 
@@ -37,3 +37,6 @@ old release claims
     assert "1.3.0 - 2026-09-03" in released_section
     assert "current release claims" in released_section
     assert "old release claims" not in released_section
+    historical_section = changelog_section(development, "1.3.0 - 2026-09-03")
+    assert "old release claims" in historical_section
+    assert "current development claims" not in historical_section

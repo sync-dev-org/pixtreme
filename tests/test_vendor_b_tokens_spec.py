@@ -12,7 +12,7 @@ from typing import Literal, get_args, get_origin, get_type_hints
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import latest_changelog_section, require_repo_file
+from repository_contracts import changelog_section, require_repo_file
 
 import pixtreme as px
 
@@ -46,6 +46,8 @@ _COLORSPACES = (
     "D-Gamut",
     "F-Gamut-C",
     "Apple-Wide-Gamut",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 _GAMMAS = (
     "linear",
@@ -77,10 +79,13 @@ _GAMMAS = (
     "Apple-Log",
     "Samsung-Log",
     "Cineon",
+    "Gamma-1.8",
     "Gamma-2.2",
     "Gamma-2.4",
     "Gamma-2.5",
     "Gamma-2.6",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 _ALIASES = (
     px.core.ChromaticAdaptation,
@@ -529,11 +534,13 @@ def _encoded_sets(gamma: str) -> tuple[tuple[np.ndarray, ...], np.ndarray, np.nd
 
 
 def test_vendor_b_tokens_extend_only_canonical_vocabulary_and_public_surfaces() -> None:
-    """v1-vendor-b-tokens acceptance 166-167: expose five canonical tokens without static aliases."""
+    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 1;
+    v1-vendor-b-tokens acceptance 166-167: expose canonical tokens without aliases.
+    """
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 188
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 199
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -855,14 +862,16 @@ def test_vendor_b_representative_frames_compose_independent_transfer_and_gamut_o
 
 
 def test_existing_token_bits_remain_at_the_pre_vendor_b_baseline() -> None:
-    """v1-vendor-b-tokens acceptance 185: preserve every existing transfer and gamut fixture bit."""
+    """v1-io-icc acceptance 3; v1-vendor-b-tokens acceptance 185: preserve pre-feature transfer and gamut bits."""
     # Characterization provenance: captured from the complete pre-vendor-B commit
     # 7d625404cbf2ddaa412dcc95055ab8b3e0891f3c. At that SHA, construct an ACEScg/linear RGB Frame
     # from float32 (-0.25, -0.018056996166706085, 0, 0.18000000715255737, 1, 1.5), then concatenate
     # each Gamma's channel-R encode and decode uint32 bytes in canonical order. For each Colorspace, convert
     # float32 ((-0.25, 0.18, 1.5), (0.02, -0.1, 1)) to Rec.709/linear and concatenate all uint32 bytes.
-    old_gammas = tuple(gamma for gamma in _GAMMAS if gamma not in _CURVES)
-    old_colorspaces = tuple(colorspace for colorspace in _COLORSPACES if colorspace != "Apple-Wide-Gamut")
+    old_gammas = tuple(gamma for gamma in _GAMMAS if gamma not in {*_CURVES, "Gamma-1.8", "Adobe-RGB", "ProPhoto-RGB"})
+    old_colorspaces = tuple(
+        colorspace for colorspace in _COLORSPACES if colorspace not in {"Apple-Wide-Gamut", "Adobe-RGB", "ProPhoto-RGB"}
+    )
     linear_values = np.asarray((-0.25, -0.018056996166706085, 0.0, 0.18000000715255737, 1.0, 1.5), np.float32)
     gamma_digest = sha256()
     for gamma in old_gammas:
@@ -910,15 +919,17 @@ def test_vendor_b_dpx_codes_are_logarithmic_and_existing_mappings_remain_unchang
 
 
 def test_vendor_b_reference_requirements_changelog_docstrings_and_generator_are_synchronized() -> None:
-    """v1-vendor-b-tokens acceptance 188: synchronize vocabulary, numeric identity, and public prose."""
+    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 22;
+    v1-vendor-b-tokens acceptance 188: synchronize current public prose.
+    """
     token_reference = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
     requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     generator = (ROOT / "tests" / "generate_vendor_b_tokens_sheet.py").read_text(encoding="utf-8")
-    latest_section = latest_changelog_section(changelog)
+    release_section = changelog_section(changelog, "1.4.0 - 2026-09-07")
     for token in ("Apple-Wide-Gamut", "N-Log", "L-Log", "Apple-Log", "Samsung-Log"):
         assert f"`{token}`" in token_reference
-        assert token in latest_section
+        assert token in release_section
         assert token in generator
     for fragment in (
         "0.3784157394368526",
@@ -944,10 +955,10 @@ def test_vendor_b_reference_requirements_changelog_docstrings_and_generator_are_
         "non-parity",
     ):
         assert fragment in token_reference
-    for fragment in ("27 Colorspace", "33 Gamma", "188 canonical tokens"):
+    for fragment in ("29 Colorspace", "36 Gamma", "199 canonical tokens"):
         assert fragment in requirements
     for fragment in ("intersection", "tangent", "collapse", "CAT02", "Bradford", "bit", "non-parity"):
-        assert fragment in latest_section
+        assert fragment in release_section
     for operation in (
         px.color.rgb_to_rgb,
         px.color.rgb_to_ycbcr,

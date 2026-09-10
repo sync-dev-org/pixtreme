@@ -14,7 +14,7 @@ unknown values raise `ValueError` before backend processing, with canonical reco
 
 Every accepted spelling is normalized at the public boundary. Frame metadata, return values, object representations,
 defaults, and error recovery candidates use canonical output. The `what` field of an error preserves the raw rejected
-input. The 30 named closed-token families contain 188 canonical tokens, including 27 Colorspace and 33 Gamma tokens.
+input. The 30 named closed-token families contain 199 canonical tokens, including 29 Colorspace and 36 Gamma tokens.
 The 30 earlier spellings listed below are permanent aliases, so existing runtime calls remain valid.
 Channel sequences are the only open-vocabulary exception: they may contain application-defined labels not listed here.
 
@@ -251,10 +251,13 @@ Gamma tokens describe the transfer characteristic applied to pixel values.
 | `Apple-Log` | Apple Log camera transfer | Apple Log Profile White Paper; Apple Log 2 White Paper | Retains the published three branches: values below `R0` encode to zero and negative encoded values decode to `R0`; no upper clip; `Apple Log 2` uses this transfer plus `Apple-Wide-Gamut` independently |
 | `Samsung-Log` | Samsung Log camera transfer | Samsung Log White Paper | Re-derives the printed lower offset from continuity at `xt`; extends the lower logarithmic branch and inverse without the published codec collapse at `x0` or encoded zero; no clipping; specify colorspace independently |
 | `Cineon` | Cineon printing-density log transfer | Kodak Cineon specification | Formula with black CV=95, white CV=685, 0.002 density/code, and film gamma=0.6; apply to nonnegative magnitude and reflect the negative side with preserved sign |
+| `Gamma-1.8` | Power transfer with exponent 1.8 | Conventional value | Decode with `sign(x) * abs(x) ** 1.8` and encode with `sign(x) * abs(x) ** (1 / 1.8)`; pure power without the ProPhoto RGB linear toe |
 | `Gamma-2.2` | Power transfer with exponent 2.2 | Conventional value | **Pure power**, reflected with preserved sign; not a piecewise function |
 | `Gamma-2.4` | Power transfer with exponent 2.4 | Conventional value | **Pure power**, reflected with preserved sign; numerically equivalent to the ideal-black `BT.1886` implementation but semantically distinct |
 | `Gamma-2.5` | Power transfer with exponent 2.5 | Conventional industry value | Decode with `sign(x) * abs(x) ** 2.5` and encode with `sign(x) * abs(x) ** 0.4`; 18% gray encodes to `0.5036269964912325`; no offset, piecewise branch, or clipping; Resolve numerical parity is not guaranteed because its formula is unpublished |
 | `Gamma-2.6` | Power transfer with exponent 2.6 | Conventional value | Decode with `sign(x) * abs(x) ** 2.6` and encode with `sign(x) * abs(x) ** (1 / 2.6)`; no offset, piecewise branch, or clipping |
+| `Adobe-RGB` | Adobe RGB (1998) transfer | Adobe RGB (1998) Color Image Encoding | Decode with sign-preserving exponent `563 / 256` and encode with `256 / 563`; no clipping; select the same-named colorspace independently |
+| `ProPhoto-RGB` | ProPhoto RGB transfer with linear toe | ISO 22028-2 ROMM RGB | Decode uses `x / 16` below `1 / 32` and `x ** 1.8` otherwise; encode uses `16 * x` below `1 / 512` and `x ** (1 / 1.8)` otherwise; the lower branch extends over all negative values; select the same-named colorspace independently |
 
 `ACEScc` and `ACEScct` take the scene-linear component `x` directly; they do not apply the Sony/Canon `x = r / 0.9`
 normalization. They are transfer tokens, so they neither force nor infer a colorspace and contain no AP0-to-AP1
@@ -416,6 +419,32 @@ parameters. Decode and encode are therefore bit-equivalent to `Gamma-2.4` across
 canonical output preserves whichever of the two meanings the caller selected. Display adaptation and calibration from
 measured white or black luminance remain outside the transfer-operation contract.
 
+## grade
+
+`px.color.grade(frame, *, lift=0.0, gamma=1.0, gain=1.0)` applies one Lift / Gamma / Gain curve directly to the
+stored float32 samples. Each parameter independently accepts a scalar or `Mapping[str, float]`. Mapping keys are
+non-empty, exact, case-sensitive labels present in `frame.channels`; a missing key resolves to the parameter's neutral
+value. The neutral values are lift 0, gamma 1, and gain 1. A channel that resolves to all three neutral values is copied
+bit-for-bit, including signed zero, NaN payload, and infinity, into new private storage.
+
+For binary32 input `x` and binary32 parameters, the curve is `z = gain * x + lift * (1 - x)`, followed by the
+sign-preserving result `copysign(abs(z) ** (1 / gamma), z)`. Parameter `gamma` is the exponent denominator; it is not
+the transfer description in `frame.gamma`. The operation does not decode, encode, interpret, or change `frame.gamma`,
+and it performs no clipping, range normalization, tone mapping, or gamut mapping. Negative samples and values above
+one remain valid scene values.
+
+Channels are an open set, so a scalar broadcasts to every storage channel, including A, Z, Cb, Cr, H, and custom
+labels. The caller uses a Mapping to limit processing to channels for which 0 is black and 1 is white. `grade` neither
+infers channel meaning nor recenters chroma or wraps hue. This differs from Nuke's default RGB selection and from
+Blender / OCIO alpha preservation.
+
+With Nuke Grade blackpoint 0, whitepoint 1, multiply 1, and offset 0, the affine core agrees on the `0 <= z <= 1`
+power interval. Nuke's nonpositive pass-through and above-one linear extension are not used. ASC CDL has the same
+affine-power core under `slope = gain - lift`, `offset = lift`, and `power = 1 / gamma`; the valid ASC CDL subset also
+requires nonnegative slope and `0 <= z <= 1`, while CDL saturation and style-dependent clamps remain outside this
+operation. Classic LGG agrees after converting its lift control with `lift = gain * lift_control`; Blender and darktable
+negative clamps are not used. Resolve Primaries compatibility is not claimed because its pixel equation is unpublished.
+
 ## reference white
 
 `ReferenceWhite` is the canonical display-white axis accepted by
@@ -507,6 +536,8 @@ and usage contexts differ.
 | `D-Gamut` | DJI D-Gamut primaries and D65 white | DJI Zenmuse X7/X9 D-Log and D-Gamut whitepapers | Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; `DJI D-Gamut` and `D-Log M` are not aliases |
 | `F-Gamut-C` | Fujifilm F-Gamut-C primaries and D65 white | Fujifilm F-Log2 C IDT v1.10 | Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; `F-Log2 C` is represented by this gamut plus `F-Log2` |
 | `Apple-Wide-Gamut` | Apple Wide Gamut primaries and D65 white | Apple Log 2 White Paper Ver.1.1 | Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; `Apple Log 2` is represented by this gamut plus `Apple-Log` |
+| `Adobe-RGB` | Adobe RGB (1998) primaries and D65 white | Adobe RGB (1998) Color Image Encoding | R `(0.6400, 0.3300)`, G `(0.2100, 0.7100)`, B `(0.1500, 0.0600)`; select the same-named transfer independently |
+| `ProPhoto-RGB` | ProPhoto RGB / ROMM RGB primaries and D50 white | ISO 22028-2 | R `(0.7347, 0.2653)`, G `(0.1596, 0.8404)`, B `(0.0366, 0.0001)`, white `(0.3457, 0.3585)`; select `Gamma-1.8` for common pure-power profiles or the same-named toe transfer independently |
 
 `px.color.rgb_to_rgb` constructs normalized primary matrices from the published RGB primaries and white point in each
 row. Conversions between different white points, such as D65 and ACES white, use the **Bradford** CAT. A colorspace
@@ -622,6 +653,12 @@ Apple Log 2 ACES CTL's independently derived CAT02 AWG-to-AP0 matrix is an auxil
 second production definition. The CAT02 and Bradford AWG-to-AP0 matrices intentionally differ. Colorspace and gamma
 remain independent: Apple Log 2 is `Apple-Wide-Gamut` plus `Apple-Log`, while Apple Log values paired with Rec.2020
 are represented as `Rec.2020` plus `Apple-Log`.
+
+`Adobe-RGB` derives its normalized RGB-to-XYZ matrix from R `(0.6400, 0.3300)`, G `(0.2100, 0.7100)`,
+B `(0.1500, 0.0600)`, and D65 `(0.3127, 0.3290)`. `ProPhoto-RGB` derives it from R `(0.7347, 0.2653)`,
+G `(0.1596, 0.8404)`, B `(0.0366, 0.0001)`, and D50 `(0.3457, 0.3585)`. Both expose their normalized
+matrix Y row through `matrix="native"` and use Bradford adaptation when the destination white differs. Colorspace
+and gamma remain independent: neither same-named token forces or infers the other.
 
 ## golden path
 
@@ -791,9 +828,11 @@ subset and coordinate rules.
 - Chroma downsampling on a `to_` path centers each output sample at the siting offset. Bilinear and bicubic use a
   scale-two reduction kernel; area averages coverage over the owned interval. Edges replicate.
 - 4:2:2 filters horizontally and reads the original row directly vertically. Equidistant nearest ties round half up.
-- `px.transform.resize` accepts the first nine table tokens. When omitted, it selects `area` if either dimension
-  shrinks, and `lanczos4` otherwise.
-- `px.transform.warp_affine` accepts the first nine table tokens. When omitted, it inspects the column norms of the
+- `px.transform.resize` accepts the eight point-sampled tokens, the three `-aa` filter-widening tokens, and `area`.
+  The `-aa` tokens require explicit selection. When interpolation is omitted, resize still selects `area` if either
+  dimension shrinks and `lanczos4` otherwise.
+- `px.transform.warp_affine` accepts the eight point-sampled tokens and `area`, but not the three `-aa` tokens. When
+  omitted, it inspects the column norms of the
   effective forward 2×2 matrix: either norm below 1 selects `area`; both norms at least 1 select `lanczos4`.
 - `px.composite.merge` accepts the first eight table tokens, excluding `area`; default `bilinear`. Each background
   pixel center maps inversely into foreground coordinates.
@@ -811,6 +850,17 @@ Point-sampled `px.transform.resize` kernels share pixel-center alignment
 nor kernel overshoot or undershoot is clipped. Each factor-derived output dimension is
 `floor(dim × factor + 0.5)`.
 
+The `lanczos2-aa`, `lanczos3-aa`, and `lanczos4-aa` resize tokens use filter-widening only on a shrinking axis. For
+each axis, let `s = max(input / output, 1)`, use `u = (src - sample) / s`, and evaluate `sinc(u) sinc(u / lobes)` for
+every integer sample in the exact support `abs(u) < lobes`. All exact-support weights are normalized before the sample
+indices replicate to the image edge; out-of-range samples are not discarded and renormalized. A nonshrinking axis has
+`s = 1` and is bit-identical to its corresponding point-sampled Lanczos path. This per-axis rule also applies to mixed
+resize: only the shrinking axis widens. Scene values and Lanczos undershoot or overshoot are not clipped.
+
+For `lanczos3-aa`, agreement with Pillow 12.3.0 mode `F` is limited to the full-support interior of the fixed two-axis
+reduction corpus (97×83 to 31×29 and 53×47 to 19×17). Pillow discards out-of-range taps at edges, whereas pixtreme
+retains its replicate contract there.
+
 `px.transform.warp_affine` places the top-left input and output pixel centers at `(0, 0)` and inverse-maps every output
 center through the caller-declared forward matrix. Nearest uses `floor(coordinate + 0.5)`. Bilinear, cubic, and Lanczos
 use fixed-support separable kernels; Lanczos normalizes by the sum of all x- and y-direction tap weights. `area` is the
@@ -827,13 +877,17 @@ Neither point nor area renormalizes only in-canvas taps; both apply the border s
 | `lanczos2` | `sinc(x) sinc(x / 2)`, two lobes | Windowed sinc | Normalize by the weight sum inside support |
 | `lanczos3` | `sinc(x) sinc(x / 3)`, three lobes | Windowed sinc | Normalize by the weight sum inside support |
 | `lanczos4` | `sinc(x) sinc(x / 4)`, four lobes | Windowed sinc | Normalize by the weight sum inside support |
+| `lanczos2-aa` | `sinc(u) sinc(u / 2)`, two lobes, with `u = (src - sample) / s` | Windowed sinc filter-widening | Widen exact source support only on a shrinking axis; normalize before replicate mapping |
+| `lanczos3-aa` | `sinc(u) sinc(u / 3)`, three lobes, with `u = (src - sample) / s` | Windowed sinc filter-widening | Widen exact source support only on a shrinking axis; normalize before replicate mapping |
+| `lanczos4-aa` | `sinc(u) sinc(u / 4)`, four lobes, with `u = (src - sample) / s` | Windowed sinc filter-widening | Widen exact source support only on a shrinking axis; normalize before replicate mapping |
 | `area` | Box average over the source region covered by each output pixel | Area or box resampling | The same definition also applies to enlargement |
 | `trilinear` | Linear interpolation along three axes over the eight vertices of a 3D grid cell | Trilinear interpolation | Subset exclusive to `px.color.apply_lut` |
 | `tetrahedral` | Linear interpolation after splitting a 3D grid cell into six tetrahedra | Tetrahedral interpolation | Subset exclusive to `px.color.apply_lut`; default |
 | `linear` | Linear interpolation between adjacent samples of each independent RGB curve | One-dimensional LUT interpolation | Subset exclusive to `px.color.apply_lut` with `Lut1D`; default for that type |
 
-The cubic and Lanczos support widths in `px.transform.resize` do not expand on the source side during reduction; these
-kernels provide no scale-aware antialiasing. Use `area` for antialiased reduction.
+The cubic and point-sampled Lanczos support widths in `px.transform.resize` do not expand on the source side during
+reduction. Use `area` for a box average or an explicit `-aa` Lanczos token for scale-aware filter-widening.
+The `-aa` family is the scale-aware antialiasing choice for Lanczos reduction.
 
 ## stack direction
 
@@ -879,14 +933,18 @@ the numerator is positive. `ccorr_normed` and `ccoeff_normed` return 0. No epsil
 Chroma-siting tokens define the centers of chroma samples in progressive 4:2:0 input, using frame coordinates where
 the top-left luma-sample center is `(0, 0)` and luma spacing is 1. They appear only on `px.io.from_nv12`,
 `px.io.from_p010`, `px.io.from_yuv420p`, `px.io.to_nv12`, `px.io.to_p010`, and `px.io.to_yuv420p`; default `left`.
-Siting is not inferred from colorimetry. State `topleft` explicitly for BT.2020 or BT.2100 material that uses the
-standard position.
+Siting is not inferred from colorimetry. All six tokens denote a single progressive-frame position; the named-format
+functions do not interpret separate top-field and bottom-field signalling. State `topleft` explicitly for BT.2020 or
+BT.2100 material that uses the standard position.
 
 | Token | Offset `(x, y)` | H.273 | Definition |
 |---|---:|---|---|
 | `left` | `(0, 0.5)` | H.273 type 0 | Horizontally co-sited and vertically interstitial; typical BT.601/BT.709 SDR delivery convention |
 | `center` | `(0.5, 0.5)` | H.273 type 1 | Geometric center of the 2×2 luma block |
 | `topleft` | `(0, 0)` | H.273 type 2 | Co-sited on both axes; standard BT.2020/BT.2100 position |
+| `top` | `(0.5, 0)` | H.273 type 3 | Horizontally centered and co-sited with the top luma row |
+| `bottomleft` | `(0, 1)` | H.273 type 4 | Co-sited with the left luma column and bottom luma row |
+| `bottom` | `(0.5, 1)` | H.273 type 5 | Horizontally centered and co-sited with the bottom luma row |
 
 4:2:2 (`px.io.from_uyvy422`, `px.io.from_v210`, and `px.io.from_yuv422p`) is fixed as horizontally co-sited and
 vertically full resolution, so it has no siting argument. 4:4:4 (`px.io.from_yuv444p` and `px.io.from_yuva444p`) has no
@@ -961,6 +1019,28 @@ font file without an extension whitelist, reads its bytes completely during cons
 face with both FreeType and HarfBuzz. The resulting asset remains usable after the source file is changed or removed.
 Its shaping, FreeType face, glyph, layout, and atlas cache identity is the content bytes plus face index, not the path
 or Python object identity.
+
+`px.fonts.available() -> tuple[str, ...]` inventories font names, and `px.fonts.font_path(name: str) -> pathlib.Path`
+returns the filesystem path registered under one name. Catalog names are an open set of exact, case-sensitive strings,
+not `TextFont` tokens: they are not normalized, case-folded, or added to a `Literal` alias. Names must be non-empty,
+equal to their own `str.strip()`, and contain no NUL. `available()` always places the bundled `sans` and `mono` names
+first, followed by installed names in Python code-point order.
+
+Installed font packages declare a non-empty `Mapping[str, pathlib.Path]` constant through entry point group
+`pixtreme.fonts`. Every path must be absolute and identify a readable regular filesystem file when discovered; a
+filesystem-backed resource is required, so a zip-only or in-memory asset is not registered. Provider modules are not
+imported by `import pixtreme`, `import pixtreme.fonts`, invalid lookup, or bundled-name lookup. The first
+`available()` or non-bundled `font_path()` call loads every provider in a deterministic order and validates the whole
+catalog atomically. Concurrent first calls share one initialization. Reserved-name, duplicate-name, load, mapping,
+and path failures expose no partial catalog and raise an actionable `RuntimeError`.
+
+Both a successful catalog and a failure are cached for the life of the process. Install, uninstall, or repair is
+therefore visible only in a fresh process. A successful catalog copies each mapping and stores the provider-supplied
+paths without resolving them. It is a path-only snapshot, not a bytes snapshot: a path can become stale after
+discovery and is still returned without revalidation. Pass it explicitly to `px.draw.Font.from_file` to create the
+existing immutable bytes snapshot. Invalid lookup names and unknown names in a healthy catalog raise actionable
+`ValueError`; an unknown name while the catalog is broken returns the cached `RuntimeError`. Recovery guidance stays
+neutral: install a font package in a fresh process or pass an existing font file path to `Font.from_file`.
 
 | Token | Bundled font | Accepted `wght` range |
 |---|---|---:|
@@ -1182,7 +1262,7 @@ buffer contains no metadata, not guaranteed truths about the material.
 | channels | `("Y", "Cb", "Cr")` | Fixed channel order after format resolution |
 | range | `legal` | Default assumption for video-family YCbCr input; override per call with `range="full"` |
 | interpolation | `bilinear` | Default for the six subsampled formats; accepts the first eight interpolation tokens |
-| siting | `left` | Present only on the three 4:2:0 formats; accepts the three chroma-siting tokens |
+| siting | `left` | Present only on the three 4:2:0 formats; accepts the six chroma-siting tokens |
 
 `colorspace=`, `gamma=`, and `matrix=` are per-call metadata claims. Colorspace and gamma priority is
 **explicit per-call value > placeholder**; omitted matrix is `None`. If only colorspace or gamma is explicit, the other
@@ -1228,7 +1308,7 @@ row storage to 128 bytes.
 |---|---|---|
 | range | `legal` | Also accepts `full`; legal placement preserves headroom codes without clipping to the legal interval |
 | interpolation | `area` | Default for the six subsampled formats; accepts nearest, bilinear, bicubic, and area |
-| siting | `left` | Present only on the three 4:2:0 formats; accepts the three chroma-siting tokens |
+| siting | `left` | Present only on the three 4:2:0 formats; accepts the six chroma-siting tokens |
 | rounding | Half away from zero | Nearest rounding from fp32 to code |
 | clipping | Container range only | Do not clip to the legal interval; clip only to physical `[0, 2^n - 1]` |
 
@@ -1286,6 +1366,9 @@ pairs, including identical dtype. All operations preserve metadata and always re
 `px.io.read_image` identifies extensions case-insensitively and supports JPEG, PNG, TIFF, JPEG 2000, WebP, BMP, PNM,
 TGA, HDR, DPX, and EXR. `px.io.decode_image` detects JPEG, PNG, TIFF, JPEG 2000, WebP, BMP, and PNM from encoded-byte
 signatures; it does not support TGA, HDR, DPX, or EXR. Both APIs use the immutable specification defaults below.
+Both APIs have a trailing keyword-only `apply_exif_orientation: bool = True` argument. Only exact `bool` values are
+accepted. `True` applies valid EXIF orientation from JPEG APP1 Exif, PNG `eXIf`, TIFF's first IFD, or WebP `EXIF`;
+`False` preserves stored pixel order and dimensions. Other formats accept the argument without changing their result.
 
 A standard read normalizes ordinary uint by container maximum and decodes EXR HALF and RGBE into float32 Frames. EXR
 UINT alone converts literal unnormalized integers numerically to float32 and permits documented loss above `2^24`.
@@ -1304,19 +1387,58 @@ values and dtype as a default read. EXR and HDR are file-only boundaries.
 | DPX | `Rec.709` | Header transfer; unknown maps to `Cineon` at 10 bit, `Rec.709` at 8 bit, and `linear` at 12 or 16 bit | RGB or RGBA |
 | EXR | `ACES2065-1` | `linear` | R, G, B, and A when present |
 
-Metadata priority is **explicit per-call value > explicit file value > specification default**. Explicit file values
-also include metadata inside encoded bytes accepted by `px.io.decode_image`. Per-call `colorspace=` and `gamma=` are
-metadata claims and do not transform pixel values. File metadata is limited to PNG cICP, sRGB, and gAMA chunks, plus
-EXR chromaticities and the ACES container flag. HDR EXPOSURE, PRIMARIES, and COLORCORR can be inspected as raw header
-values but are applied to neither pixels nor metadata. DPX maps printing-density, logarithmic, and ADX transfer
-characteristics to `Cineon`; linear to `linear`; and video-family characteristics to `Rec.709`. ICC profiles are not
-read. If a file value cannot map into the public vocabulary, pixtreme falls back to the specification default and emits
-a Python warning.
+Metadata priority is **explicit per-call value > explicit file value > specification default**, independently for
+colorspace and gamma. Explicit file values also include metadata inside encoded bytes accepted by
+`px.io.decode_image`. Per-call `colorspace=` and `gamma=` are metadata claims and do not transform pixel values.
+PNG reads cICP, iCCP, sRGB, and gAMA with the fixed source priority `cICP > iCCP > sRGB > gAMA`; an unmappable
+higher source does not fall through. JPEG reads APP2 `ICC_PROFILE` segments, TIFF reads the first IFD
+InterColorProfile tag 34675, and WebP reads the extended-container `ICCP` chunk. EXR chromaticities and the ACES
+container flag retain their existing mapping. HDR EXPOSURE, PRIMARIES, and COLORCORR remain raw inspection values.
+DPX maps printing-density, logarithmic, and ADX transfer characteristics to `Cineon`; linear to `linear`; and
+video-family characteristics to `Rec.709`.
+
+Embedded ICC handling accepts v2/v4 RGB matrix/TRC profiles with XYZ PCS, `rXYZ` / `gXYZ` / `bXYZ` / `wtpt`, optional
+`chad`, and three `curv` or `para` TRCs. It numerically recovers primaries, white, and the realized decode curve and
+maps each component to the known Colorspace and Gamma vocabularies. Description, file name, manufacturer, and model
+never select a token. Common pure-1.8 ProPhoto profiles map to `ProPhoto-RGB` / `Gamma-1.8`; the ISO toe maps to
+`ProPhoto-RGB` / `ProPhoto-RGB`. The reconstructed profile limit is 16 MiB; PNG additionally limits the compressed
+zlib stream to 17 MiB. RGB and RGBA containers, including palette expansion to RGB(A), can apply an RGB profile;
+grayscale, CMYK, and other channel structures cannot. Channel selection happens after this compatibility decision.
+
+`ImageHeader.color.raw["ICC"]` contains the exact reconstructed profile bytes when the carrier is valid, unique, and
+within its size limit; parsed tags are not public schema. `mappable` is `None` when no selected file color information
+exists, `True` only when both components map, and `False` for carrier, profile, component, or container incompatibility.
+`read_header` reports mapped components without fallback or warnings. Frame-producing reads use a mapped component
+when available, otherwise the format default, and emit one `UserWarning` whenever selected metadata has
+`mappable=False`, even if both components were overridden per call. Pixel samples, dtype, shape, channels, matrix,
+and orientation are unchanged by ICC inspection.
+
+EXIF orientation uses the following stored-image-to-output mappings. Values 5 through 8 exchange width and height;
+the others preserve them. Orientation changes only spatial placement and dimensions, not dtype, color metadata,
+channel labels, or the correspondence between labels and samples.
+
+| Orientation | Mapping |
+|---:|---|
+| 1 | Identity |
+| 2 | Mirror left to right |
+| 3 | Rotate 180 degrees |
+| 4 | Mirror top to bottom |
+| 5 | Transpose across the top-left to bottom-right diagonal |
+| 6 | Rotate 90 degrees clockwise |
+| 7 | Transpose across the top-right to bottom-left diagonal |
+| 8 | Rotate 90 degrees counter-clockwise |
+
+A missing orientation tag is silent and resolves to 1. Values outside 1 through 8, a truncated EXIF block, an invalid
+byte order, an invalid Orientation type or count, and duplicate or conflicting Orientation entries in the primary IFD
+emit a Python warning and resolve to 1. The same warning rule applies when `apply_exif_orientation=False`.
 
 `px.io.read_header` performs no pixel decoding or GPU allocation. It returns an `ImageHeader` with format, dimensions,
 stored channel dtype per part, and raw values, mapped tokens, and mapping availability for the file color information
 above. Each `ImageHeader.parts[]` entry has a per-part `deep: bool`, allowing flat/deep classification before pixel
-decode.
+decode. `ImageHeader` has six fields: `format`, `width`, `height`, `parts`, `color`, and `orientation`. Orientation
+defaults to 1. For JPEG, PNG, TIFF, and WebP, `width` / `height` are the dimensions produced by the default oriented
+decode; values 5 through 8 therefore exchange the stored dimensions. Other formats report orientation 1 and retain
+their existing dimension convention. Header probing remains CPU-only.
 
 ## image write dtype
 
@@ -1342,20 +1464,67 @@ Frame-dependent default. Conversion among `float16`, `float32`, and `uint32` is 
 including uint32, to uint8, float32, and float32 respectively with `recode_dtype` full-scale semantics. HDR requires
 exactly one R, G, and B channel.
 
+## mixed-dtype EXR channel write
+
+```python
+px.io.write_exr_channels(
+    path: str | os.PathLike[str],
+    frames: Sequence[Frame],
+    *,
+    compression: ExrCompression | None = None,
+    dwa_level: float | None = None,
+) -> None
+```
+
+`px.io.write_exr_channels` is the file-only EXR boundary for combining one or more Frames. Every Frame must have the
+same width, height, CUDA device, and colorspace. Output labels come only from `Frame.channels`, are globally unique
+nonempty UTF-8 strings of at most 255 encoded bytes, and are written in label-sorted order. Grouping, sequence order,
+gamma, and matrix do not affect file bytes; gamma and matrix are neither applied nor stored. The common colorspace
+supplies chromaticities and the ACES2065-1 container flag.
+
+| Frame storage dtype | EXR channel type | Write conversion |
+|---|---|---|
+| `float16` | HALF | None; sample bits enter the selected codec directly |
+| `float32` | FLOAT | None; sample bits enter the selected codec directly |
+| `uint32` | UINT | None; all 32-bit ID/code patterns remain literal |
+
+There is no `dtype=` argument and `uint8` / `uint16` are rejected. Use
+`px.values.cast_dtype(frame, dtype="uint32")` to preserve literal ID or code values, or
+`px.values.recode_dtype(frame, dtype="float16" | "float32")` to preserve normalized image meaning.
+`px.io.write_image` remains the single-Frame path: its EXR `dtype=` applies one output type to all channels and uses
+`recode_dtype` semantics when conversion is required. `px.io.encode_image` remains a single-Frame raster-bytes API;
+EXR has no mixed-channel bytes encoder.
+
+| Compression | UINT channel | HALF channel | FLOAT channel |
+|---|---|---|---|
+| `none` / `rle` / `zip` / `zips` / `piz` | Bit-preserving | Bit-preserving | Bit-preserving |
+| `pxr24` | Bit-preserving | Bit-preserving | 24-bit rounding; finite nonzero relative error at most `4e-5` |
+| `b44` / `b44a` | Raw bit-preserving section | Lossy 4×4 blocks | Raw bit-preserving section |
+| `dwaa` / `dwab` | Lossless UNKNOWN route, or RLE for suffix `A` | Suffix-selected lossy color, lossless `A`, or UNKNOWN route | Suffix-selected lossy color, lossless `A`, or UNKNOWN route |
+
+`compression=None` means `zip`. DWA defaults to `dwa_level=45.0`; an explicit level is valid only for DWAA/DWAB.
+All public validation finishes before a new file is created or an existing file is truncated.
+
+On readback, `px.io.read_image(path)` selects RGB and optional A rather than ID channels. A mixed explicit selection
+uses float32 and may round UINT values above `2^24`. Recover an exact ID with
+`px.io.read_image(path, channels=("object_id",), unchanged=True)`; selecting mixed stored dtypes with
+`unchanged=True` raises the existing actionable `ValueError` that reports their dtype tuple.
+
 ## image encode kwargs
 
 `format` is a required keyword-only token for `px.io.encode_image`; `px.io.write_image` derives format from its file
 extension. Encode parameters are named keywords only, never a magic integer list. EXR is file-only, so EXR compression
-and `dwa_level` exist only on `px.io.write_image`. Omission (`None`) uses the specification or codec default below.
+and `dwa_level` exist on `px.io.write_image` and `px.io.write_exr_channels`, not `px.io.encode_image`. Omission
+(`None`) uses the specification or codec default below.
 
 | Kwarg | API and target format | Value domain | Meaning |
 |---|---|---|---|
 | `quality` | Both APIs; JPEG and WebP | Integer `1` through `100` | Lossy quality; specifying it for JPEG 2000, PNG, TIFF, BMP, PNM, or EXR raises `ValueError` |
 | `compression` | Both APIs; TIFF | Token `none` or `lzw` | TIFF uncompressed or lossless LZW compression |
-| `compression` | `px.io.write_image`; EXR | EXR compression token | Default `zip`; distinct from TIFF tokens |
+| `compression` | `px.io.write_image` / `px.io.write_exr_channels`; EXR | EXR compression token | Default `zip`; distinct from TIFF tokens |
 | `compression_level` | Both APIs; PNG | Integer `0` through `9` | PNG zlib compression level; specifying it for another format raises `ValueError` |
 | `lossless` | Both APIs; JPEG 2000 and WebP | Exact `bool` or `None` | `True` is lossless, `False` lossy, and `None` the codec default; WebP `quality` conflicts with `True` |
-| `dwa_level` | `px.io.write_image`; EXR DWAA and DWAB | Positive finite exact `float` or `None`, including as a header float | `None` means `45.0`; specifying it for non-DWA compression raises `ValueError` |
+| `dwa_level` | `px.io.write_image` / `px.io.write_exr_channels`; EXR DWAA and DWAB | Positive finite exact `float` or `None`, including as a header float | `None` means `45.0`; specifying it for non-DWA compression raises `ValueError` |
 | `bit_depth` | `px.io.write_image`; DPX | Integer `8`, `10`, `12`, `16`, or `None` | `None` means 10 bit; specifying it for non-DPX output raises `ValueError` |
 | `dtype` | `px.io.write_image`; EXR | `float16`, `float32`, `uint32`, or `None` | An explicit value overrides the Frame-dependent default; specifying it for non-EXR output raises `ValueError` |
 
@@ -1426,7 +1595,7 @@ shared case-insensitive, separator-insensitive contract above.
 
 ## EXR compression
 
-Tokens accepted by `compression=` for EXR file output from `px.io.write_image`, resolved under the shared
+Tokens accepted by `compression=` for EXR file output from `px.io.write_image` or `px.io.write_exr_channels`, resolved under the shared
 case-insensitive, separator-insensitive contract above. `None` selects `zip`.
 PXR24 is lossless for HALF and rounds FLOAT to 24-bit precision. B44 and B44A lossily compress 4×4 blocks of HALF and
 do not compress FLOAT. DWAA and DWAB are lossy DCT compression; `dwa_level=None` resolves to `45.0`.

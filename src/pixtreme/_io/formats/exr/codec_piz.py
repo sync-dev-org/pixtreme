@@ -1649,20 +1649,37 @@ def _encode_piz_chunks_gpu(
     width: int,
     channel_count: int,
     pixel_type: int,
+    channel_pixel_types: Sequence[int] | None = None,
 ) -> tuple[cp.ndarray, tuple[int, ...]]:
     source = cp.ascontiguousarray(raw, dtype=cp.uint8).reshape(-1)
     offsets = tuple(int(value) for value in raw_offsets)
     sizes = tuple(int(value) for value in raw_sizes)
     rows = tuple(int(value) for value in row_counts)
     chunk_count = len(rows)
-    word_stride = 1 if pixel_type == 1 else 2
-    if pixel_type not in (0, 1, 2) or width < 1 or channel_count < 1 or not rows:
+    pixel_types = (
+        tuple(pixel_type for _ in range(channel_count))
+        if channel_pixel_types is None
+        else tuple(int(value) for value in channel_pixel_types)
+    )
+    word_strides = tuple(1 if value == 1 else 2 for value in pixel_types)
+    if (
+        pixel_type not in (0, 1, 2)
+        or len(pixel_types) != channel_count
+        or any(value not in (0, 1, 2) for value in pixel_types)
+        or width < 1
+        or channel_count < 1
+        or not rows
+    ):
         raise _gpu_error(
             why="the PIZ write descriptor has an invalid pixel type or image geometry",
-            what=(f"pixel_type={pixel_type}, width={width}, channel_count={channel_count}, row_counts={rows!r}"),
+            what=(
+                f"pixel_type={pixel_type}, channel_pixel_types={pixel_types!r}, width={width}, "
+                f"channel_count={channel_count}, row_counts={rows!r}"
+            ),
             how="encode positive scanline chunks containing UINT, HALF, or FLOAT channels",
         )
-    expected_sizes = tuple(row_count * width * channel_count * word_stride * 2 for row_count in rows)
+    row_word_count = width * sum(word_strides)
+    expected_sizes = tuple(row_count * row_word_count * 2 for row_count in rows)
     if offsets != _prefix_offsets(sizes) or sizes != expected_sizes or int(source.size) != sum(sizes):
         raise _gpu_error(
             why="the PIZ write chunk descriptors do not consume the packed scanline bytes exactly",
@@ -1671,13 +1688,22 @@ def _encode_piz_chunks_gpu(
         )
 
     total_rows = sum(rows)
-    scanline_words = source.view(cp.uint16).reshape(total_rows, channel_count, width, word_stride)
+    scanline_words = source.view(cp.uint16).reshape(total_rows, row_word_count)
     staged_parts: list[cp.ndarray] = []
     row_start = 0
     for row_count in rows:
-        staged_parts.append(
-            cp.ascontiguousarray(scanline_words[row_start : row_start + row_count].transpose(1, 0, 2, 3)).reshape(-1)
-        )
+        chunk_rows = scanline_words[row_start : row_start + row_count]
+        channel_parts: list[cp.ndarray] = []
+        channel_word_start = 0
+        for word_stride in word_strides:
+            channel_word_count = width * word_stride
+            channel_parts.append(
+                cp.ascontiguousarray(
+                    chunk_rows[:, channel_word_start : channel_word_start + channel_word_count]
+                ).reshape(-1)
+            )
+            channel_word_start += channel_word_count
+        staged_parts.append(cp.concatenate(channel_parts))
         row_start += row_count
     staged_words = cp.concatenate(staged_parts)
     chunk_word_sizes = tuple(size // 2 for size in sizes)
@@ -1707,11 +1733,9 @@ def _encode_piz_chunks_gpu(
     staged_words = cp.ascontiguousarray(forward_lut[chunk_ids, staged_words], dtype=cp.uint16)
     wavelet_fields: list[tuple[int, int, int, int, int]] = []
     for chunk_index, row_count in enumerate(rows):
-        chunk_offset = chunk_word_offsets[chunk_index]
-        plane_word_count = row_count * width * word_stride
+        plane_offset = chunk_word_offsets[chunk_index]
         max_value = int(descriptor_host[chunk_index, 2])
-        for channel_index in range(channel_count):
-            plane_offset = chunk_offset + channel_index * plane_word_count
+        for word_stride in word_strides:
             for word_slice in range(word_stride):
                 wavelet_fields.append(
                     (
@@ -1722,6 +1746,7 @@ def _encode_piz_chunks_gpu(
                         max_value,
                     )
                 )
+            plane_offset += row_count * width * word_stride
     _piz_forward_wavelet_fields_gpu(staged_words, wavelet_fields)
 
     huffman, huffman_offsets, huffman_sizes, symbol_counts = _encode_piz_huffman_chunks_gpu(

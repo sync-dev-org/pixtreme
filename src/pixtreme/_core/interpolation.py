@@ -32,8 +32,22 @@ _POINT_INTERPOLATION_SPECS = {
 }
 _POINT_INTERPOLATION_TOKENS = cast(tuple[Interpolation, ...], tuple(_POINT_INTERPOLATION_SPECS))
 
+_ANTIALIASED_LANCZOS_LOBES = {
+    "lanczos2-aa": 2,
+    "lanczos3-aa": 3,
+    "lanczos4-aa": 4,
+}
+_ANTIALIASED_LANCZOS_TOKENS = cast(tuple[Interpolation, ...], tuple(_ANTIALIASED_LANCZOS_LOBES))
+
 if _POINT_INTERPOLATION_TOKENS != _ALL_INTERPOLATION_TOKENS[: len(_POINT_INTERPOLATION_TOKENS)]:
     raise RuntimeError("point interpolation indices must match the public vocabulary order")
+if (
+    _ANTIALIASED_LANCZOS_TOKENS
+    != _ALL_INTERPOLATION_TOKENS[
+        len(_POINT_INTERPOLATION_TOKENS) : len(_POINT_INTERPOLATION_TOKENS) + len(_ANTIALIASED_LANCZOS_TOKENS)
+    ]
+):
+    raise RuntimeError("antialiased Lanczos tokens must follow the point interpolation vocabulary")
 
 
 def _canonical_mitchell_coefficients(interpolation: str) -> tuple[str, str]:

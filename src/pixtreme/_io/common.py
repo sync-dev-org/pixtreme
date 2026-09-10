@@ -163,7 +163,8 @@ def _resolve_metadata(
         defaults = _RASTER_DEFAULTS
     if header.color.mappable is False:
         warnings.warn(
-            "file color metadata cannot be mapped to pixtreme vocabulary; using specification defaults",
+            "selected file color metadata cannot be fully mapped to pixtreme vocabulary; resolving each component "
+            "from per-call claims, mapped values, or specification defaults",
             UserWarning,
             stacklevel=3,
         )

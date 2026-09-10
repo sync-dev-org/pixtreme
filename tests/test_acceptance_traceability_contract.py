@@ -66,13 +66,15 @@ assert primary_context_active() == 0
 
 
 def test_current_public_names_follow_the_documented_naming_rules_and_reservations() -> None:
-    """v1-public-namespace acceptance 11: current docs and leaves retain the naming grammar. GitHub #29."""
+    """v1-public-namespace acceptance 11; v1-fonts-module acceptance 1-2: current leaves follow the naming grammar."""
     import pixtreme as px
 
     requirements_path = require_repo_file("docs/requirements.md")
     feature_path = require_repo_file("docs/features/v1-public-namespace.md")
+    fonts_feature_path = require_repo_file("docs/features/v1-fonts-module.md")
     requirements = requirements_path.read_text(encoding="utf-8")
     feature = feature_path.read_text(encoding="utf-8")
+    fonts_feature = fonts_feature_path.read_text(encoding="utf-8")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     rules = (
         "葉名は短縮せず機構まで含む自己記述名",
@@ -82,10 +84,10 @@ def test_current_public_names_follow_the_documented_naming_rules_and_reservation
     for rule in rules:
         assert rule in requirements
     assert "## 命名規則" in feature
-    assert "The package root exposes 13 modules" in readme
+    assert "The package root exposes 14 modules" in readme
 
     modules = tuple(name for name in px.__all__ if inspect.ismodule(getattr(px, name)))
-    assert len(modules) == 13
+    assert len(modules) == 14
     public_functions = {
         (module_name, leaf)
         for module_name in modules
@@ -123,8 +125,9 @@ def test_current_public_names_follow_the_documented_naming_rules_and_reservation
     public_surface_section = feature.split("## module 公開面\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
     assert "`core.channels`" in public_surface_section
     for module_name, leaf in public_operations:
-        assert f"`{module_name}`" in public_surface_section
-        assert f"`{leaf}`" in public_surface_section
+        documented_surface = fonts_feature if module_name == "fonts" else public_surface_section
+        assert f"`{module_name}`" in documented_surface
+        assert f"`{leaf}`" in documented_surface
 
 
 def test_tga_read_source_has_one_flat_payload_transfer_and_one_gpu_pass() -> None:

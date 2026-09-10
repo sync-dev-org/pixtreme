@@ -44,6 +44,8 @@ EXPECTED_VOCABULARY: dict[str, tuple[str, ...]] = {
         "D-Gamut",
         "F-Gamut-C",
         "Apple-Wide-Gamut",
+        "Adobe-RGB",
+        "ProPhoto-RGB",
     ),
     "Gamma": (
         "linear",
@@ -75,10 +77,13 @@ EXPECTED_VOCABULARY: dict[str, tuple[str, ...]] = {
         "Apple-Log",
         "Samsung-Log",
         "Cineon",
+        "Gamma-1.8",
         "Gamma-2.2",
         "Gamma-2.4",
         "Gamma-2.5",
         "Gamma-2.6",
+        "Adobe-RGB",
+        "ProPhoto-RGB",
     ),
     "Matrix": ("BT.601", "BT.709", "BT.2020", "native"),
     "Dtype": ("float32", "float16", "uint8", "uint16", "uint32"),
@@ -94,13 +99,16 @@ EXPECTED_VOCABULARY: dict[str, tuple[str, ...]] = {
         "lanczos2",
         "lanczos3",
         "lanczos4",
+        "lanczos2-aa",
+        "lanczos3-aa",
+        "lanczos4-aa",
         "area",
         "trilinear",
         "tetrahedral",
         "linear",
     ),
     "Border": ("mirror", "replicate", "wrap", "constant"),
-    "ChromaSiting": ("left", "center", "topleft"),
+    "ChromaSiting": ("left", "center", "topleft", "top", "bottomleft", "bottom"),
     "StackDirection": ("vertical", "horizontal"),
     "SobelDirection": ("x", "y", "magnitude"),
     "TemplateMatchingMethod": ("sqdiff", "sqdiff_normed", "ccorr", "ccorr_normed", "ccoeff", "ccoeff_normed"),
@@ -289,6 +297,9 @@ def _contains_plain_str(annotation: object) -> bool:
 def _expected_parameter_families(module_name: str, operation: str, parameter: str) -> tuple[str, ...] | None:
     if operation == "warp_affine" and parameter == "matrix":
         return None
+    # px.color.grade gamma is a numeric exponent denominator, not Frame transfer metadata or a Gamma token.
+    if module_name == "pixtreme.color" and operation == "grade" and parameter == "gamma":
+        return None
     if parameter == "direction":
         if operation == "stack":
             return ("StackDirection",)
@@ -321,20 +332,22 @@ def _documentation_tokens(markdown: str, heading: str) -> tuple[str, ...]:
 
 
 def test_literal_aliases_are_the_independent_canonical_vocabulary() -> None:
-    """v1-token-vocabulary acceptance 1; v1-sony-tokens acceptance 1; v1-arri-tokens acceptance 16;
+    """v1-chroma-siting-h273 acceptance 1 and 10; v1-token-vocabulary acceptance 1;
+    v1-sony-tokens acceptance 1; v1-arri-tokens acceptance 16;
     v1-blackmagic-tokens acceptance 33; v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
     v1-panasonic-tokens acceptance 99-100; v1-standard-tokens acceptance 117;
-    v1-vendor-a-tokens acceptance 140; v1-vendor-b-tokens acceptance 166.
+    v1-vendor-a-tokens acceptance 140; v1-vendor-b-tokens acceptance 166; v1-io-icc acceptance 1.
     """
     assert len(EXPECTED_VOCABULARY) == 30
-    assert sum(map(len, EXPECTED_VOCABULARY.values())) == 188
+    assert sum(map(len, EXPECTED_VOCABULARY.values())) == 199
     assert {name: get_args(getattr(px.core, name)) for name in EXPECTED_VOCABULARY} == EXPECTED_VOCABULARY
 
 
 def test_public_token_annotations_use_only_canonical_literal_aliases() -> None:
-    """v1-token-vocabulary acceptance 2; v1-sony-tokens acceptance 2;
+    """v1-chroma-siting-h273 acceptance 3; v1-token-vocabulary acceptance 2; v1-sony-tokens acceptance 2;
     v1-blackmagic-tokens acceptance 34; v1-red-tokens acceptance 55; v1-canon-tokens acceptance 77;
-    v1-panasonic-tokens acceptance 100; v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167:
+    v1-panasonic-tokens acceptance 100; v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167;
+    v1-grade acceptance 1:
     annotations expose canonical literals.
     """
     frame_hints = get_type_hints(px.core.Frame)
@@ -380,7 +393,7 @@ def test_public_token_annotations_use_only_canonical_literal_aliases() -> None:
 
 
 def test_every_canonical_token_accepts_case_and_separator_variants() -> None:
-    """v1-token-vocabulary acceptance 3; v1-sony-tokens acceptance 3;
+    """v1-chroma-siting-h273 acceptance 1; v1-token-vocabulary acceptance 3; v1-sony-tokens acceptance 3;
     v1-blackmagic-tokens acceptance 35; v1-red-tokens acceptance 56; v1-panasonic-tokens acceptance 101;
     v1-vendor-a-tokens acceptance 142; v1-vendor-b-tokens acceptance 168:
     canonical tokens resolve all variants.
@@ -406,7 +419,7 @@ def test_all_legacy_spellings_are_permanent_runtime_aliases() -> None:
 
 
 def test_token_keys_are_collision_free_per_family_and_never_cross_families() -> None:
-    """v1-token-vocabulary acceptance 5; v1-sony-tokens acceptance 3;
+    """v1-chroma-siting-h273 acceptance 1; v1-token-vocabulary acceptance 5; v1-sony-tokens acceptance 3;
     v1-blackmagic-tokens acceptance 35; v1-panasonic-tokens acceptance 101;
     v1-vendor-a-tokens acceptance 142; v1-vendor-b-tokens acceptance 168: keys remain unique and family-local.
     """
@@ -513,12 +526,13 @@ def test_token_reference_matches_all_literal_aliases_in_order() -> None:
 
 def test_requirements_define_the_two_layer_token_contract() -> None:
     """v1-token-vocabulary acceptance 10; v1-sony-tokens acceptance 12;
-    v1-vendor-b-tokens acceptance 188; GitHub #29: requirements define tokens.
+    v1-vendor-b-tokens acceptance 188; v1-fonts-module acceptance 6 and 14: requirements define vocabularies.
     """
     path = require_repo_file("docs/requirements.md")
     requirements = path.read_text(encoding="utf-8")
     arch = requirements.split("**REQ-ARCH-003", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
-    assert "case-sensitive" not in arch
+    assert "font catalog 名は exact / case-sensitive" in arch
+    assert "閉 token の normalization を適用しない" in arch
     assert "casefold" in arch
     assert "U+0020" in arch
     assert "permanent alias" in arch

@@ -740,15 +740,15 @@ def test_analysis_vocabulary_defines_methods_and_harris_border(vocabulary_markdo
 
 
 def test_analysis_requirements_define_modules_and_array_response_boundary() -> None:
-    """v1-analysis-pair acceptance 27 / v1-public-namespace acceptance 1 and 8. GitHub #29."""
+    """v1-analysis-pair acceptance 27; v1-public-namespace acceptance 1 and 8; v1-fonts-module acceptance 1 and 14."""
     requirements_path = require_repo_file("docs/requirements.md")
     requirements = requirements_path.read_text(encoding="utf-8")
     architecture = requirements.split("**REQ-ARCH-008:", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
     modules = requirements.split("**REQ-API-009:", maxsplit=1)[1].split("**REQ-API-010:", maxsplit=1)[0]
     boundaries = requirements.split("**REQ-API-010:", maxsplit=1)[1].split("**REQ-API-011:", maxsplit=1)[0]
-    assert "13 module" in architecture
+    assert "14 module" in architecture
     assert "`px.io.from_array`" in architecture
-    assert "13 module" in modules
+    assert "14 module" in modules
     assert "`feature`" in modules
     assert "`metrics`" in modules
     assert "画像ではない測定配列" in boundaries

@@ -1,7 +1,7 @@
 """File, bytes, device-array, and wire-format boundaries."""
 
 from pixtreme._io.formats.lut import decode_lut, read_lut, write_lut
-from pixtreme._io.frontend import decode_image, encode_image, read_image, write_image
+from pixtreme._io.frontend import decode_image, encode_image, read_image, write_exr_channels, write_image
 from pixtreme._io.header import read_header
 from pixtreme._io.models import ImageHeader
 from pixtreme._io.wire.array import from_array, to_array
@@ -17,6 +17,7 @@ from pixtreme._io.wire.yuva444p import from_yuva444p, to_yuva444p
 __all__ = (
     "read_image",
     "write_image",
+    "write_exr_channels",
     "read_header",
     "read_lut",
     "decode_lut",

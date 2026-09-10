@@ -78,7 +78,9 @@ def test_transport_recipe_rejects_unproved_decoder_and_encoder_formats() -> None
 
 
 def test_transport_recipe_documents_signal_mapping_and_encoder_round_trip() -> None:
-    """v1-transport-recipe acceptance 2, 3, and 7; GitHub #29: signal claims and encode route stay explicit."""
+    """v1-chroma-siting-h273 acceptance 11; v1-transport-recipe acceptance 2, 3, and 7;
+    GitHub #29: signal claims and encode route stay explicit.
+    """
     recipe = RECIPE.read_text(encoding="utf-8")
     normalized_recipe = " ".join(recipe.split())
     feature = require_repo_file("docs/features/v1-transport-recipe.md").read_text(encoding="utf-8")
@@ -114,6 +116,29 @@ def test_transport_recipe_documents_signal_mapping_and_encoder_round_trip() -> N
         assert requirement in feature
     assert "gap" in feature
     assert "chroma sample location" in feature
+
+
+def test_transport_recipe_maps_only_complete_progressive_h273_field_signalling() -> None:
+    """v1-chroma-siting-h273 acceptance 11: the adapter recipe maps all six and rejects unsafe snapshots."""
+    recipe = RECIPE.read_text(encoding="utf-8")
+    for value, token in enumerate(("left", "center", "topleft", "top", "bottomleft", "bottom")):
+        assert f"| `{value}` | `{token}` |" in recipe
+    for required in (
+        "progressive frame",
+        "both present",
+        "equal",
+        "0 through 5",
+        "interlaced or field raster",
+        "picture structure is unknown",
+        "both values are absent",
+        "values disagree",
+        "one field value is present",
+        "6 or greater",
+        "application adapter",
+        "deinterlace or field integration",
+        "documented application policy",
+    ):
+        assert required in recipe
 
 
 def test_transport_recipe_stream_contract_matches_boundary_docstrings_and_source() -> None:

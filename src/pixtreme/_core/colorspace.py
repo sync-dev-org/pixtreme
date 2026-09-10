@@ -7,6 +7,7 @@ from collections.abc import Mapping
 _ColorSpaceDefinition = tuple[tuple[tuple[float, float], tuple[float, float], tuple[float, float]], tuple[float, float]]
 
 _D65 = (0.3127, 0.3290)
+_D50 = (0.3457, 0.3585)
 _ACES_WHITE = (0.32168, 0.33767)
 _P3_PRIMARIES = ((0.680, 0.320), (0.265, 0.690), (0.150, 0.060))
 
@@ -58,4 +59,6 @@ _COLORSPACE_DEFINITIONS: Mapping[str, _ColorSpaceDefinition] = {
     "D-Gamut": (((0.71, 0.31), (0.21, 0.88), (0.09, -0.08)), (0.3127, 0.3290)),
     "F-Gamut-C": (((0.7347, 0.2653), (0.0263, 0.9737), (0.1173, -0.0224)), (0.3127, 0.3290)),
     "Apple-Wide-Gamut": (((0.725, 0.301), (0.221, 0.814), (0.068, -0.076)), _D65),
+    "Adobe-RGB": (((0.6400, 0.3300), (0.2100, 0.7100), (0.1500, 0.0600)), _D65),
+    "ProPhoto-RGB": (((0.7347, 0.2653), (0.1596, 0.8404), (0.0366, 0.0001)), _D50),
 }

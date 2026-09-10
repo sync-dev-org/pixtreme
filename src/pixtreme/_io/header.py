@@ -94,7 +94,11 @@ def read_header(path: str | os.PathLike[str]) -> ImageHeader:
     ``path`` is selected case-insensitively by its supported raster, EXR, HDR, or DPX
     extension. The returned :class:`ImageHeader` reports format, dimensions,
     part names, channel storage dtypes, per-part deep state, and raw plus vocabulary-mapped color
-    metadata. EXR dimensions come from the first part's data window.
+    metadata. PNG iCCP, JPEG APP2, TIFF InterColorProfile, and WebP ICCP carriers are inspected for RGB matrix/TRC
+    ICC profiles and mapped numerically to canonical tokens such as ``Adobe-RGB`` and ``ProPhoto-RGB``. Exact
+    reconstructed profile bytes are returned as ``color.raw["ICC"]`` when the carrier is valid and within bounds;
+    header inspection does not apply Frame fallback or emit an ICC mapping warning. EXR dimensions come from the
+    first part's data window.
     HDR ``EXPOSURE``, ``PRIMARIES``, and ``COLORCORR`` assignments are exposed
     as raw attributes only; pixel reads do not apply their values.
     DPX reports its native bit depth, byte order, packing, and mapped transfer.

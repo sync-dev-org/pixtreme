@@ -45,17 +45,32 @@ Common progressive 4:2:0 mappings are:
 | `matrix_coefficients = 1` | `matrix="BT.709"` |
 | `matrix_coefficients = 5` or `6` | `matrix="BT.601"`, after the application confirms the equivalent non-constant-luminance coefficients |
 | `matrix_coefficients = 9` | `matrix="BT.2020"` |
-| `chroma_sample_loc_type = 0` | `siting="left"` |
-| `chroma_sample_loc_type = 1` | `siting="center"` |
-| `chroma_sample_loc_type = 2` | `siting="topleft"` |
 | `video_full_range_flag = 0` | `range="legal"` |
 | `video_full_range_flag = 1` | `range="full"` |
 
+When a decoder exposes `chroma_sample_loc_type_top_field` and `chroma_sample_loc_type_bottom_field`, the application
+adapter must first establish that the decoded raster is a progressive frame. Direct mapping is allowed only when the
+two field values are both present, equal, and in the range 0 through 5:
+
+| H.273 field value | `siting` token |
+|---:|---|
+| `0` | `left` |
+| `1` | `center` |
+| `2` | `topleft` |
+| `3` | `top` |
+| `4` | `bottomleft` |
+| `5` | `bottom` |
+
+Do not map directly when the decoded surface is an interlaced or field raster, when picture structure is unknown,
+when both values are absent, when the values disagree, when one field value is present and the other is absent, or
+when either value is 6 or greater. Reject that snapshot, reassess after deinterlace or field integration has produced
+a progressive frame with a known position, or pass the single token chosen by a documented application policy. A
+one-sided snapshot is incomplete and must be rejected rather than inferred from the available side.
+
 Do not infer chroma siting from matrix coefficients, colour primaries, resolution, or bit depth. `left` is pixtreme's
 omission default, not evidence about a particular stream. Likewise, do not guess an unspecified matrix from chroma
-siting. If signalling is absent or cannot be represented by pixtreme's closed tokens, reject the stream or apply a
-documented application policy explicitly. The named-format functions support progressive H.273 siting types 0, 1,
-and 2; field-specific interlaced locations are outside their contract.
+siting. These signalling decisions happen in the application adapter before the pixtreme call; each named-format
+function accepts one progressive-frame `siting` token and does not retain field signalling.
 
 For a decoder object that exposes a readiness wait and signalling snapshot, the connection has this shape:
 
@@ -149,7 +164,8 @@ encoder.submit(packed, producer_stream_handle=producer_stream.ptr)
 The `encoder` and `output_signal` names represent application-owned records; they are not pixtreme types.
 The packed array carries no colour metadata. Configure the encoder's VUI or container signal separately with the same
 matrix, range, primaries, transfer, and chroma location. Matching function arguments alone cannot update encoded
-bitstream signalling.
+bitstream signalling. Set the encoder's chroma-location signal to the same position actually passed to `to_nv12`,
+`to_p010`, or `to_yuv420p`; the raw packed array cannot carry that claim.
 
 ## CUDA stream and lifetime contract
 
@@ -174,4 +190,4 @@ wait is a data race. Synchronizing only the producing stream is sufficient for a
 inserted between GPU stages that can exchange stream handles or events.
 
 See [Tokens](tokens.md#matrix) for matrix and range semantics and [chroma siting](tokens.md#chroma-siting) for the
-supported progressive 4:2:0 phases.
+supported progressive 4:2:0 phases and their H.273 type 0 through 5 mapping.

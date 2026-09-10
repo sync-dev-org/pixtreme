@@ -13,6 +13,7 @@ from pixtreme import core as core
 from pixtreme import draw as draw
 from pixtreme import feature as feature
 from pixtreme import filter as filter
+from pixtreme import fonts as fonts
 from pixtreme import generate as generate
 from pixtreme import io as io
 from pixtreme import metrics as metrics
@@ -41,6 +42,7 @@ __all__ = (
     "values",
     "channel",
     "composite",
+    "fonts",
     "__version__",
 )
 

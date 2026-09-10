@@ -404,9 +404,10 @@ def rgb_to_ycbcr(
     ``S-Log3`` / ``ARRI-LogC3`` / ``ARRI-LogC4`` / ``Blackmagic-Film-Gen-5`` / ``DaVinci-Intermediate`` /
     ``RED-Log3G10`` / ``REDlogFilm`` / ``Canon-Log`` / ``Canon-Log-2`` / ``Canon-Log-3`` / ``V-Log`` / ``D-Log`` /
     ``F-Log`` / ``F-Log2`` / ``N-Log`` / ``L-Log`` / ``Apple-Log`` / ``Samsung-Log`` / ``Cineon`` /
-    ``Gamma-2.2`` / ``Gamma-2.4`` / ``Gamma-2.5`` / ``Gamma-2.6`` transfers. The colorspace vocabulary includes
+    ``Gamma-1.8`` / ``Gamma-2.2`` / ``Gamma-2.4`` / ``Gamma-2.5`` / ``Gamma-2.6`` / ``Adobe-RGB`` /
+    ``ProPhoto-RGB`` transfers. The colorspace vocabulary includes
     ``P3-DCI``, ``P3-D60``, ``P3-D65``, ``SMPTE-C``, ``Canon-Cinema-Gamut``, ``V-Gamut``, ``D-Gamut``, and
-    ``F-Gamut-C`` and ``Apple-Wide-Gamut`` independently from gamma selection.
+    ``F-Gamut-C``, ``Apple-Wide-Gamut``, ``Adobe-RGB``, and ``ProPhoto-RGB`` independently from gamma selection.
 
     ``matrix`` accepts ``"BT.601"``, ``"BT.709"``, ``"BT.2020"``, or ``"native"``.
     When omitted, the target representation resolves it to BT.709, BT.2020, native,
@@ -472,9 +473,10 @@ def ycbcr_to_rgb(
     ``S-Log``, ``S-Log2``, ``S-Log3``, ``ARRI-LogC3``, ``ARRI-LogC4``, ``Blackmagic-Film-Gen-5``,
     ``DaVinci-Intermediate``, ``RED-Log3G10``, ``REDlogFilm``, ``Canon-Log``, ``Canon-Log-2``, ``Canon-Log-3``, ``V-Log``,
     ``D-Log``, ``F-Log``, ``F-Log2``, ``N-Log``, ``L-Log``, ``Apple-Log``, ``Samsung-Log``, ``Cineon``,
-    ``Gamma-2.2``, ``Gamma-2.4``, ``Gamma-2.5``, and ``Gamma-2.6``
+    ``Gamma-1.8``, ``Gamma-2.2``, ``Gamma-2.4``, ``Gamma-2.5``, ``Gamma-2.6``, ``Adobe-RGB``, and ``ProPhoto-RGB``
     transfer tokens. The colorspace vocabulary includes ``P3-DCI``, ``P3-D60``, ``P3-D65``, ``SMPTE-C``,
-    ``Canon-Cinema-Gamut``, ``V-Gamut``, ``D-Gamut``, ``F-Gamut-C``, and ``Apple-Wide-Gamut`` independently from
+    ``Canon-Cinema-Gamut``, ``V-Gamut``, ``D-Gamut``, ``F-Gamut-C``, ``Apple-Wide-Gamut``, ``Adobe-RGB``, and
+    ``ProPhoto-RGB`` independently from
     gamma selection.
 
     The result replaces Y/Cb/Cr labels in place with R/G/B, preserves auxiliary
@@ -528,9 +530,10 @@ def rgb_to_grayscale(
     ``PQ``, ``HLG``, ``ACEScc``, ``ACEScct``, ``S-Log``, ``S-Log2``, ``S-Log3``, ``ARRI-LogC3``, ``ARRI-LogC4``, ``Blackmagic-Film-Gen-5``,
     ``DaVinci-Intermediate``, ``RED-Log3G10``, ``REDlogFilm``, ``Canon-Log``, ``Canon-Log-2``, ``Canon-Log-3``, ``V-Log``,
     ``D-Log``, ``F-Log``, ``F-Log2``, ``N-Log``, ``L-Log``, ``Apple-Log``, ``Samsung-Log``, ``Cineon``,
-    ``Gamma-2.2``, ``Gamma-2.4``, ``Gamma-2.5``, and ``Gamma-2.6``
+    ``Gamma-1.8``, ``Gamma-2.2``, ``Gamma-2.4``, ``Gamma-2.5``, ``Gamma-2.6``, ``Adobe-RGB``, and ``ProPhoto-RGB``
     gamma tokens. The colorspace vocabulary includes ``P3-DCI``, ``P3-D60``, ``P3-D65``, ``SMPTE-C``,
-    ``Canon-Cinema-Gamut``, ``V-Gamut``, ``D-Gamut``, ``F-Gamut-C``, and ``Apple-Wide-Gamut`` independently from
+    ``Canon-Cinema-Gamut``, ``V-Gamut``, ``D-Gamut``, ``F-Gamut-C``, ``Apple-Wide-Gamut``, ``Adobe-RGB``, and
+    ``ProPhoto-RGB`` independently from
     gamma selection.
     ``matrix`` accepts
     ``"BT.601"``, ``"BT.709"``, ``"BT.2020"``, or
@@ -577,7 +580,8 @@ def gamma_to_linear(frame: Frame, *, gamma: Gamma | None = None) -> Frame:
     ``PQ``, ``HLG``, ``ACEScc``, ``ACEScct``, ``S-Log``, ``S-Log2``, ``S-Log3``, ``ARRI-LogC3``, ``ARRI-LogC4``, ``Blackmagic-Film-Gen-5``,
     ``DaVinci-Intermediate``, ``RED-Log3G10``, ``REDlogFilm``, ``Canon-Log``, ``Canon-Log-2``, ``Canon-Log-3``,
     ``V-Log``, ``D-Log``, ``F-Log``, ``F-Log2``, ``N-Log``, ``L-Log``, ``Apple-Log``, ``Samsung-Log``, ``Cineon``,
-    ``Gamma-2.2``, ``Gamma-2.4``, ``Gamma-2.5``, or ``Gamma-2.6`` tokens.
+    ``Gamma-1.8``, ``Gamma-2.2``, ``Gamma-2.4``, ``Gamma-2.5``, ``Gamma-2.6``, ``Adobe-RGB``, or
+    ``ProPhoto-RGB`` tokens.
     The claim controls interpretation without mutating the input Frame metadata.
 
     Only R/G/B values are decoded. Auxiliary channels and channel order are
@@ -608,7 +612,9 @@ def gamma_to_linear(frame: Frame, *, gamma: Gamma | None = None) -> Frame:
     branch. Apple-Log preserves its published collapse below R0 and encoded zero, while Samsung-Log extends its
     continuity-derived lower logarithmic branch without codec clipping. All four take reflectance directly, remain
     independent from colorspace, and leave scene overshoot unclipped.
-    Gamma-2.5 is sign-preserving pure power. ACEScc uses the Academy lower inverse through encoded
+    Gamma-1.8 and Adobe-RGB are sign-preserving pure powers with decode exponents 1.8 and 563/256. ProPhoto-RGB
+    uses x/16 below encoded 1/32 and x**1.8 otherwise, extending the linear branch over negative values. These
+    transfers infer no colorspace and do not clip. Gamma-2.5 is sign-preserving pure power. ACEScc uses the Academy lower inverse through encoded
     (9.72 - 15) / 17.52 and its logarithmic inverse above it; ACEScct uses the published linear inverse through
     0.155251141552511 and its logarithmic inverse above it. Both use scene-linear components directly, infer no
     colorspace, and extend analytically above linear 65504 without clipping.
@@ -636,8 +642,9 @@ def linear_to_gamma(frame: Frame, *, gamma: Gamma) -> Frame:
     ``linear``, ``sRGB``, ``Rec.709``, ``BT.1886``, ``PQ``, ``HLG``, ``ACEScc``, ``ACEScct``, ``S-Log``, ``S-Log2``, ``S-Log3``,
     ``ARRI-LogC3``, ``ARRI-LogC4``, ``Blackmagic-Film-Gen-5``, ``DaVinci-Intermediate``, ``RED-Log3G10``,
     ``REDlogFilm``, ``Canon-Log``, ``Canon-Log-2``, ``Canon-Log-3``, ``V-Log``, ``D-Log``, ``F-Log``, ``F-Log2``,
-    ``N-Log``, ``L-Log``, ``Apple-Log``, ``Samsung-Log``, ``Cineon``, ``Gamma-2.2``,
-    ``Gamma-2.4``, ``Gamma-2.5``, or ``Gamma-2.6``. Passing ``None`` or an unknown token is rejected rather than inferred.
+    ``N-Log``, ``L-Log``, ``Apple-Log``, ``Samsung-Log``, ``Cineon``, ``Gamma-1.8``, ``Gamma-2.2``,
+    ``Gamma-2.4``, ``Gamma-2.5``, ``Gamma-2.6``, ``Adobe-RGB``, or ``ProPhoto-RGB``. Passing ``None`` or an unknown
+    token is rejected rather than inferred.
 
     Only R/G/B values are encoded. Auxiliary channels and channel order are
     preserved bit for bit, colorspace is inherited, output gamma is the requested
@@ -668,7 +675,9 @@ def linear_to_gamma(frame: Frame, *, gamma: Gamma) -> Frame:
     branch. Apple-Log preserves its published collapse below R0 and encoded zero, while Samsung-Log extends its
     continuity-derived lower logarithmic branch without codec clipping. All four take reflectance directly, remain
     independent from colorspace, and leave scene overshoot unclipped.
-    Gamma-2.5 uses sign(x) * abs(x) ** 0.4. ACEScc uses the Academy constant branch for x <= 0, lower logarithmic
+    Gamma-1.8 and Adobe-RGB use sign-preserving encode exponents 1/1.8 and 256/563. ProPhoto-RGB uses 16*x below
+    linear 1/512 and x**(1/1.8) otherwise, extending its lower branch over negative values. These transfers infer
+    no colorspace and do not clip. Gamma-2.5 uses sign(x) * abs(x) ** 0.4. ACEScc uses the Academy constant branch for x <= 0, lower logarithmic
     branch for 0 < x < 2**-15, and upper logarithmic branch from 2**-15. ACEScct uses its published linear toe
     through x = 0.0078125 and logarithmic branch above it. Both use scene-linear components directly, infer no
     colorspace, and add no upper clip, LUT, or gamut transform.

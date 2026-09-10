@@ -1104,11 +1104,21 @@ def _exr_write_header(
     chromaticities: Sequence[float],
     aces_image_container: bool,
     dwa_level: float | None = None,
+    channel_pixel_types: Sequence[int] | None = None,
 ) -> bytes:
+    pixel_types = (
+        tuple(pixel_type for _ in encoded_channels) if channel_pixel_types is None else tuple(channel_pixel_types)
+    )
+    if len(pixel_types) != len(encoded_channels) or any(value not in (0, 1, 2) for value in pixel_types):
+        raise _parser_error(
+            why="the EXR write header received invalid per-channel pixel types",
+            what=f"channels={len(encoded_channels)}, pixel_types={pixel_types!r}",
+            how="provide one UINT, HALF, or FLOAT pixel type for every file-order channel",
+        )
     channel_payload = bytearray()
-    for _, encoded in encoded_channels:
+    for (_, encoded), channel_pixel_type in zip(encoded_channels, pixel_types, strict=True):
         channel_payload.extend(encoded + b"\x00")
-        channel_payload.extend(struct.pack("<iB3xii", pixel_type, 0, 1, 1))
+        channel_payload.extend(struct.pack("<iB3xii", channel_pixel_type, 0, 1, 1))
     channel_payload.append(0)
     data_window = struct.pack("<iiii", 0, 0, width - 1, height - 1)
     attributes = [

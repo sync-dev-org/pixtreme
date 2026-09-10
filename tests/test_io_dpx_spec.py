@@ -577,7 +577,7 @@ def test_bit_depth_is_rejected_for_non_dpx_writes(tmp_path: Path) -> None:
 
 
 def test_dpx_read_header_is_gpu_free_and_preserves_the_public_model(tmp_path: Path) -> None:
-    """v1-dpx acceptance 9: pure CPU probing reports native codes and mapped metadata without model changes."""
+    """v1-io-orientation acceptance 8 and 10: DPX stays GPU-free and reports effective orientation one."""
     path = tmp_path / "header.dpx"
     path.write_bytes(_dpx_fixture(_codes(12, 4), bit_depth=12, byte_order="<", transfer=2))
     script = """
@@ -589,7 +589,7 @@ assert h.parts[0].channels == {"R": "uint16", "G": "uint16", "B": "uint16", "A":
 assert (h.color.colorspace, h.color.gamma, h.color.mappable) == ("Rec.709", "linear", True)
 assert h.color.raw["bit_depth"] == 12
 assert h.color.raw["byte_order"] == "little"
-assert set(px.io.ImageHeader.model_fields) == {"format", "width", "height", "parts", "color"}
+assert set(px.io.ImageHeader.model_fields) == {"format", "width", "height", "parts", "color", "orientation"}
 assert "nvidia.nvimgcodec" not in sys.modules
 assert "OpenEXR" not in sys.modules
 """

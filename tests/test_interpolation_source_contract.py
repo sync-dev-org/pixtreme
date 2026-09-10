@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 
 from pixtreme._core.interpolation import (
+    _ANTIALIASED_LANCZOS_TOKENS,
     _POINT_INTERPOLATION_DEVICE_SOURCE,
     _POINT_INTERPOLATION_SPECS,
     _POINT_INTERPOLATION_TOKENS,
@@ -216,7 +217,7 @@ def test_wire_downsampling_keeps_geometry_owned_distance_scale_in_specialized_fr
 
 
 def test_consumer_token_subsets_are_derived_without_renumbering_runtime_arguments() -> None:
-    """REQ-TEST-003 structure contract: consumer subsets preserve canonical runtime indices and area stays index eight."""
+    """REQ-TEST-003; v1-resize-antialias acceptance 1 and 9: subsets preserve point runtime indices."""
     import pixtreme._composite.merge as composite_merge
     import pixtreme._transform.resize as resize
     import pixtreme._transform.warp_affine as warp_affine
@@ -224,7 +225,7 @@ def test_consumer_token_subsets_are_derived_without_renumbering_runtime_argument
 
     point_and_area = (*_POINT_INTERPOLATION_TOKENS, "area")
     assert composite_merge._COMPOSITE_INTERPOLATION_TOKENS == _POINT_INTERPOLATION_TOKENS
-    assert resize._INTERPOLATION_TOKENS == point_and_area
+    assert resize._INTERPOLATION_TOKENS == (*_POINT_INTERPOLATION_TOKENS, *_ANTIALIASED_LANCZOS_TOKENS, "area")
     assert warp_affine._INTERPOLATION_TOKENS == point_and_area
     assert sampling._INTERPOLATION_TOKENS == _POINT_INTERPOLATION_TOKENS
     assert sampling._TO_INTERPOLATION_TOKENS == (

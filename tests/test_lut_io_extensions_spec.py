@@ -717,19 +717,20 @@ def test_write_lut_performs_one_device_to_host_transfer(
 
 def test_lut_io_public_signatures_and_documentation_contract_match_the_feature() -> None:
     """v1-lut-extensions acceptance 4 and 26; v1-white-balance acceptance 1;
-    v1-white-point-simulation acceptance 1:
+    v1-white-point-simulation acceptance 1; v1-exr-mixed-dtype-write acceptance 1 and 15:
+    v1-fonts-module acceptance 1 and 14; v1-grade acceptance 1:
     public signatures, counts, types, and boundary canon stay aligned. GitHub #29.
     """
     assert tuple(inspect.signature(px.io.read_lut).parameters) == ("path",)
     assert tuple(inspect.signature(px.io.decode_lut).parameters) == ("data",)
     assert tuple(inspect.signature(px.io.write_lut).parameters) == ("path", "lut")
-    assert len([name for name in px.io.__all__ if inspect.isfunction(getattr(px.io, name))]) == 26
+    assert len([name for name in px.io.__all__ if inspect.isfunction(getattr(px.io, name))]) == 27
 
     requirements_path = require_repo_file("docs/requirements.md")
     requirements = requirements_path.read_text(encoding="utf-8")
     public_section = requirements.split("**REQ-API-009", maxsplit=1)[1].split("**REQ-API-010", maxsplit=1)[0]
-    assert "| `io`" in public_section and "| 26 |" in public_section
-    assert "公開 operation は計 94 関数" in public_section
+    assert "| `io`" in public_section and "| 27 |" in public_section
+    assert "公開 operation は計 98 関数" in public_section
     assert "公開型" in public_section and "`core.Lut1D`" in public_section and "5 点" in public_section
     boundary = requirements.split("**REQ-API-010", maxsplit=1)[1].split("**REQ-API-011", maxsplit=1)[0]
     assert "LUT file" in boundary and "`px.io.read_lut`" in boundary and "`px.io.write_lut`" in boundary

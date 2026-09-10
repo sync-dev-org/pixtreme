@@ -1,5 +1,6 @@
 """Color and lookup-table transforms."""
 
+from pixtreme._color.grade import grade
 from pixtreme._color.histogram import clahe, equalize_histogram
 from pixtreme._color.hsv import hsv_to_rgb, rgb_to_hsv
 from pixtreme._color.lut import apply_lut
@@ -31,4 +32,5 @@ __all__ = (
     "chromatic_adaptation",
     "white_balance",
     "white_point_simulation",
+    "grade",
 )

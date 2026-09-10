@@ -105,7 +105,7 @@ def test_tensor_helpers_are_absent_in_favor_of_the_dlpack_protocol() -> None:
 
 
 def test_public_api_is_the_feature_minimum() -> None:
-    """v1-public-namespace acceptance 1 and 4: root exports stay module-only."""
+    """v1-public-namespace acceptance 1 and 4; v1-fonts-module acceptance 1: root exports stay module-only."""
     assert px.__all__ == (
         "core",
         "io",
@@ -120,6 +120,7 @@ def test_public_api_is_the_feature_minimum() -> None:
         "values",
         "channel",
         "composite",
+        "fonts",
         "__version__",
     )
     for removed in (
@@ -329,11 +330,26 @@ def test_cast_dtype_signature_requires_the_dtype_claim() -> None:
 
 
 def test_image_io_signatures_are_keyword_only_after_the_primary_inputs() -> None:
-    """v1-exr-runtime-independence acceptance 1: write_image adds one keyword-only dtype selector."""
+    """v1-io-orientation acceptance 1; v1-exr-runtime-independence acceptance 1:
+    image read orientation and image write dtype are trailing keyword-only selectors.
+    """
     read = inspect.signature(px.io.read_image)
-    assert tuple(read.parameters) == ("path", "channels", "unchanged", "colorspace", "gamma")
+    assert tuple(read.parameters) == (
+        "path",
+        "channels",
+        "unchanged",
+        "colorspace",
+        "gamma",
+        "apply_exif_orientation",
+    )
     assert read.parameters["path"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
-    for name, default in (("channels", None), ("unchanged", False), ("colorspace", None), ("gamma", None)):
+    for name, default in (
+        ("channels", None),
+        ("unchanged", False),
+        ("colorspace", None),
+        ("gamma", None),
+        ("apply_exif_orientation", True),
+    ):
         assert read.parameters[name].kind is inspect.Parameter.KEYWORD_ONLY
         assert read.parameters[name].default is default
 

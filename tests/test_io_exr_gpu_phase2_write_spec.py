@@ -358,14 +358,18 @@ def _oracle_forward_coefficients(values: np.ndarray) -> np.ndarray:
             np.log(magnitude) / np.float32(2.2) + np.float32(1.0),
         )
     nonlinear = np.copysign(nonlinear, half_values).astype(np.float16).astype(np.float32)
-    red, green, blue = (nonlinear[..., index] for index in range(3))
-    components = np.stack(
-        (
-            np.float32(0.2126) * red + np.float32(0.7152) * green + np.float32(0.0722) * blue,
-            np.float32(-0.1146) * red - np.float32(0.3854) * green + np.float32(0.5) * blue,
-            np.float32(0.5) * red - np.float32(0.4542) * green - np.float32(0.0458) * blue,
+    if nonlinear.shape[2] == 3:
+        red, green, blue = (nonlinear[..., index] for index in range(3))
+        components = np.stack(
+            (
+                np.float32(0.2126) * red + np.float32(0.7152) * green + np.float32(0.0722) * blue,
+                np.float32(-0.1146) * red - np.float32(0.3854) * green + np.float32(0.5) * blue,
+                np.float32(0.5) * red - np.float32(0.4542) * green - np.float32(0.0458) * blue,
+            )
         )
-    )
+    else:
+        assert nonlinear.shape[2] == 1
+        components = nonlinear.transpose(2, 0, 1)
     sample = np.arange(8, dtype=np.float32)[:, None]
     frequency = np.arange(8, dtype=np.float32)[None, :]
     basis = np.float32(0.5) * np.cos(
@@ -378,7 +382,7 @@ def _oracle_forward_coefficients(values: np.ndarray) -> np.ndarray:
     for component in components:
         blocks = component.reshape(block_rows, 8, block_columns, 8).transpose(0, 2, 1, 3).reshape(-1, 8, 8)
         coefficient_planes.append(np.matmul(np.matmul(basis.T, blocks), basis))
-    return np.stack(coefficient_planes, axis=1).reshape(-1, 3, 64)
+    return np.stack(coefficient_planes, axis=1).reshape(-1, len(coefficient_planes), 64)
 
 
 def _oracle_quantization_tables(dwa_level: float) -> tuple[np.ndarray, np.ndarray]:

@@ -15,8 +15,10 @@ from pixtreme._core.frame import (
     _DTYPE_TOKENS,
     _GAMMA_TOKENS,
     _LAYOUT_TOKENS,
+    _MATRIX_TOKENS,
     ChannelInput,
     Frame,
+    _construct_frame,
     _normalize_channels,
     _validate_token,
 )
@@ -540,6 +542,7 @@ def from_array(
     normalized_channels = _normalize_channels(channels)
     validated_colorspace = _validate_token(colorspace, axis="colorspace", accepted=_COLORSPACE_TOKENS)
     validated_gamma = _validate_token(gamma, axis="gamma", accepted=_GAMMA_TOKENS)
+    validated_matrix = None if matrix is None else _validate_token(matrix, axis="matrix", accepted=_MATRIX_TOKENS)
     if logical.shape[2] != len(normalized_channels):
         raise ValueError(
             _actionable_error(
@@ -650,10 +653,10 @@ def from_array(
         output = cp.ascontiguousarray(logical)
     else:
         output = logical
-    return Frame(
+    return _construct_frame(
         data=output,
         colorspace=validated_colorspace,
         gamma=validated_gamma,
         channels=normalized_channels,
-        matrix=matrix,
+        matrix=validated_matrix,
     )

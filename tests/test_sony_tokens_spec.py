@@ -44,6 +44,8 @@ _COLORSPACES = (
     "D-Gamut",
     "F-Gamut-C",
     "Apple-Wide-Gamut",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 _GAMMAS = (
     "linear",
@@ -75,10 +77,13 @@ _GAMMAS = (
     "Apple-Log",
     "Samsung-Log",
     "Cineon",
+    "Gamma-1.8",
     "Gamma-2.2",
     "Gamma-2.4",
     "Gamma-2.5",
     "Gamma-2.6",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 _ALIASES = (
     px.core.ChromaticAdaptation,
@@ -262,7 +267,9 @@ def _rgb_to_xyz(
 
 
 def test_sony_tokens_extend_the_canonical_vocabulary_and_public_static_surfaces() -> None:
-    """v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 16-17; v1-blackmagic-tokens acceptance 33-34;
+    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 1;
+    v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 16-17;
+    v1-blackmagic-tokens acceptance 33-34;
     v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77; v1-panasonic-tokens acceptance 99-100;
     v1-standard-tokens acceptance 117; v1-vendor-a-tokens acceptance 140-141;
     v1-vendor-b-tokens acceptance 166-167.
@@ -272,7 +279,7 @@ def test_sony_tokens_extend_the_canonical_vocabulary_and_public_static_surfaces(
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 188
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 199
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -523,7 +530,9 @@ def test_invalid_tokens_fail_before_gpu_with_raw_ordered_canonical_errors(
 
 
 def test_sony_public_documents_docstrings_and_changelog_are_synchronized() -> None:
-    """v1-sony-tokens acceptance 12; v1-arri-tokens acceptance 29; v1-blackmagic-tokens acceptance 50;
+    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 22;
+    v1-sony-tokens acceptance 12; v1-arri-tokens acceptance 29;
+    v1-blackmagic-tokens acceptance 50;
     v1-red-tokens acceptance 72; v1-canon-tokens acceptance 93; v1-panasonic-tokens acceptance 112;
     v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188.
 
@@ -548,7 +557,7 @@ def test_sony_public_documents_docstrings_and_changelog_are_synchronized() -> No
         "not a separately published Sony forward equation",
     ):
         assert claim in tokens
-    for claim in ("27 Colorspace", "33 Gamma", "188 canonical tokens"):
+    for claim in ("29 Colorspace", "36 Gamma", "199 canonical tokens"):
         assert claim in requirements
     for claim in (
         "S-Gamut",

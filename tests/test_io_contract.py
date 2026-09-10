@@ -41,14 +41,14 @@ def _exr_header(*attributes: bytes) -> bytes:
 
 
 def test_image_header_is_a_frozen_minimal_pydantic_model(tmp_path: Path) -> None:
-    """v1-io acceptance 17: ImageHeader exposes the fixed minimal header inspection shape."""
+    """v1-io-orientation acceptance 5 and 10: ImageHeader exposes the orientation-aware inspection shape."""
     path = tmp_path / "sample.png"
     Image.fromarray(np.zeros((2, 3, 3), dtype=np.uint8), mode="RGB").save(path)
 
     header = px.io.read_header(path)
 
     assert isinstance(header, px.io.ImageHeader)
-    assert set(px.io.ImageHeader.model_fields) == {"format", "width", "height", "parts", "color"}
+    assert set(px.io.ImageHeader.model_fields) == {"format", "width", "height", "parts", "color", "orientation"}
     assert px.io.ImageHeader.model_config["frozen"] is True
     assert (header.format, header.width, header.height) == ("PNG", 3, 2)
     assert header.parts[0].name == ""

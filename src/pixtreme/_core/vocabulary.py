@@ -34,6 +34,8 @@ Colorspace: TypeAlias = Literal[
     "D-Gamut",
     "F-Gamut-C",
     "Apple-Wide-Gamut",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 ]
 Gamma: TypeAlias = Literal[
     "linear",
@@ -65,10 +67,13 @@ Gamma: TypeAlias = Literal[
     "Apple-Log",
     "Samsung-Log",
     "Cineon",
+    "Gamma-1.8",
     "Gamma-2.2",
     "Gamma-2.4",
     "Gamma-2.5",
     "Gamma-2.6",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 ]
 Matrix: TypeAlias = Literal["BT.601", "BT.709", "BT.2020", "native"]
 Dtype: TypeAlias = Literal["float32", "float16", "uint8", "uint16", "uint32"]
@@ -84,13 +89,16 @@ Interpolation: TypeAlias = Literal[
     "lanczos2",
     "lanczos3",
     "lanczos4",
+    "lanczos2-aa",
+    "lanczos3-aa",
+    "lanczos4-aa",
     "area",
     "trilinear",
     "tetrahedral",
     "linear",
 ]
 Border: TypeAlias = Literal["mirror", "replicate", "wrap", "constant"]
-ChromaSiting: TypeAlias = Literal["left", "center", "topleft"]
+ChromaSiting: TypeAlias = Literal["left", "center", "topleft", "top", "bottomleft", "bottom"]
 StackDirection: TypeAlias = Literal["vertical", "horizontal"]
 SobelDirection: TypeAlias = Literal["x", "y", "magnitude"]
 TemplateMatchingMethod: TypeAlias = Literal[

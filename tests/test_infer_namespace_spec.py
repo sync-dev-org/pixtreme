@@ -25,6 +25,7 @@ EXPECTED_ROOT_ALL = (
     "values",
     "channel",
     "composite",
+    "fonts",
     "__version__",
 )
 
@@ -93,7 +94,7 @@ def test_unknown_root_attribute_remains_attribute_error() -> None:
 
 
 def test_split_companion_loads_without_changing_the_root_surface(tmp_path: Path) -> None:
-    """v1-infer-namespace acceptance 3, 4, and 6: split infer loads while the exact root surface stays fixed."""
+    """v1-infer-namespace acceptance 3, 4, and 6; v1-fonts-module acceptance 1: companion load preserves root."""
     companion_root = _write_infer_companion(tmp_path, 'MARKER = "split-companion"\n')
     result = _run_python(
         f"""

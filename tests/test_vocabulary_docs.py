@@ -69,7 +69,9 @@ def test_token_reference_is_the_english_canon_characterization() -> None:
 
 
 def test_documented_tokens_equal_the_validator_token_sets(vocabulary_markdown: str) -> None:
-    """v1-format-boundary acceptance 39; v1-frame-core acceptance 16; v1-recode-dtype acceptance 8;
+    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 1 and 22;
+    v1-frame-core acceptance 16;
+    v1-recode-dtype acceptance 8;
     v1-white-balance acceptance 1; v1-sony-tokens acceptance 1 and 12;
     v1-vendor-a-tokens acceptance 140-141 and 161; v1-vendor-b-tokens acceptance 166 and 188.
 
@@ -96,6 +98,9 @@ def test_documented_tokens_equal_the_validator_token_sets(vocabulary_markdown: s
         "lanczos2",
         "lanczos3",
         "lanczos4",
+        "lanczos2-aa",
+        "lanczos3-aa",
+        "lanczos4-aa",
         "area",
         "trilinear",
         "tetrahedral",
@@ -125,17 +130,30 @@ def test_documented_tokens_equal_the_validator_token_sets(vocabulary_markdown: s
     assert _table_tokens(vocabulary_markdown, "range") == _RANGE_TOKENS
     assert _table_tokens(vocabulary_markdown, "dtype") == _DTYPE_TOKENS
     assert _table_tokens(vocabulary_markdown, "interpolation") == expected_interpolations
-    assert _RESIZE_INTERPOLATION_TOKENS == _WARP_INTERPOLATION_TOKENS == expected_interpolations[:9]
+    assert _RESIZE_INTERPOLATION_TOKENS == expected_interpolations[:12]
+    assert _WARP_INTERPOLATION_TOKENS == (*expected_interpolations[:8], "area")
     assert _INTERPOLATION_TOKENS == expected_interpolations[:8]
     assert _TO_INTERPOLATION_TOKENS == ("nearest", "bilinear", "bicubic", "area")
-    assert _LUT_INTERPOLATION_TOKENS == expected_interpolations[9:]
-    assert _table_tokens(vocabulary_markdown, "chroma siting") == _SITING_TOKENS == ("left", "center", "topleft")
+    assert _LUT_INTERPOLATION_TOKENS == expected_interpolations[12:]
+    assert (
+        _table_tokens(vocabulary_markdown, "chroma siting")
+        == _SITING_TOKENS
+        == (
+            "left",
+            "center",
+            "topleft",
+            "top",
+            "bottomleft",
+            "bottom",
+        )
+    )
     assert _table_tokens(vocabulary_markdown, "layout") == _LAYOUT_TOKENS == ("HWC", "NHWC", "CHW", "NCHW")
     assert _table_tokens(vocabulary_markdown, "border") == _BORDER_TOKENS == _WARP_BORDER_TOKENS
 
 
 def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(vocabulary_markdown: str) -> None:
-    """v1-frame-core acceptance 16; v1-log-negative-extension acceptance 8; v1-sony-tokens acceptance 12;
+    """v1-io-icc acceptance 1, 2, 3, and 22; v1-frame-core acceptance 16;
+    v1-log-negative-extension acceptance 8; v1-sony-tokens acceptance 12;
     v1-arri-tokens acceptance 16 and 29; v1-blackmagic-tokens acceptance 50; v1-red-tokens acceptance 54 and 72;
     v1-canon-tokens acceptance 76 and 93; v1-panasonic-tokens acceptance 99 and 112;
     v1-vendor-a-tokens acceptance 140-141 and 161.
@@ -392,6 +410,12 @@ def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(voca
             "Formula with black CV=95, white CV=685, 0.002 density/code, and film gamma=0.6; apply to nonnegative magnitude and reflect the negative side with preserved sign",
         ),
         (
+            "`Gamma-1.8`",
+            "Power transfer with exponent 1.8",
+            "Conventional value",
+            "Decode with `sign(x) * abs(x) ** 1.8` and encode with `sign(x) * abs(x) ** (1 / 1.8)`; pure power without the ProPhoto RGB linear toe",
+        ),
+        (
             "`Gamma-2.2`",
             "Power transfer with exponent 2.2",
             "Conventional value",
@@ -414,6 +438,18 @@ def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(voca
             "Power transfer with exponent 2.6",
             "Conventional value",
             "Decode with `sign(x) * abs(x) ** 2.6` and encode with `sign(x) * abs(x) ** (1 / 2.6)`; no offset, piecewise branch, or clipping",
+        ),
+        (
+            "`Adobe-RGB`",
+            "Adobe RGB (1998) transfer",
+            "Adobe RGB (1998) Color Image Encoding",
+            "Decode with sign-preserving exponent `563 / 256` and encode with `256 / 563`; no clipping; select the same-named colorspace independently",
+        ),
+        (
+            "`ProPhoto-RGB`",
+            "ProPhoto RGB transfer with linear toe",
+            "ISO 22028-2 ROMM RGB",
+            "Decode uses `x / 16` below `1 / 32` and `x ** 1.8` otherwise; encode uses `16 * x` below `1 / 512` and `x ** (1 / 1.8)` otherwise; the lower branch extends over all negative values; select the same-named colorspace independently",
         ),
     )
     assert _table_rows(
@@ -583,11 +619,23 @@ def test_vocabulary_defines_every_frame_channel_gamma_and_colorspace_record(voca
             "Apple Log 2 White Paper Ver.1.1",
             "Scene-referred gamut derived from published xy coordinates; selected independently from every gamma token; `Apple Log 2` is represented by this gamut plus `Apple-Log`",
         ),
+        (
+            "`Adobe-RGB`",
+            "Adobe RGB (1998) primaries and D65 white",
+            "Adobe RGB (1998) Color Image Encoding",
+            "R `(0.6400, 0.3300)`, G `(0.2100, 0.7100)`, B `(0.1500, 0.0600)`; select the same-named transfer independently",
+        ),
+        (
+            "`ProPhoto-RGB`",
+            "ProPhoto RGB / ROMM RGB primaries and D50 white",
+            "ISO 22028-2",
+            "R `(0.7347, 0.2653)`, G `(0.1596, 0.8404)`, B `(0.0366, 0.0001)`, white `(0.3457, 0.3585)`; select `Gamma-1.8` for common pure-power profiles or the same-named toe transfer independently",
+        ),
     )
 
 
 def test_vocabulary_defines_chroma_siting_records_and_applicability(vocabulary_markdown: str) -> None:
-    """v1-format-boundary acceptance 39: H.273 siting records and format applicability are exact."""
+    """v1-chroma-siting-h273 acceptance 10: H.273 siting records and format applicability are exact."""
     assert _table_records(
         vocabulary_markdown, "chroma siting", ("Token", "Offset `(x, y)`", "H.273", "Definition")
     ) == (
@@ -608,6 +656,24 @@ def test_vocabulary_defines_chroma_siting_records_and_applicability(vocabulary_m
             "Offset `(x, y)`": "`(0, 0)`",
             "H.273": "H.273 type 2",
             "Definition": "Co-sited on both axes; standard BT.2020/BT.2100 position",
+        },
+        {
+            "Token": "`top`",
+            "Offset `(x, y)`": "`(0.5, 0)`",
+            "H.273": "H.273 type 3",
+            "Definition": "Horizontally centered and co-sited with the top luma row",
+        },
+        {
+            "Token": "`bottomleft`",
+            "Offset `(x, y)`": "`(0, 1)`",
+            "H.273": "H.273 type 4",
+            "Definition": "Co-sited with the left luma column and bottom luma row",
+        },
+        {
+            "Token": "`bottom`",
+            "Offset `(x, y)`": "`(0.5, 1)`",
+            "H.273": "H.273 type 5",
+            "Definition": "Horizontally centered and co-sited with the bottom luma row",
         },
     )
     section = _section(vocabulary_markdown, "chroma siting")
@@ -747,7 +813,9 @@ def test_vocabulary_documents_channel_shuffle_routing_and_provenance(vocabulary_
 
 
 def test_vocabulary_documents_from_format_conventions(vocabulary_markdown: str) -> None:
-    """v1-format-boundary acceptance 39; v1-from-format-metadata acceptance 7: defaults and layouts are exact."""
+    """v1-chroma-siting-h273 acceptance 10; v1-from-format-metadata acceptance 7:
+    defaults and layouts are exact.
+    """
     assert _table_rows(
         vocabulary_markdown,
         "from_<format> conventions",
@@ -774,7 +842,7 @@ def test_vocabulary_documents_from_format_conventions(vocabulary_markdown: str) 
         (
             "siting",
             "`left`",
-            "Present only on the three 4:2:0 formats; accepts the three chroma-siting tokens",
+            "Present only on the three 4:2:0 formats; accepts the six chroma-siting tokens",
         ),
     )
     assert _table_rows(
@@ -823,7 +891,7 @@ def test_vocabulary_documents_from_format_conventions(vocabulary_markdown: str) 
 
 
 def test_vocabulary_documents_to_format_conventions(vocabulary_markdown: str) -> None:
-    """v1-format-boundary acceptance 39: output defaults and layouts are exact."""
+    """v1-chroma-siting-h273 acceptance 10: output defaults and layouts are exact."""
     assert _table_rows(
         vocabulary_markdown,
         "to_<format> conventions",
@@ -842,7 +910,7 @@ def test_vocabulary_documents_to_format_conventions(vocabulary_markdown: str) ->
         (
             "siting",
             "`left`",
-            "Present only on the three 4:2:0 formats; accepts the three chroma-siting tokens",
+            "Present only on the three 4:2:0 formats; accepts the six chroma-siting tokens",
         ),
         ("rounding", "Half away from zero", "Nearest rounding from fp32 to code"),
         (
@@ -1111,7 +1179,7 @@ def test_vocabulary_documents_view_versions_combinations_and_scope_boundary(voca
 
 
 def test_vocabulary_documents_image_read_conventions_and_metadata_priority(vocabulary_markdown: str) -> None:
-    """v1-io acceptance 5, 6, and 7: image-read defaults and metadata priority are exact."""
+    """v1-io-icc acceptance 4, 8, 15-20, and 25-26; v1-io acceptance 5-7: read metadata is exact."""
     assert _table_rows(
         vocabulary_markdown,
         "image read conventions",
@@ -1143,7 +1211,9 @@ def test_vocabulary_documents_image_read_conventions_and_metadata_priority(vocab
 
 
 def test_vocabulary_documents_cast_quantization_and_encode_kwargs(vocabulary_markdown: str) -> None:
-    """v1-recode-dtype acceptance 8 and v1-quantize-values acceptance 15."""
+    """v1-recode-dtype acceptance 8; v1-quantize-values acceptance 15;
+    v1-exr-mixed-dtype-write acceptance 15: dtype and encode-option tables match the public boundaries.
+    """
     assert _table_rows(
         vocabulary_markdown,
         "dtype operation comparison",
@@ -1193,7 +1263,7 @@ def test_vocabulary_documents_cast_quantization_and_encode_kwargs(vocabulary_mar
         ),
         (
             "`compression`",
-            "`px.io.write_image`; EXR",
+            "`px.io.write_image` / `px.io.write_exr_channels`; EXR",
             "EXR compression token",
             "Default `zip`; distinct from TIFF tokens",
         ),
@@ -1211,7 +1281,7 @@ def test_vocabulary_documents_cast_quantization_and_encode_kwargs(vocabulary_mar
         ),
         (
             "`dwa_level`",
-            "`px.io.write_image`; EXR DWAA and DWAB",
+            "`px.io.write_image` / `px.io.write_exr_channels`; EXR DWAA and DWAB",
             "Positive finite exact `float` or `None`, including as a header float",
             "`None` means `45.0`; specifying it for non-DWA compression raises `ValueError`",
         ),

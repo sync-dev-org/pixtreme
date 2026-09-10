@@ -1041,7 +1041,7 @@ def test_draw_text_preserves_metadata_channels_and_private_fp32_output() -> None
 
 
 def test_draw_text_bundles_font_license_and_keeps_text_dependencies_lazy() -> None:
-    """v1-draw-text acceptance 27-28: the fixed Noto font and OFL ship while FreeType/HarfBuzz stay lazy."""
+    """v1-draw-text acceptance 27-28; v1-fonts-module acceptance 3 and 13: bundled paths stay shared and lazy."""
     assert FONT_PATH.is_file()
     assert FONT_PATH.stat().st_size > 1_000_000
     license_text = LICENSE_PATH.read_text(encoding="utf-8")
@@ -1067,9 +1067,12 @@ def test_draw_text_bundles_font_license_and_keeps_text_dependencies_lazy() -> No
     assert completed.returncode == 0, completed.stderr
 
     import pixtreme._draw.text as draw_text_module
+    from pixtreme._fonts import _BUNDLED_FONT_PATHS
 
     source = inspect.getsource(draw_text_module)
-    assert "NotoSansCJKjp-VF.otf" in source
+    assert draw_text_module._FONT_PATHS is _BUNDLED_FONT_PATHS
+    assert _BUNDLED_FONT_PATHS["sans"] == FONT_PATH
+    assert "_BUNDLED_FONT_PATHS" in source
     assert "system font" not in source.lower()
 
 

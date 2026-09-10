@@ -10,7 +10,7 @@ from typing import Literal, get_args, get_origin, get_type_hints
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import latest_changelog_section, require_repo_file
+from repository_contracts import changelog_section, require_repo_file
 
 import pixtreme as px
 
@@ -44,6 +44,8 @@ _COLORSPACES = (
     "D-Gamut",
     "F-Gamut-C",
     "Apple-Wide-Gamut",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 _GAMMAS = (
     "linear",
@@ -75,10 +77,13 @@ _GAMMAS = (
     "Apple-Log",
     "Samsung-Log",
     "Cineon",
+    "Gamma-1.8",
     "Gamma-2.2",
     "Gamma-2.4",
     "Gamma-2.5",
     "Gamma-2.6",
+    "Adobe-RGB",
+    "ProPhoto-RGB",
 )
 _ALIASES = (
     px.core.ChromaticAdaptation,
@@ -316,15 +321,16 @@ def _conversion(
 
 
 def test_canon_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> None:
-    """v1-canon-tokens acceptance 76-77; v1-panasonic-tokens acceptance 99-100;
+    """v1-chroma-siting-h273 acceptance 10; v1-canon-tokens acceptance 76-77;
+    v1-panasonic-tokens acceptance 99-100;
     v1-standard-tokens acceptance 117; v1-vendor-a-tokens acceptance 140-141;
-    v1-vendor-b-tokens acceptance 166-167:
+    v1-vendor-b-tokens acceptance 166-167; v1-io-icc acceptance 1:
     expose only the exact current canonical vocabulary.
     """
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 188
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 199
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -761,17 +767,18 @@ def test_canon_dpx_transfer_codes_are_logarithmic_and_existing_mappings_remain_u
 
 
 def test_canon_token_reference_requirements_changelog_and_public_docstrings_are_synchronized() -> None:
-    """v1-canon-tokens acceptance 93; v1-panasonic-tokens acceptance 112; v1-vendor-a-tokens acceptance 161;
+    """v1-chroma-siting-h273 acceptance 10; v1-canon-tokens acceptance 93;
+    v1-panasonic-tokens acceptance 112; v1-vendor-a-tokens acceptance 161;
     v1-vendor-b-tokens acceptance 188:
     synchronize canonical counts, numeric contracts, boundaries, and public prose.
     """
     token_reference = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
     requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    latest_section = latest_changelog_section(changelog)
+    release_section = changelog_section(changelog, "1.4.0 - 2026-09-07")
     for token in ("Canon-Cinema-Gamut", "Canon-Log", "Canon-Log-2", "Canon-Log-3"):
         assert f"`{token}`" in token_reference
-        assert token in latest_section
+        assert token in release_section
     for fragment in (
         "x = r / 0.9",
         "0.45310179",
@@ -788,10 +795,10 @@ def test_canon_token_reference_requirements_changelog_and_public_docstrings_are_
         "native",
     ):
         assert fragment in token_reference
-    assert "27 Colorspace" in requirements
-    assert "33 Gamma" in requirements
-    assert "188 canonical tokens" in requirements
-    assert "Canon Raw" in latest_section and "bit" in latest_section
+    assert "29 Colorspace" in requirements
+    assert "36 Gamma" in requirements
+    assert "199 canonical tokens" in requirements
+    assert "Canon Raw" in release_section and "bit" in release_section
     for operation in (px.color.rgb_to_rgb, px.color.gamma_to_linear, px.color.linear_to_gamma):
         docstring = inspect.getdoc(operation)
         assert docstring is not None

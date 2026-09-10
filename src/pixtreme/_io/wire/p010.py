@@ -55,9 +55,13 @@ def from_p010(
 
     The C-contiguous 1D layout is one Y plane followed by interleaved ``Cb Cr``.
     Each 10-bit code is MSB aligned in uint16; the lower 6 bits are padding and
-    are ignored. ``siting`` selects the H.273 4:2:0 phase, ``interpolation``
-    selects one of eight point filters, and ``range`` expands legal positions
-    without clipping or maps the full 10-bit domain.
+    are ignored. H.273 mappings are type 0 ``left=(0, 0.5)``, type 1
+    ``center=(0.5, 0.5)``, type 2 ``topleft=(0, 0)``, type 3 ``top=(0.5, 0)``,
+    type 4 ``bottomleft=(0, 1)``, and type 5 ``bottom=(0.5, 1)``. The default is ``left``;
+    import and export use the same frame offset. ``siting`` is one progressive frame
+    token and does not interpret field signalling. ``interpolation`` selects one of
+    eight point filters, and ``range`` expands legal positions without clipping or
+    maps the full 10-bit domain.
     ``colorspace`` / ``gamma`` override placeholders and ``matrix`` stamps basis provenance only.
     The conversion kernel is enqueued on the current CuPy stream and the call
     does not perform host synchronization. Order the decoder surface onto that
@@ -101,8 +105,12 @@ def to_p010(
 ) -> cp.ndarray:
     """Pack ``frame`` as P010 with 10-bit codes in each uint16 word's MSB.
 
-    The lower 6 bits are zero. ``range`` selects code-value mapping, ``siting``
-    selects the 4:2:0 chroma phase, and ``interpolation`` selects its filter.
+    The lower 6 bits are zero. H.273 mappings are type 0 ``left=(0, 0.5)``, type 1
+    ``center=(0.5, 0.5)``, type 2 ``topleft=(0, 0)``, type 3 ``top=(0.5, 0)``,
+    type 4 ``bottomleft=(0, 1)``, and type 5 ``bottom=(0.5, 1)``. The default is ``left``;
+    import and export use the same frame offset. ``siting`` is one progressive frame
+    token and does not interpret field signalling. ``range`` selects code-value
+    mapping, and ``interpolation`` selects the chroma downsampling filter.
     Packing is enqueued on the current CuPy stream without host synchronization;
     consume on that stream or pass its handle/event to the encoder.
     """

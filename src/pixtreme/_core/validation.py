@@ -252,6 +252,10 @@ def _normalized_closed_token(
     why: str | None = None,
     how: str | None = None,
 ) -> _Token:
+    if isinstance(value, str):
+        for canonical in accepted:
+            if value == canonical:
+                return canonical
     return _canonical_closed_token(value, axis=axis, accepted=accepted, why=why, how=how)
 
 

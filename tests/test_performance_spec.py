@@ -55,6 +55,7 @@ _BOUNDARY_MEASURED_MINIMUM_FRAMES = 20
 _LUT_SIZE = 65
 _SEED = 20260717
 _FHD_FP32_Y_BYTES = _WIDTH * _HEIGHT * np.dtype(np.float32).itemsize
+_FHD_UINT32_Y_BYTES = _WIDTH * _HEIGHT * np.dtype(np.uint32).itemsize
 _FHD_FP16_RGB_BYTES = _WIDTH * _HEIGHT * _CHANNELS * np.dtype(np.float16).itemsize
 _FHD_FP32_RGB_BYTES = _WIDTH * _HEIGHT * _CHANNELS * np.dtype(np.float32).itemsize
 _FHD_FP32_RGBA_BYTES = _WIDTH * _HEIGHT * 4 * np.dtype(np.float32).itemsize
@@ -94,6 +95,7 @@ _PUBLIC_GPU_PIXEL_FUNCTIONS = frozenset(
         "to_yuva444p",
         "shuffle",
         "gamma_to_linear",
+        "grade",
         "hsv_to_rgb",
         "linear_to_gamma",
         "rgb_to_grayscale",
@@ -171,10 +173,21 @@ _PUBLIC_GPU_PIXEL_FUNCTIONS = frozenset(
     }
 )
 _PERFORMANCE_BOUNDARY_FUNCTIONS = frozenset(
-    {"read_image", "write_image", "read_header", "read_lut", "decode_lut", "write_lut", "decode_image", "encode_image"}
+    {
+        "read_image",
+        "write_image",
+        "write_exr_channels",
+        "read_header",
+        "read_lut",
+        "decode_lut",
+        "write_lut",
+        "decode_image",
+        "encode_image",
+    }
 )
-# ``channels`` only normalizes named channel tokens; it touches neither pixels nor a file/bytes boundary.
-_NON_PIXEL_PUBLIC_FUNCTIONS = frozenset({"channels"})
+# ``channels`` only normalizes named channel tokens. The font catalog only inventories file paths. None of these
+# functions touches pixels or a file / bytes / device-array / wire-format data boundary.
+_NON_PIXEL_PUBLIC_FUNCTIONS = frozenset({"channels", "font_path", "available"})
 _PERFORMANCE_FRAME_METHOD_EXCLUSIONS = frozenset()
 _PUBLIC_OPERATION_MODULES = (
     px.core,
@@ -190,6 +203,7 @@ _PUBLIC_OPERATION_MODULES = (
     px.values,
     px.channel,
     px.composite,
+    px.fonts,
 )
 
 
@@ -197,6 +211,7 @@ _PUBLIC_OPERATION_MODULES = (
 class _Inputs:
     frame: px.core.Frame
     exr_phase1_frame: px.core.Frame
+    exr_mixed_frames: tuple[px.core.Frame, px.core.Frame]
     exr_phase3: Phase3PerformanceInputs
     exr_phase4: Phase4PerformanceInputs
     analysis_template: px.core.Frame
@@ -254,6 +269,7 @@ class _Inputs:
     write_jpeg_path: Path
     write_tiff_path: Path
     write_exr_path: Path
+    write_exr_mixed_path: Path
     write_exr_none_path: Path
     write_exr_zip_path: Path
     write_exr_zips_path: Path
@@ -1189,6 +1205,13 @@ _TRANSFORM_BOUNDARY_CASES = (
         kwargs={"input_white": (0.34567, 0.35850), "output_white": (0.32168, 0.33767)},
     ),
     _case(
+        "color-grade",
+        "grade",
+        "FHD fp32 RGB, per-channel Lift / Gamma / Gain",
+        px.color.grade,
+        kwargs={"lift": {"R": 0.05}, "gamma": {"G": 0.9}, "gain": {"B": 1.1}},
+    ),
+    _case(
         "color-white-balance",
         "white_balance",
         "FHD fp32 RGB, Temperature=5000 K, Tint=0 Duv, CAT02",
@@ -1782,6 +1805,15 @@ _FILE_BOUNDARY_CASES = (
         transferred_bytes=_FHD_FP32_TO_FP16_RGB_BYTES,
     ),
     _boundary_case(
+        "file-exr-mixed-dtype-write-zip",
+        "write_exr_channels",
+        "FHD HALF RGB + UINT ID to EXR ZIP, native mixed dtypes, temporary-file I/O included",
+        px.io.write_exr_channels,
+        input_attribute="write_exr_mixed_path",
+        fixture_kwargs={"frames": "exr_mixed_frames"},
+        transferred_bytes=2 * (_FHD_FP16_RGB_BYTES + _FHD_UINT32_Y_BYTES),
+    ),
+    _boundary_case(
         "file-exr-phase1-write-none",
         "write_image",
         "FHD fp32 RGB to EXR NONE/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
@@ -2183,6 +2215,15 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
         axis=2,
     )
     exr_phase1_frame = px.io.from_array(exr_data, colorspace="ACEScg", gamma="linear", channels="RGB")
+    exr_mixed_frames = (
+        px.io.from_array(exr_data.astype(cp.float16), colorspace="ACEScg", gamma="linear", channels="RGB"),
+        px.io.from_array(
+            cp.arange(_WIDTH * _HEIGHT, dtype=cp.uint32).reshape(_HEIGHT, _WIDTH, 1),
+            colorspace="ACEScg",
+            gamma="linear",
+            channels=("object_id",),
+        ),
+    )
     hsv_data = cp.empty_like(data)
     hsv_columns = cp.arange(_WIDTH, dtype=cp.float32)[None, :]
     hsv_rows = cp.arange(_HEIGHT, dtype=cp.float32)[:, None]
@@ -2347,6 +2388,7 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
     return _Inputs(
         frame=frame,
         exr_phase1_frame=exr_phase1_frame,
+        exr_mixed_frames=exr_mixed_frames,
         exr_phase3=exr_phase3,
         exr_phase4=exr_phase4,
         analysis_template=analysis_template,
@@ -2404,6 +2446,7 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
         write_jpeg_path=io_directory / "write.jpg",
         write_tiff_path=io_directory / "write.tiff",
         write_exr_path=io_directory / "write.exr",
+        write_exr_mixed_path=io_directory / "write-mixed.exr",
         write_exr_none_path=io_directory / "write-none.exr",
         write_exr_zip_path=io_directory / "write-zip.exr",
         write_exr_zips_path=io_directory / "write-zips.exr",
@@ -2434,7 +2477,8 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
 @pytest.mark.performance
 def test_performance_registry_covers_every_public_gpu_pixel_operation() -> None:
     """REQ-TEST-010; v1-color-semantics acceptance 37; v1-white-balance acceptance 14;
-    v1-white-point-simulation acceptance 14:
+    v1-white-point-simulation acceptance 14; v1-exr-mixed-dtype-write acceptance 18;
+    v1-fonts-module acceptance 1-2:
     registry classifies every public GPU pixel and boundary operation.
     """
     exported_functions = {
@@ -2454,6 +2498,7 @@ def test_performance_registry_covers_every_public_gpu_pixel_operation() -> None:
     assert _PERFORMANCE_BOUNDARY_FUNCTIONS == {
         "read_image",
         "write_image",
+        "write_exr_channels",
         "read_header",
         "read_lut",
         "decode_lut",
@@ -2461,7 +2506,7 @@ def test_performance_registry_covers_every_public_gpu_pixel_operation() -> None:
         "decode_image",
         "encode_image",
     }
-    assert _NON_PIXEL_PUBLIC_FUNCTIONS == {"channels"}
+    assert _NON_PIXEL_PUBLIC_FUNCTIONS == {"channels", "font_path", "available"}
     assert exported_functions - _NON_PIXEL_PUBLIC_FUNCTIONS == (
         _PUBLIC_GPU_PIXEL_FUNCTIONS | _PERFORMANCE_BOUNDARY_FUNCTIONS
     )
@@ -2480,6 +2525,7 @@ def test_performance_registry_covers_each_color_semantics_path() -> None:
     assert {case.target for case in color_cases} == {
         "chromatic_adaptation",
         "gamma_to_linear",
+        "grade",
         "hsv_to_rgb",
         "linear_to_gamma",
         "rgb_to_grayscale",
@@ -2505,6 +2551,19 @@ def test_performance_registry_covers_each_color_semantics_path() -> None:
         (
             "color-bt2408-rec2020-pq",
             {"output_colorspace": "Rec.2020", "output_gamma": "PQ", "tonemap": "BT.2408"},
+        ),
+    )
+
+
+@pytest.mark.performance
+def test_performance_registry_includes_one_grade_case() -> None:
+    """v1-grade acceptance 11: registry has one FHD float32 public grade call."""
+    cases = tuple(case for case in _PERFORMANCE_CASES if case.target == "grade")
+    assert tuple((case.case_id, case.input_attribute, dict(case.kwargs)) for case in cases) == (
+        (
+            "color-grade",
+            "frame",
+            {"lift": {"R": 0.05}, "gamma": {"G": 0.9}, "gain": {"B": 1.1}},
         ),
     )
 
@@ -2744,11 +2803,13 @@ def test_performance_registry_includes_representative_bytes_boundary_cases() -> 
 
 @pytest.mark.performance
 def test_performance_registry_includes_representative_file_boundary_cases() -> None:
-    """v1-io-formats acceptance 22; v1-bytes-boundary acceptance 15: file cases cover every raster format
-    beside EXR and LUT boundaries.
+    """v1-io-formats acceptance 22; v1-bytes-boundary acceptance 15;
+    v1-exr-mixed-dtype-write acceptance 18: file cases cover every raster format beside EXR and LUT boundaries.
     """
     cases = tuple(
-        case for case in _PERFORMANCE_CASES if case.target in {"read_image", "write_image", "read_header", "read_lut"}
+        case
+        for case in _PERFORMANCE_CASES
+        if case.target in {"read_image", "write_image", "write_exr_channels", "read_header", "read_lut"}
     )
 
     assert {case.case_id for case in cases} == {
@@ -2777,6 +2838,7 @@ def test_performance_registry_includes_representative_file_boundary_cases() -> N
         "file-write-jpeg",
         "file-write-tiff",
         "file-write-exr",
+        "file-exr-mixed-dtype-write-zip",
         "file-exr-phase1-write-none",
         "file-exr-phase1-write-zip",
         "file-exr-phase1-write-zips",
@@ -2801,6 +2863,30 @@ def test_performance_registry_includes_representative_file_boundary_cases() -> N
         "file-read-lut-spi1d",
         "file-read-lut-spi3d",
     }
+
+
+@pytest.mark.performance
+def test_performance_registry_includes_one_mixed_dtype_exr_write_case() -> None:
+    """v1-exr-mixed-dtype-write acceptance 18: registry has one FHD HALF RGB plus UINT ID ZIP file case."""
+    cases = tuple(case for case in _PERFORMANCE_CASES if case.target == "write_exr_channels")
+
+    assert len(cases) == 1
+    case = cases[0]
+    assert (
+        case.case_id,
+        case.parameters,
+        case.input_attribute,
+        dict(case.fixture_kwargs),
+        dict(case.kwargs),
+        case.transferred_bytes,
+    ) == (
+        "file-exr-mixed-dtype-write-zip",
+        "FHD HALF RGB + UINT ID to EXR ZIP, native mixed dtypes, temporary-file I/O included",
+        "write_exr_mixed_path",
+        {"frames": "exr_mixed_frames"},
+        {},
+        2 * (_FHD_FP16_RGB_BYTES + _FHD_UINT32_Y_BYTES),
+    )
 
 
 @pytest.mark.performance

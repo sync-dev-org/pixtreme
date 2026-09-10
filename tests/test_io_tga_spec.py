@@ -485,7 +485,7 @@ def test_tga_write_rejects_non_rgb_layout(tmp_path: Path) -> None:
 
 
 def test_tga_read_header_is_gpu_free_and_preserves_the_public_model(tmp_path: Path) -> None:
-    """v1-tga acceptance 9: the TGA header parser is pure CPU and keeps ImageHeader fields unchanged."""
+    """v1-io-orientation acceptance 8 and 10: TGA stays CPU-only and reports effective orientation one."""
     path = tmp_path / "header.tga"
     path.write_bytes(_header(width=7, height=5, pixel_depth=32))
     script = """
@@ -494,7 +494,7 @@ import pixtreme as px
 h = px.io.read_header(sys.argv[1])
 assert (h.format, h.width, h.height) == ("TGA", 7, 5)
 assert h.parts[0].channels == {"R": "uint8", "G": "uint8", "B": "uint8", "A": "uint8"}
-assert set(px.io.ImageHeader.model_fields) == {"format", "width", "height", "parts", "color"}
+assert set(px.io.ImageHeader.model_fields) == {"format", "width", "height", "parts", "color", "orientation"}
 assert "nvidia.nvimgcodec" not in sys.modules
 assert "OpenEXR" not in sys.modules
 """

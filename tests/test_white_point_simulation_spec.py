@@ -124,10 +124,13 @@ def _expected(
 
 
 def test_public_surface_signature_alias_counts_and_docs_are_synchronized() -> None:
-    """v1-white-point-simulation acceptance 1 and 13; GitHub #29: API, alias, counts, and public docs agree."""
+    """v1-white-point-simulation acceptance 1 and 13; v1-exr-mixed-dtype-write acceptance 1 and 15;
+    v1-fonts-module acceptance 1 and 14; v1-grade acceptance 1:
+    API, alias, counts, and public docs agree. GitHub #29.
+    """
     assert get_args(px.core.ReferenceWhite) == ("D65", "D93", "D50", "ACES")
-    assert px.color.__all__[-1] == "white_point_simulation"
-    assert len(px.color.__all__) == 15
+    assert px.color.__all__[-2] == "white_point_simulation"
+    assert len(px.color.__all__) == 16
 
     signature = inspect.signature(px.color.white_point_simulation)
     assert tuple(signature.parameters) == ("frame", "input_white", "output_white")
@@ -153,8 +156,8 @@ def test_public_surface_signature_alias_counts_and_docs_are_synchronized() -> No
     requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
     tokens = (root / "docs_site" / "tokens.md").read_text(encoding="utf-8")
     color_row = next(line for line in requirements.splitlines() if line.startswith("| `color` |"))
-    assert "| 15 |" in color_row
-    assert "公開 operation は計 94 関数" in requirements
+    assert "| 16 |" in color_row
+    assert "公開 operation は計 98 関数" in requirements
     reference_section = tokens.split("## reference white\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
     reference_table = reference_section.split("| Token |", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
     assert tuple(

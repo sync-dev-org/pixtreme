@@ -56,10 +56,14 @@ def from_yuv420p(
     """Construct a full-range fp32 YCbCr444 Frame from planar YUV420.
 
     The C-contiguous 1D plane order is ``Y, Cb, Cr``. ``bit_depth`` accepts 8
-    (uint8) or 10 (lower-aligned uint16). ``siting`` selects the H.273 ``left``,
-    ``center``, or ``topleft`` 4:2:0 phase, and ``interpolation`` selects one of
-    eight resize-family point filters with replicate edges. ``range`` expands
-    legal positions without clipping or maps the full code domain.
+    (uint8) or 10 (lower-aligned uint16). H.273 mappings are type 0 ``left=(0, 0.5)``,
+    type 1 ``center=(0.5, 0.5)``, type 2 ``topleft=(0, 0)``, type 3 ``top=(0.5, 0)``,
+    type 4 ``bottomleft=(0, 1)``, and type 5 ``bottom=(0.5, 1)``. The default is ``left``;
+    import and export use the same frame offset. ``siting`` is one
+    progressive frame token and does not interpret field signalling.
+    ``interpolation`` selects one of eight resize-family point filters with
+    replicate edges. ``range`` expands legal positions without clipping or maps
+    the full code domain.
     ``colorspace`` / ``gamma`` override placeholders and ``matrix`` stamps basis provenance only.
     """
     colorspace, gamma = _metadata(colorspace, gamma)
@@ -103,9 +107,12 @@ def to_yuv420p(
 ) -> cp.ndarray:
     """Pack ``frame`` as contiguous planar Y, Cb, Cr 4:2:0 samples.
 
-    ``bit_depth`` chooses the code container, ``range`` chooses code-value
-    mapping, ``siting`` selects chroma phase, and ``interpolation`` selects the
-    chroma downsampling filter.
+    H.273 mappings are type 0 ``left=(0, 0.5)``, type 1 ``center=(0.5, 0.5)``,
+    type 2 ``topleft=(0, 0)``, type 3 ``top=(0.5, 0)``, type 4 ``bottomleft=(0, 1)``,
+    and type 5 ``bottom=(0.5, 1)``. The default is ``left``; import and export use the same
+    frame offset. ``siting`` is one progressive frame token and does not interpret
+    field signalling. ``bit_depth`` chooses the code container, ``range`` chooses
+    code-value mapping, and ``interpolation`` selects the downsampling filter.
     """
     _validate_frame(frame, operation="to_yuv420p")
     _dimensions(frame.width, frame.height, even_width=True, even_height=True)

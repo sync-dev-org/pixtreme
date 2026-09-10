@@ -11,11 +11,17 @@ import numpy as np
 
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame, _validate_float32_frame
-from pixtreme._core.interpolation import _POINT_INTERPOLATION_DEVICE_SOURCE, _POINT_INTERPOLATION_TOKENS
+from pixtreme._core.interpolation import (
+    _ANTIALIASED_LANCZOS_LOBES,
+    _ANTIALIASED_LANCZOS_TOKENS,
+    _POINT_INTERPOLATION_DEVICE_SOURCE,
+    _POINT_INTERPOLATION_SPECS,
+    _POINT_INTERPOLATION_TOKENS,
+)
 from pixtreme._core.validation import _normalized_closed_token
 from pixtreme._core.vocabulary import Interpolation
 
-_INTERPOLATION_TOKENS = (*_POINT_INTERPOLATION_TOKENS, "area")
+_INTERPOLATION_TOKENS = (*_POINT_INTERPOLATION_TOKENS, *_ANTIALIASED_LANCZOS_TOKENS, "area")
 
 _RAW_KERNEL_BLOCK = (32, 8)
 _AXIS_PLAN_BLOCK = 256
@@ -273,6 +279,50 @@ extern "C" __global__ void pixtreme_resize_area_vertical(
 """
 )
 
+_ANTIALIASED_LANCZOS_AXIS_PLAN_SOURCE = (
+    _POINT_INTERPOLATION_DEVICE_SOURCE
+    + r"""
+__device__ long long pixtreme_antialias_clamp_index(const long long index, const long long extent) {
+    return index < 0 ? 0 : (index >= extent ? extent - 1 : index);
+}
+
+extern "C" __global__ void pixtreme_resize_build_antialiased_lanczos_axis(
+    long long* __restrict__ indices,
+    float* __restrict__ weights,
+    const long long input_extent,
+    const long long output_extent,
+    const int lobes,
+    const int sample_count
+) {
+    const long long output_coordinate = (long long)blockIdx.x * blockDim.x + threadIdx.x;
+    if (output_coordinate >= output_extent) {
+        return;
+    }
+    const float source_coordinate =
+        ((float)output_coordinate + 0.5f) * (float)input_extent / (float)output_extent - 0.5f;
+    const float distance_scale = (float)output_extent / (float)input_extent;
+    const long long base = (long long)floorf(source_coordinate);
+    const long long radius = sample_count / 2;
+    const long long start = base - radius + 1;
+    const long long plan_offset = output_coordinate * sample_count;
+    float weight_sum = 0.0f;
+
+    for (int offset = 0; offset < sample_count; ++offset) {
+        const long long sample = start + offset;
+        const float distance = (source_coordinate - (float)sample) * distance_scale;
+        const float weight = pixtreme_lanczos_weight(distance, lobes);
+        indices[plan_offset + offset] = pixtreme_antialias_clamp_index(sample, input_extent);
+        weights[plan_offset + offset] = weight;
+        weight_sum += weight;
+    }
+    const float inverse_weight_sum = weight_sum != 0.0f ? 1.0f / weight_sum : 0.0f;
+    for (int offset = 0; offset < sample_count; ++offset) {
+        weights[plan_offset + offset] *= inverse_weight_sum;
+    }
+}
+"""
+)
+
 
 @lru_cache(maxsize=1)
 def _nearest_kernel() -> cp.RawKernel:
@@ -282,6 +332,14 @@ def _nearest_kernel() -> cp.RawKernel:
 @lru_cache(maxsize=1)
 def _point_axis_plan_kernel() -> cp.RawKernel:
     return cp.RawKernel(_RESIZE_KERNEL_SOURCE, "pixtreme_resize_build_point_axis")
+
+
+@lru_cache(maxsize=1)
+def _antialiased_lanczos_axis_plan_kernel() -> cp.RawKernel:
+    return cp.RawKernel(
+        _ANTIALIASED_LANCZOS_AXIS_PLAN_SOURCE,
+        "pixtreme_resize_build_antialiased_lanczos_axis",
+    )
 
 
 @lru_cache(maxsize=1)
@@ -364,6 +422,77 @@ def _point_axis_plan(
     if plan_bytes <= _AXIS_PLAN_CACHE_MAX_BYTES:
         return _cached_point_axis_plan(device_id, input_extent, output_extent, interpolation_index)
     return _build_point_axis_plan(device_id, input_extent, output_extent, interpolation_index)
+
+
+def _antialiased_lanczos_sample_count(input_extent: int, output_extent: int, lobes: int) -> int:
+    radius = (lobes * input_extent + output_extent - 1) // output_extent
+    return 2 * radius
+
+
+def _build_antialiased_lanczos_axis_plan(
+    device_id: int,
+    input_extent: int,
+    output_extent: int,
+    lobes: int,
+) -> tuple[cp.ndarray, cp.ndarray]:
+    sample_count = _antialiased_lanczos_sample_count(input_extent, output_extent, lobes)
+    with cp.cuda.Device(device_id):
+        indices = cp.empty(output_extent * sample_count, dtype=cp.int64)
+        weights = cp.empty(output_extent * sample_count, dtype=cp.float32)
+        blocks = (output_extent + _AXIS_PLAN_BLOCK - 1) // _AXIS_PLAN_BLOCK
+        _antialiased_lanczos_axis_plan_kernel()(
+            (blocks,),
+            (_AXIS_PLAN_BLOCK,),
+            (
+                indices,
+                weights,
+                np.int64(input_extent),
+                np.int64(output_extent),
+                np.int32(lobes),
+                np.int32(sample_count),
+            ),
+        )
+    return indices, weights
+
+
+@lru_cache(maxsize=_AXIS_PLAN_CACHE_SIZE)
+def _cached_antialiased_lanczos_axis_plan(
+    device_id: int,
+    input_extent: int,
+    output_extent: int,
+    lobes: int,
+) -> tuple[cp.ndarray, cp.ndarray]:
+    return _build_antialiased_lanczos_axis_plan(device_id, input_extent, output_extent, lobes)
+
+
+def _antialiased_lanczos_axis_plan(
+    input_extent: int,
+    output_extent: int,
+    lobes: int,
+) -> tuple[cp.ndarray, cp.ndarray, int]:
+    if output_extent >= input_extent:
+        point_index = _POINT_INTERPOLATION_SPECS[f"lanczos{lobes}"].index
+        indices, weights = _point_axis_plan(input_extent, output_extent, point_index)
+        return indices, weights, _point_sample_count(point_index)
+
+    sample_count = _antialiased_lanczos_sample_count(input_extent, output_extent, lobes)
+    plan_bytes = output_extent * sample_count * (np.dtype(np.int64).itemsize + np.dtype(np.float32).itemsize)
+    device_id = cp.cuda.runtime.getDevice()
+    if plan_bytes <= _AXIS_PLAN_CACHE_MAX_BYTES:
+        indices, weights = _cached_antialiased_lanczos_axis_plan(
+            device_id,
+            input_extent,
+            output_extent,
+            lobes,
+        )
+    else:
+        indices, weights = _build_antialiased_lanczos_axis_plan(
+            device_id,
+            input_extent,
+            output_extent,
+            lobes,
+        )
+    return indices, weights, sample_count
 
 
 def _launch_raw_kernel(
@@ -482,8 +611,18 @@ def resize(
     ``floor(dim * factor + 0.5)``. When interpolation is omitted, any shrinking
     axis selects ``area`` and an all-nonshrinking resize selects ``lanczos4``.
 
-    Every point-sampled kernel uses pixel-center coordinates
+    ``lanczos2-aa``, ``lanczos3-aa``, and ``lanczos4-aa`` are explicit
+    filter-widening choices. For each shrinking axis they use pixel-center
+    coordinates
     ``src = (dst + 0.5) * (input / output) - 0.5`` and replicate edge handling.
+    Their scale is ``s = max(input / output, 1)``: every integer sample in the
+    exact support ``abs((src - sample) / s) < lobes`` contributes, weights are
+    normalized before indices replicate, and only the shrinking axis widens.
+    On a same-size or enlarging axis they are bit-identical to the corresponding
+    point-sampled Lanczos token. The automatic ``area`` / ``lanczos4`` choice is
+    unchanged. Agreement with Pillow 12.3.0 is limited to the fixed, two-axis
+    reduction corpus's full-support interior; Pillow uses different edge handling.
+
     Input Frame data must be float32; use ``px.values.cast_dtype`` or another
     explicit public value conversion before resizing other storage dtypes. Resize
     calculates float32 output independently per channel and does not clamp scene
@@ -582,17 +721,28 @@ def resize(
                 ),
             )
         else:
-            sample_count = _point_sample_count(interpolation_index)
-            horizontal_indices, horizontal_weights = _point_axis_plan(
-                frame.width,
-                output_width,
-                interpolation_index,
-            )
-            vertical_indices, vertical_weights = _point_axis_plan(
-                frame.height,
-                output_height,
-                interpolation_index,
-            )
+            if resolved_interpolation in _ANTIALIASED_LANCZOS_TOKENS:
+                lobes = _ANTIALIASED_LANCZOS_LOBES[resolved_interpolation]
+                horizontal_indices, horizontal_weights, horizontal_sample_count = _antialiased_lanczos_axis_plan(
+                    frame.width, output_width, lobes
+                )
+                vertical_indices, vertical_weights, vertical_sample_count = _antialiased_lanczos_axis_plan(
+                    frame.height,
+                    output_height,
+                    lobes,
+                )
+            else:
+                horizontal_sample_count = vertical_sample_count = _point_sample_count(interpolation_index)
+                horizontal_indices, horizontal_weights = _point_axis_plan(
+                    frame.width,
+                    output_width,
+                    interpolation_index,
+                )
+                vertical_indices, vertical_weights = _point_axis_plan(
+                    frame.height,
+                    output_height,
+                    interpolation_index,
+                )
             _launch_raw_kernel(
                 _point_horizontal_kernel(),
                 output_width,
@@ -606,7 +756,7 @@ def resize(
                     np.int64(frame.height),
                     np.int64(output_width),
                     np.int64(channel_count),
-                    np.int32(sample_count),
+                    np.int32(horizontal_sample_count),
                 ),
             )
             _launch_raw_kernel(
@@ -622,7 +772,7 @@ def resize(
                     np.int64(frame.height),
                     np.int64(output_height),
                     np.int64(channel_count),
-                    np.int32(sample_count),
+                    np.int32(vertical_sample_count),
                 ),
             )
     return Frame(

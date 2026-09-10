@@ -149,13 +149,15 @@ def _encode_srgb(values: np.ndarray) -> np.ndarray:
 
 
 def test_public_surface_signatures_alias_counts_and_docs_are_synchronized() -> None:
-    """v1-white-balance acceptance 1; v1-white-point-simulation acceptance 1:
+    """v1-white-balance acceptance 1; v1-white-point-simulation acceptance 1;
+    v1-exr-mixed-dtype-write acceptance 1 and 15:
+    v1-fonts-module acceptance 1 and 14; v1-grade acceptance 1:
     API, Literal, operation counts, requirements, and token docs agree. GitHub #29.
     """
     expected_tokens = ("Bradford", "CAT02", "CAT16", "von-Kries")
     assert get_args(px.core.ChromaticAdaptation) == expected_tokens
-    assert px.color.__all__[-3:-1] == ("chromatic_adaptation", "white_balance")
-    assert len(px.color.__all__) == 15
+    assert px.color.__all__[-4:-2] == ("chromatic_adaptation", "white_balance")
+    assert len(px.color.__all__) == 16
 
     chromatic_signature = inspect.signature(px.color.chromatic_adaptation)
     assert tuple(chromatic_signature.parameters) == ("frame", "input_white", "output_white", "cat")
@@ -182,10 +184,10 @@ def test_public_surface_signatures_alias_counts_and_docs_are_synchronized() -> N
     root = Path(__file__).resolve().parents[1]
     requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
     tokens = (root / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    assert "| `color` |" in requirements and "| 15 |" in next(
+    assert "| `color` |" in requirements and "| 16 |" in next(
         line for line in requirements.splitlines() if line.startswith("| `color` |")
     )
-    assert "公開 operation は計 94 関数" in requirements
+    assert "公開 operation は計 98 関数" in requirements
     section = tokens.split("## chromatic adaptation\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
     assert (
         tuple(line.split("|")[1].strip().strip("`") for line in section.splitlines() if line.startswith("| `"))

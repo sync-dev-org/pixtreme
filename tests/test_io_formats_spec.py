@@ -130,7 +130,7 @@ def _pnm_payload(magic: str, values: np.ndarray) -> bytes:
 
 
 def test_new_format_public_signatures_are_exact() -> None:
-    """v1-io-formats acceptance 1; v1-exr-runtime-independence acceptance 1 and 3:
+    """v1-io-orientation acceptance 1; v1-exr-runtime-independence acceptance 1 and 3:
     file output exposes only the fixed selectors, including the trailing EXR dtype selector.
     """
     read = inspect.signature(px.io.read_image)
@@ -138,8 +138,15 @@ def test_new_format_public_signatures_are_exact() -> None:
     write = inspect.signature(px.io.write_image)
     encode = inspect.signature(px.io.encode_image)
 
-    assert tuple(read.parameters) == ("path", "channels", "unchanged", "colorspace", "gamma")
-    assert tuple(decode.parameters) == ("data", "channels", "unchanged", "colorspace", "gamma")
+    assert tuple(read.parameters) == ("path", "channels", "unchanged", "colorspace", "gamma", "apply_exif_orientation")
+    assert tuple(decode.parameters) == (
+        "data",
+        "channels",
+        "unchanged",
+        "colorspace",
+        "gamma",
+        "apply_exif_orientation",
+    )
     assert tuple(write.parameters) == (
         "path",
         "frame",

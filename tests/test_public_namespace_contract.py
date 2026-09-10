@@ -30,11 +30,13 @@ ROOT_MODULES = (
     "values",
     "channel",
     "composite",
+    "fonts",
 )
 
 IO_FUNCTIONS = (
     "read_image",
     "write_image",
+    "write_exr_channels",
     "read_header",
     "read_lut",
     "decode_lut",
@@ -79,6 +81,7 @@ FUNCTION_MODULES = {
         "chromatic_adaptation",
         "white_balance",
         "white_point_simulation",
+        "grade",
     ),
     "filter": (
         "gaussian_blur",
@@ -115,6 +118,7 @@ FUNCTION_MODULES = {
     "values": ("quantize", "dequantize", "full_to_legal", "legal_to_full", "cast_dtype", "recode_dtype"),
     "channel": ("shuffle",),
     "composite": ("merge",),
+    "fonts": ("font_path", "available"),
 }
 
 _ERROR_PATH_CASES = (
@@ -193,6 +197,8 @@ ALIAS_TOKENS = {
         "D-Gamut",
         "F-Gamut-C",
         "Apple-Wide-Gamut",
+        "Adobe-RGB",
+        "ProPhoto-RGB",
     ),
     "Gamma": (
         "linear",
@@ -224,10 +230,13 @@ ALIAS_TOKENS = {
         "Apple-Log",
         "Samsung-Log",
         "Cineon",
+        "Gamma-1.8",
         "Gamma-2.2",
         "Gamma-2.4",
         "Gamma-2.5",
         "Gamma-2.6",
+        "Adobe-RGB",
+        "ProPhoto-RGB",
     ),
     "Matrix": ("BT.601", "BT.709", "BT.2020", "native"),
     "Dtype": ("float32", "float16", "uint8", "uint16", "uint32"),
@@ -243,13 +252,16 @@ ALIAS_TOKENS = {
         "lanczos2",
         "lanczos3",
         "lanczos4",
+        "lanczos2-aa",
+        "lanczos3-aa",
+        "lanczos4-aa",
         "area",
         "trilinear",
         "tetrahedral",
         "linear",
     ),
     "Border": ("mirror", "replicate", "wrap", "constant"),
-    "ChromaSiting": ("left", "center", "topleft"),
+    "ChromaSiting": ("left", "center", "topleft", "top", "bottomleft", "bottom"),
     "StackDirection": ("vertical", "horizontal"),
     "SobelDirection": ("x", "y", "magnitude"),
     "TemplateMatchingMethod": ("sqdiff", "sqdiff_normed", "ccorr", "ccorr_normed", "ccoeff", "ccoeff_normed"),
@@ -351,7 +363,7 @@ def _table_tokens(markdown: str, heading: str) -> tuple[str, ...]:
 
 
 def test_root_surface_is_exact_and_version_matches_distribution() -> None:
-    """v1-public-namespace acceptance 1-2: root is 13 modules plus the installed version string."""
+    """v1-public-namespace acceptance 1-2; v1-fonts-module acceptance 1: root is 14 modules plus version."""
     assert px.__all__ == (*ROOT_MODULES, "__version__")
     assert _public_names(px) == set(px.__all__)
     assert all(isinstance(getattr(px, name), ModuleType) for name in ROOT_MODULES)
@@ -362,10 +374,11 @@ def test_root_surface_is_exact_and_version_matches_distribution() -> None:
 def test_public_modules_expose_the_exact_function_type_helper_and_alias_contract() -> None:
     """v1-public-namespace acceptance 3 and 7-8; v1-white-balance acceptance 1;
     v1-white-point-simulation acceptance 1; v1-draw-text-user-font acceptance 1;
-    v1-lut-extensions acceptance 1, 4, and 26:
+    v1-lut-extensions acceptance 1, 4, and 26; v1-exr-mixed-dtype-write acceptance 1:
+    v1-fonts-module acceptance 1-2; v1-grade acceptance 1:
     every leaf and public type has one exact module owner.
     """
-    assert sum(len(leaves) for leaves in FUNCTION_MODULES.values()) == 94
+    assert sum(len(leaves) for leaves in FUNCTION_MODULES.values()) == 98
     for module_name, leaves in FUNCTION_MODULES.items():
         module = getattr(px, module_name)
         public_types = ("ImageHeader",) if module_name == "io" else (("Font",) if module_name == "draw" else ())
@@ -455,7 +468,9 @@ def test_frame_is_data_metadata_properties_and_dlpack_only() -> None:
 
 
 def test_literal_aliases_and_vocabulary_tables_are_identical() -> None:
-    """v1-public-namespace acceptance 9 and 12; v1-view-transform-lut-removal acceptance 8;
+    """v1-chroma-siting-h273 acceptance 1 and 10; v1-io-icc acceptance 1 and 22;
+    v1-public-namespace acceptance 9 and 12;
+    v1-view-transform-lut-removal acceptance 8;
     v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 16-17 and 29;
     v1-blackmagic-tokens acceptance 34; v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
     v1-panasonic-tokens acceptance 99-100 and 112; v1-vendor-a-tokens acceptance 140-141 and 161;

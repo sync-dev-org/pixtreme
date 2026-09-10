@@ -54,9 +54,12 @@ def from_nv12(
     """Construct a full-range fp32 YCbCr444 Frame from uint8 NV12.
 
     The C-contiguous 1D layout is one Y plane followed by an interleaved
-    ``Cb Cr`` plane. ``siting`` places 4:2:0 chroma at H.273 ``left``,
-    ``center``, or ``topleft`` offsets; ``interpolation`` evaluates one of the
-    eight resize-family point kernels at that phase with replicate edges.
+    ``Cb Cr`` plane. H.273 mappings are type 0 ``left=(0, 0.5)``, type 1
+    ``center=(0.5, 0.5)``, type 2 ``topleft=(0, 0)``, type 3 ``top=(0.5, 0)``,
+    type 4 ``bottomleft=(0, 1)``, and type 5 ``bottom=(0.5, 1)``. The default is ``left``;
+    import and export use the same frame offset. ``siting`` is one progressive frame
+    token and does not interpret field signalling. ``interpolation`` evaluates one
+    of eight resize-family point kernels at that phase with replicate edges.
     ``range`` expands legal code positions without clipping or maps full uint8.
     ``colorspace`` / ``gamma`` override placeholders and ``matrix`` stamps basis provenance only.
     The conversion kernel is enqueued on the current CuPy stream and the call
@@ -101,8 +104,12 @@ def to_nv12(
 ) -> cp.ndarray:
     """Pack ``frame`` as an 8-bit Y plane followed by interleaved Cb/Cr.
 
-    ``range`` selects code-value mapping, ``siting`` selects the 4:2:0 chroma
-    phase, and ``interpolation`` selects the chroma downsampling filter.
+    H.273 mappings are type 0 ``left=(0, 0.5)``, type 1 ``center=(0.5, 0.5)``,
+    type 2 ``topleft=(0, 0)``, type 3 ``top=(0.5, 0)``, type 4 ``bottomleft=(0, 1)``,
+    and type 5 ``bottom=(0.5, 1)``. The default is ``left``; import and export use the same
+    frame offset. ``siting`` is one progressive frame token and does not interpret
+    field signalling. ``range`` selects code-value mapping, and ``interpolation``
+    selects the chroma downsampling filter.
     Packing is enqueued on the current CuPy stream without host synchronization;
     consume on that stream or pass its handle/event to the encoder.
     """

@@ -11,7 +11,6 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 from functools import lru_cache
-from pathlib import Path
 from typing import Any, cast
 
 import cupy as cp
@@ -41,6 +40,7 @@ from pixtreme._core.vocabulary import (
     TextLanguage,
 )
 from pixtreme._draw.shapes import _device_values
+from pixtreme._fonts import _BUNDLED_FONT_PATHS
 
 _LANGUAGE_TOKENS = _TEXT_LANGUAGE_TOKENS
 _ALIGN_TOKENS = _TEXT_ALIGN_TOKENS
@@ -48,11 +48,7 @@ _FONT_TOKENS = _TEXT_FONT_TOKENS
 _MONO_WEIGHT_MINIMUM = 400.0
 _MONO_WEIGHT_MAXIMUM = 700.0
 _ANCHOR_TOKENS = _TEXT_ANCHOR_TOKENS
-_FONT_PATH = Path(__file__).parent.parent / "data" / "fonts" / "NotoSansCJKjp-VF.otf"
-_FONT_PATHS = {
-    "sans": _FONT_PATH,
-    "mono": Path(__file__).parent.parent / "data" / "fonts" / "NotoSansMonoCJKjp-VF.otf",
-}
+_FONT_PATHS = _BUNDLED_FONT_PATHS
 _TEXT_BLOCK = (16, 16)
 _HOST_ARRAY_WHY = "draw text color and outline inputs must be convertible to a regular host array"
 _HOST_ARRAY_HOW = "pass a sequence, NumPy array, or CuPy array with a regular numeric shape"
@@ -140,6 +136,9 @@ class Font:
         collection. Equality, hashing, and private caches use content bytes plus
         face index, never the diagnostic path. Invalid files, face indices, or
         axis tables fail during construction with actionable ``ValueError``.
+        A catalog name can be composed explicitly as
+        ``Font.from_file(px.fonts.font_path(name))``; catalog lookup remains a
+        separate path-snapshot step and this constructor still snapshots bytes.
         """
         try:
             file_path = os.fspath(path)
@@ -1184,7 +1183,9 @@ def text(
     multiplies the font line advance, while ``tracking`` is an em ratio added
     after shaping. ``kerning`` toggles only the OpenType kern feature. ``font``
     selects bundled sans (weight 100.0 through 900.0), bundled mono (400.0
-    through 700.0), or a ``Font.from_file`` bytes snapshot. For a user
+    through 700.0), or a ``Font.from_file`` bytes snapshot. A catalog result is
+    composed explicitly with ``Font.from_file(px.fonts.font_path(name))`` and
+    never expands the two token names. For a user
     ``Font``, ``weight`` controls its measured ``wght`` axis and otherwise must
     remain 400.0. ``variations`` partially overrides any other measured axes;
     unspecified axes use their font defaults and invalid tags or ranges fail

@@ -39,6 +39,9 @@ _SITING_OFFSETS = {
     "left": (0.0, 0.5),
     "center": (0.5, 0.5),
     "topleft": (0.0, 0.0),
+    "top": (0.5, 0.0),
+    "bottomleft": (0.0, 1.0),
+    "bottom": (0.5, 1.0),
 }
 _PLANAR_BIT_DEPTHS = {
     "from_yuv420p": (8, 10),

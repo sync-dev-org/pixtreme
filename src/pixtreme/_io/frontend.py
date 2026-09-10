@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import struct
+from collections.abc import Sequence
 
 import cupy as cp
 
@@ -27,6 +28,7 @@ from pixtreme._io.formats.dpx import (
     _read_dpx_frame,
     _validate_dpx_bit_depth,
 )
+from pixtreme._io.formats.exr.mixed import _write_exr_channels
 from pixtreme._io.formats.exr.selection import (
     _read_exr_pixels,
     _validate_exr_write_options,
@@ -52,6 +54,7 @@ from pixtreme._io.header import (
     _sniff_raster_format,
     read_header,
 )
+from pixtreme._io.orientation import _validate_apply_exif_orientation
 
 
 def read_image(
@@ -61,6 +64,7 @@ def read_image(
     unchanged: bool = False,
     colorspace: Colorspace | None = None,
     gamma: Gamma | None = None,
+    apply_exif_orientation: bool = True,
 ) -> Frame:
     """Decode a supported image file into an HWC GPU Frame.
 
@@ -81,7 +85,9 @@ def read_image(
     Explicit ``colorspace`` and ``gamma``
     tokens override mapped file metadata, which overrides the fixed sRGB/sRGB
     raster, ACES2065-1/linear EXR, or Rec.709/linear HDR defaults; these are metadata claims and do not
-    transform pixel values.
+    transform pixel values. PNG iCCP, JPEG APP2, TIFF InterColorProfile, and WebP ICCP carriers expose embedded
+    RGB matrix/TRC profiles as file metadata. Mappable components receive canonical tokens such as ``Adobe-RGB``
+    or ``ProPhoto-RGB``; an unmappable selected profile emits one warning and falls back only for missing components.
 
     Codec-backed raster pixels decode through nvImageCodec into CUDA memory. TGA
     structure and RLE decode on the CPU before a GPU kernel produces the Frame.
@@ -98,8 +104,12 @@ def read_image(
     :class:`FileNotFoundError`; unsupported extensions, invalid tokens, channel
     selection, or incompatible unchanged EXR channels raise :class:`ValueError`;
     header or codec failures raise :class:`RuntimeError`.
+
+    ``apply_exif_orientation=True`` applies valid JPEG, PNG, TIFF, and WebP
+    orientation metadata. Pass ``False`` to preserve the stored pixel order.
     """
     file_path, format_name = _path_and_format(path, require_exists=True)
+    apply_exif_orientation = _validate_apply_exif_orientation(apply_exif_orientation)
     if format_name == "TGA":
         return _read_tga_frame(
             file_path,
@@ -132,6 +142,7 @@ def read_image(
             unchanged=unchanged,
             colorspace=colorspace,
             gamma=gamma,
+            apply_exif_orientation=apply_exif_orientation,
         )
     try:
         container = _parse_exr(file_path)
@@ -176,6 +187,7 @@ def decode_image(
     unchanged: bool = False,
     colorspace: Colorspace | None = None,
     gamma: Gamma | None = None,
+    apply_exif_orientation: bool = True,
 ) -> Frame:
     """Decode supported raster bytes into an HWC GPU Frame.
 
@@ -186,13 +198,19 @@ def decode_image(
     supported native integer depth; the default normalizes ordinary integer
     storage to float32. Explicit ``colorspace`` and ``gamma`` metadata claims
     override embedded metadata and fixed raster defaults without transforming
-    pixel values.
+    pixel values. Embedded PNG, JPEG, TIFF, and WebP RGB matrix/TRC ICC profiles are mapped numerically to canonical
+    metadata, including ``Adobe-RGB`` and ``ProPhoto-RGB``; an unmappable selected profile warns once and falls back
+    component by component.
 
     Returns a new C-contiguous HWC GPU Frame with decoded pixels, selected channel
     labels, and resolved metadata. Unsupported or unidentifiable formats, malformed
     headers, invalid tokens, and invalid channel selections raise
     :class:`ValueError`; codec failures raise :class:`RuntimeError`.
+
+    ``apply_exif_orientation=True`` applies valid JPEG, PNG, TIFF, and WebP
+    orientation metadata. Pass ``False`` to preserve the stored pixel order.
     """
+    apply_exif_orientation = _validate_apply_exif_orientation(apply_exif_orientation)
     format_name = _sniff_raster_format(data)
     header = _read_raster_header(data, format_name)
     return _decode_raster_frame(
@@ -202,6 +220,7 @@ def decode_image(
         unchanged=unchanged,
         colorspace=colorspace,
         gamma=gamma,
+        apply_exif_orientation=apply_exif_orientation,
     )
 
 
@@ -244,6 +263,65 @@ def encode_image(
         compression=compression,
         compression_level=compression_level,
         lossless=lossless,
+    )
+
+
+def write_exr_channels(
+    path: str | os.PathLike[str],
+    frames: Sequence[Frame],
+    *,
+    compression: ExrCompression | None = None,
+    dwa_level: float | None = None,
+) -> None:
+    """Write a ``Sequence[Frame]`` as native mixed-dtype channels in one EXR file.
+
+    Every Frame must have the same shape, same CUDA device, and same colorspace.
+    Channel labels come only from ``Frame.channels``, must be globally unique,
+    nonempty UTF-8 strings of at most 255 encoded bytes, and are written in
+    sorted order. Each Frame's storage maps literally: ``float16`` to HALF,
+    ``float32`` to FLOAT, and ``uint32`` to UINT. No dtype or pixel conversion
+    is performed. Prepare literal IDs or codes with ``px.values.cast_dtype``;
+    prepare normalized imagery with ``px.values.recode_dtype``.
+
+    ``compression`` accepts ``none``, ``rle``, ``zip``, ``zips``, ``piz``,
+    ``pxr24``, ``b44``, ``b44a``, ``dwaa``, or ``dwab`` and defaults to ZIP.
+    Codec behavior is applied per channel pixel type. ``dwa_level`` is valid
+    only for DWAA/DWAB and defaults to 45.0. Common colorspace controls EXR
+    chromaticities and the ACES container flag. Frame ``gamma`` and ``matrix``
+    may differ; neither transforms values nor persists in the file.
+
+    This is a file-only boundary. Existing ``write_image`` and ``encode_image``
+    retain their single-Frame, single-output-dtype contracts. ``read_image``
+    defaults to RGB(A); mixed explicit selections promote to float32, while an
+    exact UINT ID is recovered by selecting only that channel with
+    ``unchanged=True``.
+
+    Invalid paths, sequences, Frame relationships, labels, dtypes, compression,
+    or DWA options raise :class:`ValueError` before file creation or truncation.
+    I/O, CUDA, and codec failures raise :class:`RuntimeError` with their cause.
+    Parent directories are not created. Successful writes return ``None``.
+    """
+    file_path, format_name = _path_and_format(path, require_exists=False)
+    if format_name != "EXR":
+        raise ValueError(
+            _actionable_error(
+                why="write_exr_channels writes only OpenEXR files",
+                what=f"path={str(file_path)!r}, format={format_name}",
+                how="use a path whose extension is .exr",
+            )
+        )
+    compression_token, resolved_dwa_level = _validate_exr_write_options(
+        quality=None,
+        compression=compression,
+        compression_level=None,
+        lossless=None,
+        dwa_level=dwa_level,
+    )
+    _write_exr_channels(
+        file_path,
+        frames,
+        compression=compression_token,
+        dwa_level=resolved_dwa_level,
     )
 
 

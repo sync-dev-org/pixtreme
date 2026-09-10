@@ -2624,6 +2624,26 @@ def _dwa_channel_rules_bytes(channels: Sequence[_ExrChannel]) -> bytes:
     return bytes(records)
 
 
+def _dwa_mixed_channel_rules_bytes(channels: Sequence[_ExrChannel]) -> bytes:
+    records = bytearray(b"\x00\x00")
+    suffix_and_type = {(_dwa_suffix(channel.name)[1], channel.pixel_type) for channel in channels}
+    for suffix in ("R", "G", "B", "Y", "BY", "RY", "A"):
+        accepted_types = (0, 1, 2) if suffix == "A" else (1, 2)
+        for pixel_type in accepted_types:
+            if (suffix, pixel_type) not in suffix_and_type:
+                continue
+            if suffix == "A":
+                scheme = 2
+                csc = 0
+            else:
+                scheme = 1
+                csc = {"R": 1, "G": 2, "B": 3}.get(suffix, 0)
+            records.extend(suffix.encode("ascii") + b"\x00")
+            records.extend(bytes(((csc << 4) | (scheme << 2), pixel_type)))
+    struct.pack_into("<H", records, 0, len(records))
+    return bytes(records)
+
+
 def _dwa_concatenate(parts: Sequence[cp.ndarray], *, dtype: object) -> cp.ndarray:
     nonempty = tuple(part for part in parts if int(part.size))
     if not nonempty:
@@ -2632,18 +2652,28 @@ def _dwa_concatenate(parts: Sequence[cp.ndarray], *, dtype: object) -> cp.ndarra
 
 
 def _prepare_dwa_write_streams(
-    data: cp.ndarray,
-    raw: cp.ndarray,
+    channel_planes: Mapping[str, cp.ndarray],
     channels: Sequence[_ExrChannel],
-    input_indices: Mapping[str, int],
     layout: _DwaChannelLayout,
     *,
     row_counts: Sequence[int],
     lines_per_chunk: int,
     dwa_level: float,
 ) -> _DwaWriteStreams:
-    height = int(data.shape[0])
-    width = int(data.shape[1])
+    if not channels or set(channel_planes) != {channel.name for channel in channels}:
+        raise _gpu_error(
+            why="the DWA writer received incomplete channel-plane ownership",
+            what=f"descriptors={tuple(channel.name for channel in channels)!r}, planes={tuple(channel_planes)!r}",
+            how="provide one source plane for every file-order DWA channel",
+        )
+    first_plane = channel_planes[channels[0].name]
+    height, width = (int(value) for value in first_plane.shape)
+    if any(tuple(channel_planes[channel.name].shape) != (height, width) for channel in channels):
+        raise _gpu_error(
+            why="the DWA writer received channel planes with different shapes",
+            what=repr(tuple((channel.name, tuple(channel_planes[channel.name].shape)) for channel in channels)),
+            how="provide same-shape two-dimensional source planes for every DWA channel",
+        )
     chunk_count = len(row_counts)
     row_starts = _prefix_offsets(row_counts)
     row_count_array = np.asarray(row_counts, dtype=np.int64)
@@ -2656,32 +2686,35 @@ def _prepare_dwa_write_streams(
     mirrored_rows = np.where(mirrored_rows < 0, row_count_array[:, None] - 1, mirrored_rows)
     source_rows = np.asarray(row_starts, dtype=np.int64)[:, None] + mirrored_rows
     device_source_rows = cp.asarray(source_rows)
-    valid_rows = cp.asarray(local_rows < row_count_array[:, None])
-    bytes_per_sample = channels[0].bytes_per_sample
-    raw_planes = raw.reshape(height, len(channels), width, bytes_per_sample)[device_source_rows]
     descriptor_by_name = {descriptor.name: descriptor for descriptor in layout.channels}
-    unknown_indices = tuple(
-        index for index, channel in enumerate(channels) if descriptor_by_name[channel.name].scheme == "unknown"
+    unknown_channels = tuple(channel for channel in channels if descriptor_by_name[channel.name].scheme == "unknown")
+    rle_channels = tuple(channel for channel in channels if descriptor_by_name[channel.name].scheme == "rle")
+    unknown_sizes = tuple(
+        row_count * width * sum(channel.bytes_per_sample for channel in unknown_channels) for row_count in row_counts
     )
-    rle_indices = tuple(
-        index for index, channel in enumerate(channels) if descriptor_by_name[channel.name].scheme == "rle"
+    rle_sizes = tuple(
+        row_count * width * sum(channel.bytes_per_sample for channel in rle_channels) for row_count in row_counts
     )
-    unknown_sizes = tuple(row_count * len(unknown_indices) * width * bytes_per_sample for row_count in row_counts)
-    rle_sizes = tuple(row_count * len(rle_indices) * width * bytes_per_sample for row_count in row_counts)
-    if unknown_indices:
-        unknown_staged = cp.take(raw_planes, cp.asarray(unknown_indices, dtype=cp.int32), axis=2).transpose(
-            0, 2, 1, 3, 4
+    channel_bytes = {
+        channel.name: cp.ascontiguousarray(channel_planes[channel.name])
+        .view(cp.uint8)
+        .reshape(height, width, channel.bytes_per_sample)
+        for channel in channels
+    }
+    unknown_parts: list[cp.ndarray] = []
+    rle_parts: list[cp.ndarray] = []
+    for row_start, row_count in zip(row_starts, row_counts, strict=True):
+        row_end = row_start + row_count
+        unknown_parts.extend(
+            cp.ascontiguousarray(channel_bytes[channel.name][row_start:row_end]).reshape(-1)
+            for channel in unknown_channels
         )
-        unknown_mask = cp.broadcast_to(valid_rows[:, None, :, None, None], unknown_staged.shape)
-        unknown_raw = cp.ascontiguousarray(unknown_staged[unknown_mask])
-    else:
-        unknown_raw = cp.empty(0, dtype=cp.uint8)
-    if rle_indices:
-        rle_staged = cp.take(raw_planes, cp.asarray(rle_indices, dtype=cp.int32), axis=2).transpose(0, 2, 4, 1, 3)
-        rle_mask = cp.broadcast_to(valid_rows[:, None, None, :, None], rle_staged.shape)
-        rle_raw = cp.ascontiguousarray(rle_staged[rle_mask])
-    else:
-        rle_raw = cp.empty(0, dtype=cp.uint8)
+        rle_parts.extend(
+            cp.ascontiguousarray(channel_bytes[channel.name][row_start:row_end].transpose(2, 0, 1)).reshape(-1)
+            for channel in rle_channels
+        )
+    unknown_raw = _dwa_concatenate(unknown_parts, dtype=cp.uint8)
+    rle_raw = _dwa_concatenate(rle_parts, dtype=cp.uint8)
 
     luminance_tolerance, chroma_tolerance = _dwa_quantization_tables(dwa_level)
     device_luminance_tolerance = cp.asarray(luminance_tolerance)
@@ -2700,10 +2733,11 @@ def _prepare_dwa_write_streams(
     dc_mask_parts: list[cp.ndarray] = []
     lossy_units = _dwa_lossy_units(channels, layout)
     for unit in lossy_units:
+        unit_data = cp.stack(tuple(channel_planes[channel.name] for channel in unit), axis=2)
         components = _prepare_dwa_lossy_components_gpu(
-            data,
+            unit_data,
             device_source_rows,
-            tuple(input_indices[channel.name] for channel in unit),
+            tuple(range(len(unit))),
             padded_width,
         )
 
@@ -2768,11 +2802,10 @@ def _prepare_dwa_write_streams(
     )
 
 
-def _encode_dwa_chunks_gpu(
-    data: cp.ndarray,
+def _encode_dwa_channel_chunks_gpu(
+    channel_planes: Mapping[str, cp.ndarray],
     raw: cp.ndarray,
     channels: Sequence[_ExrChannel],
-    input_indices: Mapping[str, int],
     layout: _DwaChannelLayout,
     channel_rules: bytes,
     *,
@@ -2783,10 +2816,8 @@ def _encode_dwa_chunks_gpu(
     dwa_level: float,
 ) -> tuple[cp.ndarray, tuple[int, ...]]:
     streams = _prepare_dwa_write_streams(
-        data,
-        raw,
+        channel_planes,
         channels,
-        input_indices,
         layout,
         row_counts=row_counts,
         lines_per_chunk=lines_per_chunk,
@@ -2861,6 +2892,35 @@ def _encode_dwa_chunks_gpu(
         compressed,
         compressed_offsets,
         compressed_sizes,
+    )
+
+
+def _encode_dwa_chunks_gpu(
+    data: cp.ndarray,
+    raw: cp.ndarray,
+    channels: Sequence[_ExrChannel],
+    input_indices: Mapping[str, int],
+    layout: _DwaChannelLayout,
+    channel_rules: bytes,
+    *,
+    row_counts: Sequence[int],
+    raw_offsets: Sequence[int],
+    raw_sizes: Sequence[int],
+    lines_per_chunk: int,
+    dwa_level: float,
+) -> tuple[cp.ndarray, tuple[int, ...]]:
+    channel_planes = {channel.name: data[..., input_indices[channel.name]] for channel in channels}
+    return _encode_dwa_channel_chunks_gpu(
+        channel_planes,
+        raw,
+        channels,
+        layout,
+        channel_rules,
+        row_counts=row_counts,
+        raw_offsets=raw_offsets,
+        raw_sizes=raw_sizes,
+        lines_per_chunk=lines_per_chunk,
+        dwa_level=dwa_level,
     )
 
 

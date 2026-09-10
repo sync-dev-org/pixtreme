@@ -431,7 +431,7 @@ def test_hdr_write_read_matches_encoded_rgbe_decode_oracle(tmp_path: Path) -> No
 
 
 def test_hdr_read_header_is_gpu_free_and_preserves_the_public_model(tmp_path: Path) -> None:
-    """v1-hdr acceptance 7: pure CPU header probing reports HDR fp32 RGB without public field changes."""
+    """v1-io-orientation acceptance 8 and 10: HDR stays GPU-free and reports effective orientation one."""
     path = tmp_path / "header.hdr"
     path.write_bytes(_header(width=8, height=5, variables=("EXPOSURE=2.0",)))
     script = """
@@ -442,7 +442,7 @@ assert (h.format, h.width, h.height) == ("HDR", 8, 5)
 assert h.parts[0].channels == {"R": "float32", "G": "float32", "B": "float32"}
 assert (h.color.colorspace, h.color.gamma, h.color.mappable) == ("Rec.709", "linear", True)
 assert h.color.raw == {"EXPOSURE": ("2.0",)}
-assert set(px.io.ImageHeader.model_fields) == {"format", "width", "height", "parts", "color"}
+assert set(px.io.ImageHeader.model_fields) == {"format", "width", "height", "parts", "color", "orientation"}
 assert "nvidia.nvimgcodec" not in sys.modules
 assert "OpenEXR" not in sys.modules
 """

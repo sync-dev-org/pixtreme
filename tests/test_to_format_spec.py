@@ -17,6 +17,9 @@ SITING_OFFSETS = {
     "left": (0.0, 0.5),
     "center": (0.5, 0.5),
     "topleft": (0.0, 0.0),
+    "top": (0.5, 0.0),
+    "bottomleft": (0.0, 1.0),
+    "bottom": (0.5, 1.0),
 }
 
 
@@ -224,7 +227,9 @@ def _reference_output(
 
 
 def test_to_format_functions_have_exact_keyword_only_signatures() -> None:
-    """v1-public-namespace acceptance 10: every io exit has one static format signature."""
+    """v1-chroma-siting-h273 acceptance 3; v1-public-namespace acceptance 10:
+    every io exit has one static format signature.
+    """
     expected = {
         "to_uyvy422": (("frame", "range", "interpolation"), {"range": "legal", "interpolation": "area"}),
         "to_v210": (("frame", "range", "interpolation"), {"range": "legal", "interpolation": "area"}),
@@ -296,32 +301,85 @@ def test_all_to_formats_match_independent_numpy_layout_and_range_reference(
     np.testing.assert_array_equal(actual, expected)
 
 
+@pytest.mark.parametrize(
+    ("name", "bit_depth"),
+    (("to_nv12", 8), ("to_p010", 10), ("to_yuv420p", 8), ("to_yuv420p", 10)),
+)
 @pytest.mark.parametrize("siting", tuple(SITING_OFFSETS))
 @pytest.mark.parametrize("interpolation", TO_INTERPOLATIONS)
-def test_to_yuv420p_filter_and_siting_match_the_independent_scaled_kernel_oracle(
+def test_to_420_carrier_filter_and_siting_match_the_independent_scaled_kernel_oracle(
+    name: str,
+    bit_depth: int,
     siting: str,
     interpolation: str,
 ) -> None:
-    """v1-format-boundary acceptance 17, 18, and 21-24, 35: every down-filter/siting pair follows the sheet."""
+    """v1-chroma-siting-h273 acceptance 2, 5, and 6; v1-format-boundary acceptance 18 and 21-24, 35:
+    every 420 carrier/down-filter/siting combination follows the independent H.273 coordinates.
+    """
     values = _values(8, 10)
-    actual = px.io.to_yuv420p(
+    kwargs = {"bit_depth": bit_depth} if name == "to_yuv420p" else {}
+    actual = getattr(px.io, name)(
         _frame(values),
         range="full",
         siting=siting,
         interpolation=interpolation,
+        **kwargs,
     ).get()
     expected = _reference_output(
-        "yuv420p",
+        name.removeprefix("to_"),
         values,
-        bit_depth=8,
+        bit_depth=bit_depth,
         range="full",
         siting=siting,
         interpolation=interpolation,
     )
-    difference = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
+    actual_codes = actual >> 6 if name == "to_p010" else actual
+    expected_codes = expected >> 6 if name == "to_p010" else expected
+    difference = np.abs(actual_codes.astype(np.int32) - expected_codes.astype(np.int32))
     assert int(difference.max()) <= 1
     # The only allowance is an fp32/fp64 near-tie; this fixture caps it at two percent of codes.
     assert float(np.count_nonzero(difference) / difference.size) <= 0.02
+
+
+@pytest.mark.parametrize(
+    ("name", "bit_depth"),
+    (("to_nv12", 8), ("to_p010", 10), ("to_yuv420p", 8), ("to_yuv420p", 10)),
+)
+@pytest.mark.parametrize("height", (2, 6))
+@pytest.mark.parametrize("siting", tuple(SITING_OFFSETS))
+def test_to_420_area_replicates_bottom_coverage_at_the_h273_anchor(
+    name: str,
+    bit_depth: int,
+    height: int,
+    siting: str,
+) -> None:
+    """v1-chroma-siting-h273 acceptance 5: every carrier uses the hand-calculated bottom-edge area anchor."""
+    width = 4
+    base_codes = np.asarray((40, 200) if height == 2 else (0, 40, 80, 120, 160, 200), dtype=np.float32)
+    code_scale = float(1 << (bit_depth - 8))
+    maximum = float((1 << bit_depth) - 1)
+    row_codes = base_codes * code_scale
+    values = np.zeros((height, width, 3), dtype=np.float32)
+    values[..., 1] = row_codes[:, None] / maximum
+    values[..., 2] = row_codes[:, None] / maximum
+
+    kwargs = {"bit_depth": bit_depth} if name == "to_yuv420p" else {}
+    packed = getattr(px.io, name)(_frame(values), range="full", siting=siting, interpolation="area", **kwargs).get()
+    if name == "to_p010":
+        packed = packed >> 6
+    pixel_count = height * width
+    chroma_count = pixel_count // 4
+    if name in {"to_nv12", "to_p010"}:
+        cb = packed[pixel_count:].reshape(-1, 2)[:, 0].reshape(height // 2, width // 2)
+    else:
+        cb = packed[pixel_count : pixel_count + chroma_count].reshape(height // 2, width // 2)
+
+    vertical_group = {0.0: "top", 0.5: "middle", 1.0: "bottom"}[SITING_OFFSETS[siting][1]]
+    expected_base = {
+        2: {"top": 80, "middle": 120, "bottom": 160},
+        6: {"top": 160, "middle": 180, "bottom": 190},
+    }[height][vertical_group]
+    np.testing.assert_array_equal(cb[-1], np.full(width // 2, expected_base * code_scale, dtype=cb.dtype))
 
 
 def test_area_coverage_and_nearest_half_up_choose_the_sheet_phase_samples() -> None:
@@ -423,9 +481,11 @@ def test_to_formats_reject_non_frame_input_actionably(name: str) -> None:
 
 @pytest.mark.parametrize("name", ("to_nv12", "to_p010", "to_yuv420p"))
 def test_420_to_formats_reject_unknown_tokens_and_odd_dimensions(name: str) -> None:
-    """v1-format-boundary acceptance 10, 11, 21, and 37: closed tokens and even 420 dimensions fail fast."""
+    """v1-chroma-siting-h273 acceptance 9; v1-format-boundary acceptance 10, 11, 21, and 37:
+    closed tokens and even 420 dimensions fail fast.
+    """
     valid = _frame(np.zeros((2, 2, 3), dtype=np.float32))
-    for axis, value in (("range", "studio"), ("siting", "bottom"), ("interpolation", "lanczos3")):
+    for axis, value in (("range", "studio"), ("siting", "diagonal"), ("interpolation", "lanczos3")):
         with pytest.raises(ValueError) as token_error:
             getattr(px.io, name)(valid, **{axis: value})
         _actionable(token_error)
@@ -645,8 +705,8 @@ def test_to_format_kernel_entries_are_declared_and_each_public_call_launches_onc
 
 
 def test_frame_exits_are_functions_not_methods_or_root_exports() -> None:
-    """v1-public-namespace acceptance 1 and 10: Frame exits live only in io."""
-    assert len(px.__all__) == 14
+    """v1-public-namespace acceptance 1 and 10; v1-fonts-module acceptance 1: Frame exits live only in io."""
+    assert len(px.__all__) == 15
     for name in (
         "to_uyvy422",
         "to_v210",

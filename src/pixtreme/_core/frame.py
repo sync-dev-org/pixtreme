@@ -276,8 +276,46 @@ class Frame(BaseModel):
         )
 
 
+def _construct_frame(
+    *,
+    data: cp.ndarray,
+    colorspace: Colorspace,
+    gamma: Gamma,
+    channels: tuple[str, ...],
+    matrix: Matrix | None,
+) -> Frame:
+    data_is_valid = (
+        isinstance(data, cp.ndarray)
+        and data.ndim == 3
+        and all(size >= 1 for size in data.shape)
+        and np.dtype(data.dtype) in _ACCEPTED_DTYPES
+        and data.flags.c_contiguous
+    )
+    channels_are_normalized = (
+        isinstance(channels, tuple)
+        and bool(channels)
+        and all(isinstance(label, str) and bool(label) for label in channels)
+    )
+    metadata_is_canonical = (
+        type(colorspace) is str
+        and colorspace in _COLORSPACE_TOKENS
+        and type(gamma) is str
+        and gamma in _GAMMA_TOKENS
+        and (matrix is None or (type(matrix) is str and matrix in _MATRIX_TOKENS))
+    )
+    if data_is_valid and channels_are_normalized and len(channels) == data.shape[2] and metadata_is_canonical:
+        return Frame.model_construct(
+            data=data,
+            colorspace=colorspace,
+            gamma=gamma,
+            channels=channels,
+            matrix=matrix,
+        )
+    return Frame(data=data, colorspace=colorspace, gamma=gamma, channels=channels, matrix=matrix)
+
+
 def _new_frame(frame: Frame, output: cp.ndarray) -> Frame:
-    return Frame(
+    return _construct_frame(
         data=output,
         colorspace=frame.colorspace,
         gamma=frame.gamma,

@@ -23,6 +23,7 @@ from pixtreme._io.common import (
 )
 from pixtreme._io.dtype import _WRITE_DEFAULT_DTYPES, _WRITE_NATIVE_DTYPES
 from pixtreme._io.models import ImageHeader, _ImagePart
+from pixtreme._io.orientation import _strip_webp_exif
 from pixtreme._values.cast import _recode_dtype_expression, _recode_dtype_parameter
 
 _RASTER_REPACK_THREADS_PER_BLOCK = 256
@@ -57,11 +58,27 @@ def _new_raster_header(
 def _read_raster_pixels(source: Path | bytes, header: ImageHeader) -> cp.ndarray:
     source_value: str | bytes = str(source) if isinstance(source, Path) else source
     source_description = str(source) if isinstance(source, Path) else f"{len(source)} encoded bytes"
+    if header.format == "WEBP":
+        try:
+            webp_payload = source.read_bytes() if isinstance(source, Path) else source
+        except OSError as error:
+            raise RuntimeError(
+                _actionable_error(
+                    why=f"the WebP payload could not be read for decoding: {error}",
+                    what=source_description,
+                    how="verify that the file is readable and was not removed or modified between header parsing and decoding",
+                )
+            ) from error
+        source_value = _strip_webp_exif(webp_payload)
     try:
         from nvidia import nvimgcodec
 
         code_stream = nvimgcodec.CodeStream(source_value)
-        params = nvimgcodec.DecodeParams(color_spec=nvimgcodec.UNCHANGED, allow_any_depth=True)
+        params = nvimgcodec.DecodeParams(
+            color_spec=nvimgcodec.UNCHANGED,
+            allow_any_depth=True,
+            apply_exif_orientation=False,
+        )
         decoded = nvimgcodec.Decoder().decode(code_stream, params=params)
         if decoded is None:
             raise RuntimeError(
@@ -246,6 +263,26 @@ def _decode_raster_data(decoded: cp.ndarray, indices: tuple[int, ...], *, unchan
     )
 
 
+def _apply_exif_orientation(decoded: cp.ndarray, orientation: int) -> cp.ndarray:
+    if orientation == 1:
+        return decoded
+    if orientation == 2:
+        return decoded[:, ::-1]
+    if orientation == 3:
+        return decoded[::-1, ::-1]
+    if orientation == 4:
+        return decoded[::-1]
+    if orientation == 5:
+        return decoded.transpose(1, 0, 2)
+    if orientation == 6:
+        return decoded[::-1].transpose(1, 0, 2)
+    if orientation == 7:
+        return decoded[::-1, ::-1].transpose(1, 0, 2)
+    if orientation == 8:
+        return decoded[:, ::-1].transpose(1, 0, 2)
+    raise ValueError("effective EXIF orientation is outside 1 through 8")
+
+
 def _decode_raster_frame(
     source: Path | bytes,
     header: ImageHeader,
@@ -254,10 +291,12 @@ def _decode_raster_frame(
     unchanged: bool,
     colorspace: str | None,
     gamma: str | None,
+    apply_exif_orientation: bool,
 ) -> Frame:
     resolved_colorspace, resolved_gamma = _resolve_metadata(header, colorspace=colorspace, gamma=gamma)
     locations = _resolve_channel_locations(header, channels)
     decoded = _read_raster_pixels(source, header)
+    decoded = _apply_exif_orientation(decoded, header.orientation if apply_exif_orientation else 1)
     indices = tuple(tuple(header.parts[0].channels).index(channel) for _, channel, _ in locations)
     output = _decode_raster_data(decoded, indices, unchanged=unchanged)
     output_labels = tuple(label for _, _, label in locations)
