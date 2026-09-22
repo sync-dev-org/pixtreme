@@ -25,7 +25,7 @@
     
     
       
-        <title>pixtreme.core - pixtreme 1.5.0</title>
+        <title>pixtreme.core - pixtreme 1.6.0</title>
       
     
     
@@ -84,7 +84,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="pixtreme 1.5.0" class="md-header__button md-logo" aria-label="pixtreme 1.5.0" data-md-component="logo">
+    <a href="../.." title="pixtreme 1.6.0" class="md-header__button md-logo" aria-label="pixtreme 1.6.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -98,7 +98,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            pixtreme 1.5.0
+            pixtreme 1.6.0
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -194,13 +194,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="pixtreme 1.5.0" class="md-nav__button md-logo" aria-label="pixtreme 1.5.0" data-md-component="logo">
+    <a href="../.." title="pixtreme 1.6.0" class="md-nav__button md-logo" aria-label="pixtreme 1.6.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    pixtreme 1.5.0
+    pixtreme 1.6.0
   </label>
   
     <div class="md-nav__source">
@@ -1081,6 +1081,17 @@
     <span class="md-ellipsis">
       
         domain_max
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut.shaper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        shaper
       
     </span>
   </a>
@@ -2115,6 +2126,17 @@
     <span class="md-ellipsis">
       
         domain_max
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixtreme.core.Lut.shaper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        shaper
       
     </span>
   </a>
@@ -3291,7 +3313,12 @@ through unchanged to the underlying CuPy array.</p>
 with float32 values and <code>N &gt;= 2</code>. The array is retained by reference,
 without a construction-time copy; callers are responsible for avoiding
 mutation while the LUT is in use. <code>domain_min</code> and <code>domain_max</code> map
-input RGB values onto the grid independently by channel.</p>
+input RGB values onto the grid independently by channel. <code>shaper</code> may
+hold a shared float32 <code>(N,)</code> output table on the same CUDA device. It is
+retained by reference and evaluated linearly before the cube, with its
+output clamped to cube coordinates. Writing such a LUT as Cube irreversibly
+bakes the two stages onto one grid, so the shaper and its between-node
+evaluation cannot be recovered from that file.</p>
 
 
 
@@ -3373,6 +3400,27 @@ input RGB values onto the grid independently by channel.</p>
 
 </div>
 
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="pixtreme.core.Lut.shaper" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">shaper</span> <span class="o">=</span> <span class="n">dataclass_field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kw_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
 
 
 
@@ -3396,7 +3444,7 @@ input RGB values onto the grid independently by channel.</p>
 
 
 <h4 id="pixtreme.core.Lut.__init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">domain_min</span><span class="o">=</span><span class="n">_DEFAULT_DOMAIN_MIN</span><span class="p">,</span> <span class="n">domain_max</span><span class="o">=</span><span class="n">_DEFAULT_DOMAIN_MAX</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">domain_min</span><span class="o">=</span><span class="n">_DEFAULT_DOMAIN_MIN</span><span class="p">,</span> <span class="n">domain_max</span><span class="o">=</span><span class="n">_DEFAULT_DOMAIN_MAX</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">shaper</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h4>
 

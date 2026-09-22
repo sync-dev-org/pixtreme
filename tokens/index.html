@@ -25,7 +25,7 @@
     
     
       
-        <title>Token Reference - pixtreme 1.5.0</title>
+        <title>Token Reference - pixtreme 1.6.0</title>
       
     
     
@@ -84,7 +84,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="pixtreme 1.5.0" class="md-header__button md-logo" aria-label="pixtreme 1.5.0" data-md-component="logo">
+    <a href=".." title="pixtreme 1.6.0" class="md-header__button md-logo" aria-label="pixtreme 1.6.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -98,7 +98,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            pixtreme 1.5.0
+            pixtreme 1.6.0
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -194,13 +194,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="pixtreme 1.5.0" class="md-nav__button md-logo" aria-label="pixtreme 1.5.0" data-md-component="logo">
+    <a href=".." title="pixtreme 1.6.0" class="md-nav__button md-logo" aria-label="pixtreme 1.6.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    pixtreme 1.5.0
+    pixtreme 1.6.0
   </label>
   
     <div class="md-nav__source">
@@ -3807,6 +3807,11 @@ values above 1.0.</p>
 </tr>
 </tbody>
 </table>
+<p>At the named-format boundary the same two tokens select the H.273 mapping for the format's effective bit depth. P216
+(<code>px.io.from_p216</code> / <code>px.io.to_p216</code>) is fixed at <code>n = 16</code>: <code>legal</code> maps Y as <code>Y × 56064 + 4096</code> and Cb / Cr as
+<code>(C − 0.5) × 57344 + 32768</code>, so the legal chroma endpoints for Frame values 0 and 1 are 4096 and 61440; <code>full</code> maps
+every component as <code>value × 65535</code>. The input path applies the inverse affine without clipping, and the output path
+rounds half away from zero and clips only to the uint16 container <code>[0, 65535]</code>.</p>
 <p>OCIO RangeTransform is a general transform that remaps or clamps arbitrary input and output bounds, so it differs
 semantically from these range tokens. The pixtreme operations are limited to unclipped H.273 legal/full recovery.</p>
 <h2 id="pixel-value-quantization">pixel value quantization</h2>
@@ -3856,15 +3861,19 @@ float32; a <code>to_array</code> bit-depth conversion fixes its output dtype to 
 </tr>
 </tbody>
 </table>
+<p>P216 carries a fixed 16 effective bits and has no <code>bit_depth</code> argument: every uint16 word is a code with all 16 bits
+significant, with no shift, mask, or MSB alignment. <code>px.io.to_p216</code> quantizes to 16 effective bits regardless of the
+bit depth the signal originated from; 10- and 12-bit sources are not padded into the high bits.</p>
 <h2 id="interpolation">interpolation</h2>
 <p>Interpolation tokens form the shared vocabulary for interpolation and resampling kernels. Every API fixes its accepted
 subset and coordinate rules.</p>
 <ul>
-<li><code>px.io.from_uyvy422</code>, <code>px.io.from_v210</code>, <code>px.io.from_nv12</code>, <code>px.io.from_p010</code>, <code>px.io.from_yuv420p</code>, and
-  <code>px.io.from_yuv422p</code> accept the first eight tokens in the table, excluding <code>area</code>; default <code>bilinear</code>.</li>
+<li><code>px.io.from_uyvy422</code>, <code>px.io.from_v210</code>, <code>px.io.from_nv12</code>, <code>px.io.from_p010</code>, <code>px.io.from_p216</code>,
+  <code>px.io.from_yuv420p</code>, and <code>px.io.from_yuv422p</code> accept the first eight tokens in the table, excluding <code>area</code>; default
+  <code>bilinear</code>.</li>
 <li>Chroma upsampling on a <code>from_</code> path places chroma samples at the frame coordinates defined in chroma siting and
   evaluates filter weights from each luma-sample coordinate. Edges replicate the final chroma row or column.</li>
-<li><code>px.io.to_uyvy422</code>, <code>px.io.to_v210</code>, <code>px.io.to_nv12</code>, <code>px.io.to_p010</code>, <code>px.io.to_yuv420p</code>, and
+<li><code>px.io.to_uyvy422</code>, <code>px.io.to_v210</code>, <code>px.io.to_nv12</code>, <code>px.io.to_p010</code>, <code>px.io.to_p216</code>, <code>px.io.to_yuv420p</code>, and
   <code>px.io.to_yuv422p</code> accept <code>nearest</code>, <code>bilinear</code>, <code>bicubic</code>, and <code>area</code>; default <code>area</code>.</li>
 <li>Chroma downsampling on a <code>to_</code> path centers each output sample at the siting offset. Bilinear and bicubic use a
   scale-two reduction kernel; area averages coverage over the owned interval. Edges replicate.</li>
@@ -3882,9 +3891,13 @@ subset and coordinate rules.</p>
 <li><code>px.color.apply_lut</code> chooses a subset by LUT type. A <code>Lut</code> accepts <code>trilinear</code> and <code>tetrahedral</code>, with default
   <code>tetrahedral</code>. A <code>Lut1D</code> accepts only <code>linear</code>, with default <code>linear</code>. <code>None</code> selects that type-specific default and
   never converts a token from the other subset.</li>
+<li>A <code>Lut</code> carrying a shared shaper evaluates that first stage with fixed <code>linear</code> interpolation, then applies
+  <code>trilinear</code> or <code>tetrahedral</code> only to the cube stage. <code>preserve_shaper=True</code> on <code>px.io.read_lut</code> or
+  <code>px.io.decode_lut</code> retains a nonidentity <code>.3dl</code> shaper for this two-stage evaluation; the default still reads the
+  same-edge baked approximation.</li>
 <li>Input RGB maps through the LUT's per-channel declared <code>domain</code> to grid or curve coordinates. Lookup coordinates
-  outside the domain are clamped to its edge. LUT output is not clipped; negative values and values above 1 are
-  returned unchanged.</li>
+  outside the domain are clamped to its edge. A retained shaper output is clamped to the cube's 0..1 coordinates.
+  LUT output is not clipped; negative values and values above 1 are returned unchanged.</li>
 </ul>
 <p>Point-sampled <code>px.transform.resize</code> kernels share pixel-center alignment
 <code>src = (dst + 0.5) × (input / output) - 0.5</code> and edge replication. Channels are independent, and neither scene values
@@ -4157,8 +4170,10 @@ BT.2100 material that uses the standard position.</p>
 </tr>
 </tbody>
 </table>
-<p>4:2:2 (<code>px.io.from_uyvy422</code>, <code>px.io.from_v210</code>, and <code>px.io.from_yuv422p</code>) is fixed as horizontally co-sited and
-vertically full resolution, so it has no siting argument. 4:4:4 (<code>px.io.from_yuv444p</code> and <code>px.io.from_yuva444p</code>) has no
+<p>4:2:2 (<code>px.io.from_uyvy422</code>, <code>px.io.from_v210</code>, <code>px.io.from_p216</code>, and <code>px.io.from_yuv422p</code>) is fixed as
+horizontally co-sited and vertically full resolution, so it has no siting argument. In P216 the chroma pair <code>k</code> of a row
+is centered at luma frame coordinate <code>(2k, y)</code> and represents luma pixels <code>2k</code> and <code>2k + 1</code> of that same row; no
+vertical filtering is applied on either path. 4:4:4 (<code>px.io.from_yuv444p</code> and <code>px.io.from_yuva444p</code>) has no
 subsampling and therefore has neither siting nor interpolation arguments.</p>
 <h2 id="draw-continuous-coordinates">draw continuous coordinates</h2>
 <p>Drawing APIs use coordinate pairs in <code>(x, y)</code> order: x follows columns and y follows rows. <code>(0, 0)</code> is the top-left
@@ -4716,7 +4731,7 @@ runtime input follows the shared normalization contract.</p>
 </tbody>
 </table>
 <h2 id="from_-conventions">from_<format> conventions</h2>
-<p>The eight <code>px.io.from_&lt;format&gt;</code> functions resolve uint-code packing, subsampling, and range at input, returning a
+<p>The nine <code>px.io.from_&lt;format&gt;</code> functions resolve uint-code packing, subsampling, and range at input, returning a
 C-contiguous float32 YCbCr444 Frame (<code>px.io.from_yuva444p</code> alone returns YCbCrA4444). Only <code>buf</code> is positional; width
 and height are required keyword-only arguments. The following are specification defaults for a boundary whose input
 buffer contains no metadata, not guaranteed truths about the material.</p>
@@ -4757,7 +4772,7 @@ buffer contains no metadata, not guaranteed truths about the material.</p>
 <tr>
 <td>interpolation</td>
 <td><code>bilinear</code></td>
-<td>Default for the six subsampled formats; accepts the first eight interpolation tokens</td>
+<td>Default for the seven subsampled formats; accepts the first eight interpolation tokens</td>
 </tr>
 <tr>
 <td>siting</td>
@@ -4839,13 +4854,18 @@ low bits of uint16; nonsignal high bits are ignored on read.</p>
 <td>uint16</td>
 <td>Same arrangement as NV12; 10-bit codes are MSB-aligned and the lower six bits are zero</td>
 </tr>
+<tr>
+<td><code>P216</code></td>
+<td>uint16</td>
+<td>4:2:2 semi-planar: a raster-order Y plane of <code>W × H</code> words followed by a chroma plane of <code>H</code> rows, each row interleaved as <code>Cb0 Cr0 Cb2 Cr2 …</code> (<code>W / 2</code> pairs); shape <code>(2 × W × H,)</code>; all 16 bits of every word are code; width must be even</td>
+</tr>
 </tbody>
 </table>
 <p><code>range="legal"</code> maps Y, Cb, and Cr to full-range float using the general H.273 formula for the bit depth and does not
 clip code headroom. <code>range="full"</code> uses <code>code / (2^n - 1)</code>. YUVA alpha always uses <code>code / (2^n - 1)</code> independently
 of the range token.</p>
 <h2 id="to_-conventions">to_<format> conventions</h2>
-<p>The eight <code>px.io.to_&lt;format&gt;</code> functions derive output dimensions from the width and height of the Frame passed as the
+<p>The nine <code>px.io.to_&lt;format&gt;</code> functions derive output dimensions from the width and height of the Frame passed as the
 first positional argument, resolving packing, subsampling, and range in one CUDA pass. Input must be a float32 Frame
 with channels <code>("Y", "Cb", "Cr")</code>; only <code>px.io.to_yuva444p</code> accepts <code>("Y", "Cb", "Cr", "A")</code>. Convert RGB Frames
 explicitly with <code>px.color.rgb_to_ycbcr</code> before passing them.</p>
@@ -4869,7 +4889,7 @@ row storage to 128 bytes.</p>
 <tr>
 <td>interpolation</td>
 <td><code>area</code></td>
-<td>Default for the six subsampled formats; accepts nearest, bilinear, bicubic, and area</td>
+<td>Default for the seven subsampled formats; accepts nearest, bilinear, bicubic, and area</td>
 </tr>
 <tr>
 <td>siting</td>
@@ -4946,6 +4966,12 @@ row storage to 128 bytes.</p>
 <td>Fixed 10</td>
 <td>uint16</td>
 <td>Same arrangement as NV12; MSB-aligned with the lower six bits zero</td>
+</tr>
+<tr>
+<td><code>P216</code></td>
+<td>Fixed 16</td>
+<td>uint16</td>
+<td>4:2:2 semi-planar: Y plane followed by an <code>H</code>-row interleaved Cb Cr plane; shape <code>(2 × W × H,)</code>; all 16 bits are code</td>
 </tr>
 </tbody>
 </table>

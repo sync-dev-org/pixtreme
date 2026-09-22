@@ -25,7 +25,7 @@
     
     
       
-        <title>pixtreme.color - pixtreme 1.5.0</title>
+        <title>pixtreme.color - pixtreme 1.6.0</title>
       
     
     
@@ -84,7 +84,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="pixtreme 1.5.0" class="md-header__button md-logo" aria-label="pixtreme 1.5.0" data-md-component="logo">
+    <a href="../.." title="pixtreme 1.6.0" class="md-header__button md-logo" aria-label="pixtreme 1.6.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -98,7 +98,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            pixtreme 1.5.0
+            pixtreme 1.6.0
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -194,13 +194,13 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="pixtreme 1.5.0" class="md-nav__button md-logo" aria-label="pixtreme 1.5.0" data-md-component="logo">
+    <a href="../.." title="pixtreme 1.6.0" class="md-nav__button md-logo" aria-label="pixtreme 1.6.0" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    pixtreme 1.5.0
+    pixtreme 1.6.0
   </label>
   
     <div class="md-nav__source">
@@ -1592,9 +1592,12 @@ px.values.dequantize before calling this function.</p>
 <p>User LUT values do not declare color meaning, so Frame colorspace and gamma
 metadata pass through unchanged. Other channel labels pass through by value.
 Lookup coordinates use the LUT's per-channel domain with input clamp at its
-endpoints; output values are not clipped. <code>None</code> selects tetrahedral for a
-3D <code>Lut</code> and linear for a <code>Lut1D</code>. No shaper stage is implied. Neither
-input is mutated, and the result owns new C-contiguous Frame storage.</p>
+endpoints; output values are not clipped. A 3D <code>Lut</code> with a shaper first
+evaluates that shared table with linear interpolation, clamps the shaper
+output to cube coordinates, and evaluates the cube in the same GPU kernel.
+<code>None</code> selects tetrahedral for a 3D <code>Lut</code> and linear for a <code>Lut1D</code>;
+an explicit 3D token may select trilinear or tetrahedral cube interpolation.
+Neither input is mutated, and the result owns new C-contiguous Frame storage.</p>
 
 
     </div>
