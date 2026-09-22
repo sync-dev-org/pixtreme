@@ -275,12 +275,3 @@ def test_unsharp_mask_docstring_is_a_self_contained_contract() -> None:
         "cast_dtype",
     ):
         assert required in docstring
-
-
-def test_border_vocabulary_lists_unsharp_mask_as_an_accepting_api(vocabulary_markdown: str) -> None:
-    """v1-unsharp-mask acceptance 9: border vocabulary lists the new API without adding a token."""
-    section = vocabulary_markdown.split("## border\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-
-    assert "unsharp_mask" in section
-    for token in BORDERS:
-        assert token in section

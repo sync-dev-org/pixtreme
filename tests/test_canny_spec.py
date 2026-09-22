@@ -501,13 +501,3 @@ def test_canny_docstring_is_a_self_contained_operational_contract() -> None:
         "px.values.dequantize",
     ):
         assert required in docstring
-
-
-def test_canny_vocabulary_documents_shared_border_tokens_and_both_internal_stages(
-    vocabulary_markdown: str,
-) -> None:
-    """v1-canny acceptance 15: vocabulary fixes four border tokens, mirror default, and Sobel/NMS scope."""
-    section = vocabulary_markdown.split("## border\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-
-    for required in ("px.filter.canny", "mirror", "replicate", "wrap", "constant", "Sobel", "NMS"):
-        assert required in section

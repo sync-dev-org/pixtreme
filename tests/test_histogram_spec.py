@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import inspect
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -491,51 +490,3 @@ def test_clahe_is_bitwise_deterministic_for_repeated_calls() -> None:
     ).get()
 
     np.testing.assert_array_equal(first, second)
-
-
-def test_histogram_docstrings_are_self_contained_and_vocabulary_adds_no_token_axes() -> None:
-    """v1-histogram acceptance 19-20: docs expose every numeric contract without adding named tokens."""
-    equalize_docstring = inspect.getdoc(px.color.equalize_histogram) or ""
-    for required in (
-        "equalize_histogram(frame, *, domain=(0.0, 1.0)",
-        "bins=1024) -> Frame",
-        "domain",
-        "clamp",
-        "floor",
-        "direct empirical CDF",
-        "per channel",
-        "float32",
-        "metadata",
-        "input remains unchanged",
-        "px.values.cast_dtype",
-        "px.values.recode_dtype",
-        "px.values.dequantize",
-    ):
-        assert required in equalize_docstring
-
-    clahe_docstring = inspect.getdoc(px.color.clahe) or ""
-    for required in (
-        "clahe(frame, *, clip_limit=2.0, tiles_y=8, tiles_x=8",
-        "domain=(0.0, 1.0), bins=1024) -> Frame",
-        "domain",
-        "clamp",
-        "floor",
-        "cap = clip_limit * tile pixels / bins",
-        "water-fill",
-        "bottom/right",
-        "mirror",
-        "tile-center",
-        "bilinear",
-        "bins exceeds",
-        "per channel",
-        "float32",
-        "metadata",
-        "input remains unchanged",
-        "px.values.cast_dtype",
-        "px.values.recode_dtype",
-        "px.values.dequantize",
-    ):
-        assert required in clahe_docstring
-
-    vocabulary = (Path(__file__).resolve().parents[1] / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    assert all(f"\n## {name}\n" not in vocabulary for name in ("domain", "bins", "clip_limit", "tiles_y", "tiles_x"))

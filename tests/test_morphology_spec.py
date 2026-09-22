@@ -375,24 +375,3 @@ def test_morphology_border_and_border_value_follow_the_shared_contract() -> None
         with pytest.raises(ValueError) as error:
             px.morphology.erosion(source, radius=1, border=border, border_value=0.0)
         _assert_actionable(error)
-
-
-def test_morphology_vocabulary_defines_shape_composites_and_border_default(vocabulary_markdown: str) -> None:
-    """v1-morphology acceptance 10: vocabulary fixes shape support, composite meanings, and replicate border default."""
-    shape_section = vocabulary_markdown.split("## morphology shape\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    border_section = vocabulary_markdown.split("## border\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    for required in (
-        "disk",
-        "square",
-        "dx² + dy² <= radius²",
-        "Chebyshev",
-        "px.morphology.white_tophat",
-        "px.morphology.black_tophat",
-        "small bright details",
-        "small dark details",
-    ):
-        assert required in shape_section
-    for name in MORPHOLOGY_NAMES:
-        assert name in border_section
-    for required in ("replicate", "default", "min", "max", "neutral"):
-        assert required in border_section

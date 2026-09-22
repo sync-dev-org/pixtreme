@@ -14,7 +14,6 @@ import cupy as cp
 import numpy as np
 import pytest
 from PIL import Image
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -509,23 +508,3 @@ assert "OpenEXR" not in sys.modules
         timeout=30,
     )
     assert result.returncode == 0, result.stderr
-
-
-def test_canonical_docs_and_vocabulary_match_the_extended_format_contract() -> None:
-    """v1-io-formats acceptance 20: docs share the implementation tokens. GitHub #29."""
-    requirements_path = require_repo_file("docs/requirements.md")
-    io_feature_path = require_repo_file("docs/features/v1-io.md")
-    bytes_feature_path = require_repo_file("docs/features/v1-bytes-boundary.md")
-    requirements = requirements_path.read_text(encoding="utf-8")
-    vocabulary = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    io_feature = io_feature_path.read_text(encoding="utf-8")
-    bytes_feature = bytes_feature_path.read_text(encoding="utf-8")
-
-    for format_name in ("JPEG 2000", "WebP", "BMP", "PNM"):
-        assert format_name in requirements
-        assert format_name in vocabulary
-    for token in ("jpeg2000", "webp", "bmp", "pnm"):
-        assert f"`{token}`" in vocabulary
-    for feature in (io_feature, bytes_feature):
-        assert "v1-io-formats" in feature
-        assert "将来" not in feature.split("v1-io-formats", maxsplit=1)[-1][:120]

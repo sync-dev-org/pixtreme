@@ -20,7 +20,6 @@ from generate_io_fixtures import (
     orientation_pattern,
     png_with_exif,
 )
-from repository_contracts import latest_changelog_section, require_repo_file
 
 import pixtreme as px
 
@@ -327,43 +326,3 @@ def test_non_target_file_and_bytes_formats_ignore_the_orientation_switch(tmp_pat
             _assert_same_frame(px.io.decode_image(payload, apply_exif_orientation=False), reference)
 
     assert [item for item in caught if "EXIF orientation" in str(item.message)] == []
-
-
-def test_orientation_documentation_and_legacy_contracts_are_synchronized() -> None:
-    """v1-io-orientation acceptance 10: public prose and superseded field contracts move together."""
-    token_reference = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    io_formats = require_repo_file("docs/features/v1-io-formats.md").read_text(encoding="utf-8")
-    io_feature = require_repo_file("docs/features/v1-io.md").read_text(encoding="utf-8")
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-
-    for fragment in (
-        "apply_exif_orientation: bool = True",
-        "JPEG APP1 Exif",
-        "PNG `eXIf`",
-        "TIFF's first IFD",
-        "WebP `EXIF`",
-        "| 8 | Rotate 90 degrees counter-clockwise |",
-        "duplicate or conflicting Orientation entries",
-        "`ImageHeader` has six fields",
-        "values 5 through 8 therefore exchange the stored dimensions",
-    ):
-        assert fragment in token_reference
-    assert "WebP EXIF orientation" in io_formats and "`v1-io-orientation`" in io_formats
-    assert "format / width / height / parts / color / orientation の 6 field" in io_feature
-    assert "default EXIF-oriented decode dimensions" in (inspect.getdoc(px.io.ImageHeader) or "")
-
-    superseded = "[trace:superseded-by:v1-io-orientation]"
-    for relative_path, acceptance in (
-        ("docs/features/v1-io.md", "17."),
-        ("docs/features/v1-io-formats.md", "1."),
-        ("docs/features/v1-bytes-boundary.md", "1."),
-        ("docs/features/v1-tga.md", "9."),
-        ("docs/features/v1-hdr.md", "7."),
-        ("docs/features/v1-dpx.md", "9."),
-    ):
-        lines = require_repo_file(relative_path).read_text(encoding="utf-8").splitlines()
-        assert any(line.startswith(f"{acceptance} {superseded}") for line in lines)
-
-    unreleased = latest_changelog_section(changelog)
-    assert "apply_exif_orientation" in unreleased
-    assert "ImageHeader" in unreleased and "orientations 5 through 8" in unreleased

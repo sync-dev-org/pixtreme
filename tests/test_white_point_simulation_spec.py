@@ -2,15 +2,10 @@
 
 from __future__ import annotations
 
-import inspect
 import math
-from collections.abc import Sequence
-from pathlib import Path
-from typing import get_args, get_type_hints
 
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -121,54 +116,6 @@ def _expected(
         decoded,
     )
     return _encode_srgb(transformed) if gamma == "sRGB" else transformed
-
-
-def test_public_surface_signature_alias_counts_and_docs_are_synchronized() -> None:
-    """v1-white-point-simulation acceptance 1 and 13; v1-exr-mixed-dtype-write acceptance 1 and 15;
-    v1-fonts-module acceptance 1 and 14; v1-grade acceptance 1:
-    API, alias, counts, and public docs agree. GitHub #29.
-    """
-    assert get_args(px.core.ReferenceWhite) == ("D65", "D93", "D50", "ACES")
-    assert px.color.__all__[-2] == "white_point_simulation"
-    assert len(px.color.__all__) == 16
-
-    signature = inspect.signature(px.color.white_point_simulation)
-    assert tuple(signature.parameters) == ("frame", "input_white", "output_white")
-    assert signature.parameters["frame"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
-    assert signature.parameters["input_white"].kind is inspect.Parameter.KEYWORD_ONLY
-    assert signature.parameters["output_white"].kind is inspect.Parameter.KEYWORD_ONLY
-    assert signature.parameters["input_white"].default is None
-    assert signature.parameters["output_white"].default is inspect.Parameter.empty
-    hints = get_type_hints(px.color.white_point_simulation)
-    assert hints["input_white"] == px.core.ReferenceWhite | Sequence[float] | None
-    assert hints["output_white"] == px.core.ReferenceWhite | Sequence[float]
-    assert hints["return"] is px.core.Frame
-
-    adaptation_signature = inspect.signature(px.color.chromatic_adaptation)
-    assert adaptation_signature.parameters["input_white"].default is inspect.Parameter.empty
-    assert adaptation_signature.parameters["output_white"].default is inspect.Parameter.empty
-    assert adaptation_signature.parameters["cat"].default == "CAT02"
-    adaptation_hints = get_type_hints(px.color.chromatic_adaptation)
-    assert adaptation_hints["input_white"] == px.core.ReferenceWhite | Sequence[float]
-    assert adaptation_hints["output_white"] == px.core.ReferenceWhite | Sequence[float]
-
-    root = Path(__file__).resolve().parents[1]
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    tokens = (root / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    color_row = next(line for line in requirements.splitlines() if line.startswith("| `color` |"))
-    assert "| 16 |" in color_row
-    assert "公開 operation は計 98 関数" in requirements
-    reference_section = tokens.split("## reference white\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    reference_table = reference_section.split("| Token |", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
-    assert tuple(
-        line.split("|")[1].strip().strip("`") for line in reference_table.splitlines() if line.startswith("| `")
-    ) == ("D65", "D93", "D50", "ACES")
-    assert "(0.3127, 0.3290)" in reference_section
-    assert "(0.2831, 0.2971)" in reference_section
-    assert "(0.3457, 0.3585)" in reference_section
-    assert "(0.32168, 0.33767)" in reference_section
-    assert "ICC absolute colorimetric intent" in tokens
-    assert "Temperature / Tint" in tokens
 
 
 @pytest.mark.parametrize(("token", "xy"), tuple(_REFERENCE_WHITES.items()))

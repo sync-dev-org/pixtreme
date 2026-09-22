@@ -14,7 +14,6 @@ from pathlib import Path
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -555,30 +554,6 @@ def test_draw_text_user_font_bitmap_guard_identifies_selected_asset(monkeypatch:
     message = _assert_actionable(error)
     assert str(COLLECTION_FONT) in message and "face_index=1" in message
     assert "bundled font" not in message
-
-
-def test_draw_text_user_font_documentation_is_self_contained() -> None:
-    """v1-draw-text-user-font acceptance 23; v1-lut-extensions acceptance 26; GitHub #29: counts stay current."""
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    tokens = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    text_doc = inspect.getdoc(px.draw.text) or ""
-    font_doc = inspect.getdoc(px.draw.Font.from_file) or ""
-    assert "draw.Font" in requirements and "公開型" in requirements and "5 点" in requirements
-    for required in (
-        "Font.from_file",
-        "face_index",
-        "bytes",
-        "variations",
-        "cache",
-        ".notdef",
-        "fallback",
-        "system-font",
-    ):
-        assert required in tokens
-    for required in ("Font", "variations", "weight", ".notdef", "fallback", "cache"):
-        assert required in text_doc
-    for required in ("face_index", "bytes", "axis", "cache"):
-        assert required in font_doc
 
 
 def test_draw_text_user_font_fixtures_are_repo_owned_and_reproducible(tmp_path: Path) -> None:

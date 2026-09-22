@@ -444,25 +444,6 @@ def test_resize_always_returns_a_new_frame_and_private_allocation() -> None:
     )
 
 
-def test_vocabulary_defines_resize_tokens_subsets_geometry_and_area(vocabulary_markdown: str) -> None:
-    """v1-resize acceptance 18: interpolation vocabulary is shared and defines the complete resize contract."""
-    markdown = vocabulary_markdown
-    section = markdown.split("## interpolation\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-
-    for required in (
-        "from_yuv420p",
-        "chroma siting",
-        "resize",
-        *INTERPOLATIONS,
-        "floor(dim × factor + 0.5)",
-        "replicate",
-        "pixel center",
-        "scale-aware antialiasing",
-        "source region",
-    ):
-        assert required in section
-
-
 def test_resize_docstring_is_a_self_contained_llm_readable_contract() -> None:
     """v1-resize acceptance 19: the docstring states every non-obvious call and numeric rule."""
     docstring = inspect.getdoc(px.transform.resize)

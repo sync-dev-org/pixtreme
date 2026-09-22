@@ -789,6 +789,12 @@ values above 1.0.
 | `legal` | H.273 limited-range code positions, `video_full_range_flag = 0` | ITU-T H.273 | Y and limited-range RGB use the luma interval; Cb and Cr use the chroma interval |
 | `full` | Full-range values spanning the entire unsigned container, `video_full_range_flag = 1` | ITU-T H.273 | Normal state for float working; not stored as a Frame state token |
 
+At the named-format boundary the same two tokens select the H.273 mapping for the format's effective bit depth. P216
+(`px.io.from_p216` / `px.io.to_p216`) is fixed at `n = 16`: `legal` maps Y as `Y × 56064 + 4096` and Cb / Cr as
+`(C − 0.5) × 57344 + 32768`, so the legal chroma endpoints for Frame values 0 and 1 are 4096 and 61440; `full` maps
+every component as `value × 65535`. The input path applies the inverse affine without clipping, and the output path
+rounds half away from zero and clips only to the uint16 container `[0, 65535]`.
+
 OCIO RangeTransform is a general transform that remaps or clamps arbitrary input and output bounds, so it differs
 semantically from these range tokens. The pixtreme operations are limited to unclipped H.273 legal/full recovery.
 
@@ -814,16 +820,21 @@ float32; a `to_array` bit-depth conversion fixes its output dtype to the contain
 | Named format | `px.io.from_<format>` / `px.io.to_<format>` | Effective code bits carried by the format | Packing, subsampling, and container resolved by the format contract |
 | General array boundary | `px.io.from_array` / `px.io.to_array` | Effective code bits for an unsigned full-scale grid in a raw array | Composes orthogonally with layout, channel selection, and `out=` |
 
+P216 carries a fixed 16 effective bits and has no `bit_depth` argument: every uint16 word is a code with all 16 bits
+significant, with no shift, mask, or MSB alignment. `px.io.to_p216` quantizes to 16 effective bits regardless of the
+bit depth the signal originated from; 10- and 12-bit sources are not padded into the high bits.
+
 ## interpolation
 
 Interpolation tokens form the shared vocabulary for interpolation and resampling kernels. Every API fixes its accepted
 subset and coordinate rules.
 
-- `px.io.from_uyvy422`, `px.io.from_v210`, `px.io.from_nv12`, `px.io.from_p010`, `px.io.from_yuv420p`, and
-  `px.io.from_yuv422p` accept the first eight tokens in the table, excluding `area`; default `bilinear`.
+- `px.io.from_uyvy422`, `px.io.from_v210`, `px.io.from_nv12`, `px.io.from_p010`, `px.io.from_p216`,
+  `px.io.from_yuv420p`, and `px.io.from_yuv422p` accept the first eight tokens in the table, excluding `area`; default
+  `bilinear`.
 - Chroma upsampling on a `from_` path places chroma samples at the frame coordinates defined in chroma siting and
   evaluates filter weights from each luma-sample coordinate. Edges replicate the final chroma row or column.
-- `px.io.to_uyvy422`, `px.io.to_v210`, `px.io.to_nv12`, `px.io.to_p010`, `px.io.to_yuv420p`, and
+- `px.io.to_uyvy422`, `px.io.to_v210`, `px.io.to_nv12`, `px.io.to_p010`, `px.io.to_p216`, `px.io.to_yuv420p`, and
   `px.io.to_yuv422p` accept `nearest`, `bilinear`, `bicubic`, and `area`; default `area`.
 - Chroma downsampling on a `to_` path centers each output sample at the siting offset. Bilinear and bicubic use a
   scale-two reduction kernel; area averages coverage over the owned interval. Edges replicate.
@@ -841,9 +852,13 @@ subset and coordinate rules.
 - `px.color.apply_lut` chooses a subset by LUT type. A `Lut` accepts `trilinear` and `tetrahedral`, with default
   `tetrahedral`. A `Lut1D` accepts only `linear`, with default `linear`. `None` selects that type-specific default and
   never converts a token from the other subset.
+- A `Lut` carrying a shared shaper evaluates that first stage with fixed `linear` interpolation, then applies
+  `trilinear` or `tetrahedral` only to the cube stage. `preserve_shaper=True` on `px.io.read_lut` or
+  `px.io.decode_lut` retains a nonidentity `.3dl` shaper for this two-stage evaluation; the default still reads the
+  same-edge baked approximation.
 - Input RGB maps through the LUT's per-channel declared `domain` to grid or curve coordinates. Lookup coordinates
-  outside the domain are clamped to its edge. LUT output is not clipped; negative values and values above 1 are
-  returned unchanged.
+  outside the domain are clamped to its edge. A retained shaper output is clamped to the cube's 0..1 coordinates.
+  LUT output is not clipped; negative values and values above 1 are returned unchanged.
 
 Point-sampled `px.transform.resize` kernels share pixel-center alignment
 `src = (dst + 0.5) × (input / output) - 0.5` and edge replication. Channels are independent, and neither scene values
@@ -946,8 +961,10 @@ BT.2100 material that uses the standard position.
 | `bottomleft` | `(0, 1)` | H.273 type 4 | Co-sited with the left luma column and bottom luma row |
 | `bottom` | `(0.5, 1)` | H.273 type 5 | Horizontally centered and co-sited with the bottom luma row |
 
-4:2:2 (`px.io.from_uyvy422`, `px.io.from_v210`, and `px.io.from_yuv422p`) is fixed as horizontally co-sited and
-vertically full resolution, so it has no siting argument. 4:4:4 (`px.io.from_yuv444p` and `px.io.from_yuva444p`) has no
+4:2:2 (`px.io.from_uyvy422`, `px.io.from_v210`, `px.io.from_p216`, and `px.io.from_yuv422p`) is fixed as
+horizontally co-sited and vertically full resolution, so it has no siting argument. In P216 the chroma pair `k` of a row
+is centered at luma frame coordinate `(2k, y)` and represents luma pixels `2k` and `2k + 1` of that same row; no
+vertical filtering is applied on either path. 4:4:4 (`px.io.from_yuv444p` and `px.io.from_yuva444p`) has no
 subsampling and therefore has neither siting nor interpolation arguments.
 
 ## draw continuous coordinates
@@ -1249,7 +1266,7 @@ runtime input follows the shared normalization contract.
 
 ## from_<format> conventions
 
-The eight `px.io.from_<format>` functions resolve uint-code packing, subsampling, and range at input, returning a
+The nine `px.io.from_<format>` functions resolve uint-code packing, subsampling, and range at input, returning a
 C-contiguous float32 YCbCr444 Frame (`px.io.from_yuva444p` alone returns YCbCrA4444). Only `buf` is positional; width
 and height are required keyword-only arguments. The following are specification defaults for a boundary whose input
 buffer contains no metadata, not guaranteed truths about the material.
@@ -1261,7 +1278,7 @@ buffer contains no metadata, not guaranteed truths about the material.
 | matrix | `None` | Unknown provenance; an explicit per-call `matrix=` token is normalized and stamped as its canonical spelling |
 | channels | `("Y", "Cb", "Cr")` | Fixed channel order after format resolution |
 | range | `legal` | Default assumption for video-family YCbCr input; override per call with `range="full"` |
-| interpolation | `bilinear` | Default for the six subsampled formats; accepts the first eight interpolation tokens |
+| interpolation | `bilinear` | Default for the seven subsampled formats; accepts the first eight interpolation tokens |
 | siting | `left` | Present only on the three 4:2:0 formats; accepts the six chroma-siting tokens |
 
 `colorspace=`, `gamma=`, and `matrix=` are per-call metadata claims. Colorspace and gamma priority is
@@ -1288,6 +1305,7 @@ Packed and semiplanar formats use these conventions:
 | `v210` | uint32 | Six pixels in four words, with three 10-bit samples from the low bits of each word; rows align to 128 bytes, or 48 pixels, with zero padding |
 | `NV12` | uint8 | Y plane followed by an interleaved Cb Cr plane |
 | `P010` | uint16 | Same arrangement as NV12; 10-bit codes are MSB-aligned and the lower six bits are zero |
+| `P216` | uint16 | 4:2:2 semi-planar: a raster-order Y plane of `W × H` words followed by a chroma plane of `H` rows, each row interleaved as `Cb0 Cr0 Cb2 Cr2 …` (`W / 2` pairs); shape `(2 × W × H,)`; all 16 bits of every word are code; width must be even |
 
 `range="legal"` maps Y, Cb, and Cr to full-range float using the general H.273 formula for the bit depth and does not
 clip code headroom. `range="full"` uses `code / (2^n - 1)`. YUVA alpha always uses `code / (2^n - 1)` independently
@@ -1295,7 +1313,7 @@ of the range token.
 
 ## to_<format> conventions
 
-The eight `px.io.to_<format>` functions derive output dimensions from the width and height of the Frame passed as the
+The nine `px.io.to_<format>` functions derive output dimensions from the width and height of the Frame passed as the
 first positional argument, resolving packing, subsampling, and range in one CUDA pass. Input must be a float32 Frame
 with channels `("Y", "Cb", "Cr")`; only `px.io.to_yuva444p` accepts `("Y", "Cb", "Cr", "A")`. Convert RGB Frames
 explicitly with `px.color.rgb_to_ycbcr` before passing them.
@@ -1307,7 +1325,7 @@ row storage to 128 bytes.
 | Item | Specification default | Notes |
 |---|---|---|
 | range | `legal` | Also accepts `full`; legal placement preserves headroom codes without clipping to the legal interval |
-| interpolation | `area` | Default for the six subsampled formats; accepts nearest, bilinear, bicubic, and area |
+| interpolation | `area` | Default for the seven subsampled formats; accepts nearest, bilinear, bicubic, and area |
 | siting | `left` | Present only on the three 4:2:0 formats; accepts the six chroma-siting tokens |
 | rounding | Half away from zero | Nearest rounding from fp32 to code |
 | clipping | Container range only | Do not clip to the legal interval; clip only to physical `[0, 2^n - 1]` |
@@ -1324,6 +1342,7 @@ Planar `bit_depth`, container dtype, and plane order are symmetric with the inpu
 | `v210` | Fixed 10 | uint32 | Six pixels in four words; the function zero-fills 128-byte row padding |
 | `NV12` | Fixed 8 | uint8 | Y plane followed by an interleaved Cb Cr plane |
 | `P010` | Fixed 10 | uint16 | Same arrangement as NV12; MSB-aligned with the lower six bits zero |
+| `P216` | Fixed 16 | uint16 | 4:2:2 semi-planar: Y plane followed by an `H`-row interleaved Cb Cr plane; shape `(2 × W × H,)`; all 16 bits are code |
 
 Range mapping composes inversely with the input path. Legal range uses an extent of `219 × 2^(n-8)` for Y and
 `224 × 2^(n-8)` for Cb and Cr, with lower code `16 × 2^(n-8)`. Full range scales every component by `2^n - 1`.

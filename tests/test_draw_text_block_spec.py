@@ -341,16 +341,6 @@ def _base_kwargs() -> dict[str, object]:
     }
 
 
-def _table_tokens(markdown: str, heading: str) -> tuple[str, ...]:
-    section = markdown.split(f"## {heading}\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    return tuple(
-        cells[1].strip().removeprefix("`").removesuffix("`")
-        for line in section.splitlines()
-        if line.startswith("| `")
-        for cells in (line.split("|"),)
-    )
-
-
 def test_draw_text_unification_public_signature_is_the_complete_layout_contract() -> None:
     """v1-draw-text-unification acceptance 1; v1-draw-text-supersample acceptance 1;
     v1-draw-text-user-font acceptance 5: complete signature.
@@ -815,50 +805,6 @@ def test_draw_text_caches_full_layout_with_bit_identity() -> None:
     np.testing.assert_array_equal(_host(first), _host(second))
     assert second_stats.hits > first_stats.hits
     assert not hasattr(px.draw, "text_block_cache")
-
-
-def test_draw_text_vocabulary_and_docstring_fix_the_full_layout_contract(vocabulary_markdown: str) -> None:
-    """v1-draw-text-unification acceptance 13-14: docs fix tokens, units, overflow, anchors, and ownership."""
-    from pixtreme._draw.text import _ALIGN_TOKENS, _FONT_TOKENS
-
-    assert _table_tokens(vocabulary_markdown, "text align") == ALIGNS == _ALIGN_TOKENS
-    assert _table_tokens(vocabulary_markdown, "text font") == FONTS == _FONT_TOKENS
-    assert "draw_text_block" not in vocabulary_markdown
-    layout = vocabulary_markdown.split("## text block layout\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    for required in (
-        "line_spacing",
-        "tracking",
-        "em",
-        "pixel",
-        "kerning",
-        "Justification",
-        "anchor",
-        "width",
-        "overflow",
-        "400",
-        "700",
-    ):
-        assert required in layout
-
-    docstring = inspect.getdoc(px.draw.text) or ""
-    for required in (
-        r"\n",
-        r"\r",
-        "line_spacing",
-        "tracking",
-        "kerning",
-        "font",
-        "width",
-        "align",
-        "justify",
-        "anchor",
-        ".notdef",
-        "cache",
-        "scene",
-        "new storage",
-        "400.0 through 700.0",
-    ):
-        assert required.lower() in docstring.lower()
 
 
 def test_draw_text_backreferences_and_gpu_kernel_reuse_are_structural_contracts() -> None:

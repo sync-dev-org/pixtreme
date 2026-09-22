@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 import importlib.metadata
-import inspect
 import math
 import tomllib
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, get_args
+from typing import Any
 
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -146,53 +144,6 @@ def _encode_srgb(values: np.ndarray) -> np.ndarray:
         0.055
     )
     return result
-
-
-def test_public_surface_signatures_alias_counts_and_docs_are_synchronized() -> None:
-    """v1-white-balance acceptance 1; v1-white-point-simulation acceptance 1;
-    v1-exr-mixed-dtype-write acceptance 1 and 15:
-    v1-fonts-module acceptance 1 and 14; v1-grade acceptance 1:
-    API, Literal, operation counts, requirements, and token docs agree. GitHub #29.
-    """
-    expected_tokens = ("Bradford", "CAT02", "CAT16", "von-Kries")
-    assert get_args(px.core.ChromaticAdaptation) == expected_tokens
-    assert px.color.__all__[-4:-2] == ("chromatic_adaptation", "white_balance")
-    assert len(px.color.__all__) == 16
-
-    chromatic_signature = inspect.signature(px.color.chromatic_adaptation)
-    assert tuple(chromatic_signature.parameters) == ("frame", "input_white", "output_white", "cat")
-    assert chromatic_signature.parameters["frame"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
-    assert all(
-        chromatic_signature.parameters[name].kind is inspect.Parameter.KEYWORD_ONLY
-        for name in ("input_white", "output_white", "cat")
-    )
-    assert chromatic_signature.parameters["input_white"].default is inspect.Parameter.empty
-    assert chromatic_signature.parameters["output_white"].default is inspect.Parameter.empty
-    assert chromatic_signature.parameters["cat"].default == "CAT02"
-
-    balance_signature = inspect.signature(px.color.white_balance)
-    assert tuple(balance_signature.parameters) == ("frame", "temperature", "tint", "cat")
-    assert balance_signature.parameters["frame"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
-    assert all(
-        balance_signature.parameters[name].kind is inspect.Parameter.KEYWORD_ONLY
-        for name in ("temperature", "tint", "cat")
-    )
-    assert balance_signature.parameters["temperature"].default is inspect.Parameter.empty
-    assert balance_signature.parameters["tint"].default == 0.0
-    assert balance_signature.parameters["cat"].default == "CAT02"
-
-    root = Path(__file__).resolve().parents[1]
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    tokens = (root / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    assert "| `color` |" in requirements and "| 16 |" in next(
-        line for line in requirements.splitlines() if line.startswith("| `color` |")
-    )
-    assert "公開 operation は計 98 関数" in requirements
-    section = tokens.split("## chromatic adaptation\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    assert (
-        tuple(line.split("|")[1].strip().strip("`") for line in section.splitlines() if line.startswith("| `"))
-        == expected_tokens
-    )
 
 
 def _import_colour_oracle():

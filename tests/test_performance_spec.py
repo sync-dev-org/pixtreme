@@ -11,6 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 from statistics import fmean, median
 from time import perf_counter
+from types import SimpleNamespace
 
 import cupy as cp
 import exr_phase4_gate as phase4_gate
@@ -89,6 +90,7 @@ _PUBLIC_GPU_PIXEL_FUNCTIONS = frozenset(
         "to_v210",
         "to_nv12",
         "to_p010",
+        "to_p216",
         "to_yuv420p",
         "to_yuv422p",
         "to_yuv444p",
@@ -161,6 +163,7 @@ _PUBLIC_GPU_PIXEL_FUNCTIONS = frozenset(
         "from_v210",
         "from_nv12",
         "from_p010",
+        "from_p216",
         "from_yuv420p",
         "from_yuv422p",
         "from_yuv444p",
@@ -217,6 +220,8 @@ class _Inputs:
     analysis_template: px.core.Frame
     lut: px.core.Lut
     lut1d: px.core.Lut1D
+    lut_shaped: px.core.Lut
+    lut_shaper_baked: px.core.Lut
     stack_frames: tuple[px.core.Frame, ...]
     shuffle_reorder_outputs: dict[str, tuple[px.core.Frame, str] | float]
     shuffle_multi_outputs: dict[str, tuple[px.core.Frame, str] | float]
@@ -286,6 +291,7 @@ class _Inputs:
     v210: cp.ndarray
     nv12: cp.ndarray
     p010: cp.ndarray
+    p216: cp.ndarray
     yuv420p: cp.ndarray
     yuv422p10: cp.ndarray
     yuv444p: cp.ndarray
@@ -1378,6 +1384,15 @@ _TRANSFORM_BOUNDARY_CASES = (
         + _FHD_FP32_RGB_BYTES,
     ),
     _case(
+        "from-p216",
+        "from_p216",
+        "FHD 16-bit legal, interpolation=bilinear",
+        lambda *args, **kwargs: px.io.from_p216(*args, **kwargs),
+        input_attribute="p216",
+        kwargs={"width": _WIDTH, "height": _HEIGHT, "range": "legal", "interpolation": "bilinear"},
+        transferred_bytes=_WIDTH * _HEIGHT * 4 + _FHD_FP32_RGB_BYTES,
+    ),
+    _case(
         "from-yuv420p",
         "from_yuv420p",
         "legal range, interpolation=bilinear",
@@ -1416,6 +1431,35 @@ _TRANSFORM_BOUNDARY_CASES = (
     ),
 )
 
+_LUT_SHAPER_CASES = (
+    _case(
+        "lut-transform-shaper-baked",
+        "apply_lut",
+        "FHD fp32 RGB, 65^3 baked LUT, interpolation=None",
+        px.color.apply_lut,
+        kwargs={"interpolation": None},
+        fixture_kwargs={"lut": "lut_shaper_baked"},
+    ),
+    _case(
+        "lut-transform-shaper-preserved",
+        "apply_lut",
+        "FHD fp32 RGB, 65^3 LUT, 65-sample nonidentity shaper, interpolation=None",
+        px.color.apply_lut,
+        kwargs={"interpolation": None},
+        fixture_kwargs={"lut": "lut_shaped"},
+    ),
+)
+
+
+def _lut_shaper_pair() -> tuple[px.core.Lut, px.core.Lut]:
+    """AC-11-12: same-edge identity cube with log shaper and its exact node bake."""
+    axis = np.linspace(0, 1, _LUT_SIZE, dtype=np.float32)
+    shaper = (np.log1p(50 * axis.astype(np.float64)) / np.log1p(50)).astype(np.float32)
+    cube = np.stack(np.meshgrid(axis, axis, axis, indexing="ij"), axis=-1)
+    baked = np.stack(np.meshgrid(shaper, shaper, shaper, indexing="ij"), axis=-1)
+    return px.core.Lut(cp.asarray(cube), shaper=cp.asarray(shaper)), px.core.Lut(cp.asarray(baked))
+
+
 _LUT_CASES = (
     _case(
         "lut-transform-trilinear",
@@ -1441,6 +1485,7 @@ _LUT_CASES = (
         kwargs={"interpolation": "linear"},
         fixture_kwargs={"lut": "lut1d"},
     ),
+    *_LUT_SHAPER_CASES,
 )
 
 _TO_FORMAT_CASES = (
@@ -1479,6 +1524,15 @@ _TO_FORMAT_CASES = (
         input_attribute="ycbcr_frame",
         kwargs={},
         transferred_bytes=_FHD_FP32_RGB_BYTES + _WIDTH * _HEIGHT * 3 * np.dtype(np.uint16).itemsize // 2,
+    ),
+    _case(
+        "to-p216",
+        "to_p216",
+        "FHD 16-bit area, legal",
+        lambda *args, **kwargs: px.io.to_p216(*args, **kwargs),
+        input_attribute="ycbcr_frame",
+        kwargs={"range": "legal", "interpolation": "area"},
+        transferred_bytes=_FHD_FP32_RGB_BYTES + _WIDTH * _HEIGHT * 4,
     ),
     _case(
         "to-yuv420p",
@@ -2369,6 +2423,7 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
     assert isinstance(lut, px.core.Lut)
     lut1d = px.io.read_lut(read_lut_cube1d_path)
     assert isinstance(lut1d, px.core.Lut1D)
+    lut_shaped, lut_shaper_baked = _lut_shaper_pair()
     decode_lut_cube1d = read_lut_cube1d_path.read_bytes()
     decode_lut_cube3d = read_lut_path.read_bytes()
     decode_lut_3dl = read_lut_3dl_path.read_bytes()
@@ -2394,6 +2449,8 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
         analysis_template=analysis_template,
         lut=lut,
         lut1d=lut1d,
+        lut_shaped=lut_shaped,
+        lut_shaper_baked=lut_shaper_baked,
         stack_frames=(frame, assemble_source),
         shuffle_reorder_outputs=shuffle_reorder_outputs,
         shuffle_multi_outputs=shuffle_multi_outputs,
@@ -2471,6 +2528,7 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
         vector_32=_uniform_vector(32.0),
         vector_128=_uniform_vector(128.0),
         vector_rotation_32=_rotation_vector(),
+        p216=generator.integers(0, 65536, size=pixel_count * 2, dtype=cp.uint16),
     )
 
 
@@ -2478,7 +2536,7 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
 def test_performance_registry_covers_every_public_gpu_pixel_operation() -> None:
     """REQ-TEST-010; v1-color-semantics acceptance 37; v1-white-balance acceptance 14;
     v1-white-point-simulation acceptance 14; v1-exr-mixed-dtype-write acceptance 18;
-    v1-fonts-module acceptance 1-2:
+    v1-fonts-module acceptance 1-2; v1-p216-wire-format acceptance 15:
     registry classifies every public GPU pixel and boundary operation.
     """
     exported_functions = {
@@ -2771,11 +2829,43 @@ def test_performance_registry_includes_both_histogram_equalization_cases() -> No
 
 @pytest.mark.performance
 def test_performance_registry_includes_representative_to_format_cases() -> None:
-    """v1-public-namespace acceptance 15: registry covers every wire-format export function."""
+    """v1-public-namespace acceptance 15; v1-p216-wire-format acceptance 15: registry covers all nine wire exports."""
     assert {case.target for case in _TO_FORMAT_CASES} == {
-        f"to_{name}" for name in ("uyvy422", "v210", "nv12", "p010", "yuv420p", "yuv422p", "yuv444p", "yuva444p")
+        f"to_{name}"
+        for name in ("uyvy422", "v210", "nv12", "p010", "p216", "yuv420p", "yuv422p", "yuv444p", "yuva444p")
     }
     assert all(case.transferred_bytes is not None for case in _TO_FORMAT_CASES)
+
+
+def test_p216_registry_cases_bind_fhd_public_calls_and_record_storage_traffic() -> None:
+    """v1-p216-wire-format acceptance 15: non-timing contract executes both registered FHD paths once.
+
+    No performance threshold or measurement loop: verify delayed public dispatch, fixture,
+    legal/filter parameters and transferred bytes without invoking the performance suite.
+    """
+    cases = tuple(case for case in _PERFORMANCE_CASES if case.target in {"from_p216", "to_p216"})
+    assert [(case.case_id, case.target, case.input_attribute) for case in cases] == [
+        ("from-p216", "from_p216", "p216"),
+        ("to-p216", "to_p216", "ycbcr_frame"),
+    ]
+    assert (_WIDTH, _HEIGHT) == (1920, 1080)
+    assert dict(cases[0].kwargs) == {"width": 1920, "height": 1080, "range": "legal", "interpolation": "bilinear"}
+    assert dict(cases[1].kwargs) == {"range": "legal", "interpolation": "area"}
+    assert all(case.transferred_bytes == 16 * 1920 * 1080 for case in cases)
+    assert {case.target for case in cases} <= _PUBLIC_GPU_PIXEL_FUNCTIONS
+    inputs = SimpleNamespace(
+        p216=cp.full(2 * 1920 * 1080, 4096, dtype=cp.uint16),
+        ycbcr_frame=px.core.Frame(
+            data=cp.zeros((1080, 1920, 3), dtype=cp.float32), colorspace="Rec.709", gamma="Rec.709", channels="YCbCr"
+        ),
+    )
+    decoded = cases[0].bind(inputs)()
+    assert isinstance(decoded, px.core.Frame) and decoded.shape == (1080, 1920, 3)
+    assert decoded.dtype == cp.float32 and decoded.channels == ("Y", "Cb", "Cr")
+    cp.testing.assert_allclose(decoded.data, 0, rtol=0, atol=2e-7)
+    encoded = cases[1].bind(inputs)()
+    assert isinstance(encoded, cp.ndarray) and encoded.shape == (2 * 1920 * 1080,) and encoded.dtype == cp.uint16
+    cp.testing.assert_array_equal(encoded, 4096)
 
 
 @pytest.mark.performance
@@ -3532,11 +3622,15 @@ def test_performance_registry_includes_dpx_file_boundary_cases() -> None:
 
 @pytest.mark.performance
 def test_performance_registry_includes_both_lut_interpolation_tokens() -> None:
-    """v1-lut acceptance 18; v1-lut-extensions acceptance 29: registry covers 3D and 1D LUT application."""
+    """v1-lut acceptance 18; v1-lut-extensions acceptance 29; v1-lut-shaper acceptance 12:
+    registry covers 3D, 1D and the shaped/baked comparison pair.
+    """
     assert [(case.case_id, case.target, dict(case.kwargs), dict(case.fixture_kwargs)) for case in _LUT_CASES] == [
         ("lut-transform-trilinear", "apply_lut", {"interpolation": "trilinear"}, {"lut": "lut"}),
         ("lut-transform-tetrahedral", "apply_lut", {"interpolation": "tetrahedral"}, {"lut": "lut"}),
         ("lut-transform-linear-1d", "apply_lut", {"interpolation": "linear"}, {"lut": "lut1d"}),
+        ("lut-transform-shaper-baked", "apply_lut", {"interpolation": None}, {"lut": "lut_shaper_baked"}),
+        ("lut-transform-shaper-preserved", "apply_lut", {"interpolation": None}, {"lut": "lut_shaped"}),
     ]
 
 
@@ -3961,24 +4055,52 @@ def test_performance_metrics_include_linear_percentiles_and_median_fps() -> None
     assert metrics.p95_ms == pytest.approx(4.8)
 
 
+@pytest.fixture(scope="session")
+def lut_shaper_timings(performance_inputs: _Inputs) -> dict[str, list[float]]:
+    """Share one same-process/device measurement pair between the report and ratio gate."""
+    synchronize = cp.cuda.Device().synchronize
+    timings = {}
+    for case in _LUT_SHAPER_CASES:
+        operation = case.bind(performance_inputs)
+        _run_warmup(operation, synchronize, minimum_seconds=_WARMUP_MINIMUM_SECONDS)
+        timings[case.case_id] = _measure_durations_ms(
+            operation,
+            synchronize,
+            minimum_frames=case.minimum_frames,
+            minimum_seconds=case.minimum_seconds,
+        )
+    return timings
+
+
+@pytest.mark.performance
+def test_lut_shaper_same_run_median_ratio(lut_shaper_timings: dict[str, list[float]]) -> None:
+    """v1-lut-shaper acceptance 12: the added shared linear lookup has a 25% median duration budget."""
+    baked, shaped = (median(lut_shaper_timings[case.case_id]) for case in _LUT_SHAPER_CASES)
+    assert shaped / baked <= 1.25, f"shaper/baked={shaped / baked:.6f}; shaped={shaped:.6f} ms; baked={baked:.6f} ms"
+
+
 @pytest.mark.performance
 @pytest.mark.parametrize("case", _PERFORMANCE_CASES, ids=lambda case: case.case_id)
 def test_fhd_steady_state_performance_report(
     case: _PerformanceCase,
     performance_inputs: _Inputs,
     performance_results: list[tuple[str, str, float, float, float, float, float, float]],
+    request: pytest.FixtureRequest,
 ) -> None:
-    """REQ-TEST-010: report FHD timing and dispersion after excluded time-based warmup."""
+    """REQ-TEST-010; v1-lut-shaper acceptance 12: report FHD timing and dispersion after excluded warmup."""
     operation = case.bind(performance_inputs)
     synchronize = cp.cuda.Device().synchronize
 
-    _run_warmup(operation, synchronize, minimum_seconds=_WARMUP_MINIMUM_SECONDS)
-    durations_ms = _measure_durations_ms(
-        operation,
-        synchronize,
-        minimum_frames=case.minimum_frames,
-        minimum_seconds=case.minimum_seconds,
-    )
+    if case in _LUT_SHAPER_CASES:
+        durations_ms = request.getfixturevalue("lut_shaper_timings")[case.case_id]
+    else:
+        _run_warmup(operation, synchronize, minimum_seconds=_WARMUP_MINIMUM_SECONDS)
+        durations_ms = _measure_durations_ms(
+            operation,
+            synchronize,
+            minimum_frames=case.minimum_frames,
+            minimum_seconds=case.minimum_seconds,
+        )
 
     metrics = _performance_metrics(durations_ms)
     effective_gbps = case.transferred_bytes / (metrics.median_ms * 1_000_000.0)

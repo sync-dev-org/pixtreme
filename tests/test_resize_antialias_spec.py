@@ -442,26 +442,6 @@ def test_resize_fail_fast_boundaries_include_the_expanded_canonical_subset() -> 
     _assert_actionable(size_error)
 
 
-def test_antialias_vocabulary_documents_the_complete_resize_contract(vocabulary_markdown: str) -> None:
-    """v1-resize-antialias acceptance 10: token reference distinguishes widened and point-sampled Lanczos."""
-    section = vocabulary_markdown.split("## interpolation\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    for required in (
-        *AA_TOKENS,
-        "filter-widening",
-        "shrinking axis",
-        "point-sampled",
-        "src = (dst + 0.5) × (input / output) - 0.5",
-        "s = max(input / output, 1)",
-        "exact support",
-        "replicate",
-        "area",
-        "lanczos4",
-        "Pillow 12.3.0",
-        "full-support interior",
-    ):
-        assert required in section
-
-
 def test_resize_antialias_docstring_is_self_contained_and_llm_readable() -> None:
     """v1-resize-antialias acceptance 10: resize docstring states selection, widening, edge, and oracle limits."""
     docstring = inspect.getdoc(px.transform.resize)

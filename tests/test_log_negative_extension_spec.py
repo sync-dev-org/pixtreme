@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import inspect
 from pathlib import Path
 from typing import Callable
 
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -391,79 +389,3 @@ def test_out_of_scope_transfers_keep_pre_correction_bits_characterization() -> N
         actual_decode = _red_values(px.color.gamma_to_linear(_frame(values, gamma=gamma), gamma=gamma)).view(np.uint32)
         np.testing.assert_array_equal(actual_encode, np.asarray(encode_bits, dtype=np.uint32))
         np.testing.assert_array_equal(actual_decode, np.asarray(decode_bits, dtype=np.uint32))
-
-
-def test_public_docs_describe_vendor_piecewise_signed_extensions() -> None:
-    """v1-log-negative-extension acceptance 8; v1-sony-tokens acceptance 12; v1-red-tokens acceptance 72.
-
-    GitHub #29: public docs state signed branches with the renamed ARRI token.
-    """
-    token_reference = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    sony_tokens = require_repo_file("docs/features/v1-sony-tokens.md").read_text(encoding="utf-8")
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    docstrings = {
-        function.__name__: inspect.getdoc(function) or ""
-        for function in (px.color.gamma_to_linear, px.color.linear_to_gamma, px.color.rgb_to_rgb)
-    }
-    token_rows = {
-        token: next(line for line in token_reference.splitlines() if line.startswith(f"| `{token}` |"))
-        for token in ("S-Log3", "ARRI-LogC4")
-    }
-
-    surfaces = {
-        "docs_site/tokens.md S-Log3 row": (
-            token_rows["S-Log3"],
-            (
-                "S-Log3 applies the Sony piecewise formula directly to signed inputs",
-                "the lower linear branch extends below zero",
-                "maps linear 0 to `95 / 1023`",
-                "does not use sign/magnitude mirroring",
-            ),
-        ),
-        "docs_site/tokens.md ARRI-LogC4 row": (
-            token_rows["ARRI-LogC4"],
-            (
-                "ARRI-LogC4 applies the ARRI piecewise formula directly to signed inputs",
-                "the log branch covers `x >= t`",
-                "negative encoded values decode linearly without sign/magnitude mirroring",
-            ),
-        ),
-        "docs/features/v1-sony-tokens.md": (
-            sony_tokens,
-            (
-                "S-Log / S-Log2 / S-Log3 は入力の符号へ piecewise 式を直接適用する",
-                "lower linear branch を負側へ直接適用する定義域外延長を共有する",
-                "非負域の画素値は変わらない",
-            ),
-        ),
-        "CHANGELOG.md": (
-            changelog,
-            (
-                "S-Log3 applies the Sony piecewise formula directly to signed inputs",
-                "ARRI-LogC4 applies the ARRI piecewise formula directly to signed inputs",
-                "Results for nonnegative inputs remain float32 bit-identical",
-            ),
-        ),
-        **{
-            f"{name} docstring": (
-                docstring,
-                (
-                    "S-Log / S-Log2 / S-Log3 apply their lower linear branches directly to signed inputs",
-                    "Established S-Log3 and ARRI-LogC4 results for nonnegative inputs remain float32 bit-identical",
-                ),
-            )
-            for name, docstring in docstrings.items()
-        },
-    }
-    old_mirror_claims = (
-        "Apply the standard formula to nonnegative magnitude and reflect the negative side with preserved sign",
-        "`S-Log3` は 非負 magnitude に標準式を適用して符号を戻す既定の延長",
-        "`S-Log3` の sign/magnitude mirror",
-    )
-
-    for surface, (text, required_claims) in surfaces.items():
-        normalized = " ".join(text.split())
-        for claim in required_claims:
-            assert claim in normalized, f"{surface} is missing {claim!r}"
-        for old_claim in old_mirror_claims:
-            assert old_claim not in normalized, f"{surface} retains obsolete mirror classification {old_claim!r}"

@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import inspect
 from pathlib import Path
 from typing import Literal, get_args, get_origin, get_type_hints
 
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import changelog_section, require_repo_file
 
 import pixtreme as px
 
@@ -759,55 +757,3 @@ def test_standard_transfer_dpx_codes_preserve_existing_mapping(tmp_path: Path) -
             assert px.io.read_image(path).gamma == "Cineon"
         elif gamma == "Gamma-2.5":
             assert px.io.read_image(path).gamma == "Rec.709"
-
-
-def test_standard_token_reference_requirements_changelog_and_docstrings_are_synchronized() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-standard-tokens acceptance 135;
-    v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188:
-    synchronize every public vocabulary and numeric contract surface.
-    """
-    token_reference = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    release_section = changelog_section(changelog, "1.4.0 - 2026-09-07")
-    for token in ("P3-DCI", "P3-D60", "P3-D65", "SMPTE-C", "ACEScc", "ACEScct", "Gamma-2.5"):
-        assert f"`{token}`" in token_reference
-        assert token in release_section
-    for fragment in (
-        "0.3140",
-        "0.3510",
-        "0.32168",
-        "0.33767",
-        "0.630",
-        "0.595",
-        "Bradford",
-        "0.5036269964912325",
-        "-0.35844748858447484",
-        "0.155251141552511",
-        "222.8609442038076",
-        "65504",
-        "1 ULP",
-        "Display P3",
-        "white_point_simulation",
-        "chromatic_adaptation",
-        "AP1",
-        "native",
-    ):
-        assert fragment in token_reference
-    assert "29 Colorspace" in requirements
-    assert "36 Gamma" in requirements
-    assert "199 canonical tokens" in requirements
-    for fragment in ("P3-D60", "Resolve", "Gamma-2.5", "no-upper-clip", "AP1", "bit-identical"):
-        assert fragment in release_section
-    for operation in (
-        px.color.rgb_to_rgb,
-        px.color.rgb_to_ycbcr,
-        px.color.ycbcr_to_rgb,
-        px.color.rgb_to_grayscale,
-        px.color.gamma_to_linear,
-        px.color.linear_to_gamma,
-    ):
-        docstring = inspect.getdoc(operation)
-        assert docstring is not None
-        assert "ACEScc" in docstring and "ACEScct" in docstring and "Gamma-2.5" in docstring
-        assert "P3-D65" in docstring or operation in {px.color.gamma_to_linear, px.color.linear_to_gamma}

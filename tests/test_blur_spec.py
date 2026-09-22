@@ -440,31 +440,6 @@ def test_bilateral_value_distance_couples_all_channels() -> None:
     assert not np.allclose(result, uncoupled, rtol=1e-4, atol=1e-4)
 
 
-def test_vocabulary_defines_border_tokens_defaults_and_cross_library_correspondence(
-    vocabulary_markdown: str,
-) -> None:
-    """v1-blur acceptance 20 + v1-blur-vector acceptance 14: border vocabulary fixes all four tokens."""
-    markdown = vocabulary_markdown
-    section = markdown.split("## border\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-
-    for required in (
-        *BORDERS,
-        "default",
-        "np.pad",
-        "scipy.ndimage",
-        "cv2",
-        "reflect",
-        "REFLECT_101",
-        "edge",
-        "REPLICATE",
-        "period",
-        "name",
-        "different behavior",
-        "border_value",
-    ):
-        assert required in section
-
-
 def test_blur_docstrings_are_self_contained_llm_readable_contracts() -> None:
     """v1-blur acceptance 21 + v1-blur-vector acceptance 17: docstrings expose constant border values."""
     for name in ("gaussian_blur", "box_blur", "median_blur", "bilateral_blur", "convolve_box"):

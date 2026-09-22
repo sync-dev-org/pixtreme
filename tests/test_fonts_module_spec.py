@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import get_args
 
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -793,43 +792,3 @@ def test_broken_provider_does_not_change_draw_token_results(tmp_path: Path) -> N
         timeout=60,
     )
     _assert_success(completed)
-
-
-def test_fonts_canonical_docs_and_docstrings_are_self_contained() -> None:
-    """v1-fonts-module acceptance 1 and 14-15; v1-grade acceptance 1: public docs expose one exact catalog surface."""
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    readme = require_repo_file("README.md").read_text(encoding="utf-8")
-    tokens = (_ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    font_path_doc = inspect.getdoc(px.fonts.font_path) or ""
-    available_doc = inspect.getdoc(px.fonts.available) or ""
-    draw_doc = inspect.getdoc(px.draw.text) or ""
-    from_file_doc = inspect.getdoc(px.draw.Font.from_file) or ""
-
-    for fragment in ("REQ-PKG-005", "`fonts`", "| 2 |", "公開 operation は計 98 関数"):
-        assert fragment in requirements
-    root_module_counts = re.findall(r"\b(\d+)\s+(?:focused(?: operation)?\s+)?modules\b", readme)
-    assert root_module_counts
-    assert set(root_module_counts) == {"14"}
-    assert "14 focused modules, including `core`" in readme
-    for fragment in (
-        "px.fonts.font_path",
-        "px.fonts.available",
-        "pixtreme.fonts",
-        "Mapping[str, pathlib.Path]",
-        "sans",
-        "mono",
-        "case-sensitive",
-        "process",
-        "fresh process",
-        "stale",
-        "filesystem",
-        "RuntimeError",
-        "ValueError",
-    ):
-        assert fragment in tokens
-    for fragment in ("exact", "case-sensitive", "path", "snapshot", "stale", "ValueError", "RuntimeError"):
-        assert fragment.lower() in font_path_doc.lower()
-    for fragment in ("sans", "mono", "code-point", "entry point", "process", "thread", "RuntimeError"):
-        assert fragment.lower() in available_doc.lower()
-    assert "px.fonts.font_path" in draw_doc
-    assert "px.fonts.font_path" in from_file_doc

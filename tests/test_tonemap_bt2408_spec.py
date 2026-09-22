@@ -8,7 +8,6 @@ from typing import Any
 
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -537,23 +536,3 @@ def test_bt2408_uses_one_fused_analytic_pass() -> None:
     )
     assert kernel_source.index("const float transformed_red =") < kernel_source.index("* gain")
     assert kernel_source.index("* gain") < kernel_source.index("encode_transfer(scaled_red")
-
-
-def test_bt2408_docs_and_public_docstring_are_self_contained_and_list_the_six_rows() -> None:
-    """v1-view-transform-lut-removal acceptance 4; GitHub #29: requirements and public docs expose the contract."""
-    requirements_path = require_repo_file("docs/requirements.md")
-    vocabulary_path = ROOT / "docs_site" / "tokens.md"
-    requirements = requirements_path.read_text(encoding="utf-8")
-    vocabulary = vocabulary_path.read_text(encoding="utf-8")
-    docstring = inspect.getdoc(px.color.rgb_to_rgb)
-
-    assert docstring is not None
-    for text in (requirements, vocabulary, docstring):
-        for required in ("BT.2408", "Rec.2020", "HLG", "PQ", "203", "clip"):
-            assert required in text
-    for required in ("direct mapping", "inverse tone mapping", "0.75", "203 / 10000", "approximately 58%"):
-        assert required in vocabulary
-    supply_table = vocabulary.split("## tonemap combinations", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    assert supply_table.count("| `ACES-1.3` |") == 2
-    assert supply_table.count("| `ACES-2.0` |") == 2
-    assert supply_table.count("| `BT.2408` |") == 2

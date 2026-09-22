@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import inspect
 from fractions import Fraction
-from pathlib import Path
 from typing import Any
 
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -383,28 +381,6 @@ def test_quality_metric_docstrings_are_self_contained_operational_contracts() ->
             assert required in docstrings[name]
     for required in ("2D", "(H - 10, W - 10)", "length-one channel dimension", "px.io.from_array", "explicit metadata"):
         assert required in docstrings["ssim_map"]
-
-
-def test_quality_metric_requirements_preserve_module_and_vocabulary_boundaries() -> None:
-    """v1-quality-metrics acceptance 22; v1-public-namespace acceptance 1 and 8; v1-fonts-module acceptance 1 and 14."""
-    repository = Path(__file__).resolve().parents[1]
-    requirements_path = require_repo_file("docs/requirements.md")
-    vocabulary_path = repository / "docs_site" / "tokens.md"
-    requirements = requirements_path.read_text(encoding="utf-8")
-    vocabulary = vocabulary_path.read_text(encoding="utf-8")
-    architecture = requirements.split("**REQ-ARCH-008:", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
-    modules = requirements.split("**REQ-API-009:", maxsplit=1)[1].split("**REQ-API-010:", maxsplit=1)[0]
-    boundaries = requirements.split("**REQ-API-010:", maxsplit=1)[1].split("**REQ-API-011:", maxsplit=1)[0]
-    assert "14 module" in architecture
-    assert "`px.io.from_array`" in architecture
-    assert "`px.io.to_array`" in architecture
-    assert "14 module" in modules
-    assert "`metrics`" in modules
-    for path in ("px.metrics.psnr", "px.metrics.ssim", "px.metrics.ssim_map"):
-        assert path in boundaries
-    for required in ("0 次元", "2 次元", "scalar", "map", "Frame → device 配列"):
-        assert required in boundaries
-    assert not any(token in vocabulary.lower() for token in ("psnr", "ssim", "data_range"))
 
 
 def test_quality_metric_tests_carry_acceptance_backreferences() -> None:

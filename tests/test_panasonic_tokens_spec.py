@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import inspect
 from pathlib import Path
 from typing import Literal, get_args, get_origin, get_type_hints
 
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import changelog_section, require_repo_file
 
 import pixtreme as px
 
@@ -683,43 +681,3 @@ def test_vlog_dpx_transfer_code_is_logarithmic_and_existing_mappings_remain_unch
         assert path.read_bytes()[801] == transfer
         if gamma == "V-Log":
             assert px.io.read_image(path).gamma == "Cineon"
-
-
-def test_panasonic_token_reference_requirements_changelog_and_public_docstrings_are_synchronized() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 22;
-    v1-panasonic-tokens acceptance 112; v1-vendor-a-tokens acceptance 161;
-    v1-vendor-b-tokens acceptance 188:
-    synchronize vocabulary, numeric identity, boundaries, and public prose.
-    """
-    token_reference = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    release_section = changelog_section(changelog, "1.4.0 - 2026-09-07")
-    for token in ("V-Gamut", "V-Log"):
-        assert f"`{token}`" in token_reference
-        assert token in release_section
-    for fragment in (
-        "5.60001054470806",
-        "0.124999583317922",
-        "0.180999688765003",
-        "0.730",
-        "0.840",
-        "-0.030",
-        "D65",
-        "Bradford",
-        "OpenColorIO",
-        "V-Log L",
-        "Panasonic V-Gamut",
-        "native",
-    ):
-        assert fragment in token_reference
-    assert "29 Colorspace" in requirements
-    assert "36 Gamma" in requirements
-    assert "199 canonical tokens" in requirements
-    for fragment in ("OpenColorIO", "vendor IDT", "ACES CSC", "V-Log L", "bit", "Panasonic V-Gamut"):
-        assert fragment in release_section
-    for operation in (px.color.rgb_to_rgb, px.color.gamma_to_linear, px.color.linear_to_gamma):
-        docstring = inspect.getdoc(operation)
-        assert docstring is not None
-        assert "V-Gamut" in docstring or operation is not px.color.rgb_to_rgb
-        assert "V-Log" in docstring

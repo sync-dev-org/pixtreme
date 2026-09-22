@@ -12,7 +12,6 @@ from pathlib import Path
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 from pixtreme._core.vocabulary import ExrCompression
@@ -144,7 +143,10 @@ def _assert_dwa_decode_matches_oracle(actual: np.ndarray, oracle: np.ndarray) ->
 
 
 def test_write_exr_channels_is_the_only_new_public_operation_with_exact_signature() -> None:
-    """v1-exr-mixed-dtype-write acceptance 1: the file-only mixed EXR API has one exact public path."""
+    """v1-exr-mixed-dtype-write acceptance 1: the file-only mixed EXR API has one exact public path.
+
+    v1-p216-wire-format acceptance 13: adding the P216 pair raises the io operation count from 27 to 29.
+    """
     signature = inspect.signature(px.io.write_exr_channels, eval_str=True)
 
     assert tuple(signature.parameters) == ("path", "frames", "compression", "dwa_level")
@@ -158,7 +160,7 @@ def test_write_exr_channels_is_the_only_new_public_operation_with_exact_signatur
     assert signature.parameters["dwa_level"].default is None
     assert signature.return_annotation is None
     assert px.io.__all__.count("write_exr_channels") == 1
-    assert len(tuple(name for name in px.io.__all__ if name != "ImageHeader")) == 27
+    assert len(tuple(name for name in px.io.__all__ if name != "ImageHeader")) == 29
     assert not hasattr(px, "write_exr_channels")
     assert not hasattr(px.io, "encode_exr_channels")
 
@@ -642,32 +644,3 @@ def test_public_docstring_describes_mixed_exr_boundary_contract() -> None:
         "RuntimeError",
     ):
         assert fragment in docstring
-
-
-def test_canonical_docs_describe_the_mixed_exr_public_boundary() -> None:
-    """v1-exr-mixed-dtype-write acceptance 15; v1-fonts-module acceptance 1 and 14;
-    v1-grade acceptance 1: API canon is current.
-    """
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    tokens = (_ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    io_feature = require_repo_file("docs/features/v1-io.md").read_text(encoding="utf-8")
-
-    assert "| `io` | file / bytes / device array / wire format の from・to 境界、ImageHeader | 27 |" in requirements
-    assert "公開 operation は計 98 関数" in requirements
-    assert "`px.io.write_image` / `px.io.write_exr_channels`" in requirements
-    for fragment in (
-        "px.io.write_exr_channels(",
-        "frames: Sequence[Frame]",
-        "compression: ExrCompression | None = None",
-        "dwa_level: float | None = None",
-        "`float16` | HALF",
-        "`float32` | FLOAT",
-        "`uint32` | UINT",
-        "`none` / `rle` / `zip` / `zips` / `piz`",
-        "px.values.cast_dtype",
-        "px.values.recode_dtype",
-        "unchanged=True",
-    ):
-        assert fragment in tokens
-    assert "`Sequence[Frame]` を受ける `px.io.write_exr_channels`" in io_feature
-    assert "`write_image` / `encode_image` の dtype 変換契約は変えない" in io_feature

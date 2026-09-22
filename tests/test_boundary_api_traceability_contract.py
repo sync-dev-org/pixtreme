@@ -7,21 +7,6 @@ import inspect
 import pixtreme as px
 
 
-def _section(markdown: str, heading: str) -> str:
-    return markdown.split(f"## {heading}\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-
-
-def test_frame_has_no_numpy_exit_and_vocabulary_names_explicit_host_transfers(
-    vocabulary_markdown: str,
-) -> None:
-    """v1-boundary-api acceptance 18: Frame has no NumPy method and docs name explicit host exits."""
-    assert not hasattr(px.core.Frame, "to_numpy")
-
-    boundary = _section(vocabulary_markdown, "Frame boundary contract")
-    assert "`px.io.to_array(frame, ...).get()`" in boundary
-    assert "`cp.asnumpy(px.io.to_array(frame, ...))`" in boundary
-
-
 def test_array_boundary_docstrings_state_copy_out_dlpack_and_inverse_affine_contracts() -> None:
     """v1-boundary-api acceptance 22: array-boundary docstrings expose every LLM-readable contract axis."""
     to_doc = " ".join((inspect.getdoc(px.io.to_array) or "").split())

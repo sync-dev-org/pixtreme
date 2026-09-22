@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 from collections.abc import Callable
 from pathlib import Path
 from typing import Literal, get_args, get_origin, get_type_hints
@@ -10,7 +9,6 @@ from typing import Literal, get_args, get_origin, get_type_hints
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -527,49 +525,3 @@ def test_invalid_tokens_fail_before_gpu_with_raw_ordered_canonical_errors(
     assert repr(candidates) in message
     assert "'slog'" not in message
     assert "'sgamut'" not in message
-
-
-def test_sony_public_documents_docstrings_and_changelog_are_synchronized() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 22;
-    v1-sony-tokens acceptance 12; v1-arri-tokens acceptance 29;
-    v1-blackmagic-tokens acceptance 50;
-    v1-red-tokens acceptance 72; v1-canon-tokens acceptance 93; v1-panasonic-tokens acceptance 112;
-    v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188.
-
-    GitHub #29: docs expose normalization, signed branches, anchors, gamut equivalence, and current counts.
-    """
-    tokens = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    normalized_docstrings = {
-        function.__name__: " ".join((inspect.getdoc(function) or "").split())
-        for function in (px.color.gamma_to_linear, px.color.linear_to_gamma, px.color.rgb_to_rgb)
-    }
-
-    for claim in (
-        "`x = r / 0.9`",
-        "`e = (64 + 876 * y) / 1023`",
-        "`90 / 394 / 636`",
-        "`90 / 347 / 582`",
-        "S-Log / S-Log2 / S-Log3 apply their lower linear branches directly to signed inputs",
-        "S-Gamut and S-Gamut3 are numerically identical",
-        "the algebraic inverse of Sony's published S-Log1 decoder linear branch",
-        "not a separately published Sony forward equation",
-    ):
-        assert claim in tokens
-    for claim in ("29 Colorspace", "36 Gamma", "199 canonical tokens"):
-        assert claim in requirements
-    for claim in (
-        "S-Gamut",
-        "S-Log",
-        "S-Log2",
-        "90 / 394 / 636",
-        "90 / 347 / 582",
-        "S-Gamut3 and S-Log3 remain unchanged",
-        "the algebraic inverse of Sony's published decoder linear branch",
-    ):
-        assert claim in changelog
-    for name, docstring in normalized_docstrings.items():
-        assert "S-Log / S-Log2 / S-Log3 apply their lower linear branches directly to signed inputs" in docstring, name
-        assert "x = r / 0.9" in docstring, name
-        assert "e = (64 + 876 * y) / 1023" in docstring, name

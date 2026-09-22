@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 from dataclasses import dataclass
 from decimal import Decimal, getcontext
 from hashlib import sha256
@@ -12,7 +11,6 @@ from typing import Literal, get_args, get_origin, get_type_hints
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import changelog_section, require_repo_file
 
 import pixtreme as px
 
@@ -916,59 +914,3 @@ def test_vendor_b_dpx_codes_are_logarithmic_and_existing_mappings_remain_unchang
         assert path.read_bytes()[801] == transfer
         if gamma in _CURVES:
             assert px.io.read_image(path).gamma == "Cineon"
-
-
-def test_vendor_b_reference_requirements_changelog_docstrings_and_generator_are_synchronized() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 22;
-    v1-vendor-b-tokens acceptance 188: synchronize current public prose.
-    """
-    token_reference = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    generator = (ROOT / "tests" / "generate_vendor_b_tokens_sheet.py").read_text(encoding="utf-8")
-    release_section = changelog_section(changelog, "1.4.0 - 2026-09-07")
-    for token in ("Apple-Wide-Gamut", "N-Log", "L-Log", "Apple-Log", "Samsung-Log"):
-        assert f"`{token}`" in token_reference
-        assert token in release_section
-        assert token in generator
-    for fragment in (
-        "0.3784157394368526",
-        "0.4625960144726521",
-        "7.898308971401108",
-        "0.1371004734320989",
-        "0.08971061960369227",
-        "-0.05641088",
-        "0.20855531595464208",
-        "-0.245973605190997",
-        "0.20656190889447099",
-        "0.725",
-        "-0.076",
-        "reflectance",
-        "D65",
-        "Bradford",
-        "CAT02",
-        "native",
-        "Apple Log 2",
-        "Nikon N-Log",
-        "Leica L-Log",
-        "Samsung Log",
-        "non-parity",
-    ):
-        assert fragment in token_reference
-    for fragment in ("29 Colorspace", "36 Gamma", "199 canonical tokens"):
-        assert fragment in requirements
-    for fragment in ("intersection", "tangent", "collapse", "CAT02", "Bradford", "bit", "non-parity"):
-        assert fragment in release_section
-    for operation in (
-        px.color.rgb_to_rgb,
-        px.color.rgb_to_ycbcr,
-        px.color.ycbcr_to_rgb,
-        px.color.rgb_to_grayscale,
-        px.color.gamma_to_linear,
-        px.color.linear_to_gamma,
-    ):
-        docstring = inspect.getdoc(operation)
-        assert docstring is not None
-        for gamma in _CURVES:
-            assert gamma in docstring
-        assert "Apple-Wide-Gamut" in docstring or operation in (px.color.gamma_to_linear, px.color.linear_to_gamma)

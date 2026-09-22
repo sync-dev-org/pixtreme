@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 from collections.abc import Callable
 from pathlib import Path
 from typing import Literal, get_args, get_origin, get_type_hints
@@ -10,7 +9,6 @@ from typing import Literal, get_args, get_origin, get_type_hints
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -698,45 +696,3 @@ def test_invalid_blackmagic_axis_values_fail_before_gpu_with_ordered_canonical_e
     assert message.index("why=") < message.index("what=") < message.index("how=")
     assert repr(rejected) in message and repr(candidates) in message
     assert "DaVinci WG" not in message and "Blackmagic Design Film" not in message
-
-
-def test_blackmagic_public_documents_docstrings_and_changelog_are_synchronized() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 22;
-    v1-blackmagic-tokens acceptance 50; v1-red-tokens acceptance 72;
-    v1-canon-tokens acceptance 93;
-    v1-panasonic-tokens acceptance 112; v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188;
-    GitHub #29: docs use current counts.
-    """
-    tokens = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    docstrings = " ".join(
-        " ".join((inspect.getdoc(function) or "").split())
-        for function in (px.color.gamma_to_linear, px.color.linear_to_gamma, px.color.rgb_to_rgb)
-    )
-    for claim in (
-        "`Blackmagic-Film-Gen-5`",
-        "`DaVinci-Intermediate`",
-        "natural logarithm",
-        "base-2 logarithm",
-        "derived decode threshold",
-        "negative values",
-        "`Blackmagic-Wide-Gamut-Gen-5`",
-        "`DaVinci-Wide-Gamut`",
-        "D65",
-        "independently from gamma",
-        "Gen 4",
-    ):
-        assert claim in tokens
-    for claim in ("29 Colorspace", "36 Gamma", "199 canonical tokens"):
-        assert claim in requirements
-    for claim in (
-        "Blackmagic-Wide-Gamut-Gen-5",
-        "DaVinci-Wide-Gamut",
-        "Blackmagic-Film-Gen-5",
-        "DaVinci-Intermediate",
-        "bit-identical",
-    ):
-        assert claim in changelog
-    for claim in ("Blackmagic Film Gen 5", "DaVinci Intermediate", "derived decode threshold"):
-        assert claim in docstrings

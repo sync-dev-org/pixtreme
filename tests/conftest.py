@@ -3,18 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from repository_contracts import require_repo_file
 
 PerformanceResult = tuple[str, str, float, float, float, float, float, float]
 
 _PERFORMANCE_RESULTS: list[PerformanceResult] = []
-
-
-@pytest.fixture(scope="session")
-def vocabulary_markdown() -> str:
-    """REQ-TEST-008; GitHub #29: load the repo-only token reference or skip when absent."""
-    vocabulary_path = require_repo_file("docs_site/tokens.md")
-    return vocabulary_path.read_text(encoding="utf-8")
 
 
 @pytest.fixture(scope="session")

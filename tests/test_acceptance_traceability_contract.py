@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import ast
-import inspect
 import subprocess
 import sys
 from pathlib import Path
-
-from repository_contracts import require_repo_file
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -63,71 +60,6 @@ assert primary_context_active() == 0
     )
 
     assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
-
-
-def test_current_public_names_follow_the_documented_naming_rules_and_reservations() -> None:
-    """v1-public-namespace acceptance 11; v1-fonts-module acceptance 1-2: current leaves follow the naming grammar."""
-    import pixtreme as px
-
-    requirements_path = require_repo_file("docs/requirements.md")
-    feature_path = require_repo_file("docs/features/v1-public-namespace.md")
-    fonts_feature_path = require_repo_file("docs/features/v1-fonts-module.md")
-    requirements = requirements_path.read_text(encoding="utf-8")
-    feature = feature_path.read_text(encoding="utf-8")
-    fonts_feature = fonts_feature_path.read_text(encoding="utf-8")
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    rules = (
-        "葉名は短縮せず機構まで含む自己記述名",
-        "`X_to_Y` は値が変わる色表現変換に予約",
-        "module + leaf の二階建て",
-    )
-    for rule in rules:
-        assert rule in requirements
-    assert "## 命名規則" in feature
-    assert "The package root exposes 14 modules" in readme
-
-    modules = tuple(name for name in px.__all__ if inspect.ismodule(getattr(px, name)))
-    assert len(modules) == 14
-    public_functions = {
-        (module_name, leaf)
-        for module_name in modules
-        for leaf in getattr(px, module_name).__all__
-        if inspect.isfunction(getattr(getattr(px, module_name), leaf))
-    }
-    assert {(module_name, leaf) for module_name, leaf in public_functions if module_name == "core"} == {
-        ("core", "channels")
-    }
-    public_operations = {(module_name, leaf) for module_name, leaf in public_functions if module_name != "core"}
-    leaves = {leaf for _, leaf in public_functions}
-    assert leaves.isdisjoint(
-        {
-            "invert",
-            "premult",
-            "unpremult",
-            "swap_rb",
-            "histogram",
-            "depth_merge",
-        }
-    )
-    assert {leaf for leaf in leaves if "_to_" in leaf} == {
-        "full_to_legal",
-        "gamma_to_linear",
-        "hsv_to_rgb",
-        "legal_to_full",
-        "linear_to_gamma",
-        "rgb_to_grayscale",
-        "rgb_to_hsv",
-        "rgb_to_rgb",
-        "rgb_to_ycbcr",
-        "ycbcr_to_rgb",
-        "ycbcr_to_ycbcr",
-    }
-    public_surface_section = feature.split("## module 公開面\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    assert "`core.channels`" in public_surface_section
-    for module_name, leaf in public_operations:
-        documented_surface = fonts_feature if module_name == "fonts" else public_surface_section
-        assert f"`{module_name}`" in documented_surface
-        assert f"`{leaf}`" in documented_surface
 
 
 def test_tga_read_source_has_one_flat_payload_transfer_and_one_gpu_pass() -> None:

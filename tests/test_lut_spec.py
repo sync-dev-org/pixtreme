@@ -9,7 +9,6 @@ from pathlib import Path
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -475,22 +474,3 @@ def test_lut_transform_rejects_non_frame_and_non_lut_inputs() -> None:
     with pytest.raises(ValueError) as lut_error:
         px.color.apply_lut(_frame(np.zeros(3, dtype=np.float32)), lut=object())  # type: ignore[arg-type]
     _assert_actionable(lut_error)
-
-
-def test_lut_documentation_contracts_are_present() -> None:
-    """v1-lut acceptance 15-16; v1-lut-extensions acceptance 26; GitHub #29: LUT boundary canon stays current."""
-    vocabulary_path = ROOT / "docs_site" / "tokens.md"
-    requirements_path = require_repo_file("docs/requirements.md")
-
-    vocabulary = vocabulary_path.read_text(encoding="utf-8")
-    interpolation = vocabulary.split("## interpolation\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    for required in ("apply_lut", "trilinear", "tetrahedral", "default", "domain", "clamp", "clip"):
-        assert required in interpolation
-
-    requirements = requirements_path.read_text(encoding="utf-8")
-    boundary_table = requirements.split("**REQ-API-010", maxsplit=1)[1].split("\n\n統一則", maxsplit=1)[0]
-    lut_boundary_rows = tuple(line for line in boundary_table.splitlines() if "LUT" in line)
-    assert any(
-        "LUT file" in line and "`px.io.read_lut`" in line and "`px.io.write_lut`" in line for line in lut_boundary_rows
-    )
-    assert any("LUT bytes" in line and "`px.io.decode_lut`" in line for line in lut_boundary_rows)

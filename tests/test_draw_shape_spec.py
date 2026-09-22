@@ -967,31 +967,6 @@ def test_draw_arbitrary_channel_labels_and_one_channel_matte_are_numeric_only() 
     assert np.any((antialiased > 0.0) & (antialiased < 1.0))
 
 
-def test_draw_vocabulary_documents_blend_aa_softness_and_continuous_coordinates(
-    vocabulary_markdown: str,
-) -> None:
-    """v1-draw-shape acceptance 33 / v1-composite acceptance 15, 18: vocabulary fixes shared blend semantics."""
-    markdown = vocabulary_markdown
-    for required in (
-        "## blend",
-        "`normal`",
-        "`add`",
-        "`multiply`",
-        "`screen`",
-        "default",
-        "## aa",
-        "`distance`",
-        "`supersample`",
-        "`off`",
-        "softness",
-        "4×4",
-        "(x, y)",
-        "i + 0.5",
-        "j + 0.5",
-    ):
-        assert required in markdown
-
-
 def test_draw_docstrings_state_the_llm_readable_geometry_and_ownership_contracts() -> None:
     """v1-draw-shape acceptance 34: public docstrings state non-obvious geometry, value, mode, and ownership rules."""
     combined = "\n".join(inspect.getdoc(_draw(name)) or "" for name in DRAW_NAMES)

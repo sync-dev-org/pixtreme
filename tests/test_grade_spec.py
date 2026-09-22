@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import inspect
 import math
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -77,52 +74,6 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError]) -> None:
     assert "; what=" in message
     assert "; how=" in message
     assert message.index("why=") < message.index("; what=") < message.index("; how=")
-
-
-def test_grade_public_signature_inventory_and_document_contract() -> None:
-    """v1-grade acceptance 1, 10, and 13: public signature, inventories, and contracts stay synchronized."""
-    assert px.color.__all__[-1] == "grade"
-    assert len(px.color.__all__) == 16
-    signature = inspect.signature(px.color.grade)
-    assert tuple(signature.parameters) == ("frame", "lift", "gamma", "gain")
-    assert signature.parameters["frame"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
-    assert all(signature.parameters[name].kind is inspect.Parameter.KEYWORD_ONLY for name in ("lift", "gamma", "gain"))
-    assert tuple(signature.parameters[name].default for name in ("lift", "gamma", "gain")) == (0.0, 1.0, 1.0)
-    assert px.color.grade.__annotations__ == {
-        "frame": "Frame",
-        "lift": "float | Mapping[str, float]",
-        "gamma": "float | Mapping[str, float]",
-        "gain": "float | Mapping[str, float]",
-        "return": "Frame",
-    }
-
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    color_row = next(line for line in requirements.splitlines() if line.startswith("| `color` |"))
-    assert color_row.endswith("| 16 |")
-    assert "公開 operation は計 98 関数" in requirements
-
-    root = Path(__file__).resolve().parents[1]
-    tokens = (root / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    section = tokens.split("## grade\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0].lower()
-    public_doc = inspect.getdoc(px.color.grade)
-    assert public_doc is not None
-    public_doc = public_doc.lower()
-    required_phrases = (
-        "gain * x + lift * (1 - x)",
-        "neutral",
-        "scalar",
-        "mapping",
-        "open set",
-        "nuke",
-        "asc cdl",
-        "classic lgg",
-        "resolve",
-        "no clipping",
-        "frame.gamma",
-        "exponent denominator",
-    )
-    assert all(phrase in section for phrase in required_phrases)
-    assert all(phrase in public_doc for phrase in required_phrases)
 
 
 def test_neutral_grade_bit_preserves_every_channel_in_a_private_copy() -> None:

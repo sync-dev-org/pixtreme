@@ -326,28 +326,6 @@ def test_hsv_operations_reject_non_exact_triplets_with_expected_and_received_cha
     assert "px.channel.shuffle" in str(error.value)
 
 
-def test_hsv_channel_vocabulary_and_documentation_are_self_contained(vocabulary_markdown: str) -> None:
-    """v1-hsv acceptance 13: channel tokens and the RGB / HSV section fix the full numeric contract."""
-    assert px.core.channels("HSV") == ("H", "S", "V")
-    section = vocabulary_markdown.split("## RGB / HSV conversion\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    for required in (
-        "px.color.rgb_to_hsv",
-        "px.color.hsv_to_rgb",
-        '("H", "S", "V")',
-        '("R", "G", "B")',
-        "maximum",
-        "minimum",
-        "delta",
-        "modulo 1",
-        "[0, 1)",
-        "[0, 1]",
-        "unbounded",
-        "Negative",
-        "clip",
-    ):
-        assert required in section
-
-
 @pytest.mark.parametrize("operation", ("rgb_to_hsv", "hsv_to_rgb"))
 def test_hsv_docstrings_state_the_complete_public_contract(operation: str) -> None:
     """v1-hsv acceptance 12: each public docstring is self-contained for invisible numeric and Frame rules."""

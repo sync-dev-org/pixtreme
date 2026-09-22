@@ -926,23 +926,26 @@ def test_420_formats_reject_unknown_siting_and_interpolation_tokens_actionably(n
 
 
 @pytest.mark.parametrize(
-    ("name", "valid_depths"),
+    ("name", "valid_depths", "invalid_depth"),
     (
-        ("from_yuv420p", (8, 10)),
-        ("from_yuv422p", (8, 10, 12)),
-        ("from_yuv444p", (10, 12)),
-        ("from_yuva444p", (12,)),
+        ("from_yuv420p", (8, 10), 9),
+        ("from_yuv422p", (8, 10, 12), 9),
+        ("from_yuv444p", (10, 12), 9),
+        ("from_yuva444p", (12,), 9),
+        ("from_yuv422p", (8, 10, 12), 16),
     ),
 )
 def test_planar_formats_reject_bit_depths_outside_their_closed_domains(
-    name: str, valid_depths: tuple[int, ...]
+    name: str, valid_depths: tuple[int, ...], invalid_depth: int
 ) -> None:
-    """v1-format-boundary acceptance 3 and 11: every planar bit_depth domain is closed and actionable."""
-    source = _device(np.zeros(6), dtype=np.uint8)
+    """v1-format-boundary acceptance 3 and 11; v1-p216-wire-format acceptance 19:
+    planar bit_depth stays closed; adding P216 must not enable planar 16-bit input.
+    """
+    source = _device(np.zeros(4 if invalid_depth == 16 else 6), dtype=np.uint16 if invalid_depth == 16 else np.uint8)
     kwargs = {"width": 2, "height": 2} if name == "from_yuv420p" else {"width": 2, "height": 1}
 
     with pytest.raises(ValueError) as error:
-        getattr(px.io, name)(source, bit_depth=9, **kwargs)
+        getattr(px.io, name)(source, bit_depth=invalid_depth, **kwargs)
     _actionable(error)
     assert repr(valid_depths) in str(error.value)
 

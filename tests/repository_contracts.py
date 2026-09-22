@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import pytest
@@ -17,23 +16,3 @@ def require_repo_file(relative_path: str) -> Path:
         kind = "tooling" if relative_path.startswith("tools/") else "documentation"
         pytest.skip(f"repo-only {kind} contract: {relative_path} is absent from this distribution")
     return path
-
-
-def latest_changelog_section(markdown: str) -> str:
-    """Return the first level-two section, regardless of its heading name."""
-    headings = tuple(re.finditer(r"^## .+$", markdown, flags=re.MULTILINE))
-    if not headings:
-        raise ValueError("changelog has no level-two section")
-    end = headings[1].start() if len(headings) > 1 else len(markdown)
-    return markdown[headings[0].start() : end].rstrip()
-
-
-def changelog_section(markdown: str, heading: str) -> str:
-    """Return the uniquely named level-two section from a changelog."""
-    headings = tuple(re.finditer(r"^## (?P<title>.+)$", markdown, flags=re.MULTILINE))
-    matches = tuple(index for index, match in enumerate(headings) if match.group("title") == heading)
-    if len(matches) != 1:
-        raise ValueError(f"changelog section {heading!r} occurs {len(matches)} times")
-    index = matches[0]
-    end = headings[index + 1].start() if index + 1 < len(headings) else len(markdown)
-    return markdown[headings[index].start() : end].rstrip()

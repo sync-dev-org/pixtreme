@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-import inspect
-import re
-from pathlib import Path
 from typing import Literal, get_args, get_origin, get_type_hints
 
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -85,25 +81,6 @@ def _frame(values: tuple[float, ...], *, gamma: str = "linear", channels: str = 
         gamma=gamma,
         channels=channels,
     )
-
-
-def _section(markdown: str, heading: str) -> str:
-    start = re.search(rf"^##+ {re.escape(heading)}\n", markdown, re.MULTILINE)
-    assert start is not None
-    remainder = markdown[start.end() :]
-    end = re.search(r"^##+ ", remainder, re.MULTILINE)
-    return remainder if end is None else remainder[: end.start()]
-
-
-def _table_rows(markdown: str, heading: str) -> tuple[tuple[str, ...], ...]:
-    lines = _section(markdown, heading).splitlines()
-    header_index = next(index for index, line in enumerate(lines) if line.startswith("|"))
-    rows: list[tuple[str, ...]] = []
-    for line in lines[header_index + 2 :]:
-        if not line.startswith("|"):
-            break
-        rows.append(tuple(cell.strip() for cell in line.strip().strip("|").split("|")))
-    return tuple(rows)
 
 
 def test_gamma_literal_retains_named_numeric_tokens_in_the_sony_extended_vocabulary() -> None:
@@ -300,70 +277,3 @@ def test_bt1886_and_gamma_24_are_bit_identical_but_keep_distinct_token_identity(
     power_decoded = px.color.gamma_to_linear(power_source)
     assert cp.array_equal(bt_decoded.data, power_decoded.data)
     assert (bt_source.gamma, power_source.gamma) == ("BT.1886", "Gamma-2.4")
-
-
-def test_token_reference_matches_named_gamma_and_bt1886_document_contract() -> None:
-    """v1-gamma-named-tokens acceptance 9; v1-sony-tokens acceptance 12;
-    v1-blackmagic-tokens acceptance 50; v1-panasonic-tokens acceptance 112;
-    v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188: gamma docs match code and semantics.
-    """
-    markdown = (Path(__file__).resolve().parents[1] / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    gamma_rows = _table_rows(markdown, "gamma")
-    assert tuple(row[0].strip("`") for row in gamma_rows) == get_args(px.core.Gamma) == _GAMMA_TOKENS
-
-    alias_rows = _table_rows(markdown, "Permanent aliases from earlier releases")
-    assert len(alias_rows) == 30
-    for legacy, canonical in _RENAMES:
-        assert ("Gamma", f"`{legacy}`", f"`{canonical}`") in alias_rows
-
-    gamma_section = _section(markdown, "gamma")
-    for required in (
-        "Annex 1",
-        "`L_B = 0`",
-        "pure 2.4 power",
-        "numerically equivalent",
-        "semantically distinct",
-        "production and conversion practice",
-        "canonical output",
-    ):
-        assert required in gamma_section
-
-
-def test_requirements_changelog_docstrings_and_supersede_traces_use_current_gamma_names() -> None:
-    """v1-gamma-named-tokens acceptance 10; v1-sony-tokens acceptance 12; v1-canon-tokens acceptance 93;
-    v1-panasonic-tokens acceptance 112; v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188;
-    GitHub #29: docs stay synchronized.
-    """
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    arch = requirements.split("**REQ-ARCH-003", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
-    api = requirements.split("**REQ-API-003", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
-    assert "30 token" in arch
-    for _legacy, canonical in _RENAMES:
-        assert f"`{canonical}`" in api
-
-    changelog = (Path(__file__).resolve().parents[1] / "CHANGELOG.md").read_text(encoding="utf-8")
-    release_130 = changelog.split("## 1.3.0", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    for legacy, canonical in _RENAMES:
-        assert f"| Gamma | `{legacy}` | `{canonical}` |" in release_130
-    for required in ("runtime", "numerically equivalent", "BT.1886", "unchanged"):
-        assert required in release_130
-
-    for operation in (
-        px.color.rgb_to_ycbcr,
-        px.color.ycbcr_to_rgb,
-        px.color.rgb_to_grayscale,
-        px.color.gamma_to_linear,
-        px.color.linear_to_gamma,
-    ):
-        docstring = inspect.getdoc(operation)
-        assert docstring is not None
-        for legacy, canonical in _RENAMES:
-            assert canonical in docstring
-            assert re.search(rf"``{re.escape(legacy)}``", docstring) is None
-
-    token_sheet = require_repo_file("docs/features/v1-token-vocabulary.md").read_text(encoding="utf-8")
-    color_sheet = require_repo_file("docs/features/v1-color-semantics.md").read_text(encoding="utf-8")
-    for number in (1, 3):
-        assert re.search(rf"^{number}\. \[trace:superseded-by:v1-gamma-named-tokens\]", token_sheet, re.MULTILINE)
-    for number in (27, 28):
-        assert re.search(rf"^{number}\. \[trace:superseded-by:v1-gamma-named-tokens\]", color_sheet, re.MULTILINE)

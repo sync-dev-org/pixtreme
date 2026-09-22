@@ -497,23 +497,27 @@ def test_420_to_formats_reject_unknown_tokens_and_odd_dimensions(name: str) -> N
 
 
 @pytest.mark.parametrize(
-    ("name", "valid_depths"),
+    ("name", "valid_depths", "invalid_depth"),
     (
-        ("to_yuv420p", (8, 10)),
-        ("to_yuv422p", (8, 10, 12)),
-        ("to_yuv444p", (10, 12)),
-        ("to_yuva444p", (12,)),
+        ("to_yuv420p", (8, 10), 9),
+        ("to_yuv422p", (8, 10, 12), 9),
+        ("to_yuv444p", (10, 12), 9),
+        ("to_yuva444p", (12,), 9),
+        ("to_yuv422p", (8, 10, 12), 16),
     ),
 )
 def test_planar_to_formats_reject_bit_depths_outside_their_closed_domains(
     name: str,
     valid_depths: tuple[int, ...],
+    invalid_depth: int,
 ) -> None:
-    """v1-format-boundary acceptance 3 and 11: planar to bit_depth domains enumerate recovery values."""
+    """v1-format-boundary acceptance 3 and 11; v1-p216-wire-format acceptance 19:
+    planar bit_depth stays closed; adding P216 must not enable planar 16-bit output.
+    """
     channels = ("Y", "Cb", "Cr", "A") if name == "to_yuva444p" else ("Y", "Cb", "Cr")
     frame = _frame(np.zeros((2, 2, len(channels)), dtype=np.float32), channels=channels)
     with pytest.raises(ValueError) as error:
-        getattr(px.io, name)(frame, bit_depth=9)
+        getattr(px.io, name)(frame, bit_depth=invalid_depth)
     _actionable(error)
     assert repr(valid_depths) in str(error.value)
 

@@ -53,6 +53,8 @@ IO_FUNCTIONS = (
     "to_nv12",
     "from_p010",
     "to_p010",
+    "from_p216",
+    "to_p216",
     "from_yuv420p",
     "to_yuv420p",
     "from_yuv422p",
@@ -363,7 +365,9 @@ def _table_tokens(markdown: str, heading: str) -> tuple[str, ...]:
 
 
 def test_root_surface_is_exact_and_version_matches_distribution() -> None:
-    """v1-public-namespace acceptance 1-2; v1-fonts-module acceptance 1: root is 14 modules plus version."""
+    """v1-public-namespace acceptance 1-2; v1-fonts-module acceptance 1;
+    v1-p216-wire-format acceptance 1, 13 and 19: root is 14 modules plus version, with no P216 alias.
+    """
     assert px.__all__ == (*ROOT_MODULES, "__version__")
     assert _public_names(px) == set(px.__all__)
     assert all(isinstance(getattr(px, name), ModuleType) for name in ROOT_MODULES)
@@ -375,10 +379,12 @@ def test_public_modules_expose_the_exact_function_type_helper_and_alias_contract
     """v1-public-namespace acceptance 3 and 7-8; v1-white-balance acceptance 1;
     v1-white-point-simulation acceptance 1; v1-draw-text-user-font acceptance 1;
     v1-lut-extensions acceptance 1, 4, and 26; v1-exr-mixed-dtype-write acceptance 1:
-    v1-fonts-module acceptance 1-2; v1-grade acceptance 1:
+    v1-fonts-module acceptance 1-2; v1-grade acceptance 1; v1-lut-shaper acceptance 1, 16 and 18:
+    v1-p216-wire-format acceptance 13 and 19:
     every leaf and public type has one exact module owner.
     """
-    assert sum(len(leaves) for leaves in FUNCTION_MODULES.values()) == 98
+    assert len(IO_FUNCTIONS) == 29
+    assert sum(len(leaves) for leaves in FUNCTION_MODULES.values()) == 100
     for module_name, leaves in FUNCTION_MODULES.items():
         module = getattr(px, module_name)
         public_types = ("ImageHeader",) if module_name == "io" else (("Font",) if module_name == "draw" else ())
@@ -442,7 +448,9 @@ def test_legacy_root_and_module_imports_fail_in_fresh_processes() -> None:
 
 
 def test_frame_is_data_metadata_properties_and_dlpack_only() -> None:
-    """v1-public-namespace acceptance 6: Frame keeps its structural surface and loses all nine exit methods."""
+    """v1-public-namespace acceptance 6; v1-p216-wire-format acceptance 1, 13 and 19:
+    Frame keeps its structural surface and has no exit methods, including P216.
+    """
     assert tuple(px.core.Frame.model_fields) == ("data", "colorspace", "gamma", "channels", "matrix")
     assert all(isinstance(getattr(px.core.Frame, name), property) for name in ("width", "height", "shape", "dtype"))
     assert all(callable(getattr(px.core.Frame, name)) for name in ("__dlpack__", "__dlpack_device__"))
@@ -452,6 +460,7 @@ def test_frame_is_data_metadata_properties_and_dlpack_only() -> None:
         "to_v210",
         "to_nv12",
         "to_p010",
+        "to_p216",
         "to_yuv420p",
         "to_yuv422p",
         "to_yuv444p",

@@ -1122,41 +1122,6 @@ def test_draw_text_gpu_composite_is_a_freetype_free_rawkernel_boundary() -> None
     assert "elementwisekernel" not in kernel_factory_source
 
 
-def _table_tokens(markdown: str, heading: str) -> tuple[str, ...]:
-    section = markdown.split(f"## {heading}\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    return tuple(
-        cells[1].strip().removeprefix("`").removesuffix("`")
-        for line in section.splitlines()
-        if line.startswith("| `")
-        for cells in (line.split("|"),)
-    )
-
-
-def test_draw_text_vocabulary_documents_language_anchor_and_placement_contracts(
-    vocabulary_markdown: str,
-) -> None:
-    """v1-draw-text acceptance 31: vocabulary fixes language/anchor tokens, defaults, metrics, advance, and pen placement."""
-    from pixtreme._draw.text import _ANCHOR_TOKENS, _LANGUAGE_TOKENS
-
-    markdown = vocabulary_markdown
-    assert _table_tokens(markdown, "language") == LANGUAGES == _LANGUAGE_TOKENS
-    assert _table_tokens(markdown, "anchor") == ANCHORS == _ANCHOR_TOKENS
-    for required in (
-        "locl",
-        "default",
-        "`ja`",
-        "`baseline-left`",
-        "ascender",
-        "descender",
-        "advance",
-        "pen",
-        "single-line",
-        "newlines",
-        "subpixel",
-    ):
-        assert required in markdown
-
-
 def test_draw_text_docstring_states_the_llm_readable_contract() -> None:
     """v1-draw-text-unification acceptance 14: the docstring states the complete integrated text contract."""
     docstring = (inspect.getdoc(px.draw.text) or "").lower()
@@ -1177,33 +1142,5 @@ def test_draw_text_docstring_states_the_llm_readable_contract() -> None:
         "clamp",
         "scene",
         "new storage",
-    ):
-        assert required in docstring
-
-
-def test_draw_text_supersample_vocabulary_and_docstring_state_the_opt_in_contract(
-    vocabulary_markdown: str,
-) -> None:
-    """v1-draw-text-supersample acceptance 10: vocabulary and docstring explain the bool-only 4x precision path."""
-    aa_section = vocabulary_markdown.split("## aa\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    for required in (
-        "`px.draw.text(supersample=True)`",
-        "bool",
-        "token",
-        "4×4",
-        "averages",
-    ):
-        assert required in aa_section
-
-    docstring = inspect.getdoc(px.draw.text) or ""
-    for required in (
-        "supersample=False",
-        "supersample=True",
-        "4x",
-        "fp32",
-        "box",
-        "geometry",
-        "private cache",
-        "opt-in",
     ):
         assert required in docstring

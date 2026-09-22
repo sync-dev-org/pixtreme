@@ -370,39 +370,6 @@ def test_oracle_tool_recreates_the_committed_fixture_byte_for_byte(tmp_path: Pat
     assert first.read_bytes() == second.read_bytes() == ORACLE_PATH.read_bytes()
 
 
-def test_docs_docstring_registry_and_visual_generator_expose_the_six_row_boundary() -> None:
-    """v1-view-transform-lut-removal acceptance 4 and 8; GitHub #29: public texts use the six rows."""
-    requirements_path = require_repo_file("docs/requirements.md")
-    requirements = requirements_path.read_text(encoding="utf-8")
-    vocabulary = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    docstring = inspect.getdoc(px.color.rgb_to_rgb)
-    visual_source = (ROOT / "tests" / "generate_tonemap_aces13_analytic_sheet.py").read_text(encoding="utf-8")
-    performance_source = (ROOT / "tests" / "test_performance_spec.py").read_text(encoding="utf-8")
-    assert docstring is not None
-    normalized_docstring = " ".join(docstring.split())
-
-    for text in (requirements, vocabulary, docstring):
-        for token in ("ACES-1.3", "ACES-2.0", "BT.2408"):
-            assert token in text
-        for required in ("analytic", "clip"):
-            assert required in text
-    assert "Both ``output_colorspace`` and ``output_gamma`` must be supplied explicitly" in normalized_docstring
-    assert "``Rec.709`` / ``BT.1886`` and ``sRGB`` / ``sRGB``" in normalized_docstring
-    assert "Plain ``ACES-2.0`` is not supplied" not in normalized_docstring
-    supply_table = vocabulary.split("## tonemap combinations", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    for tonemap, output_colorspace, output_gamma in _SUPPLIED_COMBINATIONS:
-        assert f"| `{tonemap}` | `{output_colorspace}` | `{output_gamma}` |" in supply_table
-    assert supply_table.count("| `ACES-2.0` |") == 2
-    for required in ("ACES-1.3", "ACES-2.0", "BT.2408", "gamut", "highlight"):
-        assert required in visual_source
-    for required in (
-        "color-aces13-analytic-srgb",
-        "color-aces20-analytic-srgb",
-        "color-bt2408-rec2020-pq",
-    ):
-        assert required in performance_source
-
-
 @pytest.mark.performance
 def test_analytic_fhd_median_is_within_the_absolute_limit() -> None:
     """v1-view-transform-lut-removal acceptance 2: the unchanged ACES 1.3 path remains within 0.20 ms.

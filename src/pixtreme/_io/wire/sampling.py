@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from functools import lru_cache
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import cupy as cp
 import numpy as np
@@ -60,6 +61,24 @@ _YCBCR_CHANNELS = ("Y", "Cb", "Cr")
 _YCBCRA_CHANNELS = ("Y", "Cb", "Cr", "A")
 _THREADS_PER_BLOCK = 256
 _token = _normalized_closed_token
+
+
+@dataclass(frozen=True, slots=True)
+class _LayoutFacts:
+    vertical_subsampling: bool
+    storage: Literal["packed", "planar", "semi-planar", "v210"]
+    code_shift: int = 0
+
+
+_LAYOUT_FACTS = {
+    "uyvy422": _LayoutFacts(vertical_subsampling=False, storage="packed"),
+    "v210": _LayoutFacts(vertical_subsampling=False, storage="v210"),
+    "yuv420p": _LayoutFacts(vertical_subsampling=True, storage="planar"),
+    "yuv422p": _LayoutFacts(vertical_subsampling=False, storage="planar"),
+    "nv12": _LayoutFacts(vertical_subsampling=True, storage="semi-planar"),
+    "p010": _LayoutFacts(vertical_subsampling=True, storage="semi-planar", code_shift=6),
+    "p216": _LayoutFacts(vertical_subsampling=False, storage="semi-planar"),
+}
 
 _SUBSAMPLED_KERNEL_TEMPLATE = r"""
 typedef __INPUT_TYPE__ pixtreme_input_t;
@@ -210,6 +229,7 @@ def _sample_chroma(interpolation: str, *, vertical_subsampling: bool, offset: tu
 
 
 def _read_functions(layout: str, *, bit_depth: int) -> str:
+    facts = _LAYOUT_FACTS[layout]
     mask = (1 << bit_depth) - 1
     common = """
 __device__ int pixtreme_clamp(const int index, const int extent) {
@@ -359,7 +379,7 @@ __device__ unsigned int pixtreme_read_cr(
 }
 """
         )
-    if layout in {"yuv420p", "yuv422p"}:
+    if facts.storage == "planar":
         return (
             common
             + f"""
@@ -413,7 +433,7 @@ __device__ unsigned int pixtreme_read_cr(
 }}
 """
         )
-    shift = 6 if layout == "p010" else 0
+    shift = facts.code_shift
     return (
         common
         + f"""
@@ -476,7 +496,7 @@ def _subsampled_kernel_source(
     interpolation: str,
     siting: str,
 ) -> str:
-    vertical_subsampling = layout in {"yuv420p", "nv12", "p010"}
+    vertical_subsampling = _LAYOUT_FACTS[layout].vertical_subsampling
     offset = _SITING_OFFSETS[siting] if vertical_subsampling else (0.0, 0.0)
     source = (
         _SUBSAMPLED_KERNEL_TEMPLATE.replace(
@@ -669,9 +689,10 @@ def _from_subsampled(
     matrix: Matrix | None,
     row_words: int = 0,
 ) -> Frame:
+    facts = _LAYOUT_FACTS[layout]
     pixel_count = width * height
     chroma_width = (width + 1) // 2 if layout == "v210" else width // 2
-    chroma_height = height // 2 if layout in {"yuv420p", "nv12", "p010"} else height
+    chroma_height = height // 2 if facts.vertical_subsampling else height
     output = cp.empty((height, width, 3), dtype=cp.float32)
     grid, block = _launch_shape(pixel_count)
     kernel(
@@ -918,7 +939,26 @@ __device__ float pixtreme_sample_chroma(
     )
 
 
-def _quantize_function() -> str:
+def _quantize_function(*, wide_affine: bool = False) -> str:
+    if wide_affine:
+        return r"""
+__device__ unsigned int pixtreme_quantize(
+    const float value,
+    const float offset,
+    const float scale,
+    const unsigned int maximum
+) {
+    const double mapped = (double)value * (double)scale + (double)offset;
+    const double rounded = mapped >= 0.0 ? floor(mapped + 0.5) : ceil(mapped - 0.5);
+    if (rounded <= 0.0) {
+        return 0U;
+    }
+    if (rounded >= (double)maximum) {
+        return maximum;
+    }
+    return (unsigned int)rounded;
+}
+"""
     return r"""
 __device__ unsigned int pixtreme_quantize(
     const float value,
@@ -939,9 +979,9 @@ __device__ unsigned int pixtreme_quantize(
 """
 
 
-def _store_helpers() -> str:
+def _store_helpers(*, wide_affine: bool = False) -> str:
     return (
-        _quantize_function()
+        _quantize_function(wide_affine=wide_affine)
         + r"""
 __device__ unsigned int pixtreme_y_code(
     const float* input,
@@ -984,7 +1024,8 @@ __device__ unsigned int pixtreme_chroma_code(
 
 
 def _store_body(layout: str) -> str:
-    if layout in {"yuv420p", "yuv422p"}:
+    facts = _LAYOUT_FACTS[layout]
+    if facts.storage == "planar":
         return r"""
     if (index < pixel_count) {
         output[index] = (pixtreme_output_t)pixtreme_quantize(
@@ -1005,8 +1046,8 @@ def _store_body(layout: str) -> str:
         );
     }
 """
-    if layout in {"nv12", "p010"}:
-        shift = " << 6" if layout == "p010" else ""
+    if facts.storage == "semi-planar":
+        shift = f" << {facts.code_shift}" if facts.code_shift else ""
         return f"""
     if (index < pixel_count) {{
         output[index] = (pixtreme_output_t)(
@@ -1125,7 +1166,7 @@ def _to_subsampled_kernel_source(
     interpolation: str,
     siting: str,
 ) -> str:
-    vertical_subsampling = layout in {"yuv420p", "nv12", "p010"}
+    vertical_subsampling = _LAYOUT_FACTS[layout].vertical_subsampling
     offset = _SITING_OFFSETS[siting] if vertical_subsampling else (0.0, 0.0)
     source = (
         _TO_SUBSAMPLED_KERNEL_TEMPLATE.replace(
@@ -1141,7 +1182,7 @@ def _to_subsampled_kernel_source(
                 offset=offset,
             ),
         )
-        .replace("__STORE_HELPERS__", _store_helpers())
+        .replace("__STORE_HELPERS__", _store_helpers(wide_affine=layout == "p216"))
         .replace("__STORE_BODY__", _store_body(layout))
     )
     return source
@@ -1212,23 +1253,20 @@ def _to_subsampled(
     bit_depth: int,
     range: str,
 ) -> cp.ndarray:
+    facts = _LAYOUT_FACTS[layout]
     width, height = frame.width, frame.height
     pixel_count = width * height
     chroma_width = (width + 1) // 2 if layout == "v210" else width // 2
-    chroma_height = height // 2 if layout in {"yuv420p", "nv12", "p010"} else height
+    chroma_height = height // 2 if facts.vertical_subsampling else height
     row_words = ((width + 47) // 48) * 32 if layout == "v210" else 0
-    if layout == "uyvy422":
+    if facts.storage == "packed":
         element_count = pixel_count * 2
         work_count = pixel_count // 2
         dtype = cp.uint8
-    elif layout == "v210":
+    elif facts.storage == "v210":
         element_count = row_words * height
         work_count = element_count
         dtype = cp.uint32
-    elif layout in {"nv12", "p010"}:
-        element_count = pixel_count + pixel_count // 2
-        work_count = pixel_count
-        dtype = cp.uint16 if layout == "p010" else cp.uint8
     else:
         chroma_count = chroma_width * chroma_height
         element_count = pixel_count + 2 * chroma_count

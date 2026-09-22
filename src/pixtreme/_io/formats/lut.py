@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Literal
 
 import cupy as cp
@@ -23,6 +24,103 @@ _CUBE_DIRECTIVE_LINE = re.compile(
 )
 _SUPPORTED_EXTENSIONS = frozenset({".cube", ".3dl", ".spi1d", ".spi3d"})
 
+_SHAPED_LUT_BAKE_KERNEL_SOURCE = r"""
+__device__ __forceinline__ double pixtreme_bake_mul_add(
+    const double accumulator,
+    const double weight,
+    const float value
+) {
+    return __dadd_rn(accumulator, __dmul_rn(weight, (double)value));
+}
+
+extern "C" __global__ void pixtreme_bake_shaped_lut(
+    const float* __restrict__ cube,
+    const long long stride_r,
+    const long long stride_g,
+    const long long stride_b,
+    const long long stride_c,
+    const float* __restrict__ shaper,
+    const long long shaper_stride,
+    const int size,
+    float* __restrict__ output
+) {
+    const long long node = (long long)blockDim.x * blockIdx.x + threadIdx.x;
+    const long long node_count = (long long)size * size * size;
+    if (node >= node_count) {
+        return;
+    }
+    const int red_node = (int)(node / ((long long)size * size));
+    const int green_node = (int)((node / size) % size);
+    const int blue_node = (int)(node % size);
+    const int sample_indices[3] = {red_node, green_node, blue_node};
+    int lower[3];
+    double fraction[3];
+    for (int axis = 0; axis < 3; ++axis) {
+        const double shaped = fmin(fmax((double)shaper[(long long)sample_indices[axis] * shaper_stride], 0.0), 1.0);
+        const double position = __dmul_rn(shaped, (double)(size - 1));
+        lower[axis] = min((int)floor(position), size - 2);
+        fraction[axis] = __dsub_rn(position, (double)lower[axis]);
+    }
+
+    double first_fraction = fraction[0];
+    double second_fraction = fraction[1];
+    double third_fraction = fraction[2];
+    int first_axis = 0;
+    int second_axis = 1;
+    int third_axis = 2;
+    if (first_fraction < second_fraction) {
+        const double value = first_fraction;
+        first_fraction = second_fraction;
+        second_fraction = value;
+        const int axis = first_axis;
+        first_axis = second_axis;
+        second_axis = axis;
+    }
+    if (second_fraction < third_fraction) {
+        const double value = second_fraction;
+        second_fraction = third_fraction;
+        third_fraction = value;
+        const int axis = second_axis;
+        second_axis = third_axis;
+        third_axis = axis;
+    }
+    if (first_fraction < second_fraction) {
+        const double value = first_fraction;
+        first_fraction = second_fraction;
+        second_fraction = value;
+        const int axis = first_axis;
+        first_axis = second_axis;
+        second_axis = axis;
+    }
+
+    int vertex1[3] = {lower[0], lower[1], lower[2]};
+    ++vertex1[first_axis];
+    int vertex2[3] = {vertex1[0], vertex1[1], vertex1[2]};
+    ++vertex2[second_axis];
+    const long long offset0 =
+        (long long)lower[0] * stride_r + (long long)lower[1] * stride_g + (long long)lower[2] * stride_b;
+    const long long offset1 =
+        (long long)vertex1[0] * stride_r + (long long)vertex1[1] * stride_g + (long long)vertex1[2] * stride_b;
+    const long long offset2 =
+        (long long)vertex2[0] * stride_r + (long long)vertex2[1] * stride_g + (long long)vertex2[2] * stride_b;
+    const long long offset3 = offset0 + stride_r + stride_g + stride_b;
+    const double weights[4] = {
+        __dsub_rn(1.0, first_fraction),
+        __dsub_rn(first_fraction, second_fraction),
+        __dsub_rn(second_fraction, third_fraction),
+        third_fraction
+    };
+    for (int channel = 0; channel < 3; ++channel) {
+        const long long component = (long long)channel * stride_c;
+        double value = __dmul_rn(weights[0], (double)cube[offset0 + component]);
+        value = pixtreme_bake_mul_add(value, weights[1], cube[offset1 + component]);
+        value = pixtreme_bake_mul_add(value, weights[2], cube[offset2 + component]);
+        value = pixtreme_bake_mul_add(value, weights[3], cube[offset3 + component]);
+        output[node * 3 + channel] = (float)value;
+    }
+}
+"""
+
 
 @dataclass(frozen=True, slots=True)
 class _ParsedLut:
@@ -30,6 +128,7 @@ class _ParsedLut:
     domain_min: tuple[float, float, float]
     domain_max: tuple[float, float, float]
     dimension: Literal[1, 3]
+    shaper: np.ndarray | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -366,7 +465,7 @@ def _tetrahedral_grid(cube: np.ndarray, shaped_axis: np.ndarray) -> np.ndarray:
     return result
 
 
-def _parse_3dl(text: str, *, source: str) -> _ParsedLut:
+def _parse_3dl(text: str, *, source: str, preserve_shaper: bool = False) -> _ParsedLut:
     lines = _active_lines(text)
     mesh_marker_count = 0
     mesh_declarations: list[tuple[str, ...]] = []
@@ -450,13 +549,17 @@ def _parse_3dl(text: str, *, source: str) -> _ParsedLut:
     expected_spacing_codes = np.linspace(0.0, spacing_scale, edge, dtype=np.float64)
     identity_spacing = bool(np.all(np.abs(spacing_codes.astype(np.float64) - expected_spacing_codes) <= 0.5))
     cube = cube_codes.astype(np.float64).reshape(edge, edge, edge, 3) / output_scale
-    if not identity_spacing:
+    shaper = None
+    if not identity_spacing and preserve_shaper:
+        shaper = np.ascontiguousarray(spacing.astype(np.float32))
+    elif not identity_spacing:
         cube = _tetrahedral_grid(cube, spacing)
     return _ParsedLut(
         np.ascontiguousarray(cube.astype(np.float32)),
         _DEFAULT_DOMAIN_MIN,
         _DEFAULT_DOMAIN_MAX,
         3,
+        shaper,
     )
 
 
@@ -730,11 +833,11 @@ def _sniff_parser(text: str) -> Literal[".cube", ".3dl", ".spi1d", ".spi3d"]:
     )
 
 
-def _parse_text(text: str, *, format_name: str, source: str) -> _ParsedLut:
+def _parse_text(text: str, *, format_name: str, source: str, preserve_shaper: bool = False) -> _ParsedLut:
     if format_name == ".cube":
         return _parse_cube(text, source=source)
     if format_name == ".3dl":
-        return _parse_3dl(text, source=source)
+        return _parse_3dl(text, source=source, preserve_shaper=preserve_shaper)
     if format_name == ".spi1d":
         return _parse_spi1d(text, source=source)
     if format_name == ".spi3d":
@@ -750,18 +853,38 @@ def _to_device_lut(parsed: _ParsedLut) -> Lut | Lut1D:
     packed[..., :3] = parsed.data
     packed[..., 3] = np.float32(0.0)
     device_packed = cp.asarray(packed)
-    return Lut(device_packed[..., :3], domain_min=parsed.domain_min, domain_max=parsed.domain_max)
+    device_shaper = None if parsed.shaper is None else cp.asarray(parsed.shaper)
+    return Lut(
+        device_packed[..., :3],
+        domain_min=parsed.domain_min,
+        domain_max=parsed.domain_max,
+        shaper=device_shaper,
+    )
 
 
-def read_lut(path: str | os.PathLike[str]) -> Lut | Lut1D:
+def _validate_preserve_shaper(value: object) -> bool:
+    if type(value) is not bool:
+        raise _error(
+            why="preserve_shaper must be a Boolean",
+            what=f"received preserve_shaper={value!r}",
+            how="pass preserve_shaper=True or preserve_shaper=False",
+        )
+    return value
+
+
+def read_lut(path: str | os.PathLike[str], *, preserve_shaper: bool = False) -> Lut | Lut1D:
     """Read a supported LUT text file into GPU memory without caching.
 
     The extension selects Cube, 3DL, SPI1D, or SPI3D parsing. Cube red-fastest,
     3DL blue-fastest, and SPI explicit-index forms normalize to RGB-indexed
-    public values. A nonidentity 3DL shaper is baked onto an equally sized grid;
-    that single-LUT approximation depends on the source edge density and local
-    transform curvature. Parsing performs one bulk host-to-device transfer.
+    public values. A nonidentity 3DL shaper is baked onto an equally sized grid
+    by default; that single-LUT approximation depends on the source edge density
+    and local transform curvature. ``preserve_shaper=True`` instead retains the
+    normalized shared shaper beside the unbaked cube for strict two-stage GPU
+    evaluation. Unshaped parsing performs one bulk host-to-device transfer;
+    preserved cube and shaper tables each cross once.
     """
+    preserve_shaper = _validate_preserve_shaper(preserve_shaper)
     file_path = _coerce_path(path, kind="LUT")
     extension = file_path.suffix.lower()
     if extension not in _SUPPORTED_EXTENSIONS:
@@ -786,17 +909,22 @@ def read_lut(path: str | os.PathLike[str]) -> Lut | Lut1D:
             what=f"{file_path} failed with {type(error).__name__}",
             how="provide a readable UTF-8 LUT text file",
         ) from error
-    return _to_device_lut(_parse_text(text, format_name=extension, source=str(file_path)))
+    return _to_device_lut(
+        _parse_text(text, format_name=extension, source=str(file_path), preserve_shaper=preserve_shaper)
+    )
 
 
-def decode_lut(data: bytes) -> Lut | Lut1D:
+def decode_lut(data: bytes, *, preserve_shaper: bool = False) -> Lut | Lut1D:
     """Decode supported UTF-8 LUT bytes into GPU memory without caching.
 
     Format markers are resolved in SPI3D, SPI1D, Cube, then 3DL specificity
     order. Headerless 3DL is selected only by its complete numeric structure.
     A selected parser never falls through. Nonidentity 3DL shapers are baked as
-    the equally sized single-grid approximation documented by :func:`read_lut`.
+    the equally sized single-grid approximation documented by :func:`read_lut`
+    unless ``preserve_shaper=True`` retains the shared shaper and unbaked cube
+    for strict two-stage GPU evaluation.
     """
+    preserve_shaper = _validate_preserve_shaper(preserve_shaper)
     if not isinstance(data, bytes):
         raise _error(
             why="decode_lut requires a bytes payload",
@@ -812,7 +940,9 @@ def decode_lut(data: bytes) -> Lut | Lut1D:
             how="provide a supported LUT payload encoded as UTF-8",
         ) from error
     format_name = _sniff_parser(text)
-    return _to_device_lut(_parse_text(text, format_name=format_name, source="LUT bytes"))
+    return _to_device_lut(
+        _parse_text(text, format_name=format_name, source="LUT bytes", preserve_shaper=preserve_shaper)
+    )
 
 
 def _format_domain(domain: tuple[float, float, float]) -> str:
@@ -824,12 +954,46 @@ def _format_cube_rows(rows: np.ndarray) -> str:
     return "".join(map(row_format, zip(rows[:, 0], rows[:, 1], rows[:, 2])))
 
 
+@lru_cache(maxsize=1)
+def _shaped_lut_bake_kernel() -> cp.RawKernel:
+    return cp.RawKernel(_SHAPED_LUT_BAKE_KERNEL_SOURCE, "pixtreme_bake_shaped_lut")
+
+
+def _bake_shaped_lut(lut: Lut) -> cp.ndarray:
+    assert lut.shaper is not None
+    size = int(lut.data.shape[0])
+    output = cp.empty((size, size, size, 3), dtype=cp.float32)
+    itemsize = int(lut.data.dtype.itemsize)
+    strides = tuple(np.int64(int(stride) // itemsize) for stride in lut.data.strides)
+    shaper_stride = np.int64(int(lut.shaper.strides[0]) // int(lut.shaper.dtype.itemsize))
+    node_count = size**3
+    threads_per_block = 256
+    block_count = (node_count + threads_per_block - 1) // threads_per_block
+    _shaped_lut_bake_kernel()(
+        (block_count,),
+        (threads_per_block,),
+        (
+            lut.data,
+            *strides,
+            lut.shaper,
+            shaper_stride,
+            np.int32(size),
+            output,
+        ),
+    )
+    return output
+
+
 def write_lut(path: str | os.PathLike[str], lut: Lut | Lut1D) -> None:
     """Write a finite one- or three-dimensional LUT as deterministic Cube text.
 
     The output always includes the RGB input domain and uses float32 shortest
     round-trip decimals. The complete table crosses device-to-host once. Parent
     directories are not created and no cache or ambient registry is consulted.
+    A ``Lut`` shaper is linearly evaluated with the tetrahedral cube at the
+    same-edge nodes on the GPU using float64 intermediate arithmetic. Cube can
+    store only the resulting table, so the shaper and strict between-node
+    evaluation are irreversibly lost when the file is read back.
     """
     file_path = _coerce_path(path, kind="LUT")
     if file_path.suffix.lower() != ".cube":
@@ -844,7 +1008,8 @@ def write_lut(path: str | os.PathLike[str], lut: Lut | Lut1D) -> None:
             what=f"received {type(lut).__module__}.{type(lut).__qualname__}",
             how="pass a validated px.core.Lut or px.core.Lut1D",
         )
-    host_data = cp.asnumpy(lut.data)
+    device_data = _bake_shaped_lut(lut) if isinstance(lut, Lut) and lut.shaper is not None else lut.data
+    host_data = cp.asnumpy(device_data)
     if not bool(np.all(np.isfinite(host_data))):
         raise _error(
             why="Cube output requires finite table values",

@@ -2,6 +2,32 @@
 
 Notable changes to pixtreme are documented in this file.
 
+## 1.6.0 - 2026-09-23
+
+pixtreme 1.6.0 adds two public capabilities. The first is the `px.io.from_p216` / `px.io.to_p216` pair, the ninth
+named-format pair, which exchanges 16-bit 4:2:2 semi-planar frames (a `uint16` Y plane followed by a `uint16`
+interleaved Cb Cr plane) as one C-contiguous device array under the existing 4:2:2 planar rules; the `io` module grows
+to 29 operations and the public API to 100. The second is the keyword-only `preserve_shaper` option of
+`px.io.read_lut` and `px.io.decode_lut`, which evaluates a nonidentity `.3dl` shaper strictly in one GPU kernel
+instead of the default same-edge bake. Both are independent additions: existing token spellings, aliases, signatures,
+and float32 results are unchanged, and there are no breaking changes to the public API. The published performance
+baseline (`docs_site/performance.md` and the README table) is regenerated from a single same-run measurement of the
+current implementation on an NVIDIA RTX A6000 (WSL2, CUDA runtime 12.9, CuPy 14.1.1) and now covers 210 cases,
+including the P216 pair and the shaper-aware LUT cases.
+
+### Added
+
+- Added `px.io.from_p216` and `px.io.to_p216`, the ninth named-format pair. P216 is 16-bit 4:2:2 semi-planar
+  (a `uint16` Y plane followed by a `uint16` interleaved Cb Cr plane) exchanged as a C-contiguous 1D device array.
+  The effective code depth is fixed at 16 bits with no `bit_depth` argument; `range`, rounding, clipping, the
+  even-width constraint, horizontally co-sited chroma at full vertical resolution, and the `interpolation` tokens
+  follow the existing 4:2:2 planar rules. The `io` module now exposes 29 operations and the public API 100.
+- Added the keyword-only `preserve_shaper` option to `px.io.read_lut` and `px.io.decode_lut`. For nonidentity
+  `.3dl` spacing, opting in retains a shared shaper on `px.core.Lut` and evaluates its linear stage with the existing
+  trilinear or tetrahedral cube stage in one GPU kernel. The default remains the existing same-edge baked
+  approximation. Writing a shaped LUT as Cube performs the same-edge bake on the GPU; the independent shaper and
+  strict between-node evaluation are not recoverable from that output.
+
 ## 1.5.0 - 2026-09-10
 
 pixtreme 1.5.0 adds six public capabilities and changes two raster decode defaults. The additions are the

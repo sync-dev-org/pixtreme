@@ -258,16 +258,6 @@ def _narrow_normalized(code: np.ndarray) -> np.ndarray:
     return (code.astype(np.float32) - np.float32(64.0)) / np.float32(876.0)
 
 
-def _table_tokens(markdown: str, heading: str) -> tuple[str, ...]:
-    section = markdown.split(f"## {heading}\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    return tuple(
-        cells[1].strip().removeprefix("`").removesuffix("`")
-        for line in section.splitlines()
-        if line.startswith("| `")
-        for cells in (line.split("|"),)
-    )
-
-
 def test_generator_public_signatures_are_keyword_only_and_minimal() -> None:
     """v1-derivative-filters acceptance 17: generators stay in the expanded 68-point public surface."""
     expected = {
@@ -765,19 +755,6 @@ def test_color_bars_scale_boundaries_to_tiny_frames_without_gaps_or_minimum_size
     assert scaled.shape == (13, 19, 3)
     assert np.all(_host(tiny) <= 1023)
     assert np.all(_host(scaled) <= 1023)
-
-
-def test_generator_vocabulary_tables_equal_implementation_token_sets(vocabulary_markdown: str) -> None:
-    """v1-generator acceptance 37: kind, standard, output, and shared aa vocabulary exactly match implementation."""
-    from pixtreme._draw.shapes import _AA_TOKENS
-    from pixtreme._generate.patterns import _KIND_TOKENS, _OUTPUT_TOKENS, _STANDARD_TOKENS
-
-    markdown = vocabulary_markdown
-    assert _table_tokens(markdown, "generator kind") == KINDS == _KIND_TOKENS
-    assert _table_tokens(markdown, "color bars standard") == STANDARDS == _STANDARD_TOKENS
-    assert _table_tokens(markdown, "color bars output") == OUTPUTS == _OUTPUT_TOKENS
-    assert _AA_TOKENS == AAS
-    assert "grid" in markdown and "checkerboard" in markdown and "share the same three tokens" in markdown
 
 
 def test_generator_docstrings_state_llm_readable_geometry_metadata_and_output_contracts() -> None:

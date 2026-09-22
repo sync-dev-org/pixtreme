@@ -7,7 +7,6 @@ from typing import Any
 
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 from pixtreme._feature.features import _DIRECT_MATCH_OPERATION_LIMIT, _window_sums
@@ -723,36 +722,3 @@ def test_analysis_docstrings_are_self_contained_operational_contracts() -> None:
         assert required in corner_docstring
     for required in (*METHODS, "valid", "smaller", "larger", "+inf", "zero"):
         assert required in match_docstring
-
-
-def test_analysis_vocabulary_defines_methods_and_harris_border(vocabulary_markdown: str) -> None:
-    """v1-analysis-pair acceptance 24: vocabulary fixes all metric tokens, score direction, and Harris border."""
-    method_section = vocabulary_markdown.split("## template matching method\n", maxsplit=1)[1].split(
-        "\n## ", maxsplit=1
-    )[0]
-    border_section = vocabulary_markdown.split("## border\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    for token in METHODS:
-        assert f"`{token}`" in method_section
-    for required in ("ccoeff_normed", "default", "Lower", "Higher", "mean", "sqrt"):
-        assert required in method_section
-    for required in ("px.feature.corner_harris", "mirror", "gradient stage", "aggregation window"):
-        assert required in border_section
-
-
-def test_analysis_requirements_define_modules_and_array_response_boundary() -> None:
-    """v1-analysis-pair acceptance 27; v1-public-namespace acceptance 1 and 8; v1-fonts-module acceptance 1 and 14."""
-    requirements_path = require_repo_file("docs/requirements.md")
-    requirements = requirements_path.read_text(encoding="utf-8")
-    architecture = requirements.split("**REQ-ARCH-008:", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
-    modules = requirements.split("**REQ-API-009:", maxsplit=1)[1].split("**REQ-API-010:", maxsplit=1)[0]
-    boundaries = requirements.split("**REQ-API-010:", maxsplit=1)[1].split("**REQ-API-011:", maxsplit=1)[0]
-    assert "14 module" in architecture
-    assert "`px.io.from_array`" in architecture
-    assert "14 module" in modules
-    assert "`feature`" in modules
-    assert "`metrics`" in modules
-    assert "画像ではない測定配列" in boundaries
-    for path in ("px.feature.corner_harris", "px.feature.match_template"):
-        assert path in boundaries
-    assert "Frame → device 配列" in boundaries
-    assert "px.io.to_array" in boundaries

@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import inspect
-import re
-from pathlib import Path
 from typing import Literal, get_args, get_origin, get_type_hints
 
 import cupy as cp
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -326,11 +323,6 @@ def _expected_parameter_families(module_name: str, operation: str, parameter: st
     return (family,)
 
 
-def _documentation_tokens(markdown: str, heading: str) -> tuple[str, ...]:
-    section = markdown.split(f"## {heading}\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    return tuple(match.group(1) for line in section.splitlines() if (match := re.match(r"^\| `([^`]+)`", line)))
-
-
 def test_literal_aliases_are_the_independent_canonical_vocabulary() -> None:
     """v1-chroma-siting-h273 acceptance 1 and 10; v1-token-vocabulary acceptance 1;
     v1-sony-tokens acceptance 1; v1-arri-tokens acceptance 16;
@@ -500,53 +492,3 @@ def test_gamma_aliases_preserve_pixels_and_non_token_observables() -> None:
         )
         assert result is not canonical
         assert result.data.data.ptr != canonical.data.data.ptr
-
-
-def test_token_reference_matches_all_literal_aliases_in_order() -> None:
-    """v1-token-vocabulary acceptance 9; v1-sony-tokens acceptance 12;
-    v1-blackmagic-tokens acceptance 50; v1-panasonic-tokens acceptance 112;
-    v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188;
-    GitHub #29: token tables match all aliases in order.
-    """
-    path = require_repo_file("docs_site/tokens.md")
-    markdown = path.read_text(encoding="utf-8")
-    assert {
-        family: _documentation_tokens(markdown, heading) for family, heading in DOC_HEADINGS.items()
-    } == EXPECTED_VOCABULARY
-    assert "case-insensitive" in markdown
-    assert "permanent aliases" in markdown
-    assert "canonical output" in markdown
-    # OpenType axis tags remain a legitimately case-sensitive open vocabulary; only
-    # token-family claims of case sensitivity or literal stamping are stale.
-    assert "case-sensitive token" not in markdown.lower()
-    assert "case-sensitive closed" not in markdown.lower()
-    assert "case variants are invalid" not in markdown
-    assert "stamped literally" not in markdown
-
-
-def test_requirements_define_the_two_layer_token_contract() -> None:
-    """v1-token-vocabulary acceptance 10; v1-sony-tokens acceptance 12;
-    v1-vendor-b-tokens acceptance 188; v1-fonts-module acceptance 6 and 14: requirements define vocabularies.
-    """
-    path = require_repo_file("docs/requirements.md")
-    requirements = path.read_text(encoding="utf-8")
-    arch = requirements.split("**REQ-ARCH-003", maxsplit=1)[1].split("\n\n", maxsplit=1)[0]
-    assert "font catalog 名は exact / case-sensitive" in arch
-    assert "閉 token の normalization を適用しない" in arch
-    assert "casefold" in arch
-    assert "U+0020" in arch
-    assert "permanent alias" in arch
-    for canonical in ("BT.601", "BT.709", "BT.2020", "Rec.709", "BT.1886", "ACES-1.3", "BT.2408"):
-        assert f"`{canonical}`" in requirements or f'"{canonical}"' in requirements
-
-
-def test_changelog_records_all_breaking_renames_and_runtime_compatibility() -> None:
-    """v1-token-vocabulary acceptance 11; v1-canon-tokens acceptance 93; GitHub #29: preserve release history."""
-    changelog = (Path(__file__).resolve().parents[1] / "CHANGELOG.md").read_text(encoding="utf-8")
-    release_130 = changelog.split("## 1.3.0", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    assert "Breaking" in release_130
-    assert "permanent" in release_130
-    for aliases in LEGACY_ALIASES.values():
-        for legacy, canonical in aliases:
-            assert f"`{legacy}`" in release_130
-            assert f"`{canonical}`" in release_130

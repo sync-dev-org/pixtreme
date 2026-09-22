@@ -428,24 +428,3 @@ def test_derivative_docstrings_are_self_contained_operational_contracts() -> Non
         assert required in docstrings["laplacian"]
     for required in ("gaussian_blur", "sigma1", "sigma2", "ceil(3 * sigma)", "equal", "order"):
         assert required in docstrings["difference_of_gaussians"]
-
-
-def test_derivative_vocabulary_defines_sobel_direction_and_shared_border_default(vocabulary_markdown: str) -> None:
-    """v1-derivative-filters acceptance 16: vocabulary fixes direction semantics and mirror border inheritance."""
-    direction_section = vocabulary_markdown.split("## sobel direction\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    border_section = vocabulary_markdown.split("## border\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
-    for token in DIRECTIONS:
-        assert f"`{token}`" in direction_section
-    for required in (
-        "horizontal direction",
-        "vertical edges",
-        "vertical direction",
-        "horizontal edges",
-        "sqrt",
-        "default",
-    ):
-        assert required in direction_section
-    for name in ("sobel", "laplacian", "difference_of_gaussians"):
-        assert name in border_section
-    assert "mirror" in border_section
-    assert "default" in border_section

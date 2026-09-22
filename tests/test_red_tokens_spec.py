@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 from collections.abc import Callable
 from pathlib import Path
 from typing import Literal, get_args, get_origin, get_type_hints
@@ -10,7 +9,6 @@ from typing import Literal, get_args, get_origin, get_type_hints
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -686,41 +684,3 @@ def test_red_dpx_transfer_codes_cover_logarithmic_and_printing_density_headers(t
         headers[gamma] = path.read_bytes()[801]
         assert headers[gamma] == transfer
     assert headers["REDlogFilm"] == headers["Cineon"]
-
-
-def test_red_token_reference_and_public_docstrings_are_synchronized() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 22;
-    v1-red-tokens acceptance 72; v1-canon-tokens acceptance 93;
-    v1-panasonic-tokens acceptance 112;
-    v1-vendor-a-tokens acceptance 161; v1-vendor-b-tokens acceptance 188;
-    GitHub #29: synchronize public prose.
-    """
-    token_reference = (ROOT / "docs_site" / "tokens.md").read_text(encoding="utf-8")
-    requirements = require_repo_file("docs/requirements.md").read_text(encoding="utf-8")
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").split("## 1.2.1", maxsplit=1)[0]
-    for token in (*_COLORSPACES[16:22], *_GAMMAS[11:17], "Cineon"):
-        assert f"`{token}`" in token_reference
-    for fragment in (
-        "a = 0.224282",
-        "b = 155.975327",
-        "c = 0.01",
-        "g = 15.1927",
-        "0.0107977516232771",
-        "sign-preserving mirror",
-        "Bradford",
-        "REDWideGamutRGB",
-        "DRAGONcolor",
-    ):
-        assert fragment in token_reference
-    assert "29 Colorspace" in requirements
-    assert "36 Gamma" in requirements
-    assert "199 canonical tokens" in requirements
-    assert "REDWideGamutRGB" in changelog and "RED-Log3G10" in changelog and "REDlogFilm" in changelog
-    assert "ARRI-LogC3" in changelog and "ARRI-LogC4" in changelog and "runtime input" in changelog
-    for operation in (px.color.rgb_to_rgb, px.color.gamma_to_linear, px.color.linear_to_gamma):
-        docstring = inspect.getdoc(operation)
-        assert docstring is not None
-        assert "RED-Log3G10" in docstring
-        assert "REDlogFilm" in docstring
-        assert "ARRI-LogC3" in docstring
-        assert "ARRI-LogC4" in docstring

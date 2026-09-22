@@ -47,6 +47,17 @@ __device__ __forceinline__ void pixtreme_lut_affine_coordinate(
     *lower = min((int)floor(position), size - 2);
     *fraction = (float)(position - *lower);
 }
+
+__device__ __forceinline__ void pixtreme_lut_normalized_coordinate(
+    const float value,
+    const int size,
+    int* lower,
+    float* fraction
+) {
+    const float position = fminf(fmaxf(value, 0.0f), 1.0f) * (size - 1);
+    *lower = min((int)floorf(position), size - 2);
+    *fraction = position - *lower;
+}
 """
 
 
@@ -107,6 +118,9 @@ extern "C" __global__ void pixtreme_lut_transform(
     const int blue_index,
     const float* __restrict__ lut,
     const int lut_size,
+    const float* __restrict__ shaper,
+    const long long shaper_stride,
+    const int has_shaper,
     const long long stride_r,
     const long long stride_g,
     const long long stride_b,
@@ -142,36 +156,35 @@ extern "C" __global__ void pixtreme_lut_transform(
     float red_fraction;
     float green_fraction;
     float blue_fraction;
-    pixtreme_lut_affine_coordinate(
-        input[base + red_index],
-        domain_min_r,
-        domain_max_r,
-        scale_r,
-        offset_r,
-        lut_size,
-        &red,
-        &red_fraction
-    );
-    pixtreme_lut_affine_coordinate(
-        input[base + green_index],
-        domain_min_g,
-        domain_max_g,
-        scale_g,
-        offset_g,
-        lut_size,
-        &green,
-        &green_fraction
-    );
-    pixtreme_lut_affine_coordinate(
-        input[base + blue_index],
-        domain_min_b,
-        domain_max_b,
-        scale_b,
-        offset_b,
-        lut_size,
-        &blue,
-        &blue_fraction
-    );
+    const float inputs[3] = {
+        input[base + red_index], input[base + green_index], input[base + blue_index]
+    };
+    const double domain_mins[3] = {domain_min_r, domain_min_g, domain_min_b};
+    const double domain_maxs[3] = {domain_max_r, domain_max_g, domain_max_b};
+    const double scales[3] = {scale_r, scale_g, scale_b};
+    const double offsets[3] = {offset_r, offset_g, offset_b};
+    int* lowers[3] = {&red, &green, &blue};
+    float* fractions[3] = {&red_fraction, &green_fraction, &blue_fraction};
+    for (int channel = 0; channel < 3; ++channel) {
+        pixtreme_lut_affine_coordinate(
+            inputs[channel],
+            domain_mins[channel],
+            domain_maxs[channel],
+            scales[channel],
+            offsets[channel],
+            lut_size,
+            lowers[channel],
+            fractions[channel]
+        );
+        if (has_shaper) {
+            const long long shaper_offset = (long long)(*lowers[channel]) * shaper_stride;
+            const float lower_value = shaper[shaper_offset];
+            const float upper_value = shaper[shaper_offset + shaper_stride];
+            const float shaped =
+                (1.0f - *fractions[channel]) * lower_value + *fractions[channel] * upper_value;
+            pixtreme_lut_normalized_coordinate(shaped, lut_size, lowers[channel], fractions[channel]);
+        }
+    }
     const int packed =
         stride_b == 4
         && stride_c == 1
@@ -368,9 +381,12 @@ def apply_lut(
     User LUT values do not declare color meaning, so Frame colorspace and gamma
     metadata pass through unchanged. Other channel labels pass through by value.
     Lookup coordinates use the LUT's per-channel domain with input clamp at its
-    endpoints; output values are not clipped. ``None`` selects tetrahedral for a
-    3D ``Lut`` and linear for a ``Lut1D``. No shaper stage is implied. Neither
-    input is mutated, and the result owns new C-contiguous Frame storage.
+    endpoints; output values are not clipped. A 3D ``Lut`` with a shaper first
+    evaluates that shared table with linear interpolation, clamps the shaper
+    output to cube coordinates, and evaluates the cube in the same GPU kernel.
+    ``None`` selects tetrahedral for a 3D ``Lut`` and linear for a ``Lut1D``;
+    an explicit 3D token may select trilinear or tetrahedral cube interpolation.
+    Neither input is mutated, and the result owns new C-contiguous Frame storage.
     """
     if not isinstance(frame, Frame):
         raise ValueError(
@@ -439,11 +455,16 @@ def apply_lut(
         strides = tuple(np.int64(int(stride) // itemsize) for stride in lut.data.strides)
         if isinstance(lut, Lut):
             domain_arguments_3d = _lut_domain_arguments(lut)
+            shaper = lut.data if lut.shaper is None else lut.shaper
+            shaper_stride = np.int64(int(shaper.strides[0]) // int(shaper.dtype.itemsize))
             _lut_transform_kernel()(
                 (block_count,),
                 (threads_per_block,),
                 (
                     *common_arguments,
+                    shaper,
+                    shaper_stride,
+                    np.int32(lut.shaper is not None),
                     *strides,
                     *domain_arguments_3d,
                     np.int32(_LUT_3D_INTERPOLATION_TOKENS.index(resolved_interpolation)),

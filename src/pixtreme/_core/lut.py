@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from numbers import Real
 from typing import cast
 
@@ -61,12 +62,18 @@ class Lut:
     with float32 values and ``N >= 2``. The array is retained by reference,
     without a construction-time copy; callers are responsible for avoiding
     mutation while the LUT is in use. ``domain_min`` and ``domain_max`` map
-    input RGB values onto the grid independently by channel.
+    input RGB values onto the grid independently by channel. ``shaper`` may
+    hold a shared float32 ``(N,)`` output table on the same CUDA device. It is
+    retained by reference and evaluated linearly before the cube, with its
+    output clamped to cube coordinates. Writing such a LUT as Cube irreversibly
+    bakes the two stages onto one grid, so the shaper and its between-node
+    evaluation cannot be recovered from that file.
     """
 
     data: cp.ndarray
     domain_min: tuple[float, float, float] = _DEFAULT_DOMAIN_MIN
     domain_max: tuple[float, float, float] = _DEFAULT_DOMAIN_MAX
+    shaper: cp.ndarray | None = dataclass_field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
         if not isinstance(self.data, cp.ndarray):
@@ -102,6 +109,55 @@ class Lut:
                     how="convert the lookup grid with data.astype(cupy.float32)",
                 )
             )
+        if self.shaper is not None:
+            if not isinstance(self.shaper, cp.ndarray):
+                raise ValueError(
+                    _actionable_error(
+                        why="Lut shaper must reside on the GPU as a cupy.ndarray",
+                        what=f"received {type(self.shaper).__module__}.{type(self.shaper).__qualname__}",
+                        how=f"transfer a float32 ({size},) shared output table with cupy.asarray",
+                    )
+                )
+            if self.shaper.ndim != 1:
+                raise ValueError(
+                    _actionable_error(
+                        why="Lut shaper must be a rank-one shared output table",
+                        what=f"received shape {self.shaper.shape!r}",
+                        how=f"provide shaper data shaped ({size},)",
+                    )
+                )
+            if int(self.shaper.shape[0]) < 2 or int(self.shaper.shape[0]) != size:
+                raise ValueError(
+                    _actionable_error(
+                        why="Lut shaper sample count must equal the cube edge and be at least 2",
+                        what=f"received shaper shape {self.shaper.shape!r} for cube edge {size}",
+                        how=f"provide exactly {size} shared shaper samples",
+                    )
+                )
+            if np.dtype(self.shaper.dtype) != np.dtype(np.float32):
+                raise ValueError(
+                    _actionable_error(
+                        why="Lut shaper uses the float32 working representation",
+                        what=f"received dtype {self.shaper.dtype!s}",
+                        how="convert the shaper table with shaper.astype(cupy.float32)",
+                    )
+                )
+            if self.shaper.device.id != self.data.device.id:
+                raise ValueError(
+                    _actionable_error(
+                        why="Lut data and shaper must reside on the same CUDA device",
+                        what=f"received data device {self.data.device.id} and shaper device {self.shaper.device.id}",
+                        how="transfer both arrays to the same CUDA device before constructing the Lut",
+                    )
+                )
+            if not bool(cp.all(cp.isfinite(self.shaper)).item()):
+                raise ValueError(
+                    _actionable_error(
+                        why="Lut shaper samples must be finite",
+                        what="the shaper table contains NaN or infinity",
+                        how="replace every non-finite shaper output with a finite float32 value",
+                    )
+                )
         domain_min = _domain(self.domain_min, name="domain_min")
         domain_max = _domain(self.domain_max, name="domain_max")
         if not all(lower < upper for lower, upper in zip(domain_min, domain_max)):

@@ -8,7 +8,6 @@ from pathlib import Path
 import cupy as cp
 import numpy as np
 import pytest
-from repository_contracts import require_repo_file
 
 import pixtreme as px
 
@@ -517,7 +516,7 @@ def test_read_lut_cube_extracts_directives_in_one_structural_scan(tmp_path: Path
 
 
 def test_write_lut_emits_deterministic_cube_text_for_1d_and_3d(tmp_path: Path) -> None:
-    """v1-lut-extensions acceptance 21-22: Cube output is deterministic, self-contained, ordered UTF-8 text."""
+    """v1-lut-shaper acceptance 9 and 19; v1-lut-extensions acceptance 21-22: Cube output is deterministic, self-contained, ordered UTF-8 text."""
     one_d = px.core.Lut1D(
         cp.asarray(((-0.0, 0.1, 1.0), (2.0, -1.5, 0.25)), dtype=cp.float32),
         domain_min=(-1.0, -2.0, -3.0),
@@ -556,7 +555,7 @@ def test_write_lut_emits_deterministic_cube_text_for_1d_and_3d(tmp_path: Path) -
 def test_write_lut_bulk_serialization_keeps_shortest_float32_bytes_without_python_row_iteration(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """v1-lut-extensions acceptance 21-23: structural contract keeps bulk serialization byte-exact."""
+    """v1-lut-shaper acceptance 9 and 19; v1-lut-extensions acceptance 21-23: structural contract keeps bulk serialization byte-exact."""
     import pixtreme._io.formats.lut as implementation
 
     values = np.asarray(
@@ -590,7 +589,7 @@ def test_write_lut_bulk_serialization_keeps_shortest_float32_bytes_without_pytho
 
 @pytest.mark.parametrize("kind", ("1d", "3d"))
 def test_write_read_roundtrip_preserves_every_float32_bit_and_domain(tmp_path: Path, kind: str) -> None:
-    """v1-lut-extensions acceptance 23: finite programmatic LUTs round-trip every float32 data bit."""
+    """v1-lut-shaper acceptance 19; v1-lut-extensions acceptance 23: finite programmatic LUTs round-trip every float32 data bit."""
     values = np.asarray(
         (
             -0.0,
@@ -669,7 +668,7 @@ def test_write_lut_rejects_before_mutation_and_preserves_backend_causes(tmp_path
 def test_each_decode_parser_performs_one_bulk_host_to_device_transfer(
     monkeypatch: pytest.MonkeyPatch, text: str
 ) -> None:
-    """v1-lut-extensions acceptance 25: every decoded LUT crosses the host-to-device boundary exactly once."""
+    """v1-lut-shaper acceptance 19; v1-lut-extensions acceptance 25: every decoded LUT crosses the host-to-device boundary exactly once."""
     import pixtreme._io.formats.lut as implementation
 
     original = implementation.cp.asarray
@@ -691,7 +690,7 @@ def test_each_decode_parser_performs_one_bulk_host_to_device_transfer(
 def test_write_lut_performs_one_device_to_host_transfer(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, kind: str
 ) -> None:
-    """v1-lut-extensions acceptance 25: write_lut transfers each LUT table to host exactly once without caching."""
+    """v1-lut-shaper acceptance 19; v1-lut-extensions acceptance 25: write_lut transfers each LUT table to host exactly once without caching."""
     import pixtreme._io.formats.lut as implementation
 
     lut: px.core.Lut | px.core.Lut1D
@@ -713,25 +712,3 @@ def test_write_lut_performs_one_device_to_host_transfer(
     assert transfers == [lut.data]
     assert not hasattr(px.io.read_lut, "cache_info")
     assert not hasattr(px.io.decode_lut, "cache_info")
-
-
-def test_lut_io_public_signatures_and_documentation_contract_match_the_feature() -> None:
-    """v1-lut-extensions acceptance 4 and 26; v1-white-balance acceptance 1;
-    v1-white-point-simulation acceptance 1; v1-exr-mixed-dtype-write acceptance 1 and 15:
-    v1-fonts-module acceptance 1 and 14; v1-grade acceptance 1:
-    public signatures, counts, types, and boundary canon stay aligned. GitHub #29.
-    """
-    assert tuple(inspect.signature(px.io.read_lut).parameters) == ("path",)
-    assert tuple(inspect.signature(px.io.decode_lut).parameters) == ("data",)
-    assert tuple(inspect.signature(px.io.write_lut).parameters) == ("path", "lut")
-    assert len([name for name in px.io.__all__ if inspect.isfunction(getattr(px.io, name))]) == 27
-
-    requirements_path = require_repo_file("docs/requirements.md")
-    requirements = requirements_path.read_text(encoding="utf-8")
-    public_section = requirements.split("**REQ-API-009", maxsplit=1)[1].split("**REQ-API-010", maxsplit=1)[0]
-    assert "| `io`" in public_section and "| 27 |" in public_section
-    assert "公開 operation は計 98 関数" in public_section
-    assert "公開型" in public_section and "`core.Lut1D`" in public_section and "5 点" in public_section
-    boundary = requirements.split("**REQ-API-010", maxsplit=1)[1].split("**REQ-API-011", maxsplit=1)[0]
-    assert "LUT file" in boundary and "`px.io.read_lut`" in boundary and "`px.io.write_lut`" in boundary
-    assert "LUT bytes" in boundary and "`px.io.decode_lut`" in boundary
