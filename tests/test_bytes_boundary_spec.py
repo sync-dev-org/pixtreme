@@ -66,9 +66,11 @@ def _sentence_containing(docstring: str, fragment: str) -> str:
     return matches[0]
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_bytes_boundary_public_signatures_are_exact() -> None:
-    """v1-io-orientation acceptance 1; v1-bytes-boundary acceptance 5 and 14:
-    both public APIs expose the fixed keyword grammar.
+    """Image file and bytes APIs expose the documented keyword parameters for reading, decoding, writing, and
+    encoding.
     """
     decode = inspect.signature(px.io.decode_image)
     assert tuple(decode.parameters) == (
@@ -107,9 +109,11 @@ def test_bytes_boundary_public_signatures_are_exact() -> None:
         assert encode.parameters[name].default is None
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize("format_token", ("jpeg", "png", "tiff"))
 def test_decode_image_matches_the_file_boundary(tmp_path: Path, format_token: str) -> None:
-    """v1-bytes-boundary acceptance 2: sniffed bytes and file decoding return identical pixels and metadata."""
+    """Decoding image bytes and reading the same file produce identical pixels and color metadata."""
     path = _save_fixture(tmp_path, format_token)
 
     decoded = px.io.decode_image(path.read_bytes())
@@ -118,6 +122,8 @@ def test_decode_image_matches_the_file_boundary(tmp_path: Path, format_token: st
     _assert_frames_equal(decoded, from_file)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "payload",
     (
@@ -127,13 +133,17 @@ def test_decode_image_matches_the_file_boundary(tmp_path: Path, format_token: st
     ),
 )
 def test_decode_image_rejects_recognizable_unsupported_and_unknown_bytes(payload: bytes) -> None:
-    """v1-bytes-boundary acceptance 3: unsupported and unidentifiable bytes fail with actionable context."""
+    """Decoding unsupported or unidentified image bytes raises an error that explains the format problem."""
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.decode_image(payload)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_read_and_decode_docstrings_state_the_file_only_and_bytes_boundaries() -> None:
-    """REQ-API-005 and v1-bytes-boundary acceptance 1-4: both image inputs enumerate their format boundary."""
+    """The public image input documentation lists which formats are accepted from files and which are accepted from
+    bytes.
+    """
     read_docstring = inspect.getdoc(px.io.read_image) or ""
     decode_docstring = inspect.getdoc(px.io.decode_image) or ""
     raster_formats = {"JPEG", "PNG", "TIFF", "JPEG 2000", "WebP", "BMP", "PNM"}
@@ -155,15 +165,20 @@ def test_read_and_decode_docstrings_state_the_file_only_and_bytes_boundaries() -
     assert set(re.findall(r":class:`([^`]+)`", decode_docstring)) == {"ValueError", "RuntimeError"}
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_decode_image_rejects_malformed_headers_with_value_error() -> None:
-    """REQ-API-005 and v1-bytes-boundary acceptance 2: a recognized but malformed header is invalid input, not a codec failure."""
+    """A recognized image format with a malformed header is rejected as invalid input with an actionable error."""
     truncated_png = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\x0dIHDR"
     with pytest.raises(ValueError):
         px.io.decode_image(truncated_png)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 def test_decode_image_metadata_overrides_and_native_depth_match_read_image(tmp_path: Path) -> None:
-    """v1-bytes-boundary acceptance 4: raster defaults, per-call claims, and unchanged depth mirror file I/O."""
+    """Bytes decoding and file reading apply the same raster defaults, metadata overrides, and native-depth option."""
     values = np.array([[0, 1, 32768, 65535]], dtype=np.uint16)
     path = tmp_path / "gray16.png"
     Image.fromarray(values).save(path)
@@ -177,9 +192,11 @@ def test_decode_image_metadata_overrides_and_native_depth_match_read_image(tmp_p
     assert (decoded.colorspace, decoded.gamma) == ("ACEScg", "linear")
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("format_token", ("jpg", "jpeg-x", "jpeg2k", None, 1))
 def test_encode_image_requires_a_supported_format_token(format_token: object) -> None:
-    """v1-io-formats acceptance 3: format remains required and its extended typed token set fails fast."""
+    """Encoding image bytes requires a supported format name and explains invalid format names."""
     frame = _frame()
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.encode_image(frame, format=format_token)  # type: ignore[arg-type]
@@ -188,9 +205,11 @@ def test_encode_image_requires_a_supported_format_token(format_token: object) ->
         px.io.encode_image(frame)  # type: ignore[call-arg]
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("quality", (0, 101, True, 90.0))
 def test_jpeg_quality_is_typed_bounded_and_format_specific(quality: object) -> None:
-    """v1-bytes-boundary acceptance 7: JPEG quality alone accepts exact integers from 1 through 100."""
+    """JPEG quality accepts built-in integers from 1 through 100 only for JPEG output."""
     frame = _frame()
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.encode_image(frame, format="jpeg", quality=quality)  # type: ignore[arg-type]
@@ -200,9 +219,11 @@ def test_jpeg_quality_is_typed_bounded_and_format_specific(quality: object) -> N
     assert isinstance(px.io.encode_image(frame, format="jpeg", quality=90), bytes)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("compression", ("zip", "deflate", 1))
 def test_tiff_compression_tokens_are_closed_and_format_specific(compression: object) -> None:
-    """v1-bytes-boundary acceptance 8; v1-token-vocabulary acceptance 7: TIFF rejects unknown compression tokens."""
+    """TIFF output accepts only its supported compression names and rejects them for other formats."""
     frame = _frame()
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.encode_image(frame, format="tiff", compression=compression)  # type: ignore[arg-type]
@@ -210,17 +231,19 @@ def test_tiff_compression_tokens_are_closed_and_format_specific(compression: obj
         px.io.encode_image(frame, format="png", compression="lzw")
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize("compression", ("none", "lzw"))
 def test_tiff_compression_round_trip_is_bit_exact(compression: str) -> None:
-    """v1-bytes-boundary acceptance 8: both TIFF compression tokens preserve pixels across the bytes boundary."""
+    """Both supported TIFF compression modes preserve pixel codes through a bytes round trip."""
     frame = _frame()
     decoded = px.io.decode_image(px.io.encode_image(frame, format="tiff", compression=compression), unchanged=True)
     _assert_frames_equal(decoded, frame)
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize("compression_level", range(10))
 def test_png_compression_levels_round_trip_bit_exactly(compression_level: int) -> None:
-    """v1-bytes-boundary acceptance 9: every PNG zlib level 0 through 9 is lossless."""
+    """Every PNG compression level from 0 through 9 preserves pixel codes through a bytes round trip."""
     frame = _frame()
     decoded = px.io.decode_image(
         px.io.encode_image(frame, format="png", compression_level=compression_level),
@@ -229,9 +252,11 @@ def test_png_compression_levels_round_trip_bit_exactly(compression_level: int) -
     _assert_frames_equal(decoded, frame)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("compression_level", (-1, 10, True, 1.0, "1"))
 def test_png_compression_level_is_typed_bounded_and_format_specific(compression_level: object) -> None:
-    """v1-bytes-boundary acceptance 9: PNG compression levels fail fast outside the exact integer domain."""
+    """PNG compression levels accept built-in integers from 0 through 9 only for PNG output."""
     frame = _frame()
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.encode_image(frame, format="png", compression_level=compression_level)  # type: ignore[arg-type]
@@ -239,6 +264,8 @@ def test_png_compression_level_is_typed_bounded_and_format_specific(compression_
         px.io.encode_image(frame, format="tiff", compression_level=1)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     ("format_token", "suffix", "kwargs"),
     (
@@ -253,7 +280,7 @@ def test_bytes_and_file_encode_round_trips_match(
     suffix: str,
     kwargs: dict[str, object],
 ) -> None:
-    """v1-bytes-boundary acceptance 10-11: bytes and file output share pixels, metadata, and encode parameters."""
+    """Encoding bytes and writing files with the same options preserve equivalent pixels and metadata on readback."""
     frame = _frame()
     path = tmp_path / f"round-trip{suffix}"
 
@@ -264,8 +291,10 @@ def test_bytes_and_file_encode_round_trips_match(
     _assert_frames_equal(px.io.decode_image(payload, unchanged=True), px.io.read_image(path, unchanged=True))
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_write_image_new_encode_parameters_share_fail_fast_validation(tmp_path: Path) -> None:
-    """v1-bytes-boundary acceptance 11: file output enforces the same parameter/format matrix as bytes output."""
+    """File writing rejects invalid format-specific encode parameters with the same rules as bytes encoding."""
     frame = _frame()
     invalid = (
         (tmp_path / "quality.png", {"quality": 90}),
@@ -279,43 +308,39 @@ def test_write_image_new_encode_parameters_share_fail_fast_validation(tmp_path: 
             px.io.write_image(path, frame, **kwargs)  # type: ignore[arg-type]
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(("compression", "expected_tag"), (("none", 1), ("lzw", 5)))
 def test_tiff_compression_token_controls_bytes_output_encoding(compression: str, expected_tag: int) -> None:
-    """v1-bytes-boundary acceptance 8: TIFF compression tokens select the container scheme in the emitted bytes.
-
-    Independent Pillow oracle over TIFF tag 259 (Compression); fails if the option
-    is silently ignored, which lossless round-trip assertions cannot detect.
-    """
+    """The TIFF compression option selects the compression scheme recorded in encoded bytes."""
     payload = px.io.encode_image(_frame(), format="tiff", compression=compression)
     with Image.open(io.BytesIO(payload)) as image:
         assert image.tag_v2[259] == expected_tag
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(("compression", "expected_tag"), (("none", 1), ("lzw", 5)))
 def test_tiff_compression_token_controls_file_output_encoding(
     tmp_path: Path, compression: str, expected_tag: int
 ) -> None:
-    """v1-bytes-boundary acceptance 11: write_image applies the same TIFF compression scheme as encode_image."""
+    """Writing a TIFF file records the compression scheme selected by its compression option."""
     path = tmp_path / "compression.tiff"
     px.io.write_image(path, _frame(), compression=compression)
     with Image.open(path) as image:
         assert image.tag_v2[259] == expected_tag
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_png_compression_level_controls_bytes_output_size() -> None:
-    """v1-bytes-boundary acceptance 9: zlib levels materially change the emitted payload on compressible content.
-
-    Level 0 stores uncompressed deflate blocks, so a constant image must shrink at
-    level 9; fails if compression_level is silently ignored.
-    """
+    """Higher PNG compression reduces the encoded size of a compressible image compared with level zero."""
     frame = _frame(np.zeros((64, 64, 3), dtype=np.uint8))
     fastest = px.io.encode_image(frame, format="png", compression_level=0)
     smallest = px.io.encode_image(frame, format="png", compression_level=9)
     assert len(smallest) < len(fastest)
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_png_compression_level_controls_file_output_size(tmp_path: Path) -> None:
-    """v1-bytes-boundary acceptance 11: write_image applies the same PNG compression levels as encode_image."""
+    """Writing a compressible PNG file applies the selected compression level to its output size."""
     frame = _frame(np.zeros((64, 64, 3), dtype=np.uint8))
     fastest_path = tmp_path / "level0.png"
     smallest_path = tmp_path / "level9.png"

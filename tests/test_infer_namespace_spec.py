@@ -60,12 +60,14 @@ def _assert_process_succeeded(result: subprocess.CompletedProcess[str]) -> None:
     assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
 
 
+@pytest.mark.req("REQ-PIX-112")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "distribution"),
     (("infer", "pixtreme-infer"), ("transport", "pixtreme-transport")),
 )
 def test_missing_companion_reports_its_install_guidance(name: str, distribution: str) -> None:
-    """v1-infer-namespace acceptance 1: each missing companion reports its matching install command."""
+    """Missing infer and transport companions report the install command for the requested companion."""
     result = _run_python(
         f"""
 from pathlib import Path
@@ -87,14 +89,16 @@ else:
     _assert_process_succeeded(result)
 
 
+@pytest.mark.req("REQ-PIX-112")
 def test_unknown_root_attribute_remains_attribute_error() -> None:
-    """v1-infer-namespace acceptance 2: names outside the companion list retain the root AttributeError contract."""
+    """An unknown root package attribute raises AttributeError when it is not a reserved companion name."""
     with pytest.raises(AttributeError, match="module 'pixtreme' has no attribute 'nonexistent'"):
         px.nonexistent
 
 
+@pytest.mark.req("REQ-PIX-112")
 def test_split_companion_loads_without_changing_the_root_surface(tmp_path: Path) -> None:
-    """v1-infer-namespace acceptance 3, 4, and 6; v1-fonts-module acceptance 1: companion load preserves root."""
+    """Loading an installed companion exposes its reserved namespace without adding other root exports."""
     companion_root = _write_infer_companion(tmp_path, 'MARKER = "split-companion"\n')
     result = _run_python(
         f"""
@@ -119,8 +123,9 @@ assert "infer" not in vars(px)
     _assert_process_succeeded(result)
 
 
+@pytest.mark.req("REQ-PIX-112")
 def test_infer_internal_module_not_found_error_propagates_unchanged(tmp_path: Path) -> None:
-    """v1-infer-namespace acceptance 5: an infer dependency failure is not rewritten as install guidance."""
+    """A missing dependency inside an installed infer companion raises its original import error."""
     companion_root = _write_infer_companion(tmp_path, "import deliberately_missing_infer_dependency\n")
     result = _run_python(
         """

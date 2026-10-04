@@ -245,3 +245,9 @@ def _read_exr_zip_custom_cpu(
         even_odd_grouped=prepared.compressed,
         output_dtype=output_dtype,
     )
+
+
+def _zip_gpu_eligible(channels: Sequence[_ExrChannel]) -> bool:
+    return all(
+        channel.pixel_type in (0, 1, 2) and channel.x_sampling == channel.y_sampling == 1 for channel in channels
+    )

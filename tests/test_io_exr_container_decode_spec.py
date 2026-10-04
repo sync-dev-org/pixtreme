@@ -197,6 +197,7 @@ def _scanline_chunk(part_index: int, y: int, values: tuple[float, ...]) -> bytes
     return struct.pack("<iii", part_index, y, len(payload)) + payload
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize("compression", range(10))
 @pytest.mark.parametrize("level_mode", (0, 1, 2))
 @pytest.mark.parametrize("line_order", (0, 1, 2))
@@ -206,7 +207,8 @@ def test_tiled_level_zero_materializes_all_compressions_without_table_or_line_or
     level_mode: int,
     line_order: int,
 ) -> None:
-    """v1-exr-runtime-independence acceptance 16, 18, and 19: level zero owns the public HWC output."""
+    """Tiled EXR reads place level-zero pixels in HWC order for every supported compression, regardless of table or
+    line order."""
     payload, expected = _build_tiled_read_fixture(
         compression=compression,
         level_mode=level_mode,
@@ -221,8 +223,10 @@ def test_tiled_level_zero_materializes_all_compressions_without_table_or_line_or
     np.testing.assert_array_equal(actual.data.get(), expected)
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_multipart_channels_decode_from_their_own_part_and_preserve_requested_order(tmp_path: Path) -> None:
-    """v1-exr-runtime-independence acceptance 22 and 23: each selected channel uses its owning part."""
+    """Multipart EXR reads obtain each selected channel from its owning part and return channels in the requested
+    order."""
     window = (-1, 2, 0, 3)
     headers = (
         _part_attributes(
@@ -259,8 +263,11 @@ def test_multipart_channels_decode_from_their_own_part_and_preserve_requested_or
     assert actual.channels == ("fill.G", "R")
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_default_selection_ignores_deep_duplicates_and_explicit_deep_selection_is_actionable(tmp_path: Path) -> None:
-    """v1-exr-runtime-independence acceptance 24 and 26: deep affects only explicit deep reads."""
+    """EXR reads ignore deep-part name collisions by default and explain why explicitly selected deep channels cannot
+    be read."""
     window = (0, 0, 0, 0)
     flat_header = _part_attributes(
         data_window=window,
@@ -391,8 +398,9 @@ def _build_rle_subsampled_fixture() -> tuple[bytes, dict[str, np.ndarray]]:
     return header + table + b"".join(chunks), expected
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_subsampled_channels_materialize_only_stored_lattice_samples(tmp_path: Path) -> None:
-    """v1-exr-runtime-independence acceptance 27 and 28: saved samples retain their real HWC shape."""
+    """EXR reads return only stored samples from subsampled channels with the corresponding HWC dimensions."""
     payload, expected = _build_subsampled_fixture()
     path = tmp_path / "subsampled.exr"
     path.write_bytes(payload)
@@ -409,8 +417,9 @@ def test_subsampled_channels_materialize_only_stored_lattice_samples(tmp_path: P
     assert "why=" in message and "what=" in message and "how=" in message
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_compressed_subsampled_channels_materialize_without_openexr_fallback(tmp_path: Path) -> None:
-    """v1-exr-runtime-independence acceptance 4, 27, and 28: compressed samples retain their real lattice."""
+    """Compressed subsampled EXR channels decode on their stored sampling lattice without an OpenEXR runtime backend."""
     payload, expected = _build_rle_subsampled_fixture()
     path = tmp_path / "subsampled-rle.exr"
     path.write_bytes(payload)

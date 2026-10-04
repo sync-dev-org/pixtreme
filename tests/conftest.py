@@ -26,7 +26,7 @@ def pytest_terminal_summary(
     if not _PERFORMANCE_RESULTS:
         return
 
-    terminalreporter.section("v1-performance FHD measurement report")
+    terminalreporter.section("pixtreme FHD performance measurement report")
     terminalreporter.write_line(
         "| target | representative parameters | mean ms | median ms | fps | p5 ms | p95 ms | effective GB/s | > 1 ms |"
     )

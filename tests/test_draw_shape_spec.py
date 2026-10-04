@@ -310,8 +310,12 @@ def _host(result: px.core.Frame) -> np.ndarray:
     ).get()
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 def test_draw_shape_public_signatures_and_frame_only_entries_are_actionable() -> None:
-    """v1-draw-shape acceptance 1-2: six exact keyword APIs are public, Frame-only, and return Frame."""
+    """Six public shape drawing operations accept Frames through their documented keyword arguments and return
+    Frames.
+    """
     import cupy as cp
 
     expected_parameters = {
@@ -423,8 +427,9 @@ def test_draw_shape_public_signatures_and_frame_only_entries_are_actionable() ->
         _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_draw_host_array_conversion_failure_is_actionable() -> None:
-    """REQ-API-012: draw host-array conversion reports the rejected value and a concrete recovery."""
+    """For shape drawing, draw host-array conversion reports the rejected value and a concrete recovery."""
     value = ((1.0,), (1.0, 2.0))
     with pytest.raises(ValueError) as error:
         draw_module._host_array(value)
@@ -432,9 +437,13 @@ def test_draw_host_array_conversion_failure_is_actionable() -> None:
     assert repr(value) in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("name", DRAW_NAMES)
 def test_draw_shape_color_validation_and_scene_values(name: str) -> None:
-    """v1-draw-shape acceptance 3: color matches channels, is finite-real, and remains unclamped."""
+    """For shape drawing, color matches channels, is finite-real, and remains unclamped."""
     operation = _draw(name)
     source = _zeros()
     for invalid_color in ((1.0, 2.0), (1.0, 2.0, 3.0, 4.0), (1.0, float("nan"), 3.0), 1.0):
@@ -454,6 +463,8 @@ def test_draw_shape_color_validation_and_scene_values(name: str) -> None:
     np.testing.assert_array_equal(_host(result), np.full((3, 3, 1), -3.0, dtype=np.float32))
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "parameter", "invalid"),
     (
@@ -475,15 +486,16 @@ def test_draw_shape_color_validation_and_scene_values(name: str) -> None:
 def test_draw_shape_coordinates_and_dimensions_reject_invalid_values(
     name: str, parameter: str, invalid: object
 ) -> None:
-    """v1-draw-shape acceptance 4-5: geometry values are finite reals with signed-domain validation."""
+    """For shape drawing, geometry values are finite reals with signed-domain validation."""
     with pytest.raises(ValueError) as error:
         _draw(name)(_zeros(), **(_base_kwargs(name) | {parameter: invalid}))
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-012")
 @pytest.mark.parametrize("name", DRAW_NAMES)
 def test_draw_shape_accepts_integer_float_and_subpixel_geometry(name: str) -> None:
-    """v1-draw-shape acceptance 4: geometry accepts int and float coordinates and preserves subpixel motion."""
+    """For shape drawing, geometry accepts int and float coordinates and preserves subpixel motion."""
     source = _zeros(height=5, width=7, channels=("signal",))
     base = _base_kwargs(name) | {"color": (1.0,)}
     first = _host(_draw(name)(source, **base))
@@ -503,6 +515,8 @@ def test_draw_shape_accepts_integer_float_and_subpixel_geometry(name: str) -> No
     assert not np.array_equal(first, second)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "points"),
     (
@@ -513,14 +527,15 @@ def test_draw_shape_accepts_integer_float_and_subpixel_geometry(name: str) -> No
     ),
 )
 def test_draw_shape_points_validate_count_and_n_by_two_shape(name: str, points: object) -> None:
-    """v1-draw-shape acceptance 6: point inputs require finite (x,y) pairs and primitive-specific minima."""
+    """For shape drawing, point inputs require finite (x,y) pairs and primitive-specific minima."""
     with pytest.raises(ValueError) as error:
         _draw(name)(_zeros(), **(_base_kwargs(name) | {"points": points}))
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_shape_accepts_sequence_and_ndarray_points() -> None:
-    """v1-draw-shape acceptance 6: point sequences and N-by-2 ndarrays describe the same geometry."""
+    """For shape drawing, point sequences and N-by-2 ndarrays describe the same geometry."""
     source = _zeros(channels=("signal",))
     points = ((1.0, 1.0), (5.0, 1.0), (3.0, 5.0))
     sequence = _host(_draw("polygon")(source, points=points, color=(1.0,), aa="off"))
@@ -528,25 +543,31 @@ def test_draw_shape_accepts_sequence_and_ndarray_points() -> None:
     np.testing.assert_array_equal(array, sequence)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("opacity", (-0.1, 1.1, float("nan"), float("inf"), True, "1"))
 def test_draw_shape_opacity_is_a_finite_unit_interval_real(opacity: object) -> None:
-    """v1-draw-shape acceptance 7: opacity is a finite non-bool real in the closed unit interval."""
+    """For shape drawing, opacity is a finite non-bool real in the closed unit interval."""
     with pytest.raises(ValueError) as error:
         _draw("circle")(_zeros(), **(_base_kwargs("circle") | {"opacity": opacity}))
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(("axis", "token", "accepted"), (("blend", "over", BLENDS), ("aa", "nearest", AAS)))
 def test_draw_shape_tokens_fail_fast_with_the_accepted_vocabulary(
     axis: str, token: str, accepted: tuple[str, ...]
 ) -> None:
-    """v1-draw-shape acceptance 8-9 / v1-composite acceptance 15: over is rejected and recovery is listed."""
+    """Shape drawing rejects unknown mode tokens and lists the accepted names."""
     with pytest.raises(ValueError) as error:
         _draw("circle")(_zeros(), **(_base_kwargs("circle") | {axis: token}))
     _assert_actionable(error)
     assert all(candidate in str(error.value) for candidate in accepted)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("name", ("rectangle", "circle", "ellipse"))
 @pytest.mark.parametrize(
     "overrides",
@@ -558,22 +579,25 @@ def test_draw_shape_tokens_fail_fast_with_the_accepted_vocabulary(
     ),
 )
 def test_draw_shape_fill_and_thickness_are_explicit_and_exclusive(name: str, overrides: dict[str, object]) -> None:
-    """v1-draw-shape acceptance 5 and 10: fill and positive thickness select exactly one region mode."""
+    """For shape drawing, fill and positive thickness select exactly one region mode."""
     with pytest.raises(ValueError) as error:
         _draw(name)(_zeros(), **(_base_kwargs(name) | overrides))
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 def test_draw_shape_off_rejects_softness() -> None:
-    """v1-draw-shape acceptance 11: binary aa=off cannot be combined with edge softness."""
+    """For shape drawing, binary aa=off cannot be combined with edge softness."""
     with pytest.raises(ValueError) as error:
         _draw("circle")(_zeros(), **(_base_kwargs("circle") | {"aa": "off", "softness": 1.0}))
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-012")
 @pytest.mark.parametrize("aa", AAS)
 def test_draw_line_matches_pixel_center_capsule_oracle(aa: str) -> None:
-    """v1-draw-shape acceptance 12, 14-15, and 23-25: line coverage follows pixel centers and round capsules."""
+    """For shape drawing, line coverage follows pixel centers and round capsules."""
     source_values = np.full((6, 8, 1), 0.25, dtype=np.float32)
     source = _frame(source_values, channels=("signal",))
     start = (1.25, 2.0)
@@ -609,8 +633,9 @@ def test_draw_line_matches_pixel_center_capsule_oracle(aa: str) -> None:
         np.testing.assert_allclose(coverage * 16.0, scaled, atol=1e-12)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_line_zero_length_is_a_round_cap_circle_and_thickness_is_symmetric() -> None:
-    """v1-draw-shape acceptance 14-15: a zero-length line is a diameter-thickness circle with symmetric spread."""
+    """For shape drawing, a zero-length line is a diameter-thickness circle with symmetric spread."""
     source = _zeros(height=9, width=9, channels=("signal",))
     line = _host(
         _draw("line")(
@@ -628,8 +653,9 @@ def test_draw_line_zero_length_is_a_round_cap_circle_and_thickness_is_symmetric(
     np.testing.assert_array_equal(line, line[:, ::-1])
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_polyline_unifies_round_segment_coverage_before_one_blend() -> None:
-    """v1-draw-shape acceptance 15-16: round segment union is composited once at joins and self-intersections."""
+    """For shape drawing, round segment union is composited once at joins and self-intersections."""
     source_values = np.full((7, 7, 1), 0.2, dtype=np.float32)
     source = _frame(source_values, channels=("signal",))
     points = ((1.0, 1.0), (5.0, 5.0), (1.0, 5.0), (5.0, 1.0))
@@ -649,8 +675,10 @@ def test_draw_polyline_unifies_round_segment_coverage_before_one_blend() -> None
     np.testing.assert_allclose(_host(result), expected, rtol=2e-6, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 def test_draw_rectangle_geometry_corner_saturation_and_outside_clip() -> None:
-    """v1-draw-shape acceptance 13 and 17-18: rectangles use continuous bounds, rounded saturation, and image clip."""
+    """For shape drawing, rectangles use continuous bounds, rounded saturation, and image clip."""
     source_values = np.arange(6 * 7, dtype=np.float32).reshape(6, 7, 1) / 10.0
     source = _frame(source_values, channels=("signal",))
     with pytest.raises(ValueError) as error:
@@ -695,9 +723,10 @@ def test_draw_rectangle_geometry_corner_saturation_and_outside_clip() -> None:
     assert outside.data.data.ptr != source.data.data.ptr
 
 
+@pytest.mark.req("REQ-PIX-012")
 @pytest.mark.parametrize("fill", (False, True))
 def test_draw_rectangle_matches_rounded_box_distance_oracle(fill: bool) -> None:
-    """v1-draw-shape acceptance 17-18 and 23: rectangle fill and centered outline follow rounded-box distance."""
+    """For shape drawing, rectangle fill and centered outline follow rounded-box distance."""
     source_values = np.full((7, 8, 1), 0.1, dtype=np.float32)
     source = _frame(source_values, channels=("signal",))
     kwargs = {
@@ -715,9 +744,12 @@ def test_draw_rectangle_matches_rounded_box_distance_oracle(fill: bool) -> None:
     np.testing.assert_allclose(_host(result), expected, rtol=2e-6, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("blend", BLENDS)
 def test_draw_circle_matches_fp32_blend_equations_without_clamp(blend: str) -> None:
-    """v1-draw-shape acceptance 27-28 and 30: all blend B equations use fp32 alpha composition without clamp."""
+    """For shape drawing, all blend B equations use fp32 alpha composition without clamp."""
     source_values = np.asarray(
         [
             [[-0.5, 0.25, 1.5], [0.0, 0.5, 2.0]],
@@ -744,8 +776,9 @@ def test_draw_circle_matches_fp32_blend_equations_without_clamp(blend: str) -> N
     np.testing.assert_allclose(_host(result), expected, rtol=2e-6, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_ellipse_rotation_and_uniform_outline_width_match_distance_oracle() -> None:
-    """v1-draw-shape acceptance 19-20: ellipse uses lens rotation direction and an isotropic outline distance."""
+    """For shape drawing, ellipse uses lens rotation direction and an isotropic outline distance."""
     source = _zeros(height=13, width=13, channels=("signal",))
     kwargs = {
         "center": (6.5, 6.5),
@@ -797,8 +830,9 @@ def test_draw_ellipse_rotation_and_uniform_outline_width_match_distance_oracle()
     np.testing.assert_array_equal(vertical, np.rot90(horizontal, 1))
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_polygon_even_odd_accepts_concave_self_intersecting_and_degenerate_vertices() -> None:
-    """v1-draw-shape acceptance 21: polygon fill is even-odd for concave/self-crossing paths with degenerate vertices."""
+    """For shape drawing, polygon fill is even-odd for concave/self-crossing paths with degenerate vertices."""
     source_values = np.full((8, 8, 1), 0.2, dtype=np.float32)
     source = _frame(source_values, channels=("signal",))
     points = ((1.0, 1.0), (6.0, 6.0), (1.0, 6.0), (6.0, 1.0), (6.0, 1.0), (1.0, 1.0))
@@ -816,8 +850,9 @@ def test_draw_polygon_even_odd_accepts_concave_self_intersecting_and_degenerate_
     np.testing.assert_allclose(_host(result), expected, rtol=2e-6, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_calls_composite_sequentially_in_call_order() -> None:
-    """v1-draw-shape acceptance 22: each call completes one primitive blend and later calls consume that result."""
+    """For shape drawing, each call completes one primitive blend and later calls consume that result."""
     source = _zeros(height=5, width=5, channels=("signal",))
     red = _draw("circle")(
         source,
@@ -858,8 +893,9 @@ def test_draw_calls_composite_sequentially_in_call_order() -> None:
     assert not np.array_equal(_host(red_then_blue), _host(blue_then_red))
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_distance_and_softness_have_continuous_monotone_edge_coverage() -> None:
-    """v1-draw-shape acceptance 23 and 26: distance AA is continuous and softness widens its centered transition."""
+    """For shape drawing, distance AA is continuous and softness widens its centered transition."""
     source = _zeros(height=1, width=9, channels=("signal",))
     hard = _host(
         _draw("rectangle")(
@@ -890,8 +926,9 @@ def test_draw_distance_and_softness_have_continuous_monotone_edge_coverage() -> 
     assert hard[-1] == 1.0
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_supersample_softness_matches_per_sample_feather_oracle() -> None:
-    """v1-draw-shape acceptance 24 and 26: supersample averages the fixed 4x4 grid and feathers each sample."""
+    """For shape drawing, supersample averages the fixed 4x4 grid and feathers each sample."""
     source_values = np.zeros((5, 6, 1), dtype=np.float32)
     source = _frame(source_values, channels=("signal",))
 
@@ -919,8 +956,10 @@ def test_draw_supersample_softness_matches_per_sample_feather_oracle() -> None:
     np.testing.assert_allclose(_host(result), expected, rtol=2e-6, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_preserves_metadata_and_always_allocates_private_output() -> None:
-    """v1-draw-shape acceptance 13 and 29: metadata is unchanged and every result owns new data, including no-op opacity."""
+    """For shape drawing, metadata is unchanged and every result owns new data, including no-op opacity."""
     source_values = np.arange(4 * 5 * 2, dtype=np.float32).reshape(4, 5, 2)
     source = _frame(source_values, colorspace="S-Gamut3", gamma="S-Log3", channels=("depth", "matte"))
     result = _draw("circle")(
@@ -943,8 +982,9 @@ def test_draw_preserves_metadata_and_always_allocates_private_output() -> None:
     np.testing.assert_array_equal(_host(result), source_values)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_arbitrary_channel_labels_and_one_channel_matte_are_numeric_only() -> None:
-    """v1-draw-shape acceptance 31-32: arbitrary channel labels are inert and one-channel AA/off masks work."""
+    """For shape drawing, arbitrary channel labels are inert and one-channel AA/off masks work."""
     labels = ("normal.x", "normal.y", "depth", "id", "custom")
     source = _zeros(height=5, width=5, channels=labels)
     color = (-1.0, 0.0, 1.0, 2.0, 3.0)
@@ -967,8 +1007,10 @@ def test_draw_arbitrary_channel_labels_and_one_channel_matte_are_numeric_only() 
     assert np.any((antialiased > 0.0) & (antialiased < 1.0))
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 def test_draw_docstrings_state_the_llm_readable_geometry_and_ownership_contracts() -> None:
-    """v1-draw-shape acceptance 34: public docstrings state non-obvious geometry, value, mode, and ownership rules."""
+    """Developers can find shape geometry, drawing modes, values, and output ownership in the public docstrings."""
     combined = "\n".join(inspect.getdoc(_draw(name)) or "" for name in DRAW_NAMES)
     for required in (
         "round",
@@ -983,16 +1025,3 @@ def test_draw_docstrings_state_the_llm_readable_geometry_and_ownership_contracts
         "allocation",
     ):
         assert required in combined
-
-
-def test_draw_uses_one_full_copy_then_one_bbox_raw_kernel_path() -> None:
-    """v1-draw-shape acceptance 1: structural contract fixes full copy plus bbox RawKernel composition."""
-    import pixtreme._draw.shapes as draw_module
-
-    draw_source = inspect.getsource(draw_module._draw)
-    kernel_factory_source = inspect.getsource(draw_module._draw_kernel)
-    assert "frame.data.copy" in draw_source
-    assert "_bbox(" in draw_source
-    assert "_draw_kernel()(" in draw_source
-    assert "cp.RawKernel" in kernel_factory_source
-    assert "ElementwiseKernel" not in kernel_factory_source

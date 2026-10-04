@@ -2,36 +2,34 @@
 
 from __future__ import annotations
 
+import struct
 from collections.abc import Sequence
+from dataclasses import dataclass
 from functools import lru_cache
 
 import cupy as cp
 import numpy as np
 
+from pixtreme._core.errors import _actionable_error
+from pixtreme._io.formats.exr.codec_common import _CanonicalHuffmanCode, _chunk_channel_geometry
 from pixtreme._io.formats.exr.codec_dwa import (
+    _DWA_MAX_HUFFMAN_CODE_LENGTH,
+    _DWA_MAX_HUFFMAN_SYMBOL,
     _decode_dwa_huffman_gpu,
     _dwa_huffman_pack_kernel,
-)
-from pixtreme._io.formats.exr.container import (
-    _DWA_MAX_HUFFMAN_SYMBOL,
-    _EXR_THREADS_PER_BLOCK,
-    _PIZ_BITMAP_BYTE_COUNT,
-    _decode_piz_huffman_host,
     _DwaByteSpan,
     _DwaHuffmanTable,
+)
+from pixtreme._io.formats.exr.container import (
+    _EXR_MAX_INTEGER,
+    _EXR_THREADS_PER_BLOCK,
+    _checked_product,
     _ExrChannel,
     _ExrChunk,
     _ExrContainer,
     _ExrGpuError,
+    _ExrPart,
     _gpu_error,
-    _parse_piz_huffman_table,
-    _piz_error,
-    _piz_inverse_wavelet_host,
-    _piz_reverse_lut,
-    _piz_uses_w14,
-    _PizByteSpan,
-    _PizChunkDescriptor,
-    _PizHuffmanTable,
 )
 from pixtreme._io.formats.exr.packing import (
     _device_i64,
@@ -1930,7 +1928,7 @@ def _piz_materialize_chunk_host(container: _ExrContainer, chunk: _ExrChunk) -> n
     descriptor = chunk.piz
     if descriptor is None:
         raise _piz_error(
-            why="the PIZ host materializer received a chunk without a Phase 4 descriptor",
+            why="the PIZ host materializer received a chunk without a PIZ descriptor",
             what=f"chunk_y={chunk.y}",
             how="materialize only chunks from a PIZ-eligible parsed container",
         )
@@ -2068,7 +2066,7 @@ def _read_exr_piz_gpu(
         descriptor = chunk.piz
         if descriptor is None:
             raise _piz_error(
-                why="the PIZ GPU materializer received a chunk without a Phase 4 descriptor",
+                why="the PIZ GPU materializer received a chunk without a PIZ descriptor",
                 what=f"chunk_y={chunk.y}",
                 how="materialize only chunks from a PIZ-eligible parsed container",
             )
@@ -2190,3 +2188,615 @@ def _read_exr_piz_gpu(
         np.zeros(len(container.chunks), dtype=np.uint8),
         output_dtype=output_dtype,
     )
+
+
+_PIZ_BITMAP_BYTE_COUNT = 8192
+
+_PIZ_HUFFMAN_LEADER_SIZE = 5 * 4
+
+
+@dataclass(frozen=True)
+class _PizByteSpan:
+    start: int
+    end: int
+
+    @property
+    def size(self) -> int:
+        return self.end - self.start
+
+
+@dataclass(frozen=True)
+class _PizChannelPlane:
+    channel_index: int
+    channel_name: str
+    pixel_type: int
+    bytes_per_sample: int
+    sample_count: int
+    word_slice_count: int
+    word_offset: int
+    word_count: int
+
+
+@dataclass(frozen=True)
+class _PizHuffmanLeader:
+    minimum_symbol: int
+    maximum_symbol: int
+    table_byte_count: int
+    data_bit_count: int
+    reserved: int
+    span: _PizByteSpan
+
+
+@dataclass(frozen=True)
+class _PizHuffmanTable:
+    minimum_symbol: int
+    maximum_symbol: int
+    declared_table_byte_count: int
+    data_bit_count: int
+    reserved: int
+    code_lengths: tuple[int, ...]
+    codes: tuple[_CanonicalHuffmanCode, ...]
+    table_span: _PizByteSpan
+    data_span: _PizByteSpan
+
+
+@dataclass(frozen=True)
+class _PizChunkDescriptor:
+    lines_per_chunk: int
+    chunk_y: int
+    row_start: int
+    row_count: int
+    output_row_span: tuple[int, int]
+    payload_span: _PizByteSpan
+    stored_size: int
+    expected_packed_size: int
+    expected_output_word_count: int
+    raw_stored: bool
+    channel_planes: tuple[_PizChannelPlane, ...]
+    bitmap_range: tuple[int, int] | None
+    bitmap_span: _PizByteSpan
+    huffman_byte_count: int
+    huffman_count_span: _PizByteSpan
+    huffman_span: _PizByteSpan
+    huffman_leader: _PizHuffmanLeader | None
+    trailing_span: _PizByteSpan
+
+
+class _ExrPizError(RuntimeError):
+    """An already-classified PIZ descriptor integrity failure."""
+
+
+def _piz_error(*, why: str, what: str, how: str) -> _ExrPizError:
+    return _ExrPizError(_actionable_error(why=why, what=what, how=how))
+
+
+def _piz_channel_planes(
+    channels: Sequence[_ExrChannel],
+    *,
+    width: int,
+    chunk_y: int,
+    row_count: int,
+) -> tuple[tuple[_PizChannelPlane, ...], int]:
+    word_offset = 0
+    planes: list[_PizChannelPlane] = []
+    for channel_index, channel in enumerate(channels):
+        channel_width, channel_rows = _chunk_channel_geometry(
+            channel,
+            width=width,
+            chunk_y=chunk_y,
+            row_count=row_count,
+        )
+        sample_count = _checked_product(
+            channel_width,
+            channel_rows,
+            context=f"PIZ channel {channel.name!r} sample count",
+        )
+        word_slice_count = channel.bytes_per_sample // 2
+        word_count = _checked_product(
+            sample_count,
+            word_slice_count,
+            context=f"PIZ channel {channel.name!r} word count",
+        )
+        planes.append(
+            _PizChannelPlane(
+                channel_index=channel_index,
+                channel_name=channel.name,
+                pixel_type=channel.pixel_type,
+                bytes_per_sample=channel.bytes_per_sample,
+                sample_count=sample_count,
+                word_slice_count=word_slice_count,
+                word_offset=word_offset,
+                word_count=word_count,
+            )
+        )
+        if word_offset > _EXR_MAX_INTEGER - word_count:
+            raise _piz_error(
+                why="the PIZ channel-plane word offsets overflow signed 64-bit bounds",
+                what=f"channel={channel.name!r}, word_offset={word_offset}, word_count={word_count}",
+                how="use image dimensions and channel counts representable within 64-bit word offsets",
+            )
+        word_offset += word_count
+    return tuple(planes), word_offset
+
+
+def _piz_chunk_descriptor(
+    data: bytes,
+    part: _ExrPart,
+    *,
+    width: int,
+    lines_per_chunk: int,
+    chunk_y: int,
+    row_start: int,
+    row_count: int,
+    payload_start: int,
+    payload_end: int,
+    expected_packed_size: int,
+    raw_stored: bool,
+) -> _PizChunkDescriptor:
+    channel_planes, expected_output_word_count = _piz_channel_planes(
+        part.channels,
+        width=width,
+        chunk_y=chunk_y,
+        row_count=row_count,
+    )
+    if expected_output_word_count * 2 != expected_packed_size:
+        raise _piz_error(
+            why="the PIZ channel-plane word count differs from the packed chunk byte count",
+            what=(
+                f"chunk_y={chunk_y}, words={expected_output_word_count}, expected_packed_size={expected_packed_size}"
+            ),
+            how="derive one 16-bit word for HALF and low/high words for FLOAT or UINT samples",
+        )
+    empty_span = _PizByteSpan(payload_start, payload_start)
+    if raw_stored:
+        return _PizChunkDescriptor(
+            lines_per_chunk=lines_per_chunk,
+            chunk_y=chunk_y,
+            row_start=row_start,
+            row_count=row_count,
+            output_row_span=(row_start, row_start + row_count),
+            payload_span=_PizByteSpan(payload_start, payload_end),
+            stored_size=payload_end - payload_start,
+            expected_packed_size=expected_packed_size,
+            expected_output_word_count=expected_output_word_count,
+            raw_stored=raw_stored,
+            channel_planes=channel_planes,
+            bitmap_range=None,
+            bitmap_span=empty_span,
+            huffman_byte_count=0,
+            huffman_count_span=empty_span,
+            huffman_span=empty_span,
+            huffman_leader=None,
+            trailing_span=empty_span,
+        )
+
+    if payload_end - payload_start < 4:
+        raise _piz_error(
+            why="the compressed PIZ payload is truncated before its bitmap leader",
+            what=f"chunk_y={chunk_y}, stored_size={payload_end - payload_start}, required=4",
+            how="provide the little-endian minimum and maximum bitmap byte indices",
+        )
+    bitmap_minimum, bitmap_maximum = struct.unpack_from("<HH", data, payload_start)
+    if bitmap_minimum >= _PIZ_BITMAP_BYTE_COUNT or bitmap_maximum >= _PIZ_BITMAP_BYTE_COUNT:
+        raise _piz_error(
+            why="the PIZ bitmap leader indexes outside the 8192-byte bitmap",
+            what=f"chunk_y={chunk_y}, minimum={bitmap_minimum}, maximum={bitmap_maximum}",
+            how="encode bitmap byte indices in the inclusive range 0 through 8191",
+        )
+    bitmap_size = bitmap_maximum - bitmap_minimum + 1 if bitmap_minimum <= bitmap_maximum else 0
+    bitmap_start = payload_start + 4
+    bitmap_end = bitmap_start + bitmap_size
+    huffman_count_end = bitmap_end + 4
+    if huffman_count_end > payload_end:
+        raise _piz_error(
+            why="the PIZ bitmap slice or Huffman byte count extends beyond the chunk payload",
+            what=(
+                f"chunk_y={chunk_y}, bitmap={bitmap_start}:{bitmap_end}, "
+                f"huffman_count_end={huffman_count_end}, payload_end={payload_end}"
+            ),
+            how="store the inclusive bitmap slice followed by one complete little-endian u32 Huffman byte count",
+        )
+    huffman_byte_count = struct.unpack_from("<I", data, bitmap_end)[0]
+    huffman_start = huffman_count_end
+    huffman_end = huffman_start + huffman_byte_count
+    if huffman_end > payload_end:
+        raise _piz_error(
+            why="the PIZ Huffman section exceeds the remaining chunk payload",
+            what=(
+                f"chunk_y={chunk_y}, huffman={huffman_start}:{huffman_end}, "
+                f"payload_end={payload_end}, hufByteCount={huffman_byte_count}"
+            ),
+            how="bound hufByteCount to the bytes available after the bitmap slice",
+        )
+    if huffman_byte_count < _PIZ_HUFFMAN_LEADER_SIZE:
+        raise _piz_error(
+            why="the PIZ Huffman section is truncated before its fixed-width leader",
+            what=f"chunk_y={chunk_y}, hufByteCount={huffman_byte_count}, required={_PIZ_HUFFMAN_LEADER_SIZE}",
+            how="provide im, iM, tableByteCount, dataBitCount, and reserved as five little-endian u32 values",
+        )
+    minimum_symbol, maximum_symbol, table_byte_count, data_bit_count, reserved = struct.unpack_from(
+        "<IIIII", data, huffman_start
+    )
+    if minimum_symbol > maximum_symbol or maximum_symbol > (1 << 16):
+        raise _piz_error(
+            why="the PIZ Huffman symbol bounds are reversed or exceed the pseudo-symbol domain",
+            what=f"chunk_y={chunk_y}, im={minimum_symbol}, iM={maximum_symbol}",
+            how="use an inclusive symbol range ending no later than pseudo symbol 65536",
+        )
+    declared_data_bytes = (data_bit_count + 7) // 8
+    if declared_data_bytes > huffman_byte_count - _PIZ_HUFFMAN_LEADER_SIZE:
+        raise _piz_error(
+            why="the PIZ Huffman data bit count cannot fit within the declared section",
+            what=(
+                f"chunk_y={chunk_y}, dataBitCount={data_bit_count}, data_bytes={declared_data_bytes}, "
+                f"hufByteCount={huffman_byte_count}"
+            ),
+            how="bound the declared data bits to the Huffman section after its fixed-width leader",
+        )
+    leader_span = _PizByteSpan(huffman_start, huffman_start + _PIZ_HUFFMAN_LEADER_SIZE)
+    return _PizChunkDescriptor(
+        lines_per_chunk=lines_per_chunk,
+        chunk_y=chunk_y,
+        row_start=row_start,
+        row_count=row_count,
+        output_row_span=(row_start, row_start + row_count),
+        payload_span=_PizByteSpan(payload_start, payload_end),
+        stored_size=payload_end - payload_start,
+        expected_packed_size=expected_packed_size,
+        expected_output_word_count=expected_output_word_count,
+        raw_stored=raw_stored,
+        channel_planes=channel_planes,
+        bitmap_range=(bitmap_minimum, bitmap_maximum),
+        bitmap_span=_PizByteSpan(bitmap_start, bitmap_end),
+        huffman_byte_count=huffman_byte_count,
+        huffman_count_span=_PizByteSpan(bitmap_end, huffman_count_end),
+        huffman_span=_PizByteSpan(huffman_start, huffman_end),
+        huffman_leader=_PizHuffmanLeader(
+            minimum_symbol=minimum_symbol,
+            maximum_symbol=maximum_symbol,
+            table_byte_count=table_byte_count,
+            data_bit_count=data_bit_count,
+            reserved=reserved,
+            span=leader_span,
+        ),
+        trailing_span=_PizByteSpan(huffman_end, payload_end),
+    )
+
+
+def _piz_reverse_lut(
+    bitmap_minimum: int,
+    bitmap_maximum: int,
+    bitmap_slice: bytes,
+) -> tuple[np.ndarray, int]:
+    if not 0 <= bitmap_minimum < _PIZ_BITMAP_BYTE_COUNT or not 0 <= bitmap_maximum < _PIZ_BITMAP_BYTE_COUNT:
+        raise _piz_error(
+            why="the PIZ reverse-LUT bitmap range lies outside the 8192-byte domain",
+            what=f"minimum={bitmap_minimum}, maximum={bitmap_maximum}",
+            how="use bitmap byte indices in the inclusive range 0 through 8191",
+        )
+    expected_size = bitmap_maximum - bitmap_minimum + 1 if bitmap_minimum <= bitmap_maximum else 0
+    if len(bitmap_slice) != expected_size:
+        raise _piz_error(
+            why="the PIZ reverse-LUT bitmap slice length differs from its inclusive range",
+            what=f"minimum={bitmap_minimum}, maximum={bitmap_maximum}, received={len(bitmap_slice)}, expected={expected_size}",
+            how="provide exactly max-min+1 bitmap bytes, or no bytes for an empty range",
+        )
+    bitmap = np.zeros(_PIZ_BITMAP_BYTE_COUNT, dtype=np.uint8)
+    if expected_size:
+        bitmap[bitmap_minimum : bitmap_maximum + 1] = np.frombuffer(bitmap_slice, dtype=np.uint8)
+    marked = np.flatnonzero(np.unpackbits(bitmap, bitorder="little"))
+    marked = marked[marked != 0]
+    reverse = np.zeros(1 << 16, dtype=np.uint16)
+    reverse[0] = 0
+    if marked.size:
+        reverse[1 : marked.size + 1] = marked.astype(np.uint16, copy=False)
+    return reverse, int(marked.size)
+
+
+def _piz_uses_w14(max_value: int) -> bool:
+    if not 0 <= max_value <= 0xFFFF:
+        raise _piz_error(
+            why="the PIZ compact maximum lies outside the 16-bit LUT domain",
+            what=f"max_value={max_value}",
+            how="derive maxValue from the implicit-zero reverse LUT rank",
+        )
+    return max_value < (1 << 14)
+
+
+def _read_piz_bits(data: bytes, bit_offset: int, width: int, *, field: str) -> tuple[int, int]:
+    if width < 0 or bit_offset < 0 or bit_offset + width > len(data) * 8:
+        raise _piz_error(
+            why=f"the PIZ Huffman {field} is truncated within a packed field",
+            what=f"bit_offset={bit_offset}, requested_bits={width}, available_bits={len(data) * 8}",
+            how="provide the complete six-bit length token, long-run count, or encoded symbol",
+        )
+    value = 0
+    for absolute in range(bit_offset, bit_offset + width):
+        value = (value << 1) | ((data[absolute // 8] >> (7 - absolute % 8)) & 1)
+    return value, bit_offset + width
+
+
+def _canonical_piz_codes(minimum_symbol: int, lengths: Sequence[int]) -> tuple[_CanonicalHuffmanCode, ...]:
+    length_array = np.asarray(lengths, dtype=np.uint8)
+    observed_offsets = np.flatnonzero(length_array)
+    if not observed_offsets.size:
+        raise _piz_error(
+            why="the PIZ Huffman code-length assignment contains no decodable symbol",
+            what=f"minimum_symbol={minimum_symbol}, symbol_count={len(lengths)}",
+            how="assign a code length between 1 and 58 to an actual symbol and the repeat pseudo-symbol",
+        )
+    observed_lengths = length_array[observed_offsets].astype(np.int64, copy=False)
+    if np.any(observed_lengths > _DWA_MAX_HUFFMAN_CODE_LENGTH):
+        raise _piz_error(
+            why="the PIZ Huffman code-length assignment exceeds 58 bits",
+            what=f"maximum_length={int(observed_lengths.max())}",
+            how="encode only canonical lengths in the inclusive range 1 through 58",
+        )
+    counts = np.bincount(observed_lengths, minlength=_DWA_MAX_HUFFMAN_CODE_LENGTH + 1)
+    maximum_length = int(observed_lengths.max())
+    capacity = 1 << maximum_length
+    occupancy = sum(int(counts[length]) << (maximum_length - length) for length in range(1, maximum_length + 1))
+    if occupancy > capacity:
+        raise _piz_error(
+            why="the PIZ Huffman code-length assignment is oversubscribed",
+            what=f"occupancy={occupancy}, capacity={capacity}, maximum_length={maximum_length}",
+            how="reduce short code counts until the canonical assignment is prefix-free",
+        )
+    next_codes = np.zeros(_DWA_MAX_HUFFMAN_CODE_LENGTH + 1, dtype=np.uint64)
+    code = 0
+    for length in range(_DWA_MAX_HUFFMAN_CODE_LENGTH, 0, -1):
+        next_codes[length] = code
+        code = (code + int(counts[length])) >> 1
+    codes: list[_CanonicalHuffmanCode] = []
+    intervals: list[tuple[int, int, int]] = []
+    for offset_value in observed_offsets:
+        offset = int(offset_value)
+        length = int(length_array[offset])
+        assigned = int(next_codes[length])
+        next_codes[length] += 1
+        symbol = minimum_symbol + offset
+        if assigned >= 1 << length:
+            raise _piz_error(
+                why="the PIZ canonical Huffman code exceeds its declared length",
+                what=f"symbol={symbol}, code={assigned}, length={length}",
+                how="provide an in-range prefix-free canonical length assignment",
+            )
+        intervals.append(
+            (
+                assigned << (_DWA_MAX_HUFFMAN_CODE_LENGTH - length),
+                (assigned + 1) << (_DWA_MAX_HUFFMAN_CODE_LENGTH - length),
+                symbol,
+            )
+        )
+        codes.append(_CanonicalHuffmanCode(symbol=symbol, length=length, code=assigned))
+    intervals.sort()
+    for previous, current in zip(intervals, intervals[1:], strict=False):
+        if previous[1] > current[0]:
+            raise _piz_error(
+                why="the PIZ canonical Huffman assignment contains duplicate or prefix-conflicting codes",
+                what=f"symbols={(previous[2], current[2])!r}",
+                how="provide non-overlapping canonical code lengths across im through iM",
+            )
+    return tuple(codes)
+
+
+def _parse_piz_huffman_table(payload: bytes) -> _PizHuffmanTable:
+    if len(payload) < _PIZ_HUFFMAN_LEADER_SIZE:
+        raise _piz_error(
+            why="the PIZ Huffman stream is truncated before its 20-byte leader",
+            what=f"received={len(payload)}, required={_PIZ_HUFFMAN_LEADER_SIZE}",
+            how="provide im, iM, tableByteCount, dataBitCount, and reserved",
+        )
+    minimum_symbol, maximum_symbol, declared_table_bytes, data_bit_count, reserved = struct.unpack_from(
+        "<IIIII", payload
+    )
+    if minimum_symbol > maximum_symbol or maximum_symbol > _DWA_MAX_HUFFMAN_SYMBOL:
+        raise _piz_error(
+            why="the PIZ Huffman symbol range is reversed or outside the pseudo-symbol domain",
+            what=f"im={minimum_symbol}, iM={maximum_symbol}",
+            how="encode an ordered inclusive range ending no later than 65536",
+        )
+    symbol_count = maximum_symbol - minimum_symbol + 1
+    packed = payload[_PIZ_HUFFMAN_LEADER_SIZE:]
+    lengths: list[int] = []
+    bit_offset = 0
+    while len(lengths) < symbol_count:
+        token, bit_offset = _read_piz_bits(packed, bit_offset, 6, field="code-length table")
+        if token <= _DWA_MAX_HUFFMAN_CODE_LENGTH:
+            lengths.append(token)
+            continue
+        if token == 63:
+            extra, bit_offset = _read_piz_bits(packed, bit_offset, 8, field="code-length long zero run")
+            run = extra + 6
+        else:
+            run = token - 57
+        if len(lengths) + run > symbol_count:
+            raise _piz_error(
+                why="the PIZ Huffman code-length table run overshoots iM+1",
+                what=f"decoded={len(lengths)}, run={run}, symbols={symbol_count}, token={token}",
+                how="end every zero-length run at or before the declared maximum symbol",
+            )
+        lengths.extend((0,) * run)
+    consumed_table_bytes = (bit_offset + 7) // 8
+    table_start = _PIZ_HUFFMAN_LEADER_SIZE
+    table_end = table_start + consumed_table_bytes
+    data_byte_count = (data_bit_count + 7) // 8
+    data_end = table_end + data_byte_count
+    if data_end > len(payload):
+        raise _piz_error(
+            why="the PIZ Huffman encoded data is truncated after the derived code-length table",
+            what=(
+                f"table_end={table_end}, dataBitCount={data_bit_count}, data_end={data_end}, "
+                f"hufByteCount={len(payload)}"
+            ),
+            how="provide every declared data bit within the bounded Huffman section",
+        )
+    codes = _canonical_piz_codes(minimum_symbol, lengths)
+    if not any(code.symbol != maximum_symbol for code in codes) or not any(
+        code.symbol == maximum_symbol for code in codes
+    ):
+        raise _piz_error(
+            why="the PIZ Huffman table does not code both an actual symbol and its repeat pseudo-symbol",
+            what=f"im={minimum_symbol}, iM={maximum_symbol}, coded={tuple(code.symbol for code in codes)!r}",
+            how="assign a nonzero length to at least one actual symbol and iM",
+        )
+    return _PizHuffmanTable(
+        minimum_symbol=minimum_symbol,
+        maximum_symbol=maximum_symbol,
+        declared_table_byte_count=declared_table_bytes,
+        data_bit_count=data_bit_count,
+        reserved=reserved,
+        code_lengths=tuple(lengths),
+        codes=codes,
+        table_span=_PizByteSpan(table_start, table_end),
+        data_span=_PizByteSpan(table_end, data_end),
+    )
+
+
+def _decode_piz_huffman_host(
+    payload: bytes,
+    table: _PizHuffmanTable,
+    *,
+    expected_count: int,
+) -> np.ndarray:
+    if expected_count < 0 or table.data_span.start < 0 or table.data_span.end > len(payload):
+        raise _piz_error(
+            why="the PIZ Huffman output count or encoded-data span is outside its bounded domain",
+            what=f"expected={expected_count}, span={table.data_span.start}:{table.data_span.end}, payload={len(payload)}",
+            how="decode a non-negative word count from the matching bounded Huffman section",
+        )
+    codes_by_length: dict[int, dict[int, int]] = {}
+    for item in table.codes:
+        codes_by_length.setdefault(item.length, {})[item.code] = item.symbol
+    encoded = payload[table.data_span.start : table.data_span.end]
+    output = np.empty(expected_count, dtype=np.uint16)
+    produced = 0
+    bit_offset = 0
+    while produced < expected_count:
+        code = 0
+        symbol: int | None = None
+        for length in range(1, _DWA_MAX_HUFFMAN_CODE_LENGTH + 1):
+            if bit_offset >= table.data_bit_count:
+                raise _piz_error(
+                    why="the PIZ Huffman data ends before the expected word count",
+                    what=f"decoded={produced}, expected={expected_count}, bit_offset={bit_offset}",
+                    how="provide a complete canonical code path for every output word",
+                )
+            bit, bit_offset = _read_piz_bits(encoded, bit_offset, 1, field="encoded symbol")
+            code = (code << 1) | bit
+            symbol = codes_by_length.get(length, {}).get(code)
+            if symbol is not None:
+                break
+        if symbol is None:
+            raise _piz_error(
+                why="the PIZ Huffman data contains an invalid canonical prefix",
+                what=f"decoded={produced}, bit_offset={bit_offset}",
+                how="encode every word with one declared prefix-free canonical code",
+            )
+        if symbol == table.maximum_symbol:
+            if produced == 0:
+                raise _piz_error(
+                    why="the PIZ Huffman repeat pseudo-symbol has no previous literal",
+                    what=f"decoded={produced}, bit_offset={bit_offset}",
+                    how="place every repeat pseudo-symbol after a literal word",
+                )
+            if bit_offset + 8 > table.data_bit_count:
+                raise _piz_error(
+                    why="the PIZ Huffman repeat count is truncated",
+                    what=f"decoded={produced}, bit_offset={bit_offset}, data_bits={table.data_bit_count}",
+                    how="append the complete unsigned eight-bit previous-symbol count",
+                )
+            repeat_count, bit_offset = _read_piz_bits(encoded, bit_offset, 8, field="repeat count")
+            if produced + repeat_count > expected_count:
+                raise _piz_error(
+                    why="the PIZ Huffman repeat would overflow the expected word count",
+                    what=f"decoded={produced}, repeat={repeat_count}, expected={expected_count}",
+                    how="bound every previous-symbol run to the remaining output capacity",
+                )
+            output[produced : produced + repeat_count] = output[produced - 1]
+            produced += repeat_count
+            continue
+        if symbol > 0xFFFF:
+            raise _piz_error(
+                why="the PIZ Huffman literal lies outside the 16-bit word domain",
+                what=f"symbol={symbol}, decoded={produced}",
+                how="reserve only iM as the non-literal repeat pseudo-symbol",
+            )
+        output[produced] = symbol
+        produced += 1
+    return output
+
+
+def _inverse_piz_pair(a_word: int, b_word: int, *, w14: bool) -> tuple[int, int]:
+    if w14:
+        low = a_word - 0x10000 if a_word & 0x8000 else a_word
+        high = b_word - 0x10000 if b_word & 0x8000 else b_word
+        first = low + (high & 1) + (high >> 1)
+        second = first - high
+        return first & 0xFFFF, second & 0xFFFF
+    second = (a_word - (b_word >> 1)) & 0xFFFF
+    first = (b_word + second - 32768) & 0xFFFF
+    return first, second
+
+
+def _piz_inverse_wavelet_host(
+    words: np.ndarray,
+    *,
+    nx: int,
+    ny: int,
+    word_stride: int,
+    word_slice: int,
+    max_value: int,
+) -> None:
+    values = np.asarray(words, dtype=np.uint16)
+    if nx < 1 or ny < 1 or word_stride < 1 or not 0 <= word_slice < word_stride:
+        raise _piz_error(
+            why="the PIZ inverse-wavelet field geometry is invalid",
+            what=f"nx={nx}, ny={ny}, word_stride={word_stride}, word_slice={word_slice}",
+            how="decode a positive sampled plane and an in-range independent word slice",
+        )
+    required = word_slice + (ny - 1) * word_stride * nx + (nx - 1) * word_stride + 1
+    if required > values.size:
+        raise _piz_error(
+            why="the PIZ inverse-wavelet field extends beyond its owning word plane",
+            what=f"required={required}, words={values.size}, nx={nx}, ny={ny}",
+            how="match each field geometry and stride to its channel-plane descriptor",
+        )
+    if min(nx, ny) < 2:
+        return
+    w14 = _piz_uses_w14(max_value)
+    x_stride = word_stride
+    y_stride = word_stride * nx
+    p2 = 1 << (min(nx, ny).bit_length() - 1)
+    p = p2 // 2
+    while p >= 1:
+        step = p * 2
+        for y in range(0, ny - step + 1, step):
+            for x in range(0, nx - step + 1, step):
+                i00 = word_slice + y * y_stride + x * x_stride
+                i01 = i00 + p * x_stride
+                i10 = i00 + p * y_stride
+                i11 = i10 + p * x_stride
+                low0, low1 = _inverse_piz_pair(int(values[i00]), int(values[i10]), w14=w14)
+                high0, high1 = _inverse_piz_pair(int(values[i01]), int(values[i11]), w14=w14)
+                values[i00], values[i01] = _inverse_piz_pair(low0, high0, w14=w14)
+                values[i10], values[i11] = _inverse_piz_pair(low1, high1, w14=w14)
+        if nx & p:
+            x = (nx // step) * step
+            for y in range(0, ny - step + 1, step):
+                first = word_slice + y * y_stride + x * x_stride
+                second = first + p * y_stride
+                values[first], values[second] = _inverse_piz_pair(int(values[first]), int(values[second]), w14=w14)
+        if ny & p:
+            y = (ny // step) * step
+            for x in range(0, nx - step + 1, step):
+                first = word_slice + y * y_stride + x * x_stride
+                second = first + p * x_stride
+                values[first], values[second] = _inverse_piz_pair(int(values[first]), int(values[second]), w14=w14)
+        p //= 2
+
+
+def _piz_gpu_eligible(channels: Sequence[_ExrChannel], chunks: Sequence[_ExrChunk]) -> bool:
+    return all(
+        channel.pixel_type in (0, 1, 2) and channel.x_sampling == channel.y_sampling == 1 for channel in channels
+    ) and all(chunk.piz is not None for chunk in chunks)

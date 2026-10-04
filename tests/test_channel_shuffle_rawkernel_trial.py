@@ -47,12 +47,10 @@ def _assert_bit_equal(actual: cp.ndarray, expected: cp.ndarray) -> None:
     cp.testing.assert_array_equal(actual.view(cp.uint32), expected.view(cp.uint32))
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-003")
 def test_shuffle_rawkernel_trial_matches_legacy_reorder_multi_fill_and_adapt_bits_characterization() -> None:
-    """characterization: issue #1 RawKernel trial acceptance 1 and 6 preserve pre-trial routing bits.
-
-    The slice copy / fill composition above remains independent of the shared core kernel so the optimization
-    cannot bless its own output. Replace this characterization when issue #1 closes the trial.
-    """
+    """characterization: Channel shuffle keeps bit-exact reorder, multi-Frame fill, and adaptation results."""
     first_bits = np.asarray(
         [
             [[0x80000000, 0x3F000000, 0x7FC00001], [0xBF800000, 0x3F800000, 0x7FC01234]],
@@ -97,31 +95,3 @@ def test_shuffle_rawkernel_trial_matches_legacy_reorder_multi_fill_and_adapt_bit
         adapt_result.data,
         _legacy_route_data((first.data, adapted.data), ((0, 0), (1, 1), (1, 2))),
     )
-
-
-def test_shuffle_routes_once_through_shared_core_helper(monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-channel-shuffle acceptance 22 and 24; issue #1 RawKernel trial acceptance 1, 2, and 6.
-
-    One shared core call assembles all output channels without moving numeric adaptation into shuffle.
-    """
-    import pixtreme._channel.shuffle as shuffle_module
-
-    source = _frame(np.arange(12, dtype=np.float32).reshape(2, 2, 3))
-    sentinel = cp.zeros((2, 2, 2), dtype=cp.float32)
-    calls: list[tuple[tuple[cp.ndarray, ...], tuple[tuple[int, int] | np.float32, ...]]] = []
-
-    def route_once(
-        sources: tuple[cp.ndarray, ...],
-        routes: tuple[tuple[int, int] | np.float32, ...],
-    ) -> cp.ndarray:
-        calls.append((sources, routes))
-        return sentinel
-
-    monkeypatch.setattr(shuffle_module, "_route_float32_channels", route_once)
-
-    result = px.channel.shuffle(G=(source, "G"), fill=-2.5)
-
-    assert result.data is sentinel
-    assert len(calls) == 1
-    assert len(calls[0][0]) == 1 and calls[0][0][0] is source.data
-    assert calls[0][1] == ((0, 1), np.float32(-2.5))

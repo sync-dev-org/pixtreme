@@ -15,19 +15,18 @@ from pixtreme._core.frame import Frame
 from pixtreme._io.common import _colorspace_chromaticities
 from pixtreme._io.formats.exr.codec_b44 import _encode_b44_chunks_gpu
 from pixtreme._io.formats.exr.codec_dwa import (
+    _classify_default_dwa_channels,
     _dwa_mixed_channel_rules_bytes,
     _encode_dwa_channel_chunks_gpu,
 )
-from pixtreme._io.formats.exr.codec_piz import _encode_piz_chunks_gpu
+from pixtreme._io.formats.exr.codec_piz import _encode_piz_chunks_gpu, _ExrPizError
 from pixtreme._io.formats.exr.codec_pxr24 import _encode_pxr24_rows_gpu
 from pixtreme._io.formats.exr.codec_rle import _encode_rle_packets_gpu
 from pixtreme._io.formats.exr.container import (
     _EXR_DTYPE_INFO,
     _EXR_LINES_PER_CHUNK,
-    _classify_default_dwa_channels,
     _ExrChannel,
     _ExrGpuError,
-    _ExrPizError,
     _gpu_error,
 )
 from pixtreme._io.formats.exr.packing import (

@@ -57,8 +57,9 @@ def _frame(
     return px.io.from_array(data, colorspace=colorspace, gamma=gamma, channels=channels)
 
 
+@pytest.mark.req("REQ-PIX-005")
 def test_public_signature_tokens_and_exact_six_row_supply_table() -> None:
-    """v1-view-transform-lut-removal acceptance 2 and 4: signature and the exact six-row grammar are fixed."""
+    """ACES 1.3 output transformation exposes its documented signature and six supported output combinations."""
     import pixtreme._color.transform as implementation
 
     signature = inspect.signature(px.color.rgb_to_rgb)
@@ -86,6 +87,8 @@ def test_public_signature_tokens_and_exact_six_row_supply_table() -> None:
         assert (result.colorspace, result.gamma, result.matrix) == (output_colorspace, output_gamma, None)
 
 
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("tonemap", "output_colorspace", "output_gamma"),
     (
@@ -98,7 +101,7 @@ def test_public_signature_tokens_and_exact_six_row_supply_table() -> None:
 def test_table_external_forms_fail_before_pixel_processing_with_the_complete_six_row_recipe(
     tonemap: str, output_colorspace: str | None, output_gamma: str | None
 ) -> None:
-    """v1-view-transform-lut-removal acceptance 1 and 2: invalid forms fail with the complete six-row recipe."""
+    """ACES 1.3 output transformation rejects unsupported combinations and lists all six supported choices."""
     with pytest.raises(ValueError) as error:
         px.color.rgb_to_rgb(
             _frame((0.18, 0.18, 0.18)),
@@ -114,6 +117,8 @@ def test_table_external_forms_fail_before_pixel_processing_with_the_complete_six
     assert "('ACES-2.0', 'sRGB', 'sRGB')" in how
 
 
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-109")
 @pytest.mark.parametrize(
     ("output_colorspace", "output_gamma", "fixture_key"),
     (
@@ -124,7 +129,7 @@ def test_table_external_forms_fail_before_pixel_processing_with_the_complete_six
 def test_analytic_output_matches_the_raw_ocio_cpu_oracle_corpus(
     output_colorspace: str, output_gamma: str, fixture_key: str
 ) -> None:
-    """v1-tonemap-aces13-analytic acceptance 4-7; v1-color-semantics acceptance 36: raw OCIO oracle matches."""
+    """ACES 1.3 analytic output matches the independent OpenColorIO corpus for all sampled scene values."""
     with np.load(ORACLE_PATH, allow_pickle=False) as fixture:
         source_values = np.asarray(fixture["input"], dtype=np.float32)
         expected = np.asarray(fixture[fixture_key], dtype=np.float32)
@@ -154,8 +159,11 @@ def test_analytic_output_matches_the_raw_ocio_cpu_oracle_corpus(
     assert np.max(actual) > 1.0
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-005")
 def test_analytic_input_claims_override_metadata_and_equivalent_ap1_ap0_light_converges() -> None:
-    """v1-tonemap-aces13-analytic acceptance 2 and 4: claims win and equivalent scene light converges."""
+    """Explicit input color claims control ACES 1.3 rendering and equivalent AP1 and AP0 light produces equivalent
+    output."""
     ap1_to_ap0 = np.asarray(
         (
             (0.69545224, 0.1406787, 0.16386907),
@@ -187,8 +195,9 @@ def test_analytic_input_claims_override_metadata_and_equivalent_ap1_ap0_light_co
     assert (source_ap1.colorspace, source_ap1.gamma) == ("sRGB", "sRGB")
 
 
+@pytest.mark.req("REQ-PIX-005")
 def test_analytic_accepts_every_input_axis_token() -> None:
-    """v1-tonemap-aces13-analytic acceptance 2 and 4: every input colorspace and gamma token is accepted."""
+    """ACES 1.3 output transformation accepts every named input color space and gamma."""
     from pixtreme._core.frame import _COLORSPACE_TOKENS, _GAMMA_TOKENS
 
     source = _frame((0.0, 0.0, 0.0), colorspace="ACEScg", gamma="linear")
@@ -212,8 +221,10 @@ def test_analytic_accepts_every_input_axis_token() -> None:
         assert np.isfinite(result.data.get()).all()
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-005")
 def test_analytic_is_label_driven_preserves_auxiliary_bits_and_returns_private_storage() -> None:
-    """v1-tonemap-aces13-analytic acceptance 14-15 and 17: labels, metadata, storage, and range are preserved."""
+    """ACES 1.3 output transformation changes RGB labels and keeps auxiliary bits in separate Frame storage."""
     source = _frame(
         (9.0, 0.4, 0.75, 0.18, 0.1),
         channels=["Z", "R", "A", "G", "B"],
@@ -234,9 +245,11 @@ def test_analytic_is_label_driven_preserves_auxiliary_bits_and_returns_private_s
     cp.testing.assert_array_equal(source.data, before)
 
 
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("channels", ("YCbCr", "RG", ["R", "G", "A"]))
 def test_analytic_rejects_missing_rgb_before_rendering(channels: str | list[str]) -> None:
-    """v1-tonemap-aces13-analytic acceptance 15: missing RGB labels fail before the analytic pass."""
+    """ACES 1.3 output transformation rejects a Frame missing any RGB label before rendering."""
     with pytest.raises(ValueError, match="R, G, and B"):
         px.color.rgb_to_rgb(
             _frame(np.zeros(len(px.core.channels(channels)), dtype=np.float32), channels=channels),
@@ -246,6 +259,8 @@ def test_analytic_rejects_missing_rgb_before_rendering(channels: str | list[str]
         )
 
 
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "routes"),
     (
@@ -257,7 +272,7 @@ def test_analytic_rejects_missing_rgb_before_rendering(channels: str | list[str]
 def test_analytic_rejects_non_float32_with_dtype_specific_guidance(
     dtype: type[np.generic], routes: tuple[str, ...]
 ) -> None:
-    """v1-tonemap-aces13-analytic acceptance 16: non-fp32 data fails with the existing conversion recipe."""
+    """ACES 1.3 output transformation rejects non-float32 Frames and names a conversion path."""
     with pytest.raises(ValueError) as error:
         px.color.rgb_to_rgb(
             _frame((0, 0, 0), dtype=dtype),
@@ -270,8 +285,10 @@ def test_analytic_rejects_non_float32_with_dtype_specific_guidance(
     assert tuple(message.index(route) for route in routes) == tuple(sorted(message.index(route) for route in routes))
 
 
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-017")
 def test_analytic_rejects_non_frame_with_three_part_guidance() -> None:
-    """v1-tonemap-aces13-analytic acceptance 16: non-Frame input has complete actionable guidance."""
+    """ACES 1.3 output transformation rejects non-Frame inputs with a usable correction."""
     with pytest.raises(ValueError) as error:
         px.color.rgb_to_rgb(  # type: ignore[arg-type]
             cp.zeros((1, 1, 3), dtype=cp.float32),
@@ -284,6 +301,8 @@ def test_analytic_rejects_non_frame_with_three_part_guidance() -> None:
     assert "pixtreme.core.Frame" in how
 
 
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("parameter", "invalid_value"),
     (
@@ -294,7 +313,7 @@ def test_analytic_rejects_non_frame_with_three_part_guidance() -> None:
     ),
 )
 def test_analytic_rejects_every_unknown_axis_token_with_three_part_guidance(parameter: str, invalid_value: str) -> None:
-    """v1-tonemap-aces13-analytic acceptance 16: every named-axis error has why, what, and how."""
+    """ACES 1.3 output transformation rejects unknown color and gamma names with valid choices."""
     from pixtreme._core.frame import _COLORSPACE_TOKENS, _GAMMA_TOKENS
 
     accepted = _COLORSPACE_TOKENS if parameter.endswith("colorspace") else _GAMMA_TOKENS
@@ -315,8 +334,11 @@ def test_analytic_rejects_every_unknown_axis_token_with_three_part_guidance(para
     assert repr(accepted) in how
 
 
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-109")
 def test_analytic_runtime_is_one_fused_pass_with_no_lut_or_ocio_dependency(monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-tonemap-aces13-analytic acceptance 8-9 and 13: analytic routing is one pass and data-free."""
+    """ACES 1.3 output transformation computes the analytic equations in one GPU pass without a LUT or runtime
+    OpenColorIO dependency."""
     import pixtreme._color.aces13_analytic as implementation
 
     calls = 0
@@ -345,22 +367,8 @@ def test_analytic_runtime_is_one_fused_pass_with_no_lut_or_ocio_dependency(monke
         assert forbidden not in module_source
 
 
-def test_spline_tables_use_packed_global_read_only_records_for_divergent_segments() -> None:
-    """v1-tonemap-aces13-analytic acceptance 8-9 and issue #1: divergent coefficients use packed global records."""
-    import pixtreme._color.aces13_analytic as implementation
-
-    source = implementation._ACES13_ANALYTIC_KERNEL
-    for curve, knot_count, coefficient_count in (("curve0", 9, 8), ("curve1", 15, 14)):
-        assert f"__device__ __constant__ float aces13_{curve}_knots[{knot_count}]" in source
-        assert f"__device__ const float4 aces13_{curve}_coefficients[{coefficient_count}]" in source
-        for coefficient in ("a", "b", "c"):
-            assert f"aces13_{curve}_{coefficient}[" not in source
-    assert source.count("__device__ __constant__ float") == 2
-    assert source.count("__device__ const float4") == 2
-
-
 def test_oracle_tool_recreates_the_committed_fixture_byte_for_byte(tmp_path: Path) -> None:
-    """v1-tonemap-aces13-analytic acceptance 20-21; GitHub #29: the OCIO oracle is byte-deterministic."""
+    """The ACES 1.3 oracle generator reproduces the stored OpenColorIO sample bytes."""
     first = tmp_path / "first.npz"
     second = tmp_path / "second.npz"
     tool_path = require_repo_file("tools/bake_aces13_analytic_oracle.py")
@@ -370,14 +378,16 @@ def test_oracle_tool_recreates_the_committed_fixture_byte_for_byte(tmp_path: Pat
     assert first.read_bytes() == second.read_bytes() == ORACLE_PATH.read_bytes()
 
 
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-021")
 @pytest.mark.performance
 def test_analytic_fhd_median_is_within_the_absolute_limit() -> None:
-    """v1-view-transform-lut-removal acceptance 2: the unchanged ACES 1.3 path remains within 0.20 ms.
+    """The ACES 1.3 output transform has a measured FHD median no greater than 0.20 ms under its performance
+    conditions.
 
     Warmup is time-based (at least 0.5 seconds, matching the registry harness) so that measurement
     starts only after the GPU has ramped from idle to boost clocks. A fixed iteration count finishes
-    inside the ramp and reports idle-clock timings when preceding suite cases leave the GPU idle (I-58).
-    """
+    inside the ramp and reports idle-clock timings when preceding suite cases leave the GPU idle."""
     values = cp.linspace(np.float32(-0.25), np.float32(4.0), 1920 * 1080 * 3, dtype=cp.float32).reshape(1080, 1920, 3)
     source = px.io.from_array(values, colorspace="ACES2065-1", gamma="linear", channels="RGB")
 

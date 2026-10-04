@@ -131,8 +131,9 @@ def _oracle(
     return _encode_hlg(scaled) if output_gamma == "HLG" else _encode_pq(scaled)
 
 
+@pytest.mark.req("REQ-PIX-005")
 def test_bt2408_coexists_with_the_fixed_signature_and_exact_six_combination_table() -> None:
-    """v1-view-transform-lut-removal acceptance 2 and 4: signature is fixed and runtime supplies six exits."""
+    """Output transformation exposes the documented signature and six supported output combinations."""
     import pixtreme._color.transform as implementation
 
     assert tuple(inspect.signature(px.color.rgb_to_rgb).parameters) == (
@@ -149,9 +150,10 @@ def test_bt2408_coexists_with_the_fixed_signature_and_exact_six_combination_tabl
     )
 
 
+@pytest.mark.req("REQ-PIX-005")
 @pytest.mark.parametrize(("tonemap", "output_colorspace", "output_gamma"), (*_ACES_COMBINATIONS, *_BT2408_COMBINATIONS))
 def test_every_tonemap_combination_is_operational(tonemap: str, output_colorspace: str, output_gamma: str) -> None:
-    """v1-tonemap-aces20-analytic acceptance 2: eight ACES and two direct-mapping rows all execute."""
+    """Each supported ACES output transform and BT.2408 direct-mapping combination produces a Frame."""
     result = px.color.rgb_to_rgb(
         _frame([0.18, 0.18, 0.18]),
         output_colorspace=output_colorspace,
@@ -166,6 +168,8 @@ def test_every_tonemap_combination_is_operational(tonemap: str, output_colorspac
     ).all()
 
 
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("tonemap", "output_colorspace", "output_gamma"),
     (
@@ -181,7 +185,7 @@ def test_every_tonemap_combination_is_operational(tonemap: str, output_colorspac
 def test_bt2408_missing_unknown_and_table_external_combinations_fail_with_actionable_guidance(
     tonemap: str, output_colorspace: str | None, output_gamma: str | None
 ) -> None:
-    """v1-tonemap-bt2408 acceptance 2-3: all table-external forms fail-fast with why/what/how."""
+    """BT.2408 direct mapping rejects unsupported output combinations and lists the supported choices."""
     with pytest.raises(ValueError) as error:
         px.color.rgb_to_rgb(
             _frame([0.18, 0.18, 0.18]),
@@ -193,11 +197,12 @@ def test_bt2408_missing_unknown_and_table_external_combinations_fail_with_action
     assert all(part in message for part in ("why=", "what=", "how=", "BT.2408", "Rec.2020", "HLG", "PQ"))
 
 
+@pytest.mark.req("REQ-PIX-005")
 @pytest.mark.parametrize(("output_gamma", "expected"), (("HLG", 0.75), ("PQ", None)))
 def test_bt2408_places_rec709_linear_reference_white_from_independent_published_equations(
     output_gamma: str, expected: float | None
 ) -> None:
-    """v1-tonemap-bt2408 acceptance 4-5 and 14: reference white follows independent HLG/PQ equations."""
+    """BT.2408 direct mapping places Rec.709 reference white according to published HLG and PQ equations."""
     result = px.color.rgb_to_rgb(
         _frame([1.0, 1.0, 1.0]),
         output_colorspace="Rec.2020",
@@ -219,11 +224,14 @@ def test_bt2408_places_rec709_linear_reference_white_from_independent_published_
     )
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("output_gamma", ("HLG", "PQ"))
 def test_bt2408_matches_independent_decode_matrix_gain_encode_oracle_for_signed_scene_values(
     output_gamma: str,
 ) -> None:
-    """v1-tonemap-bt2408 acceptance 6-7, 12, and 14: ordered technical composition is signed and unclipped."""
+    """BT.2408 direct mapping matches independent decode, matrix, gain, and encode equations for signed scene values."""
     values = np.asarray(
         (
             (-0.04, 0.18, 0.90),
@@ -252,11 +260,13 @@ def test_bt2408_matches_independent_decode_matrix_gain_encode_oracle_for_signed_
     assert output[1].max() > white_signal
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-005")
 @pytest.mark.parametrize("output_gamma", ("HLG", "PQ"))
 def test_bt2408_input_claims_override_metadata_and_equivalent_rec2020_linear_inputs_converge(
     output_gamma: str,
 ) -> None:
-    """v1-tonemap-bt2408 acceptance 7 and 9: claims win, input is immutable, and equivalent light converges."""
+    """Explicit input color claims control BT.2408 mapping without mutating the source Frame."""
     encoded = np.asarray((0.2, 0.5, 0.8), dtype=np.float64)
     source = _frame(encoded, colorspace="ACEScg", gamma="linear")
     original = (
@@ -301,6 +311,7 @@ def test_bt2408_input_claims_override_metadata_and_equivalent_rec2020_linear_inp
     )
 
 
+@pytest.mark.req("REQ-PIX-005")
 @pytest.mark.parametrize(
     "input_colorspace",
     (
@@ -334,12 +345,7 @@ def test_bt2408_input_claims_override_metadata_and_equivalent_rec2020_linear_inp
     ),
 )
 def test_bt2408_accepts_every_input_colorspace_token(input_colorspace: str) -> None:
-    """v1-tonemap-bt2408 acceptance 2 and 7; v1-sony-tokens acceptance 1-2;
-    v1-arri-tokens acceptance 17 and 25; v1-blackmagic-tokens acceptance 34 and 46;
-    v1-red-tokens acceptance 54 and 69; v1-canon-tokens acceptance 77; v1-panasonic-tokens acceptance 100;
-    v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167:
-    every colorspace token is legal.
-    """
+    """BT.2408 direct mapping accepts every named input color space."""
     result = px.color.rgb_to_rgb(
         _frame([0.18, 0.18, 0.18]),
         input_colorspace=input_colorspace,
@@ -354,6 +360,7 @@ def test_bt2408_accepts_every_input_colorspace_token(input_colorspace: str) -> N
     ).all()
 
 
+@pytest.mark.req("REQ-PIX-005")
 @pytest.mark.parametrize(
     "input_gamma",
     (
@@ -393,12 +400,7 @@ def test_bt2408_accepts_every_input_colorspace_token(input_colorspace: str) -> N
     ),
 )
 def test_bt2408_accepts_every_input_gamma_token(input_gamma: str) -> None:
-    """v1-tonemap-bt2408 acceptance 2 and 7; v1-sony-tokens acceptance 1-2;
-    v1-arri-tokens acceptance 17 and 25; v1-blackmagic-tokens acceptance 34 and 46;
-    v1-red-tokens acceptance 54 and 69; v1-canon-tokens acceptance 77; v1-panasonic-tokens acceptance 100;
-    v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167:
-    every gamma token is legal.
-    """
+    """BT.2408 direct mapping accepts every named input gamma."""
     result = px.color.rgb_to_rgb(
         _frame([0.18, 0.18, 0.18]),
         input_gamma=input_gamma,
@@ -413,8 +415,11 @@ def test_bt2408_accepts_every_input_gamma_token(input_gamma: str) -> None:
     ).all()
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-005")
 def test_bt2408_is_label_driven_preserves_auxiliary_bits_and_returns_private_metadata() -> None:
-    """v1-tonemap-bt2408 acceptance 9-10: RGB labels transform while auxiliaries and input storage stay exact."""
+    """BT.2408 direct mapping transforms RGB labels and preserves auxiliary bits in a separate Frame with output
+    color information."""
     values = np.asarray((9.0, 0.7, 1.0, 0.5, 0.25), dtype=np.float32)
     source = _frame(values, channels=["Z", "A", "B", "R", "G"])
     original = (
@@ -451,9 +456,11 @@ def test_bt2408_is_label_driven_preserves_auxiliary_bits_and_returns_private_met
     assert result.data.data.ptr != source.data.data.ptr
 
 
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("channels", ("YCbCr", "RG", ["R", "G", "A"]))
 def test_bt2408_rejects_frames_without_all_rgb_labels(channels: str | list[str]) -> None:
-    """v1-tonemap-bt2408 acceptance 10: missing RGB labels fail before direct mapping."""
+    """BT.2408 direct mapping rejects Frames without complete RGB labels before processing pixels."""
     source = _frame(np.zeros(len(px.core.channels(channels)), dtype=np.float32), channels=channels)
     with pytest.raises(ValueError, match="R, G, and B"):
         px.color.rgb_to_rgb(
@@ -464,6 +471,8 @@ def test_bt2408_rejects_frames_without_all_rgb_labels(channels: str | list[str])
         )
 
 
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "routes"),
     (
@@ -475,7 +484,7 @@ def test_bt2408_rejects_frames_without_all_rgb_labels(channels: str | list[str])
 def test_bt2408_rejects_non_float32_with_dtype_specific_guidance(
     dtype: type[np.generic], routes: tuple[str, ...]
 ) -> None:
-    """v1-tonemap-bt2408 acceptance 11: all supported non-fp32 storages fail before pixel processing."""
+    """BT.2408 direct mapping rejects non-float32 Frames and explains how to convert each dtype."""
     with pytest.raises(ValueError) as error:
         px.color.rgb_to_rgb(
             _frame([0, 0, 0], dtype=dtype),
@@ -488,8 +497,10 @@ def test_bt2408_rejects_non_float32_with_dtype_specific_guidance(
     assert all(route in message for route in routes)
 
 
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-017")
 def test_bt2408_rejects_non_frame_and_unknown_axis_tokens_before_pixel_processing() -> None:
-    """v1-tonemap-bt2408 acceptance 11; v1-token-vocabulary acceptance 7: unknown axis inputs fail fast."""
+    """BT.2408 direct mapping rejects non-Frames and unknown color names before processing pixels."""
     with pytest.raises(ValueError, match="must be a Frame"):
         px.color.rgb_to_rgb(  # type: ignore[arg-type]
             np.zeros((1, 1, 3), dtype=np.float32),
@@ -507,8 +518,9 @@ def test_bt2408_rejects_non_frame_and_unknown_axis_tokens_before_pixel_processin
         )
 
 
+@pytest.mark.req("REQ-PIX-005")
 def test_bt2408_uses_one_fused_analytic_pass() -> None:
-    """v1-tonemap-bt2408 acceptance 8 and 15: direct mapping is one analytic pass."""
+    """BT.2408 direct mapping computes its output analytically in one GPU pass."""
     import pixtreme._color.transform as implementation
 
     result = px.color.rgb_to_rgb(

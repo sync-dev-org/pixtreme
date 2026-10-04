@@ -34,6 +34,8 @@ def _trace_from_array_kernel(monkeypatch: pytest.MonkeyPatch) -> list[tuple[obje
     return launches
 
 
+@pytest.mark.req("REQ-PIX-015")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("matrix", "repacking"),
     (
@@ -47,7 +49,9 @@ def _trace_from_array_kernel(monkeypatch: pytest.MonkeyPatch) -> list[tuple[obje
 def test_from_array_rejects_invalid_matrix_before_any_repacking(
     monkeypatch: pytest.MonkeyPatch, matrix: object, repacking: dict[str, object]
 ) -> None:
-    """v1-from-array-matrix-fail-fast acceptance 1 and 2: invalid matrix fails at the entry with a plain ValueError."""
+    """Creating a Frame from an array rejects an invalid color matrix before repacking pixels and reports a plain
+    ValueError.
+    """
     import cupy as cp
 
     launches = _trace_from_array_kernel(monkeypatch)
@@ -76,10 +80,14 @@ def test_from_array_rejects_invalid_matrix_before_any_repacking(
     np.testing.assert_array_equal(cp.asnumpy(source), values)
 
 
+@pytest.mark.req("REQ-PIX-015")
+@pytest.mark.req("REQ-PIX-017")
 def test_from_array_invalid_matrix_is_rejected_at_the_same_stage_as_other_tokens(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-from-array-matrix-fail-fast acceptance 4: matrix joins layout, colorspace, gamma, and channels at the entry."""
+    """Creating a Frame from an array validates matrix, layout, colorspace, gamma, and channel names at the input
+    boundary.
+    """
     import cupy as cp
 
     launches = _trace_from_array_kernel(monkeypatch)
@@ -107,10 +115,14 @@ def test_from_array_invalid_matrix_is_rejected_at_the_same_stage_as_other_tokens
     assert launches == []
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-015")
 def test_from_array_valid_matrix_spellings_and_none_keep_canonical_results(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-from-array-matrix-fail-fast acceptance 3: valid matrix spellings and None resolve as before the entry check."""
+    """Creating a Frame from an array accepts canonical color matrix spellings and None without changing pixel
+    results.
+    """
     import cupy as cp
 
     values = np.asarray([[[0.0, 0.5, 1.0], [1.0, -0.25, 1.25]]], dtype=np.float32)

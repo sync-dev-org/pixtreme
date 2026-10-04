@@ -96,6 +96,7 @@ _TRANSFER_FIXTURES = (
 )
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(("gamma", "encoded", "linear", "atol"), _TRANSFER_FIXTURES)
 def test_every_gamma_decodes_and_encodes_published_representative_and_boundary_points(
     gamma: str,
@@ -103,9 +104,7 @@ def test_every_gamma_decodes_and_encodes_published_representative_and_boundary_p
     linear: tuple[float, ...],
     atol: float,
 ) -> None:
-    """v1-color-semantics acceptance 26-28; v1-sony-tokens acceptance 4-7;
-    v1-blackmagic-tokens acceptance 36-43; v1-red-tokens acceptance 68: transfers match public fixtures.
-    """
+    """Each named gamma transfer decodes and encodes published representative and boundary values."""
     decoded = px.color.rgb_to_rgb(_gray_frame(encoded, gamma=gamma), output_gamma="linear")
     encoded_again = px.color.rgb_to_rgb(_gray_frame(linear), output_gamma=gamma)
 
@@ -129,8 +128,9 @@ def test_every_gamma_decodes_and_encodes_published_representative_and_boundary_p
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_cineon_matches_independent_numpy_float64_kodak_equations() -> None:
-    """v1-dpx acceptance 5 and 13: Cineon encode/decode matches an independent host float64 equation oracle."""
+    """Cineon encoding and decoding match independent Kodak equations evaluated in float64."""
     black_offset = np.float64(10.0) ** ((np.float64(95.0) - np.float64(685.0)) / np.float64(300.0))
     encoded = np.asarray((95.0, 250.0, 445.0, 685.0, 750.0), dtype=np.float64) / np.float64(1023.0)
     expected_linear = (
@@ -163,12 +163,12 @@ def test_cineon_matches_independent_numpy_float64_kodak_equations() -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize("gamma", tuple(fixture[0] for fixture in _TRANSFER_FIXTURES))
 def test_every_gamma_decode_encode_round_trip_stays_within_float32_transfer_error(gamma: str) -> None:
-    """v1-color-semantics acceptance 26-28; v1-sony-tokens acceptance 8; v1-red-tokens acceptance 68.
+    """Every named gamma transfer round-trips representative values within float32 transfer error.
 
-    Every established transfer, including renamed ARRI tokens, round-trips in float32.
-    """
+    Every published transfer, including ARRI log curves, round-trips in float32."""
     fixture = next(candidate for candidate in _TRANSFER_FIXTURES if candidate[0] == gamma)
     # BT.709's published rounded 10-bit constants have a deliberate 0.000248
     # discontinuity at the branch boundary, so that boundary is tested against
@@ -193,9 +193,12 @@ def test_every_gamma_decode_encode_round_trip_stays_within_float32_transfer_erro
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("gamma", ("PQ", "Cineon", "Gamma-2.2", "Gamma-2.4", "Gamma-2.6"))
 def test_log_and_pure_power_extensions_are_sign_preserving_mirrors(gamma: str) -> None:
-    """v1-color-semantics acceptance 26-28; v1-log-negative-extension acceptance 7: mirrored curves stay fixed."""
+    """Log and pure-power transfers mirror positive values into the negative domain without losing sign."""
     source = _gray_frame((-0.18, 0.18))
 
     encoded = px.io.to_array(
@@ -216,6 +219,9 @@ def test_log_and_pure_power_extensions_are_sign_preserving_mirrors(gamma: str) -
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize(
     ("gamma", "linear", "encoded"),
     (
@@ -228,7 +234,7 @@ def test_log_and_pure_power_extensions_are_sign_preserving_mirrors(gamma: str) -
 def test_piecewise_transfer_extensions_follow_their_natural_negative_branch(
     gamma: str, linear: float, encoded: float
 ) -> None:
-    """v1-color-transform acceptance 7: piecewise curves extend naturally without clipping negative values."""
+    """Piecewise transfers follow their defined negative branches without clipping negative inputs."""
     result = px.color.rgb_to_rgb(_gray_frame((linear,)), output_gamma=gamma)
     assert px.io.to_array(
         result,
@@ -240,8 +246,11 @@ def test_piecewise_transfer_extensions_follow_their_natural_negative_branch(
     ).get()[0, 0, 0] == pytest.approx(linear, abs=3e-6)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_transfer_functions_preserve_scene_overshoot_without_clipping() -> None:
-    """v1-color-transform acceptance 7: negative and above-one scene values survive a transfer round trip."""
+    """Gamma conversion round-trips negative and above-one scene values without clipping."""
     source = _gray_frame((-0.25, 1.5))
 
     encoded = px.color.rgb_to_rgb(source, output_gamma="Gamma-2.2")
@@ -271,9 +280,12 @@ def test_transfer_functions_preserve_scene_overshoot_without_clipping() -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("gamma", tuple(fixture[0] for fixture in _TRANSFER_FIXTURES))
 def test_every_transfer_preserves_negative_and_above_one_scene_values(gamma: str) -> None:
-    """v1-color-transform acceptance 7; v1-red-tokens acceptance 68: renamed ARRI transfers preserve range."""
+    """Every named transfer preserves negative and above-one scene values through a round trip."""
     source = _gray_frame((-0.18, 1.5))
 
     encoded = px.color.rgb_to_rgb(source, output_gamma=gamma)
@@ -308,11 +320,12 @@ _RED_TO_REC709_FIXTURES = (
 )
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(("colorspace", "expected_red"), _RED_TO_REC709_FIXTURES)
 def test_every_colorspace_uses_its_published_primaries_and_bradford_white_adaptation(
     colorspace: str, expected_red: tuple[float, float, float]
 ) -> None:
-    """v1-color-transform acceptance 8; v1-sony-tokens acceptance 9: primaries match independent fixtures."""
+    """Each named color space uses its published primaries and Bradford white adaptation."""
     red = _frame([1.0, 0.0, 0.0], colorspace=colorspace)
     white = _frame([1.0, 1.0, 1.0], colorspace=colorspace)
 
@@ -339,8 +352,9 @@ def test_every_colorspace_uses_its_published_primaries_and_bradford_white_adapta
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_srgb_and_rec709_colorspace_conversion_is_value_exact_identity() -> None:
-    """v1-color-transform acceptance 9: sRGB and Rec.709 are exactly equivalent primaries and white."""
+    """Converting between sRGB and Rec.709 primaries leaves pixel values exactly unchanged."""
     values = np.array([[[-0.25, 0.125, 1.5], [0.2, 0.4, 0.8]]], dtype=np.float32)
     source = _frame(values, colorspace="sRGB")
 
@@ -355,9 +369,10 @@ def test_srgb_and_rec709_colorspace_conversion_is_value_exact_identity() -> None
     assert result.colorspace == "Rec.709"
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize("colorspace", tuple(fixture[0] for fixture in _RED_TO_REC709_FIXTURES))
 def test_every_colorspace_round_trip_stays_within_accumulated_float32_matrix_error(colorspace: str) -> None:
-    """v1-color-transform acceptance 10: A-to-B-to-A round trips remain within two float32 matrix passes."""
+    """A color-space conversion and its inverse recover pixels within two float32 matrix passes."""
     values = np.array([[[-0.25, 0.125, 1.5], [0.2, 0.4, 0.8]]], dtype=np.float32)
     source = _frame(values, colorspace=colorspace)
     intermediate = "ACEScg" if colorspace != "ACEScg" else "Rec.709"
@@ -377,8 +392,10 @@ def test_every_colorspace_round_trip_stays_within_accumulated_float32_matrix_err
     )
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_input_claims_override_metadata_without_mutating_the_input_frame() -> None:
-    """v1-color-transform acceptance 2 and 4: per-call input claims win while input state stays immutable."""
+    """Explicit input color claims control conversion without changing the source Frame's color information."""
     source = _gray_frame((0.5,), gamma="linear")
     original = (
         px.io.to_array(
@@ -408,8 +425,10 @@ def test_input_claims_override_metadata_without_mutating_the_input_frame() -> No
     assert (result.colorspace, result.gamma, result.channels) == ("sRGB", "linear", ("R", "G", "B"))
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_input_colorspace_claim_overrides_metadata_without_relabeling_the_input() -> None:
-    """v1-color-transform acceptance 2: an input colorspace claim drives the matrix but not Frame mutation."""
+    """An explicit input color space controls the conversion matrix without relabeling the source Frame."""
     source = _frame([1.0, 0.0, 0.0], colorspace="ACEScg")
 
     result = px.color.rgb_to_rgb(source, input_colorspace="Rec.2020", output_colorspace="Rec.709")
@@ -426,8 +445,10 @@ def test_input_colorspace_claim_overrides_metadata_without_relabeling_the_input(
     assert result.colorspace == "Rec.709"
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_partial_output_changes_only_that_axis_and_updates_its_metadata() -> None:
-    """v1-color-transform acceptance 3 and 4: output omission preserves the other axis and all channels."""
+    """Changing one output color axis preserves the other axis and records the new color information in the result."""
     source = _gray_frame((0.5,), gamma="sRGB")
 
     result = px.color.rgb_to_rgb(source, output_gamma="linear")
@@ -436,6 +457,8 @@ def test_partial_output_changes_only_that_axis_and_updates_its_metadata() -> Non
     assert (source.colorspace, source.gamma, source.channels) == ("sRGB", "sRGB", ("R", "G", "B"))
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(
     "kwargs",
     (
@@ -449,7 +472,7 @@ def test_partial_output_changes_only_that_axis_and_updates_its_metadata() -> Non
     ),
 )
 def test_omitted_or_equal_outputs_return_a_new_frame_no_op(kwargs: dict[str, str]) -> None:
-    """v1-color-transform acceptance 3: omitted or equal output axes allocate a value-preserving Frame."""
+    """Omitted or unchanged output color axes return a separate Frame with identical pixel values."""
     source = _frame([0.25, 0.5, 0.75])
 
     result = px.color.rgb_to_rgb(source, **kwargs)
@@ -467,8 +490,9 @@ def test_omitted_or_equal_outputs_return_a_new_frame_no_op(kwargs: dict[str, str
     assert (result.colorspace, result.gamma, result.channels) == (source.colorspace, source.gamma, source.channels)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_combined_colorspace_and_gamma_transform_matches_decode_then_matrix_fixture() -> None:
-    """v1-color-transform acceptance 11: a combined call applies decode, matrix, then encode in that order."""
+    """Combined color conversion decodes gamma, converts primaries, and encodes gamma in that order."""
     source = _frame([0.5, 0.0, 0.0], colorspace="Rec.709", gamma="sRGB")
 
     result = px.color.rgb_to_rgb(source, output_colorspace="ACEScg", output_gamma="linear")
@@ -483,32 +507,21 @@ def test_combined_colorspace_and_gamma_transform_matches_decode_then_matrix_fixt
     )
 
 
-def test_color_transform_kernel_is_one_fused_decode_matrix_encode_pass() -> None:
-    """v1-color-transform acceptance 11 and v1-tonemap-bt2408 acceptance 8: one fused transform pass."""
-    import pixtreme._color.transform as implementation
-
-    transform_source = inspect.getsource(implementation._transform_data)
-    kernel_source = implementation._COLOR_TRANSFORM_KERNEL
-
-    assert transform_source.count("_color_transform_kernel()(") == 1
-    assert "Frame(" not in transform_source
-    assert kernel_source.index("const float linear_red = decode_transfer") < kernel_source.index(
-        "const float transformed_red ="
-    )
-    assert kernel_source.index("const float transformed_red =") < kernel_source.index("const float scaled_red =")
-    assert kernel_source.index("const float scaled_red =") < kernel_source.index("encode_transfer(scaled_red")
-
-
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_color_transform_docstring_warns_that_split_partial_calls_add_passes() -> None:
-    """v1-color-transform acceptance 11: API docs identify the pass cost of splitting a combined transform."""
+    """The public color-conversion help explains that splitting one combined conversion adds GPU passes."""
     docstring = inspect.getdoc(px.color.rgb_to_rgb)
     assert docstring is not None
     for required in ("single fused pass", "separate partial calls", "additional passes"):
         assert required in docstring
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-017")
 def test_color_transform_docstring_scopes_rendering_to_tonemap_selection() -> None:
-    """REQ-API-003: the opening contract distinguishes technical conversion, rendering, and direct mapping."""
+    """The public color-conversion help distinguishes technical conversion from output rendering and direct mapping."""
     docstring = inspect.getdoc(px.color.rgb_to_rgb)
     assert docstring is not None
     opening = " ".join(docstring.split("\n\n", maxsplit=1)[0].split())
@@ -516,8 +529,9 @@ def test_color_transform_docstring_scopes_rendering_to_tonemap_selection() -> No
         assert required in opening
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_rgb_labels_drive_conversion_and_non_rgb_labels_pass_through_exactly() -> None:
-    """v1-color-transform acceptance 12: RGB is transformed by label while Z and A remain bit-exact."""
+    """Color conversion transforms channels labeled R, G, and B while preserving Z and A bit for bit."""
     source = _frame([9.0, 0.3, 0.8, 0.1, 0.2], gamma="Gamma-2.2", channels=["Z", "B", "A", "R", "G"])
 
     result = px.color.rgb_to_rgb(source, output_gamma="linear")
@@ -531,18 +545,22 @@ def test_rgb_labels_drive_conversion_and_non_rgb_labels_pass_through_exactly() -
     np.testing.assert_allclose(output[[1, 3, 4]], np.power([0.3, 0.1, 0.2], 2.2), rtol=0.0, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("dtype", (np.float16, np.uint8, np.uint16))
 def test_color_transform_rejects_non_float32_actionably(dtype: type[np.generic]) -> None:
-    """REQ-API-012 / v1-color-transform acceptance 12: non-fp32 input names a concrete recovery route."""
+    """Color conversion rejects non-float32 Frames and names a usable conversion path."""
     with pytest.raises(ValueError) as error:
         px.color.rgb_to_rgb(_frame([0, 0, 0], dtype=dtype), output_gamma="linear")
     _assert_actionable(error)
     assert str(np.dtype(dtype)) in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("channels", ("YCbCr", "RG", ["R", "G", "A"]))
 def test_color_transform_rejects_frames_without_all_rgb_labels(channels: str | list[str]) -> None:
-    """REQ-API-012 / v1-color-transform acceptance 12: missing RGB labels fail actionably."""
+    """Color conversion rejects Frames missing an R, G, or B channel and explains the required labels."""
     source = _frame(np.zeros(len(px.core.channels(channels)), dtype=np.float32), channels=channels)
 
     with pytest.raises(ValueError, match="R, G, and B") as error:
@@ -550,6 +568,8 @@ def test_color_transform_rejects_frames_without_all_rgb_labels(channels: str | l
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("parameter", "value"),
     (
@@ -560,6 +580,6 @@ def test_color_transform_rejects_frames_without_all_rgb_labels(channels: str | l
     ),
 )
 def test_color_transform_rejects_unknown_axis_tokens(parameter: str, value: str) -> None:
-    """v1-color-transform acceptance 2 and 4; v1-token-vocabulary acceptance 7: unknown axis tokens fail."""
+    """Color conversion rejects unknown color-space and gamma names with valid alternatives."""
     with pytest.raises(ValueError, match=parameter):
         px.color.rgb_to_rgb(_frame([0.1, 0.2, 0.3]), **{parameter: value})

@@ -1,4 +1,4 @@
-"""Generate deterministic visual evidence for v1-canon-tokens acceptance 97."""
+"""Generate deterministic Canon transfer-curve and gamut comparison sheets."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ _ORACLE = (247, 197, 72)
 _ERROR = (243, 101, 128)
 _SAMPLES = 2048
 
-_CURVES = {
+_CURVES: dict[px.core.Gamma, dict[str, np.float64]] = {
     "Canon-Log": {
         "a": np.float64("0.45310179"),
         "b": np.float64("10.1596"),
@@ -56,7 +56,7 @@ def _piecewise(
     return result
 
 
-def _canon_encode(gamma: str, reflectance: np.ndarray) -> np.ndarray:
+def _canon_encode(gamma: px.core.Gamma, reflectance: np.ndarray) -> np.ndarray:
     constants = _CURVES[gamma]
     x = np.asarray(reflectance, dtype=np.float64) / np.float64("0.9")
     a, b, c = constants["a"], constants["b"], constants["c"]
@@ -82,7 +82,7 @@ def _canon_encode(gamma: str, reflectance: np.ndarray) -> np.ndarray:
     )
 
 
-def _public_curve(reflectance: np.ndarray, gamma: str) -> tuple[np.ndarray, np.ndarray]:
+def _public_curve(reflectance: np.ndarray, gamma: px.core.Gamma) -> tuple[np.ndarray, np.ndarray]:
     rgb = np.repeat(reflectance.astype(np.float32)[:, None], 3, axis=1)[None, :, :]
     source = px.io.from_array(cp.asarray(rgb), colorspace="ACEScg", gamma="linear", channels="RGB")
     encoded = px.color.linear_to_gamma(source, gamma=gamma)
@@ -146,7 +146,7 @@ def _markers(
 
 def _axes(
     draw: ImageDraw.ImageDraw,
-    font: ImageFont.ImageFont,
+    font: ImageFont.ImageFont | ImageFont.FreeTypeFont,
     *,
     box: tuple[int, int, int, int],
     title: str,
@@ -276,7 +276,7 @@ def _transfer_sheet() -> Image.Image:
         fill=_TEXT,
         font=font,
     )
-    anchor_sets = {
+    anchor_sets: dict[px.core.Gamma, np.ndarray] = {
         "Canon-Log": np.asarray((0.0, 0.18, 0.9, 7.2), dtype=np.float64),
         "Canon-Log-2": np.asarray((0.0, 0.18, 0.9, 57.6), dtype=np.float64),
         "Canon-Log-3": np.asarray((0.0, 0.18, 0.9, 14.4), dtype=np.float64),

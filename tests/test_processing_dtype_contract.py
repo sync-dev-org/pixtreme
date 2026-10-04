@@ -111,6 +111,8 @@ def _assert_float32_guidance(
         assert hasattr(getattr(px, module_name), operation_name)
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(("operation", "kwargs"), _OPERATION_KWARGS)
 @pytest.mark.parametrize("dtype", _NON_FLOAT32_DTYPES)
 def test_public_processing_operations_reject_non_float32_before_identity_shortcuts(
@@ -118,7 +120,9 @@ def test_public_processing_operations_reject_non_float32_before_identity_shortcu
     kwargs: dict[str, Any],
     dtype: type[np.generic],
 ) -> None:
-    """REQ-ARCH-005: every processing entry fails before its identity shortcut and names a public cast route."""
+    """Public image operations reject non-float32 input before returning an identity result and explain the conversion
+    route.
+    """
     call_kwargs = dict(kwargs)
     if operation == "filter.vector_blur":
         call_kwargs["vector"] = _frame(np.float32, channels=("x", "y"))
@@ -129,18 +133,22 @@ def test_public_processing_operations_reject_non_float32_before_identity_shortcu
     _assert_float32_guidance(error, operation=operation, dtype=dtype)
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("dtype", _NON_FLOAT32_DTYPES)
 def test_vector_blur_rejects_non_float32_vector_frame(dtype: type[np.generic]) -> None:
-    """REQ-ARCH-005: vector_blur validates the vector Frame's storage dtype as well as the image dtype."""
+    """Vector blur rejects a vector Frame with non-float32 pixels as well as a non-float32 image."""
     with pytest.raises(ValueError) as error:
         px.filter.vector_blur(_frame(np.float32), vector=_frame(dtype, channels=("x", "y")))
 
     _assert_float32_guidance(error, operation="filter.vector_blur", dtype=dtype)
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("dtype", _NON_FLOAT32_DTYPES)
 def test_text_rejects_non_float32_before_opacity_identity(dtype: type[np.generic]) -> None:
-    """REQ-ARCH-005: text validates storage before the opacity-zero identity path."""
+    """Text drawing rejects non-float32 image data even when opacity is zero."""
     with pytest.raises(ValueError) as error:
         px.draw.text(
             _frame(dtype),

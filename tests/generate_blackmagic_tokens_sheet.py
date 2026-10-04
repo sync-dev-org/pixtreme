@@ -1,4 +1,4 @@
-"""Generate deterministic visual comparisons for v1-blackmagic-tokens acceptance 52."""
+"""Generate deterministic Blackmagic transfer-curve and gamut comparison sheets."""
 
 from __future__ import annotations
 
@@ -63,7 +63,7 @@ def _davinci_encode(values: np.ndarray) -> np.ndarray:
     )
 
 
-def _public_curve(linear: np.ndarray, gamma: str) -> tuple[np.ndarray, np.ndarray]:
+def _public_curve(linear: np.ndarray, gamma: px.core.Gamma) -> tuple[np.ndarray, np.ndarray]:
     rgb = np.repeat(linear.astype(np.float32)[:, None], 3, axis=1)[None, :, :]
     source = px.io.from_array(cp.asarray(rgb), colorspace="ACEScg", gamma="linear", channels="RGB")
     encoded = px.color.linear_to_gamma(source, gamma=gamma)
@@ -100,7 +100,7 @@ def _x_pixel(values: np.ndarray, value: float, *, logarithmic: bool = False) -> 
 
 def _markers(
     draw: ImageDraw.ImageDraw,
-    font: ImageFont.ImageFont,
+    font: ImageFont.ImageFont | ImageFont.FreeTypeFont,
     values: np.ndarray,
     top: int,
     bottom: int,
@@ -221,9 +221,11 @@ def _curve_sheet() -> Image.Image:
     return image
 
 
-def _gamut_target(source_rgb: np.ndarray, colorspace: str) -> np.ndarray:
+def _gamut_target(source_rgb: np.ndarray, colorspace: px.core.Colorspace) -> np.ndarray:
     frame = px.io.from_array(cp.asarray(source_rgb[None, :, :]), colorspace=colorspace, gamma="linear", channels="RGB")
-    return px.io.to_array(px.color.rgb_to_rgb(frame, output_colorspace="Rec.709")).get()[0]
+    return np.asarray(
+        px.io.to_array(px.color.rgb_to_rgb(frame, output_colorspace="Rec.709")).get()[0], dtype=np.float32
+    )
 
 
 def _strip(values: np.ndarray, *, lower: float, upper: float, height: int = 74) -> Image.Image:

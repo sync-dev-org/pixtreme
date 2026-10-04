@@ -249,17 +249,14 @@ def _conversion(source: tuple[object, tuple[float, float]], target: tuple[object
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_blackmagic_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 1;
-    v1-blackmagic-tokens acceptance 33-34; v1-red-tokens acceptance 54-55;
-    v1-canon-tokens acceptance 76-77; v1-panasonic-tokens acceptance 99-100;
-    v1-standard-tokens acceptance 117; v1-vendor-a-tokens acceptance 140-141;
-    v1-vendor-b-tokens acceptance 166-167: expose current canonical tokens.
-    """
+    """Blackmagic color tokens appear in the canonical vocabulary and public annotations without extra aliases."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 199
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 200
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -273,10 +270,9 @@ def test_blackmagic_tokens_extend_canonical_vocabulary_and_public_static_surface
         assert f"gamma={gamma!r}" in repr(frame)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_blackmagic_token_keys_are_collision_free_family_local_and_do_not_guess_resolve_labels() -> None:
-    """v1-blackmagic-tokens acceptance 35; v1-vendor-a-tokens acceptance 142:
-    normalize separators locally without aliases or fuzzy labels.
-    """
+    """Blackmagic token keys are family-local and unique, and unrelated labels are not guessed as tokens."""
     from pixtreme._core.validation import _normalized_closed_token
     from pixtreme._core.vocabulary import _PERMANENT_TOKEN_ALIASES
 
@@ -302,8 +298,11 @@ def test_blackmagic_token_keys_are_collision_free_family_local_and_do_not_guess_
         _normalized_closed_token("DaVinci-Intermediate", axis="colorspace", accepted=_COLORSPACES)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_blackmagic_film_encode_matches_independent_oracle_anchors_and_monotonic_cut() -> None:
-    """v1-blackmagic-tokens acceptance 36 and 38: Film Gen 5 encode follows the signed natural-log curve."""
+    """Blackmagic Film Gen 5 encoding follows its signed natural-log curve at anchors and the branch cut."""
     cut = np.float32(_LIN_CUT)
     values = np.asarray(
         (
@@ -348,8 +347,12 @@ def test_blackmagic_film_encode_matches_independent_oracle_anchors_and_monotonic
     np.testing.assert_array_equal(codes.astype(np.int64), np.asarray((145, 400, 529, 704, 809, 879, 940)))
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_blackmagic_film_decode_uses_the_derived_threshold_and_signed_inverse() -> None:
-    """v1-blackmagic-tokens acceptance 37: Film Gen 5 decode uses its derived cut and unclipped inverse."""
+    """Blackmagic Film Gen 5 decoding uses the derived threshold and retains negative values through its
+    inverse."""
     cut = np.float32(_LOG_CUT)
     values = np.asarray(
         (-0.25, np.nextafter(cut, -np.inf), cut, np.nextafter(cut, np.inf), 0.0, 0.18, 1.0, 1.5), dtype=np.float32
@@ -365,11 +368,13 @@ def test_blackmagic_film_decode_uses_the_derived_threshold_and_signed_inverse() 
     assert actual[0] < 0.0 and actual[-1] > 1.0
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(
-    ("gamma", "cut", "encode", "decode", "acceptance"),
+    ("gamma", "cut", "encode", "decode"),
     (
-        ("Blackmagic-Film-Gen-5", _LIN_CUT, _film_encode, _film_decode, 39),
-        ("DaVinci-Intermediate", _DI_LIN_CUT, _di_encode, _di_decode, 43),
+        ("Blackmagic-Film-Gen-5", _LIN_CUT, _film_encode, _film_decode),
+        ("DaVinci-Intermediate", _DI_LIN_CUT, _di_encode, _di_decode),
     ),
 )
 def test_blackmagic_curves_round_trip_and_standalone_fused_paths_preserve_frame_contract(
@@ -377,10 +382,8 @@ def test_blackmagic_curves_round_trip_and_standalone_fused_paths_preserve_frame_
     cut: np.float64,
     encode: Callable[[np.ndarray], np.ndarray],
     decode: Callable[[np.ndarray], np.ndarray],
-    acceptance: int,
 ) -> None:
-    """v1-blackmagic-tokens acceptance 39 and 43: both curves round-trip through standalone and fused paths."""
-    assert acceptance in (39, 43)
+    """Blackmagic transfers round trip through standalone and fused paths while preserving Frame properties."""
     float_cut = np.float32(cut)
     linear = np.asarray(
         (-0.25, np.nextafter(float_cut, -np.inf), float_cut, np.nextafter(float_cut, np.inf), 0.0, 0.18, 1.0, 1.5),
@@ -408,8 +411,9 @@ def test_blackmagic_curves_round_trip_and_standalone_fused_paths_preserve_frame_
     assert encoded.data.dtype == restored.data.dtype == cp.float32
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_davinci_intermediate_encode_matches_normative_oracle_published_anchors_and_cut() -> None:
-    """v1-blackmagic-tokens acceptance 40 and 42: Intermediate uses the public base-2 curve and anchor bounds."""
+    """DaVinci Intermediate encoding matches its public base-2 curve, anchors, and branch cut."""
     cut = np.float32(_DI_LIN_CUT)
     values = np.asarray(
         (-0.25, np.nextafter(cut, -np.inf), cut, np.nextafter(cut, np.inf), 0.0, 0.18, 1.0, 1.5), dtype=np.float32
@@ -434,8 +438,9 @@ def test_davinci_intermediate_encode_matches_normative_oracle_published_anchors_
     assert np.round(_di_encode(np.asarray((40.0,)))[0], 6) != published[5]
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_davinci_intermediate_decode_uses_derived_not_printed_threshold() -> None:
-    """v1-blackmagic-tokens acceptance 41-42: decode assigns all 11 disputed float32 values to the derived branch."""
+    """DaVinci Intermediate decoding selects the derived branch for values around its threshold."""
     assert np.isclose(_DI_DECODE_CUT - _DI_PRINTED_LOG_CUT, np.float64("2.06593695e-8"), rtol=0.0, atol=1e-16)
     lower = np.float32(_DI_PRINTED_LOG_CUT)
     upper = np.float32(_DI_DECODE_CUT)
@@ -480,14 +485,14 @@ def test_davinci_intermediate_decode_uses_derived_not_printed_threshold() -> Non
     assert actual[0] < 0.0
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(
-    ("colorspace", "vendor", "vendor_tolerance", "acceptance"),
+    ("colorspace", "vendor", "vendor_tolerance"),
     (
         (
             "Blackmagic-Wide-Gamut-Gen-5",
             ((0.606530, 0.220408, 0.123479), (0.267989, 0.832731, -0.100720), (-0.029442, -0.086611, 1.204861)),
             3e-4,
-            44,
         ),
         (
             "DaVinci-Wide-Gamut",
@@ -497,17 +502,15 @@ def test_davinci_intermediate_decode_uses_derived_not_printed_threshold() -> Non
                 (-0.09896291, -0.13789533, 1.32591599),
             ),
             1e-8,
-            45,
         ),
     ),
 )
 def test_blackmagic_gamut_primaries_matrices_and_native_rows_match_independent_oracles(
-    colorspace: str, vendor: tuple[tuple[float, ...], ...], vendor_tolerance: float, acceptance: int
+    colorspace: str, vendor: tuple[tuple[float, ...], ...], vendor_tolerance: float
 ) -> None:
-    """v1-blackmagic-tokens acceptance 44-45: primaries, production D65, conversion, and native row agree."""
+    """Blackmagic gamut primaries, conversion matrices, and native luma rows match independent calculations."""
     from pixtreme._core.colorspace import _COLORSPACE_DEFINITIONS
 
-    assert acceptance in (44, 45)
     definition = _GAMUTS[colorspace]
     assert _COLORSPACE_DEFINITIONS[colorspace] == definition
     matrix = _rgb_to_xyz(*definition)
@@ -522,8 +525,9 @@ def test_blackmagic_gamut_primaries_matrices_and_native_rows_match_independent_o
     np.testing.assert_allclose(px.io.to_array(grayscale).get()[0, :, 0], values @ matrix[1], rtol=0.0, atol=6e-6)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_blackmagic_gamut_adaptation_pairing_and_cat02_auxiliary_contracts() -> None:
-    """v1-blackmagic-tokens acceptance 46: conversion uses Bradford and leaves gamut/gamma pairing independent."""
+    """Blackmagic gamut conversion uses Bradford adaptation and allows independent gamut and gamma pairings."""
     values = np.asarray(((1.0, -0.25, 0.18), (0.2, 0.4, 1.5)), dtype=np.float32)
     source = _frame(values, colorspace="Blackmagic-Wide-Gamut-Gen-5", auxiliary=True)
     before = source.data.copy()
@@ -580,6 +584,7 @@ def test_blackmagic_gamut_adaptation_pairing_and_cat02_auxiliary_contracts() -> 
 # that checkout with the worktree source selected through PYTHONPATH, construct RGB float32 Frames from the exact
 # `linear` and `encoded` arrays below, call each public standalone transfer, copy R to NumPy, and print
 # `.view(np.uint32).tolist()`. The fixture intentionally locks existing branch cuts and signed extensions.
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(
     ("gamma", "linear", "encoded", "encode_bits", "decode_bits"),
     (
@@ -627,15 +632,16 @@ def test_existing_camera_log_gpu_bits_remain_identical_to_pre_blackmagic_baselin
     encode_bits: tuple[int, ...],
     decode_bits: tuple[int, ...],
 ) -> None:
-    """v1-blackmagic-tokens acceptance 47; v1-red-tokens acceptance 68-69: existing transfer bits stay fixed."""
+    """Other supported camera log transfers retain their exact float32 GPU pixel values."""
     actual_encode = _red_values(px.color.linear_to_gamma(_frame(linear), gamma=gamma)).view(np.uint32)
     actual_decode = _red_values(px.color.gamma_to_linear(_frame(encoded, gamma=gamma), gamma=gamma)).view(np.uint32)
     np.testing.assert_array_equal(actual_encode, np.asarray(encode_bits, dtype=np.uint32))
     np.testing.assert_array_equal(actual_decode, np.asarray(decode_bits, dtype=np.uint32))
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_dpx_classifies_blackmagic_curves_as_logarithmic_without_changing_existing_mappings() -> None:
-    """v1-blackmagic-tokens acceptance 48; v1-red-tokens acceptance 72: DPX uses current canonical tokens."""
+    """DPX writing identifies Blackmagic transfers as logarithmic and preserves other transfer mappings."""
     from pixtreme._io.formats.dpx import _dpx_transfer_from_gamma
 
     gammas = (
@@ -666,6 +672,8 @@ def test_dpx_classifies_blackmagic_curves_as_logarithmic_without_changing_existi
     }
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("operation", "parameter", "rejected", "candidates"),
     (
@@ -678,9 +686,7 @@ def test_dpx_classifies_blackmagic_curves_as_logarithmic_without_changing_existi
 def test_invalid_blackmagic_axis_values_fail_before_gpu_with_ordered_canonical_errors(
     operation: str, parameter: str, rejected: object, candidates: tuple[str, ...], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """v1-blackmagic-tokens acceptance 49; v1-vendor-a-tokens acceptance 160:
-    invalid inputs fail before GPU with why/what/how recovery.
-    """
+    """Invalid Blackmagic color axis values fail before GPU work and list canonical replacements in order."""
     import pixtreme._color.semantics as semantics
     import pixtreme._color.transform as transform
 

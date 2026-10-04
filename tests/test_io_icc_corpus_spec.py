@@ -8,6 +8,7 @@ from io import BytesIO
 from pathlib import Path
 
 import numpy as np
+import pytest
 from icc_test_utils import BRADFORD, D50, curv_tag, icc_profile, para_tag, rgb_to_xyz, xy_to_xyz, xyz_tag
 from PIL import Image, ImageCms
 
@@ -184,8 +185,10 @@ def _corpus() -> tuple[tuple[str, bytes, str, str, str], ...]:
     )
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_deterministic_icc_corpus_maps_and_matches_colour_lcms_and_composite_oracles() -> None:
-    """v1-io-icc acceptance 14 and 21: generated v2/v4 curv/para profiles satisfy every independent oracle."""
+    """ICC v2 and v4 curve profiles map to color metadata that agrees with independent color-library oracles."""
     corpus = _corpus()
     assert len(corpus) == 8
     assert len(corpus[3][1]) == 588

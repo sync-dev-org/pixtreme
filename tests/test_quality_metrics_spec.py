@@ -40,7 +40,7 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError]) -> str:
 
 
 def _psnr_reference(reference: np.ndarray, candidate: np.ndarray, *, data_range: float) -> np.float64:
-    """Evaluate the acceptance formula in host NumPy float64."""
+    """Evaluate the PSNR formula on the host in NumPy float64."""
     difference = reference.astype(np.float64) - candidate.astype(np.float64)
     mse = np.sum(difference * difference, dtype=np.float64) / np.float64(reference.size)
     if mse == 0.0:
@@ -86,8 +86,9 @@ def _ssim_reference(reference: np.ndarray, candidate: np.ndarray, *, data_range:
     return output
 
 
+@pytest.mark.req("REQ-PIX-014")
 def test_quality_metrics_public_signatures_paths_and_array_contract_are_exact() -> None:
-    """v1-quality-metrics acceptance 1, 2, and 7: three exact paths return private raw device arrays."""
+    """PSNR, SSIM, and SSIM maps each have one public path and return separate device arrays."""
     for name in ("psnr", "ssim", "ssim_map"):
         function = getattr(px.metrics, name)
         signature = inspect.signature(function)
@@ -141,9 +142,11 @@ def test_quality_metrics_public_signatures_paths_and_array_contract_are_exact() 
             assert not hasattr(result, metadata_name)
 
 
+@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("name", ("psnr", "ssim", "ssim_map"))
 def test_quality_metrics_reject_non_frame_and_non_float32_inputs_actionably(name: str) -> None:
-    """v1-quality-metrics acceptance 3: both inputs must be float32 Frames with conversion guidance."""
+    """For image quality metrics, both inputs must be float32 Frames with conversion guidance."""
     function = getattr(px.metrics, name)
     good = _frame(np.zeros((11, 11, 1), dtype=np.float32), channels=["Y"])
     for value in (cp.zeros((11, 11, 1), dtype=cp.float32), np.zeros((11, 11, 1), dtype=np.float32), object()):
@@ -170,6 +173,8 @@ def test_quality_metrics_reject_non_frame_and_non_float32_inputs_actionably(name
                 assert f"px.values.{guidance}" in message
 
 
+@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("name", ("psnr", "ssim", "ssim_map"))
 @pytest.mark.parametrize(
     ("field", "candidate"),
@@ -184,7 +189,7 @@ def test_quality_metrics_reject_non_frame_and_non_float32_inputs_actionably(name
     ),
 )
 def test_quality_metrics_reject_every_pair_mismatch_actionably(name: str, field: str, candidate: Any) -> None:
-    """v1-quality-metrics acceptance 4: geometry and metadata must match literally and fail fast."""
+    """Quality metrics reject mismatched dimensions, channels, and color metadata with guidance."""
     reference = _frame(np.zeros((11, 12, 3), dtype=np.float32))
     with pytest.raises(ValueError) as error:
         getattr(px.metrics, name)(reference, candidate())
@@ -194,8 +199,10 @@ def test_quality_metrics_reject_every_pair_mismatch_actionably(name: str, field:
     assert "candidate" in message
 
 
+@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("REQ-PIX-017")
 def test_ssim_metrics_enforce_the_11x11_minimum_geometry() -> None:
-    """v1-quality-metrics acceptance 5: SSIM needs an 11x11 valid window beyond the Frame invariant."""
+    """SSIM rejects images smaller than its eleven by eleven valid window with guidance."""
     for shape in ((10, 11, 1), (11, 10, 1)):
         too_small = _frame(np.zeros(shape, dtype=np.float32), channels=["Y"])
         for function in (px.metrics.ssim, px.metrics.ssim_map):
@@ -206,9 +213,11 @@ def test_ssim_metrics_enforce_the_11x11_minimum_geometry() -> None:
             assert "11" in message
 
 
+@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("name", ("psnr", "ssim", "ssim_map"))
 def test_quality_metrics_validate_data_range_without_inference(name: str) -> None:
-    """v1-quality-metrics acceptance 6 and 8: data_range is explicit, finite, positive, and never inferred."""
+    """Quality metrics require an explicit positive finite data range and explain invalid values."""
     function = getattr(px.metrics, name)
     frame = _frame(np.full((11, 11, 1), np.float32(2.5)), channels=["Y"])
     for value in (True, False, "1.0", object(), complex(1.0), 0.0, -1.0, np.inf, -np.inf, np.nan, 10**1000):
@@ -222,8 +231,9 @@ def test_quality_metrics_validate_data_range_without_inference(name: str) -> Non
         assert isinstance(result, cp.ndarray)
 
 
+@pytest.mark.req("REQ-PIX-014")
 def test_psnr_matches_one_global_float64_oracle_and_ieee_special_values() -> None:
-    """v1-quality-metrics acceptance 8-12 and 25: PSNR uses one all-sample MSE and propagates IEEE values."""
+    """PSNR uses one mean squared error over all samples and propagates infinity and NaN according to its formula."""
     cases = (
         (
             np.asarray([[[-0.5]]], dtype=np.float32),
@@ -261,8 +271,9 @@ def test_psnr_matches_one_global_float64_oracle_and_ieee_special_values() -> Non
     assert bool(cp.isneginf(px.metrics.psnr(infinite_reference, finite)))
 
 
+@pytest.mark.req("REQ-PIX-014")
 def test_ssim_map_matches_direct_population_oracle_and_scalar_is_its_fp32_mean() -> None:
-    """v1-quality-metrics acceptance 13-18 and 25: valid Gaussian SSIM matches an independent float64 oracle."""
+    """For image quality metrics, valid Gaussian SSIM matches an independent float64 oracle."""
     generator = np.random.default_rng(20260806)
     reference_values = generator.uniform(-0.75, 1.75, size=(13, 14, 3)).astype(np.float32)
     candidate_values = reference_values.copy()
@@ -285,9 +296,12 @@ def test_ssim_map_matches_direct_population_oracle_and_scalar_is_its_fp32_mean()
     assert px.metrics.ssim_map(minimal, minimal).shape == (1, 1)
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("constant", (-2.5, 0.0, 1.0, 4.25))
 def test_ssim_identical_pairs_are_exact_one_without_clamp(constant: float) -> None:
-    """v1-quality-metrics acceptance 8, 9, and 19: finite identical scene values produce exact one."""
+    """For image quality metrics, finite identical scene values produce exact one."""
     values = np.full((12, 12, 2), np.float32(constant), dtype=np.float32)
     frame = _frame(values, channels=("A", "custom"))
     result_map = px.metrics.ssim_map(frame, frame, data_range=0.5)
@@ -296,16 +310,20 @@ def test_ssim_identical_pairs_are_exact_one_without_clamp(constant: float) -> No
     cp.testing.assert_array_equal(result_scalar, cp.asarray(np.float32(1.0)))
 
 
+@pytest.mark.req("REQ-PIX-014")
 def test_ssim_nonconstant_identical_pair_is_exact_one() -> None:
-    """v1-quality-metrics acceptance 19: finite nonconstant identical windows are exact fp32 one."""
+    """For image quality metrics, finite nonconstant identical windows are exact fp32 one."""
     values = np.linspace(-0.45, 2.5, 13 * 14 * 3, dtype=np.float32).reshape(13, 14, 3)
     frame = _frame(values)
     cp.testing.assert_array_equal(px.metrics.ssim_map(frame, frame), cp.ones((3, 4), dtype=cp.float32))
     cp.testing.assert_array_equal(px.metrics.ssim(frame, frame), cp.asarray(np.float32(1.0)))
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("REQ-PIX-103")
 def test_ssim_evaluates_distinct_constants_and_nonfinite_values_without_clamp() -> None:
-    """v1-quality-metrics acceptance 9 and 19: constants and IEEE values follow the formula unchanged."""
+    """For image quality metrics, constants and IEEE values follow the formula unchanged."""
     reference_values = np.full((11, 11, 2), np.float32(-2.0), dtype=np.float32)
     candidate_values = np.full((11, 11, 2), np.float32(3.5), dtype=np.float32)
     reference = _frame(reference_values, channels=("A", "custom"))
@@ -322,8 +340,9 @@ def test_ssim_evaluates_distinct_constants_and_nonfinite_values_without_clamp() 
     assert bool(cp.isnan(px.metrics.ssim(nan_frame, candidate)))
 
 
+@pytest.mark.req("REQ-PIX-014")
 def test_quality_metrics_preserve_both_inputs_and_do_not_share_storage() -> None:
-    """v1-quality-metrics acceptance 7-9: metrics do not mutate, normalize, clip, scan, or alias either input."""
+    """For image quality metrics, metrics do not mutate, normalize, clip, scan, or alias either input."""
     values = np.linspace(-2.0, 3.0, 12 * 12 * 2, dtype=np.float32).reshape(12, 12, 2)
     reference = _frame(values, channels=("A", "custom"), matrix="native")
     candidate = _frame(values[::-1].copy(), channels=reference.channels, matrix=reference.matrix)
@@ -345,8 +364,12 @@ def test_quality_metrics_preserve_both_inputs_and_do_not_share_storage() -> None
         assert result.data.ptr not in (reference.data.data.ptr, candidate.data.data.ptr)
 
 
+@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("REQ-PIX-017")
 def test_quality_metric_docstrings_are_self_contained_operational_contracts() -> None:
-    """v1-quality-metrics acceptance 20 and 21: public docs explain formulas, boundaries, and explicit composition."""
+    """Developers can find PSNR and SSIM formulas, input requirements, device array outputs, and reconstruction
+    guidance in the public docstrings.
+    """
     docstrings = {
         name: " ".join((inspect.getdoc(getattr(px.metrics, name)) or "").split())
         for name in ("psnr", "ssim", "ssim_map")
@@ -381,10 +404,3 @@ def test_quality_metric_docstrings_are_self_contained_operational_contracts() ->
             assert required in docstrings[name]
     for required in ("2D", "(H - 10, W - 10)", "length-one channel dimension", "px.io.from_array", "explicit metadata"):
         assert required in docstrings["ssim_map"]
-
-
-def test_quality_metric_tests_carry_acceptance_backreferences() -> None:
-    """v1-quality-metrics acceptance 25: every test in this module names its feature acceptance source."""
-    for name, value in globals().items():
-        if name.startswith("test_") and inspect.isfunction(value):
-            assert "v1-quality-metrics acceptance" in (inspect.getdoc(value) or "")

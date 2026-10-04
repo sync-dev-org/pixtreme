@@ -1,4 +1,4 @@
-"""Independent P216 fixtures and fp64 oracle from v1-p216-wire-format AC 2/4/6/10.
+"""Independent P216 fixtures and fp64 oracle for P216 wire-format tests.
 
 Sampling reuses the existing test-only H.273 coordinate/weight oracle, never
 production constants. Range constants below are H.273 at n=16 (256 * 8-bit codes).

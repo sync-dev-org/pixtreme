@@ -23,6 +23,7 @@ _REFERENCE_WHITE_COORDINATES: Mapping[ReferenceWhite, tuple[float, float]] = {
     "D93": (0.2831, 0.2971),
     "D50": (0.3457, 0.3585),
     "ACES": (0.32168, 0.33767),
+    "DCI": (0.3140, 0.3510),
 }
 
 

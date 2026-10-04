@@ -1,4 +1,4 @@
-"""Generate deterministic visual evidence for v1-io-icc acceptance 24."""
+"""Generate deterministic ICC transfer-curve and color-space comparison sheets."""
 
 from __future__ import annotations
 
@@ -35,23 +35,27 @@ _BRADFORD = np.asarray(
 )
 
 
-def _frame(values: np.ndarray, *, colorspace: str = "sRGB", gamma: str = "linear") -> px.core.Frame:
+def _frame(
+    values: np.ndarray, *, colorspace: px.core.Colorspace = "sRGB", gamma: px.core.Gamma = "linear"
+) -> px.core.Frame:
     array = np.asarray(values, dtype=np.float32)
     if array.ndim == 1:
         array = np.repeat(array[:, None], 3, axis=1)
     return px.io.from_array(cp.asarray(array[None]), colorspace=colorspace, gamma=gamma, channels="RGB")
 
 
-def _gpu_encode(values: np.ndarray, gamma: str) -> np.ndarray:
-    return px.color.linear_to_gamma(_frame(values), gamma=gamma).data.get()[0, :, 0].astype(np.float64)
+def _gpu_encode(values: np.ndarray, gamma: px.core.Gamma) -> np.ndarray:
+    return np.asarray(px.color.linear_to_gamma(_frame(values), gamma=gamma).data.get()[0, :, 0], dtype=np.float64)
 
 
-def _gpu_decode(values: np.ndarray, gamma: str) -> np.ndarray:
-    return px.color.gamma_to_linear(_frame(values, gamma=gamma), gamma=gamma).data.get()[0, :, 0].astype(np.float64)
+def _gpu_decode(values: np.ndarray, gamma: px.core.Gamma) -> np.ndarray:
+    return np.asarray(
+        px.color.gamma_to_linear(_frame(values, gamma=gamma), gamma=gamma).data.get()[0, :, 0], dtype=np.float64
+    )
 
 
 def _signed_power(values: np.ndarray, exponent: float) -> np.ndarray:
-    return np.copysign(np.abs(np.asarray(values, dtype=np.float64)) ** exponent, values)
+    return np.asarray(np.copysign(np.abs(np.asarray(values, dtype=np.float64)) ** exponent, values), dtype=np.float64)
 
 
 def _encode(values: np.ndarray, gamma: str) -> np.ndarray:
@@ -107,7 +111,7 @@ def _rgb_to_xyz(definition: tuple[tuple[tuple[float, float], ...], tuple[float, 
         (tuple(x / y for x, y in primaries), (1.0, 1.0, 1.0), tuple((1.0 - x - y) / y for x, y in primaries)),
         dtype=np.float64,
     )
-    return unscaled @ np.diag(np.linalg.solve(unscaled, _xy_to_xyz(white)))
+    return np.asarray(unscaled @ np.diag(np.linalg.solve(unscaled, _xy_to_xyz(white))), dtype=np.float64)
 
 
 def _conversion(source: str, target: str) -> np.ndarray:
@@ -116,7 +120,9 @@ def _conversion(source: str, target: str) -> np.ndarray:
     source_cones = _BRADFORD @ _xy_to_xyz(source_definition[1])
     target_cones = _BRADFORD @ _xy_to_xyz(target_definition[1])
     adaptation = np.linalg.inv(_BRADFORD) @ np.diag(target_cones / source_cones) @ _BRADFORD
-    return np.linalg.inv(_rgb_to_xyz(target_definition)) @ adaptation @ _rgb_to_xyz(source_definition)
+    return np.asarray(
+        np.linalg.inv(_rgb_to_xyz(target_definition)) @ adaptation @ _rgb_to_xyz(source_definition), dtype=np.float64
+    )
 
 
 def _coordinates(values: np.ndarray, lower: float, upper: float, start: int, extent: int) -> np.ndarray:
@@ -125,7 +131,7 @@ def _coordinates(values: np.ndarray, lower: float, upper: float, start: int, ext
 
 def _panel(
     draw: ImageDraw.ImageDraw,
-    font: ImageFont.ImageFont,
+    font: ImageFont.ImageFont | ImageFont.FreeTypeFont,
     *,
     box: tuple[int, int, int, int],
     title: str,
@@ -194,12 +200,17 @@ def _transfer_sheet() -> Image.Image:
         curves=((_decode(decode_cut, "ProPhoto-RGB"), _ORACLE), (_gpu_decode(decode_cut, "ProPhoto-RGB"), _GPU)),
     )
 
+    residual_cases: tuple[tuple[px.core.Gamma, tuple[int, int, int]], ...] = (
+        ("Gamma-1.8", _ACCENT),
+        ("Adobe-RGB", _ORACLE),
+        ("ProPhoto-RGB", _GPU),
+    )
     residuals = tuple(
         (
             np.abs(_gpu_decode(_gpu_encode(signed, gamma), gamma) - signed.astype(np.float64)),
             color,
         )
-        for gamma, color in (("Gamma-1.8", _ACCENT), ("Adobe-RGB", _ORACLE), ("ProPhoto-RGB", _GPU))
+        for gamma, color in residual_cases
     )
     _panel(
         draw,
@@ -262,7 +273,11 @@ def _rgb_sheet() -> Image.Image:
     x = np.linspace(0.0, 1.0, width, dtype=np.float32)
     encoded = np.stack((1.15 * x - 0.08, 0.12 + 0.82 * np.sin(np.pi * x), 1.08 * (1.0 - x) - 0.04), axis=1)
     draw.text((_LEFT, 18), "ICC gamut + transfer to sRGB/sRGB: GPU vs host matrix/TRC oracle", fill=_TEXT, font=font)
-    cases = (("Adobe-RGB", "Adobe-RGB"), ("ProPhoto-RGB", "Gamma-1.8"), ("ProPhoto-RGB", "ProPhoto-RGB"))
+    cases: tuple[tuple[px.core.Colorspace, px.core.Gamma], ...] = (
+        ("Adobe-RGB", "Adobe-RGB"),
+        ("ProPhoto-RGB", "Gamma-1.8"),
+        ("ProPhoto-RGB", "ProPhoto-RGB"),
+    )
     for row, (colorspace, gamma) in enumerate(cases):
         source = _frame(encoded, colorspace=colorspace, gamma=gamma)
         actual = px.color.rgb_to_rgb(source, output_colorspace="sRGB", output_gamma="sRGB").data.get()[0]

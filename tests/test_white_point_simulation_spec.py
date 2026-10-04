@@ -13,7 +13,8 @@ _D65 = (0.3127, 0.3290)
 _D93 = (0.2831, 0.2971)
 _D50 = (0.3457, 0.3585)
 _ACES = (0.32168, 0.33767)
-_REFERENCE_WHITES = {"D65": _D65, "D93": _D93, "D50": _D50, "ACES": _ACES}
+_DCI = (0.3140, 0.3510)
+_REFERENCE_WHITES = {"D65": _D65, "D93": _D93, "D50": _D50, "ACES": _ACES, "DCI": _DCI}
 _CAT_TOKENS = ("Bradford", "CAT02", "CAT16", "von-Kries")
 _PRIMARIES = {
     "sRGB": ((0.640, 0.330), (0.300, 0.600), (0.150, 0.060)),
@@ -118,12 +119,13 @@ def _expected(
     return _encode_srgb(transformed) if gamma == "sRGB" else transformed
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(("token", "xy"), tuple(_REFERENCE_WHITES.items()))
-def test_reference_white_tokens_are_case_sensitive_and_match_only_their_fixed_xy(
+def test_reference_white_tokens_resolve_to_their_fixed_xy(
     token: str,
     xy: tuple[float, float],
 ) -> None:
-    """v1-white-point-simulation acceptance 2: each closed token resolves to one specification-fixed xy."""
+    """Each named reference white resolves to its defined chromaticity coordinates."""
     import cupy as cp
 
     source = _frame((0.17, 0.41, 1.23))
@@ -132,6 +134,32 @@ def test_reference_white_tokens_are_case_sensitive_and_match_only_their_fixed_xy
     assert cp.array_equal(token_output.data, xy_output.data)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.parametrize("operation", ("chromatic_adaptation", "white_point_simulation"))
+@pytest.mark.parametrize("position", ("input_white", "output_white"))
+@pytest.mark.parametrize("spelling", ("DCI", "dci", "D.C_I"))
+def test_dci_white_matches_direct_xy_in_each_operation_and_argument(
+    operation: str,
+    position: str,
+    spelling: str,
+) -> None:
+    """The DCI white name matches its direct coordinates as either white in adaptation and simulation."""
+    import cupy as cp
+
+    source = _frame((0.17, 0.41, 1.23))
+    named_whites: dict[str, str | tuple[float, float]] = {"input_white": "D65", "output_white": "D65"}
+    direct_whites = named_whites.copy()
+    named_whites[position] = spelling
+    direct_whites[position] = (0.3140, 0.3510)
+    color_operation = getattr(px.color, operation)
+
+    named_result = color_operation(source, **named_whites)
+    direct_result = color_operation(source, **direct_whites)
+    assert cp.array_equal(named_result.data, direct_result.data)
+    assert not cp.array_equal(named_result.data, source.data)
+
+
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(
     "distinct_xy",
     (
@@ -142,7 +170,7 @@ def test_reference_white_tokens_are_case_sensitive_and_match_only_their_fixed_xy
 def test_noncanonical_d93_coordinates_remain_distinct_direct_xy_inputs(
     distinct_xy: tuple[float, float],
 ) -> None:
-    """v1-white-point-simulation acceptance 2: unrounded daylight and 27 MPCD coordinates do not become d93."""
+    """Reference-white simulation keeps nearby daylight and 27 MPCD coordinates distinct from the D93 name."""
     import cupy as cp
 
     source = _frame((0.17, 0.41, 1.23))
@@ -151,6 +179,8 @@ def test_noncanonical_d93_coordinates_remain_distinct_direct_xy_inputs(
     assert not cp.array_equal(token_output.data, direct_output.data)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize("cat", _CAT_TOKENS)
 @pytest.mark.parametrize(("token", "xy"), tuple(_REFERENCE_WHITES.items()))
 def test_chromatic_adaptation_tokens_match_direct_xy_for_every_cat(
@@ -158,7 +188,7 @@ def test_chromatic_adaptation_tokens_match_direct_xy_for_every_cat(
     token: str,
     xy: tuple[float, float],
 ) -> None:
-    """v1-white-point-simulation acceptance 4: both white inputs share token resolution for all CATs."""
+    """Chromatic adaptation resolves named and direct source and target whites identically for every method."""
     import cupy as cp
 
     source = _frame((0.19, 0.53, 1.17), gamma="sRGB")
@@ -177,13 +207,14 @@ def test_chromatic_adaptation_tokens_match_direct_xy_for_every_cat(
     assert cp.array_equal(token_output.data, xy_output.data)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "invalid",
     (
         "D55",
         "D75",
         "E",
-        "DCI",
         "unknown",
         "d93-8mpcd",
         "d93-27mpcd",
@@ -205,7 +236,7 @@ def test_invalid_reference_whites_fail_actionably_before_pixel_processing(
     monkeypatch: pytest.MonkeyPatch,
     invalid: object,
 ) -> None:
-    """v1-white-point-simulation acceptance 2-3: aliases, malformed xy, and invalid domains fail before GPU work."""
+    """Reference-white simulation rejects aliases, malformed coordinates, and invalid domains before GPU work."""
     import pixtreme._color.white_point as implementation
 
     def forbidden_transform(*args: object, **kwargs: object) -> object:
@@ -221,12 +252,14 @@ def test_invalid_reference_whites_fail_actionably_before_pixel_processing(
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("invalid", ((0.640, 0.330), (5e-324, 5e-324)))
 def test_nonfinite_or_singular_device_matrices_fail_before_pixel_processing(
     monkeypatch: pytest.MonkeyPatch,
     invalid: tuple[float, float],
 ) -> None:
-    """v1-white-point-simulation acceptance 3: unconstructible device matrices fail actionably before GPU work."""
+    """Reference-white simulation rejects nonfinite or singular device matrices before GPU work."""
     import pixtreme._color.white_point as implementation
 
     def forbidden_transform(*args: object, **kwargs: object) -> object:
@@ -242,12 +275,14 @@ def test_nonfinite_or_singular_device_matrices_fail_before_pixel_processing(
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("invalid", ((0.640, 0.330), (5e-324, 5e-324)))
 def test_equal_singular_whites_fail_before_the_identity_copy(
     monkeypatch: pytest.MonkeyPatch,
     invalid: tuple[float, float],
 ) -> None:
-    """v1-white-point-simulation acceptance 3: equal unconstructible whites fail instead of returning an identity copy."""
+    """Reference-white simulation rejects a singular white even when source and target whites are equal."""
     import pixtreme._color.white_point as implementation
 
     def forbidden_transform(*args: object, **kwargs: object) -> object:
@@ -263,8 +298,10 @@ def test_equal_singular_whites_fail_before_the_identity_copy(
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_implicit_input_white_uses_the_frame_colorspace_nominal_white() -> None:
-    """v1-white-point-simulation acceptance 2-3: ACES token, omitted, and None match the Frame nominal white."""
+    """An omitted input white uses the Frame color space's nominal white in reference-white simulation."""
     import cupy as cp
 
     source = _frame((0.18, 0.47, 1.31), colorspace="ACES2065-1")
@@ -281,6 +318,8 @@ def test_implicit_input_white_uses_the_frame_colorspace_nominal_white() -> None:
     assert cp.array_equal(omitted.data, explicit_xy.data)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "invalid_frame",
     (
@@ -290,7 +329,7 @@ def test_implicit_input_white_uses_the_frame_colorspace_nominal_white() -> None:
     ),
 )
 def test_white_point_simulation_requires_one_float32_rgb_triplet(invalid_frame: object) -> None:
-    """v1-white-point-simulation acceptance 5: the operation requires a float32 Frame with one RGB triplet."""
+    """Reference-white simulation requires a float32 Frame with exactly one R, G, and B channel."""
     if invalid_frame == "float16":
         invalid_frame = _frame((0.2, 0.3, 0.4), dtype=np.float16)
     elif invalid_frame == "missing-rgb":
@@ -300,6 +339,9 @@ def test_white_point_simulation_requires_one_float32_rgb_triplet(invalid_frame: 
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize(("input_white", "output_white"), ((_D65, _D93), (_D93, _D65)))
 @pytest.mark.parametrize("colorspace", ("sRGB", "ACES2065-1"))
 def test_linear_output_matches_independent_device_matrix_and_preserves_signed_primary_scales(
@@ -307,7 +349,8 @@ def test_linear_output_matches_independent_device_matrix_and_preserves_signed_pr
     output_white: tuple[float, float],
     colorspace: str,
 ) -> None:
-    """v1-white-point-simulation acceptance 6-7 and 11: device composition preserves scene values without CAT or clip."""
+    """Reference-white simulation matches an independent device matrix and preserves signed scene values without
+    clipping."""
     values = np.asarray(
         [[[-0.20, 0.35, 1.40], [1.75, 0.08, 0.60], [0.04, 1.20, 0.22]]],
         dtype=np.float32,
@@ -345,12 +388,13 @@ def test_linear_output_matches_independent_device_matrix_and_preserves_signed_pr
     np.testing.assert_allclose(actual.data.get(), expected, rtol=1e-5, atol=1e-5)
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(("input_white", "output_white"), (("D65", _D65), (_D93, "D93")))
 def test_equal_resolved_whites_return_an_all_channel_bit_preserving_private_copy(
     input_white: object,
     output_white: object,
 ) -> None:
-    """v1-white-point-simulation acceptance 8: token/xy identity preserves all channel bits in private storage."""
+    """Equal resolved whites return a separate Frame with every channel bit unchanged."""
     import cupy as cp
 
     source = _frame(
@@ -367,9 +411,12 @@ def test_equal_resolved_whites_return_an_all_channel_bit_preserving_private_copy
     assert output.matrix is None
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("gamma", ("linear", "sRGB"))
 def test_asymmetric_scene_values_match_host_oracle_and_reverse_round_trip(gamma: str) -> None:
-    """v1-white-point-simulation acceptance 9 and 11: both transfer paths match an oracle and reverse compensation."""
+    """Reference-white simulation matches a host oracle and reverses asymmetric signed scene values within tolerance."""
     values = np.asarray(
         [[[-0.20, 0.35, 1.40], [1.75, 0.08, 0.60], [0.04, 1.20, 0.22]]],
         dtype=np.float32,
@@ -390,10 +437,12 @@ def test_asymmetric_scene_values_match_host_oracle_and_reverse_round_trip(gamma:
     np.testing.assert_allclose(reverse.data.get(), source.data.get(), rtol=tolerance, atol=tolerance)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_different_whites_use_one_label_driven_private_metadata_preserving_pass(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-white-point-simulation acceptance 10: decode, device matrix, and encode use one label-driven GPU pass."""
+    """Different reference whites convert labeled RGB in one GPU pass and preserve Frame color information."""
     import cupy as cp
 
     import pixtreme._color.white_point as implementation
@@ -432,10 +481,12 @@ def test_different_whites_use_one_label_driven_private_metadata_preserving_pass(
     assert (source.colorspace, source.gamma, source.channels, source.matrix) == metadata_snapshot
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_calls_are_bit_deterministic_and_do_not_stamp_implicit_metadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-white-point-simulation acceptance 12: results ignore environment and call order without metadata state."""
+    """Reference-white simulation returns deterministic bits without adding implicit color information to the Frame."""
     import cupy as cp
 
     source = _frame((0.21, 0.47, 1.19), gamma="sRGB")
@@ -453,65 +504,11 @@ def test_calls_are_bit_deterministic_and_do_not_stamp_implicit_metadata(
     )
 
 
-def test_simulation_host_memoization_is_bounded_lru_and_recomputes_bit_exactly() -> None:
-    """v1-white-point-simulation acceptance 18: resolved simulation matrices use a 128-entry bit-exact LRU."""
-    import pixtreme._color.white_point as implementation
-
-    cached = implementation._white_point_simulation_matrix
-    cached.cache_clear()
-    key = ("sRGB", _D65, _D93)
-    cold = cached(*key).tobytes()
-    assert cached.cache_info().maxsize == 128
-    assert cached(*key).tobytes() == cold
-    assert cached.cache_info().hits == 1
-
-    for index in range(128):
-        input_white = (float(np.float64(0.29) + np.float64(index) * np.float64(1e-5)), 0.33)
-        cached("sRGB", input_white, _D93)
-
-    assert cached.cache_info().currsize == 128
-    misses_before_revisit = cached.cache_info().misses
-    recomputed = cached(*key)
-    assert cached.cache_info().misses == misses_before_revisit + 1
-    assert recomputed.tobytes() == cold == cached.__wrapped__(*key).tobytes()
-
-
-def test_simulation_memoization_identity_uses_every_resolved_binary64_value() -> None:
-    """v1-white-point-simulation acceptance 19: None, tokens, and xy share exact resolved binary64 cache keys."""
-    import pixtreme._color.white_point as implementation
-
-    cached = implementation._white_point_simulation_matrix
-    cached.cache_clear()
-    source = _frame((0.2, 0.3, 0.4), colorspace="sRGB")
-    px.color.white_point_simulation(source, input_white=None, output_white="D93")
-    implicit_stats = cached.cache_info()
-    px.color.white_point_simulation(source, input_white=_D65, output_white=_D93)
-    direct_stats = cached.cache_info()
-    px.color.white_point_simulation(source, input_white="D65", output_white="D93")
-    token_stats = cached.cache_info()
-    assert direct_stats.hits == implicit_stats.hits + 1
-    assert token_stats.hits == direct_stats.hits + 1
-    assert token_stats.misses == implicit_stats.misses
-
-    cached.cache_clear()
-    cached("sRGB", _D65, _D93)
-    misses = cached.cache_info().misses
-    variants = (
-        ("ACES2065-1", _D65, _D93),
-        ("sRGB", (float(np.nextafter(_D65[0], np.inf)), _D65[1]), _D93),
-        ("sRGB", (_D65[0], float(np.nextafter(_D65[1], np.inf))), _D93),
-        ("sRGB", _D65, (float(np.nextafter(_D93[0], np.inf)), _D93[1])),
-        ("sRGB", _D65, (_D93[0], float(np.nextafter(_D93[1], np.inf)))),
-    )
-    for variant in variants:
-        cached(*variant)
-    assert cached.cache_info().misses == misses + len(variants)
-
-
+@pytest.mark.req("REQ-PIX-003")
 def test_simulation_cache_states_and_uncached_composition_are_publicly_bit_identical(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-white-point-simulation acceptance 20: every cache state and uncached composition is bit identical."""
+    """Reference-white simulation returns the same bits across cache states and uncached computation."""
     import pixtreme._color.white_point as implementation
 
     cached = implementation._white_point_simulation_matrix

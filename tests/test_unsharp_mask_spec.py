@@ -79,8 +79,10 @@ def _unsharp_fixture(
     return (source64 + amount * (source64 - blurred)).astype(np.float32)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_unsharp_mask_public_signature_and_frame_only_entry_are_exact() -> None:
-    """v1-unsharp-mask acceptance 1: sigma and amount are required keyword-only parameters."""
+    """Unsharp masking accepts a Frame and requires keyword only sigma and amount values."""
     import cupy as cp
 
     signature = inspect.signature(px.filter.unsharp_mask)
@@ -98,10 +100,11 @@ def test_unsharp_mask_public_signature_and_frame_only_entry_are_exact() -> None:
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("border", BORDERS)
 @pytest.mark.parametrize("amount", (1.25, -0.5))
 def test_unsharp_mask_matches_hand_derived_gaussian_fixture_for_every_border(border: str, amount: float) -> None:
-    """v1-unsharp-mask acceptance 2, 4, and 6: the formula and all borders match an independent fixture."""
+    """For unsharp masking, the formula and all borders match an independent fixture."""
     values = np.asarray(
         [
             [[-0.25, 0.1], [0.25, 0.4], [0.75, 1.2], [1.25, -0.1]],
@@ -134,8 +137,9 @@ def test_unsharp_mask_matches_hand_derived_gaussian_fixture_for_every_border(bor
     )
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_zero_amount_is_a_private_bit_exact_identity() -> None:
-    """v1-unsharp-mask acceptance 3 and 8: amount zero copies every fp32 bit without aliasing input."""
+    """For unsharp masking, amount zero copies every fp32 bit without aliasing input."""
     values = np.asarray([[[-0.0], [0.25], [-1.5]], [[2.0], [1.0], [0.0]]], dtype=np.float32)
     source = _frame(values, channels=("signal",))
 
@@ -149,6 +153,8 @@ def test_zero_amount_is_a_private_bit_exact_identity() -> None:
     assert result.data.data.ptr != source.data.data.ptr
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("parameter", "value"),
     (
@@ -166,7 +172,7 @@ def test_zero_amount_is_a_private_bit_exact_identity() -> None:
     ),
 )
 def test_unsharp_mask_rejects_invalid_sigma_and_amount_actionably(parameter: str, value: object) -> None:
-    """v1-unsharp-mask acceptance 4: sigma is positive finite and amount is finite with three-part errors."""
+    """For unsharp masking, sigma is positive finite and amount is finite with three-part errors."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=("signal",))
     kwargs: dict[str, object] = {"sigma": 1.0, "amount": 1.0}
     kwargs[parameter] = value
@@ -178,8 +184,11 @@ def test_unsharp_mask_rejects_invalid_sigma_and_amount_actionably(parameter: str
     assert parameter in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-103")
 def test_unsharp_mask_preserves_halo_excursions_without_clipping() -> None:
-    """v1-unsharp-mask acceptance 5: overshoot, undershoot, and scene values are never clipped."""
+    """For unsharp masking, overshoot, undershoot, and scene values are never clipped."""
     values = np.zeros((5, 5, 1), dtype=np.float32)
     values[2, 2, 0] = 1.5
     source = _frame(values, channels=("signal",))
@@ -192,12 +201,14 @@ def test_unsharp_mask_preserves_halo_excursions_without_clipping() -> None:
     assert float(result.min()) < 0.0
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("border", "border_value"),
     (("reflect", None), ("edge", None), ("constant", None), ("constant", float("inf")), ("mirror", 0.0)),
 )
 def test_unsharp_mask_uses_the_shared_border_error_contract(border: str, border_value: object) -> None:
-    """v1-unsharp-mask acceptance 6: border tokens and border_value follow the blur contract exactly."""
+    """Unsharp masking accepts four border modes and requires a finite border value only for constant mode."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=("signal",))
 
     with pytest.raises(ValueError) as error:
@@ -206,6 +217,8 @@ def test_unsharp_mask_uses_the_shared_border_error_contract(border: str, border_
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "guidance"),
     ((np.float16, "cast_dtype"), (np.uint8, "dequantize"), (np.uint16, "dequantize")),
@@ -214,7 +227,7 @@ def test_unsharp_mask_rejects_non_fp32_frames_with_conversion_guidance(
     dtype: np.dtype[Any] | type[np.generic],
     guidance: str,
 ) -> None:
-    """v1-unsharp-mask acceptance 7: non-fp32 storage fails with an appropriate conversion path."""
+    """For unsharp masking, non-fp32 storage fails with an appropriate conversion path."""
     source = _frame(np.zeros((2, 2, 1)), dtype=dtype, channels=("signal",))
 
     with pytest.raises(ValueError) as error:
@@ -225,8 +238,10 @@ def test_unsharp_mask_rejects_non_fp32_frames_with_conversion_guidance(
     assert guidance in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-011")
 def test_unsharp_mask_is_channel_label_independent_and_preserves_metadata_and_input() -> None:
-    """v1-unsharp-mask acceptance 7-8; v1-red-tokens acceptance 68: renamed ARRI metadata survives."""
+    """Unsharp masking preserves channel and color metadata without modifying the input Frame."""
     values = np.linspace(-0.5, 1.5, 48, dtype=np.float32).reshape(3, 4, 4)
     source = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=("R", "G", "B", "A"))
     relabeled = _frame(values, colorspace="ACEScg", gamma="ARRI-LogC4", channels=("Z", "Y", "Cb", "Cr"))
@@ -256,8 +271,12 @@ def test_unsharp_mask_is_channel_label_independent_and_preserves_metadata_and_in
     assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "ARRI-LogC4", ("R", "G", "B", "A"))
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_unsharp_mask_docstring_is_a_self_contained_contract() -> None:
-    """v1-unsharp-mask acceptance 1-8: the public docstring exposes the operational contract."""
+    """Developers can find the unsharp formula, Gaussian radius, borders, float32 input, and unclamped values
+    in the public docstring.
+    """
     docstring = inspect.getdoc(px.filter.unsharp_mask)
     assert docstring is not None
     for required in (

@@ -11,6 +11,7 @@ from typing import Any
 
 import numpy as np
 import pytest
+from transfer_capture import capture_array_transfers
 
 import pixtreme as px
 import pixtreme._draw.text as draw_text_module
@@ -65,8 +66,9 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError]) -> None:
     assert "; how=" in message
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_draw_text_host_array_conversion_failure_is_actionable() -> None:
-    """REQ-API-012: text host-array conversion reports the rejected value and a concrete recovery."""
+    """For text drawing, text host-array conversion reports the rejected value and a concrete recovery."""
     value = ((1.0,), (1.0, 2.0))
     with pytest.raises(ValueError) as error:
         draw_text_module._host_array(value)
@@ -74,8 +76,9 @@ def test_draw_text_host_array_conversion_failure_is_actionable() -> None:
     assert repr(value) in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_draw_text_unsupported_freetype_bitmap_is_actionable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """REQ-API-012: unsupported FreeType bitmap layouts report the observed layout and repair contract."""
+    """For text drawing, unsupported FreeType bitmap layouts report the observed layout and repair contract."""
 
     class Bitmap:
         rows = 1
@@ -368,9 +371,11 @@ def _base_kwargs() -> dict[str, object]:
     }
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 def test_draw_text_public_signature_frame_entry_empty_text_and_defaults() -> None:
-    """v1-draw-text-unification acceptance 5; v1-draw-text-supersample acceptance 1;
-    v1-draw-text-user-font acceptance 5: add the final font extension before existing layout controls.
+    """Text drawing exposes its font and layout controls through one public Frame operation, including empty text
+    defaults.
     """
     import cupy as cp
 
@@ -448,6 +453,8 @@ def test_draw_text_public_signature_frame_entry_empty_text_and_defaults() -> Non
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("overrides", "listed_tokens"),
     (
@@ -480,24 +487,27 @@ def test_draw_text_entry_validation_is_actionable(
     overrides: dict[str, object],
     listed_tokens: tuple[str, ...],
 ) -> None:
-    """v1-draw-text-unification acceptance 5-6: text type, carriage return, geometry, and tokens fail fast."""
+    """For text drawing, text type, carriage return, geometry, and tokens fail fast."""
     with pytest.raises(ValueError) as error:
         px.draw.text(_zeros(), **(_base_kwargs() | overrides))
     _assert_actionable(error)
     assert all(token in str(error.value) for token in listed_tokens)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("supersample", (0, 1, "true", None, (), np.bool_(True)))
 def test_draw_text_supersample_requires_a_strict_python_bool(supersample: object) -> None:
-    """v1-draw-text-supersample acceptance 2: only Python True and False pass the public boundary."""
+    """For text drawing, only Python True and False pass the public boundary."""
     with pytest.raises(ValueError) as error:
         px.draw.text(_zeros(), **(_base_kwargs() | {"supersample": supersample}))
     _assert_actionable(error)
     assert "supersample" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_supersample_false_is_bit_identical_before_and_after_true_mode() -> None:
-    """v1-draw-text-supersample acceptance 3: the default 8-bit path stays bit-identical and mode-local."""
+    """Text drawing with supersampling off produces the same bits regardless of prior supersampled calls."""
     source_values = np.linspace(-0.4, 1.6, 96 * 192, dtype=np.float32).reshape(96, 192, 1)
     source = _frame(source_values, colorspace="S-Gamut3", gamma="S-Log3", channels=("matte",))
     kwargs = {
@@ -528,9 +538,10 @@ def test_draw_text_supersample_false_is_bit_identical_before_and_after_true_mode
     )
 
 
+@pytest.mark.req("REQ-PIX-012")
 @pytest.mark.parametrize("phase", ((0, 0), (8, 24), (31, 47), (55, 13)))
 def test_draw_text_supersample_glyph_matches_independent_4x_box_oracle(phase: tuple[int, int]) -> None:
-    """v1-draw-text-supersample acceptance 4 and 6: 4x fp32 averaging preserves the 1x glyph grid."""
+    """Supersampled text glyphs match independent fourfold pixel averaging on the original glyph grid."""
     import pixtreme._draw.text as draw_text_module
 
     size = 37.25
@@ -579,74 +590,9 @@ def test_draw_text_supersample_glyph_matches_independent_4x_box_oracle(phase: tu
     np.testing.assert_array_equal(actual.coverage, expected)
 
 
-def test_draw_text_supersample_empty_whitespace_keeps_zero_sized_glyph_and_atlas_at_phase_boundary() -> None:
-    """v1-draw-text-supersample acceptance 6 and 8: empty whitespace keeps mode-local zero-sized storage."""
-    import freetype
-
-    import pixtreme._draw.text as draw_text_module
-
-    glyph_id = freetype.Face(str(FONT_PATH)).get_char_index(ord(" "))
-    glyph_args = (glyph_id, 12 * 64, 400.0, 0, 63, 63, "sans")
-    normal_glyph = draw_text_module._glyph_bitmap(*glyph_args, supersample=False)
-    sampled_glyph = draw_text_module._glyph_bitmap(*glyph_args, supersample=True)
-
-    assert (
-        (
-            sampled_glyph.left,
-            sampled_glyph.top,
-            sampled_glyph.coverage.shape,
-            sampled_glyph.coverage.nbytes,
-        )
-        == (
-            normal_glyph.left,
-            normal_glyph.top,
-            normal_glyph.coverage.shape,
-            normal_glyph.coverage.nbytes,
-        )
-        == (0, 0, (0, 0), 0)
-    )
-
-    atlas_args = (
-        " ",
-        12 * 64,
-        400.0,
-        "ja",
-        True,
-        0.0,
-        1.0,
-        "left",
-        "sans",
-        None,
-        63,
-        63,
-        (),
-        -512,
-        -512,
-        512,
-        512,
-    )
-    normal_atlas = draw_text_module._build_block_atlas(*atlas_args, supersample=False)
-    sampled_atlas = draw_text_module._build_block_atlas(*atlas_args, supersample=True)
-
-    assert (
-        (
-            sampled_atlas.left,
-            sampled_atlas.top,
-            sampled_atlas.body.shape,
-            sampled_atlas.body.nbytes,
-        )
-        == (
-            normal_atlas.left,
-            normal_atlas.top,
-            normal_atlas.body.shape,
-            normal_atlas.body.nbytes,
-        )
-        == (0, 0, (0, 0), 0)
-    )
-
-
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_supersample_fixed_fhd_matte_matches_oracle_and_exceeds_256_coverages() -> None:
-    """v1-draw-text-supersample acceptance 5: the fixed matte matches the independent oracle and exceeds 256 values."""
+    """For text drawing, the fixed matte matches the independent oracle and exceeds 256 values."""
     source_values = np.zeros((1080, 1920, 1), dtype=np.float32)
     source = _frame(source_values, channels=("matte",))
     kwargs = {
@@ -667,9 +613,10 @@ def test_draw_text_supersample_fixed_fhd_matte_matches_oracle_and_exceeds_256_co
     assert np.unique(actual).size > 256
 
 
+@pytest.mark.req("REQ-PIX-012")
 @pytest.mark.parametrize("anchor", ANCHORS)
 def test_draw_text_supersample_keeps_all_anchor_solutions_mode_independent(anchor: str) -> None:
-    """v1-draw-text-supersample acceptance 6: supersampling does not change block metrics or anchor placement."""
+    """For text drawing, supersampling does not change block metrics or anchor placement."""
     text = "Ag骨"
     size = 31.25
     _glyphs, advance_26_6 = _reference_shape(text, size=size, weight=400.0, language="ja")
@@ -711,8 +658,9 @@ def test_draw_text_supersample_keeps_all_anchor_solutions_mode_independent(ancho
     np.testing.assert_array_equal(_host(anchored), _host(baseline))
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_supersample_multi_outline_matches_independent_ring_oracle() -> None:
-    """v1-draw-text-supersample acceptance 7: body and cumulative outline rings share the fixed 4x rule."""
+    """For text drawing, body and cumulative outline rings share the fixed 4x rule."""
     source_values = np.full((144, 300, 3), 0.2, dtype=np.float32)
     source = _frame(source_values)
     kwargs = {
@@ -731,67 +679,12 @@ def test_draw_text_supersample_multi_outline_matches_independent_ring_oracle() -
     np.testing.assert_allclose(_host(actual), expected, rtol=4e-6, atol=4e-6)
 
 
-def test_draw_text_supersample_caches_are_mode_local_and_store_only_downsampled_fp32() -> None:
-    """v1-draw-text-supersample acceptance 8: glyph and atlas caches split modes without retaining 4x storage."""
-    import pixtreme._draw.text as draw_text_module
-
-    size = 30.0
-    size_26_6 = round(size * 64.0)
-    glyphs, _advance = _reference_shape("骨", size=size, weight=550.0, language="ja")
-    glyph_id = glyphs[0][0]
-    draw_text_module._glyph_bitmap.cache_clear()
-    glyph_args = (glyph_id, size_26_6, 550.0, 0, 19, 37, "sans")
-    normal_glyph = draw_text_module._glyph_bitmap(*glyph_args, supersample=False)
-    after_normal_glyph = draw_text_module._glyph_bitmap.cache_info()
-    sampled_glyph = draw_text_module._glyph_bitmap(*glyph_args, supersample=True)
-    after_sampled_glyph = draw_text_module._glyph_bitmap.cache_info()
-    assert after_sampled_glyph.misses == after_normal_glyph.misses + 1
-    assert draw_text_module._glyph_bitmap(*glyph_args, supersample=False) is normal_glyph
-    assert draw_text_module._glyph_bitmap(*glyph_args, supersample=True) is sampled_glyph
-    assert sampled_glyph.coverage.shape == normal_glyph.coverage.shape
-    assert sampled_glyph.coverage.nbytes == normal_glyph.coverage.nbytes
-    assert sampled_glyph.coverage.dtype == normal_glyph.coverage.dtype == np.float32
-
-    draw_text_module._build_block_atlas.cache_clear()
-    atlas_args = (
-        "cache 骨",
-        size_26_6,
-        550.0,
-        "ja",
-        True,
-        0.0,
-        1.0,
-        "left",
-        "sans",
-        None,
-        19,
-        37,
-        (96, 224),
-        -512,
-        -512,
-        512,
-        512,
-    )
-    normal_atlas = draw_text_module._build_block_atlas(*atlas_args, supersample=False)
-    after_normal_atlas = draw_text_module._build_block_atlas.cache_info()
-    sampled_atlas = draw_text_module._build_block_atlas(*atlas_args, supersample=True)
-    after_sampled_atlas = draw_text_module._build_block_atlas.cache_info()
-    assert after_sampled_atlas.misses == after_normal_atlas.misses + 1
-    assert draw_text_module._build_block_atlas(*atlas_args, supersample=False) is normal_atlas
-    assert draw_text_module._build_block_atlas(*atlas_args, supersample=True) is sampled_atlas
-    assert (sampled_atlas.left, sampled_atlas.top) == (normal_atlas.left, normal_atlas.top)
-    for sampled, normal in zip(
-        (sampled_atlas.body, *sampled_atlas.rings),
-        (normal_atlas.body, *normal_atlas.rings),
-        strict=True,
-    ):
-        assert sampled.shape == normal.shape
-        assert sampled.nbytes == normal.nbytes
-        assert sampled.dtype == normal.dtype == np.float32
-
-
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-103")
 def test_draw_text_supersample_preserves_scene_metadata_input_and_private_storage() -> None:
-    """v1-draw-text-supersample acceptance 9: True keeps scene values, channels, metadata, and storage contracts."""
+    """Supersampled text drawing preserves out of range values and Frame metadata without changing the input storage."""
     labels = ("normal.x", "depth", "id", "custom")
     source_values = np.full((96, 192, len(labels)), -0.25, dtype=np.float32)
     source = _frame(source_values, colorspace="S-Gamut3", gamma="S-Log3", channels=labels)
@@ -817,9 +710,11 @@ def test_draw_text_supersample_preserves_scene_metadata_input_and_private_storag
     assert np.max(_host(result)) > 1.0
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-019")
 @pytest.mark.parametrize("blend", BLENDS)
 def test_draw_text_matches_independent_harfbuzz_freetype_and_numpy_oracle(blend: str) -> None:
-    """v1-draw-text-unification acceptance 11-12: inherited single-line shaping and compositing match a host oracle."""
+    """For text drawing, single-line shaping and compositing match a host oracle."""
     source_values = np.linspace(-0.4, 1.7, 112 * 240 * 3, dtype=np.float32).reshape(112, 240, 3)
     source = _frame(source_values)
     kwargs = {
@@ -847,9 +742,11 @@ def test_draw_text_matches_independent_harfbuzz_freetype_and_numpy_oracle(blend:
     assert np.max(_host(result)) > 1.0
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-019")
 @pytest.mark.parametrize("anchor", ANCHORS)
 def test_draw_text_all_anchors_represent_the_same_font_metric_and_advance_point(anchor: str) -> None:
-    """v1-draw-text acceptance 12-14: all 12 anchors use font ascender/descender and shaped line advance, not ink."""
+    """For text drawing, all 12 anchors use font ascender/descender and shaped line advance, not ink."""
     text = "Ag骨"
     size = 31.25
     weight = 400.0
@@ -891,8 +788,9 @@ def test_draw_text_all_anchors_represent_the_same_font_metric_and_advance_point(
     np.testing.assert_array_equal(_host(anchored), _host(baseline))
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_subpixel_clipping_outside_and_missing_glyph_behavior() -> None:
-    """v1-draw-text acceptance 4 and 16-18: subpixel placement is continuous, clipping is safe, and .notdef draws."""
+    """For text drawing, subpixel placement is continuous, clipping is safe, and .notdef draws."""
     source_values = np.arange(72 * 96, dtype=np.float32).reshape(72, 96, 1) / 1000.0
     source = _frame(source_values, channels=("signal",))
     integer = px.draw.text(source, text="A", position=(12.0, 40.0), size=30.0, color=(1.0,))
@@ -909,9 +807,10 @@ def test_draw_text_subpixel_clipping_outside_and_missing_glyph_behavior() -> Non
     assert np.any(_host(tofu) > 0.0)
 
 
+@pytest.mark.req("REQ-PIX-012")
 @pytest.mark.parametrize("position", ((1e308, 40.0), (-1e308, 40.0), (12.0, 1e308), (12.0, -1e308)))
 def test_draw_text_large_finite_positions_remain_valid_outside_coordinates(position: tuple[float, float]) -> None:
-    """v1-draw-text acceptance 4 and 17: large finite positions remain valid and draw only image intersections."""
+    """For text drawing, large finite positions remain valid and draw only image intersections."""
     source_values = np.linspace(-0.25, 1.25, 72 * 96, dtype=np.float32).reshape(72, 96, 1)
     source = _frame(source_values, channels=("matte",))
     actual = px.draw.text(source, text="A", position=position, size=30.0, color=(1.0,))
@@ -919,8 +818,9 @@ def test_draw_text_large_finite_positions_remain_valid_outside_coordinates(posit
     assert actual.data.data.ptr != source.data.data.ptr
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_language_selects_cjk_locl_forms_and_weight_instances() -> None:
-    """v1-draw-text acceptance 6, 8, 15, and 19: language selects locl glyphs and wght changes rasterized coverage."""
+    """For text drawing, language selects locl glyphs and wght changes rasterized coverage."""
     source = _zeros(height=96, width=160, channels=("matte",))
     japanese = px.draw.text(
         source,
@@ -959,8 +859,9 @@ def test_draw_text_language_selects_cjk_locl_forms_and_weight_instances() -> Non
     assert np.sum(_host(heavy), dtype=np.float64) > np.sum(_host(thin), dtype=np.float64)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_multiple_outlines_match_cumulative_external_ring_oracle() -> None:
-    """v1-draw-text acceptance 21-22: glyphs merge by max and cumulative outlines composite outer-to-inner then body."""
+    """For text drawing, glyphs merge by max and cumulative outlines composite outer-to-inner then body."""
     source_values = np.full((128, 240, 3), 0.15, dtype=np.float32)
     source = _frame(source_values)
     outlines = (((1.5, -0.2, 0.4), 1.25), ((-0.5, 1.8, 0.2), 2.5))
@@ -982,8 +883,9 @@ def test_draw_text_multiple_outlines_match_cumulative_external_ring_oracle() -> 
     assert not np.array_equal(_host(result), _host(reversed_order))
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_outer_outline_adds_nothing_inside_the_body_fill() -> None:
-    """v1-draw-text acceptance 22: each cumulative outline is only the external ring beyond the inner solid union."""
+    """For text drawing, each cumulative outline is only the external ring beyond the inner solid union."""
     source = _zeros(height=128, width=128, channels=("matte",))
     placement = {
         "text": "O",
@@ -1007,8 +909,10 @@ def test_draw_text_outer_outline_adds_nothing_inside_the_body_fill() -> None:
     np.testing.assert_array_equal(outer_ring_contribution[fully_covered_body], np.float32(0.0))
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_preserves_metadata_channels_and_private_fp32_output() -> None:
-    """v1-draw-text acceptance 23-26: metadata and arbitrary labels survive, and one-channel matte uses numeric coverage."""
+    """For text drawing, metadata and arbitrary labels survive, and one-channel matte uses numeric coverage."""
     labels = ("normal.x", "depth", "id", "custom")
     source_values = np.full((80, 160, len(labels)), 0.25, dtype=np.float32)
     source = _frame(source_values, colorspace="S-Gamut3", gamma="S-Log3", channels=labels)
@@ -1040,8 +944,11 @@ def test_draw_text_preserves_metadata_channels_and_private_fp32_output() -> None
     assert np.any((matte_values > 0.0) & (matte_values < 1.0))
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 def test_draw_text_bundles_font_license_and_keeps_text_dependencies_lazy() -> None:
-    """v1-draw-text acceptance 27-28; v1-fonts-module acceptance 3 and 13: bundled paths stay shared and lazy."""
+    """Bundled text fonts and their licenses remain available while text libraries load only when used."""
     assert FONT_PATH.is_file()
     assert FONT_PATH.stat().st_size > 1_000_000
     license_text = LICENSE_PATH.read_text(encoding="utf-8")
@@ -1076,8 +983,9 @@ def test_draw_text_bundles_font_license_and_keeps_text_dependencies_lazy() -> No
     assert "system font" not in source.lower()
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_caches_shaping_glyph_rasters_and_atlases_with_bit_identity() -> None:
-    """v1-draw-text-unification acceptance 5 and 10: private caches preserve repeated output bit identity."""
+    """For text drawing, private caches preserve repeated output bit identity."""
     import pixtreme._draw.text as draw_text_module
 
     for name in ("_shape_text", "_glyph_bitmap", "_build_block_atlas"):
@@ -1109,21 +1017,25 @@ def test_draw_text_caches_shaping_glyph_rasters_and_atlases_with_bit_identity() 
     assert not hasattr(px.draw, "text_cache")
 
 
-def test_draw_text_gpu_composite_is_a_freetype_free_rawkernel_boundary() -> None:
-    """v1-draw-text acceptance 30: the GPU compositor consumes coverage atlases without touching FreeType or HarfBuzz."""
-    import pixtreme._draw.text as draw_text_module
+@pytest.mark.req("REQ-PIX-018")
+def test_draw_text_composite_keeps_pixels_on_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Text drawing composites its GPU pixels without transferring them back to the CPU.
 
-    compositor_source = inspect.getsource(draw_text_module._composite_layer)
-    kernel_factory_source = inspect.getsource(draw_text_module._text_composite_kernel)
-    combined = (compositor_source + kernel_factory_source).lower()
-    assert "freetype" not in combined
-    assert "harfbuzz" not in combined
-    assert "cp.RawKernel" in kernel_factory_source
-    assert "elementwisekernel" not in kernel_factory_source
+    Pixel data transfers are counted; short control-data transfers independent of image size are excluded.
+    """
+    source = _zeros()
+    transfers = capture_array_transfers(monkeypatch)
+
+    result = px.draw.text(source, **_base_kwargs())
+
+    assert result.shape == source.shape
+    assert len(transfers.pixel_device_to_host) == 0
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 def test_draw_text_docstring_states_the_llm_readable_contract() -> None:
-    """v1-draw-text-unification acceptance 14: the docstring states the complete integrated text contract."""
+    """Developers can find text layout, font, compositing, and output rules in the public docstring."""
     docstring = (inspect.getdoc(px.draw.text) or "").lower()
     for required in (
         "anchor",

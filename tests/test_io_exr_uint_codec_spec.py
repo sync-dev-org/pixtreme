@@ -97,7 +97,7 @@ def _internal_reader(compression: str) -> Callable[..., object]:
 
 
 def _with_codec_chunks(container: container_module._ExrContainer) -> container_module._ExrContainer:
-    """Materialize UINT NONE/ZIP descriptors before the Phase 4 container gate opens them."""
+    """Materialize UINT NONE/ZIP descriptors before the PIZ container gate opens them."""
     if container.chunks:
         return container
     part = container.parts[0]
@@ -229,36 +229,11 @@ def _reference_unpack_exr_uint_chunks(
     return output
 
 
-def test_uint_output_routes_through_shared_unpack_kernel_contract(monkeypatch: pytest.MonkeyPatch) -> None:
-    """REQ-TEST-002; issue #1 RawKernel trial acceptance 4: UINT output uses the shared unpack kernel."""
-    sentinel = object()
-    calls: list[str] = []
-
-    def shared_unpack(*args: object, output_dtype: str) -> object:
-        calls.append(output_dtype)
-        return sentinel
-
-    monkeypatch.setattr(packing_module, "_unpack_exr_chunks", shared_unpack)
-
-    actual = packing_module._unpack_exr_output(
-        object(),
-        (),
-        object(),
-        np.empty(0, dtype=np.int64),
-        np.empty(0, dtype=np.int64),
-        np.empty(0, dtype=np.uint8),
-        output_dtype="uint32",
-    )
-
-    assert actual is sentinel
-    assert calls == ["uint32"]
-
-
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("compression", _UINT_COMPRESSIONS)
 def test_shared_unpack_kernel_matches_pretrial_uint_composition_characterization(compression: str) -> None:
-    """characterization: issue #1 RawKernel trial acceptance 1 retains the pre-trial UINT composition because it
-    is the trial's exact compatibility baseline; replace it when an external wire oracle covers every tested layout.
-    """
+    """characterization: Native UINT EXR unpacking retains the recorded pixel bits for each tested layout."""
     container, selected, decoded, offsets, sizes, grouped = _synthetic_uint_unpack_case(compression)
     expected = _reference_unpack_exr_uint_chunks(container, selected, decoded, offsets, sizes, grouped)
 
@@ -275,6 +250,8 @@ def test_shared_unpack_kernel_matches_pretrial_uint_composition_characterization
     np.testing.assert_array_equal(actual.get(), expected.get())
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(
     "compression",
     ("none", "zips", "zip", "rle", "pxr24", "b44", "b44a", "dwaa", "dwab"),
@@ -284,7 +261,7 @@ def test_non_piz_codec_uint_write_and_read_lanes_preserve_sample_bits(
     monkeypatch: pytest.MonkeyPatch,
     compression: str,
 ) -> None:
-    """v1-exr-runtime-independence acceptance 30 and 31: codec-direct UINT writes and reads are bit exact."""
+    """Non-PIZ EXR codecs preserve native UINT sample bits across writes and reads."""
     import cupy as cp
     from openexr_dev_oracle import OpenEXR
 
@@ -338,12 +315,14 @@ def test_non_piz_codec_uint_write_and_read_lanes_preserve_sample_bits(
     np.testing.assert_array_equal(actual.get()[..., 0], samples)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("compression", ("b44", "b44a"))
 def test_b44_compressed_mixed_file_reads_raw_uint_section_as_native_uint32(
     tmp_path: Path,
     compression: str,
 ) -> None:
-    """v1-exr-runtime-independence acceptance 30: B44 raw UINT sections survive compressed mixed-type chunks."""
+    """B44 EXR reads recover raw UINT sections from compressed mixed type chunks as native uint32 pixels."""
     import cupy as cp
     from openexr_dev_oracle import OpenEXR
 

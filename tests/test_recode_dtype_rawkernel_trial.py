@@ -95,6 +95,7 @@ def _trial_values(source_dtype: str, target_dtype: str) -> np.ndarray:
     return np.concatenate((np.asarray(boundaries, dtype=source_dtype), random_values))
 
 
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("source_dtype", _DTYPES)
 @pytest.mark.parametrize("target_dtype", _DTYPES)
 def test_rawkernel_trial_matches_legacy_boundary_and_random_bits_characterization(

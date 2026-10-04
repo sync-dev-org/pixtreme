@@ -303,17 +303,14 @@ def _conversion_matrix(
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_arri_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 1;
-    v1-arri-tokens acceptance 16-17; v1-blackmagic-tokens acceptance 33-34;
-    v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
-    v1-panasonic-tokens acceptance 99-100; v1-standard-tokens acceptance 117;
-    v1-vendor-a-tokens acceptance 140-141; v1-vendor-b-tokens acceptance 166-167: canonical public surfaces.
-    """
+    """ARRI color tokens appear in the canonical vocabulary and public annotations without extra aliases."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 199
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 200
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -324,12 +321,9 @@ def test_arri_tokens_extend_canonical_vocabulary_and_public_static_surfaces() ->
     assert "gamma='ARRI-LogC3'" in repr(frame)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_arri_token_keys_are_collision_free_family_local_and_separator_normalized() -> None:
-    """v1-arri-tokens acceptance 18; v1-blackmagic-tokens acceptance 35; v1-red-tokens acceptance 68;
-    v1-vendor-a-tokens acceptance 142.
-
-    Token keys remain local and unique after the ARRI rename.
-    """
+    """ARRI token variants normalize to unique keys within their color and gamma families."""
     from pixtreme._core.validation import _normalized_closed_token
     from pixtreme._core.vocabulary import _PERMANENT_TOKEN_ALIASES
 
@@ -361,8 +355,11 @@ def test_arri_token_keys_are_collision_free_family_local_and_separator_normalize
         _normalized_closed_token("AWG3", axis="colorspace", accepted=_COLORSPACES)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_logc3_encode_matches_the_normative_oracle_and_is_continuous_monotonic_and_unclipped() -> None:
-    """v1-arri-tokens acceptance 19 and 21; v1-red-tokens acceptance 68: retain ARRI-LogC3 encode bits."""
+    """ARRI-LogC3 encoding matches the vendor curve across its cut and retains signed scene values."""
     cut = np.float32(_LOGC3_CUT)
     values = np.asarray(
         (
@@ -423,8 +420,11 @@ def test_logc3_encode_matches_the_normative_oracle_and_is_continuous_monotonic_a
     assert int(np.floor(np.float64(1023.0) * np.float64(gray) + np.float64(0.5))) == 400
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_logc3_decode_matches_the_normative_oracle_through_the_boundary_without_clipping() -> None:
-    """v1-arri-tokens acceptance 20-21; v1-red-tokens acceptance 68: retain the ARRI-LogC3 inverse."""
+    """ARRI-LogC3 decoding matches the vendor inverse through its boundary without clipping scene values."""
     boundary = np.float32(_LOGC3_CODE_CUT)
     encoded_fixtures = _logc3_encode(np.asarray((-0.25, 0.0, 0.18, 1.0, 1.5), dtype=np.float64)).astype(np.float32)
     values = np.concatenate(
@@ -452,7 +452,7 @@ def test_logc3_decode_matches_the_normative_oracle_through_the_boundary_without_
 
 
 def test_logc3_high_precision_coefficients_round_to_arri_values_and_bound_printed_oracle_error() -> None:
-    """v1-arri-tokens acceptance 21: normative coefficients round to ARRI's table and bound its print error."""
+    """ARRI-LogC3 high precision coefficients produce the vendor's tabulated values within print precision."""
     normative = {
         "cut": _LOGC3_CUT,
         "a": _LOGC3_A,
@@ -474,8 +474,11 @@ def test_logc3_high_precision_coefficients_round_to_arri_values_and_bound_printe
     np.testing.assert_allclose(_printed_logc3_decode(encoded), _logc3_decode(encoded), rtol=0.0, atol=5e-6)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_logc3_round_trips_and_all_transfer_paths_preserve_the_frame_contract() -> None:
-    """v1-arri-tokens acceptance 22; v1-red-tokens acceptance 68: ARRI-LogC3 paths preserve Frame observables."""
+    """ARRI-LogC3 round trips through public transfer paths while preserving Frame metadata and auxiliary
+    channels."""
     cut = np.float32(_LOGC3_CUT)
     linear = np.asarray(
         (
@@ -524,15 +527,14 @@ def test_logc3_round_trips_and_all_transfer_paths_preserve_the_frame_contract() 
     assert encoded.data.dtype == restored.data.dtype == cp.float32
 
 
-@pytest.mark.parametrize(("colorspace", "acceptance"), (("ARRI-Wide-Gamut-3", 23), ("ARRI-Wide-Gamut-4", 24)))
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.parametrize("colorspace", ("ARRI-Wide-Gamut-3", "ARRI-Wide-Gamut-4"))
 def test_awg_primaries_conversion_and_native_row_match_independent_float64_oracles(
     colorspace: str,
-    acceptance: int,
 ) -> None:
-    """v1-arri-tokens acceptance 23-24: both AWG definitions match independent matrix and native-row oracles."""
+    """ARRI Wide Gamut primaries, conversion matrices, and native luma rows agree with independent calculations."""
     from pixtreme._core.colorspace import _COLORSPACE_DEFINITIONS
 
-    assert acceptance in (23, 24)
     definition = _AWG_DEFINITIONS[colorspace]
     assert _COLORSPACE_DEFINITIONS[colorspace] == definition
     awg_matrix = _rgb_to_xyz(*definition)
@@ -548,8 +550,9 @@ def test_awg_primaries_conversion_and_native_row_match_independent_float64_oracl
     assert grayscale.matrix == "native"
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_awg_adaptation_and_independent_gamma_pairings_follow_existing_color_contracts() -> None:
-    """v1-arri-tokens acceptance 25; v1-red-tokens acceptance 68: AWG and renamed ARRI gamma stay independent."""
+    """ARRI Wide Gamut adapts between white points and accepts gamma pairings independently of gamut names."""
     values = np.asarray(((1.0, -0.25, 0.18), (0.2, 0.4, 1.5)), dtype=np.float32)
     source = _frame(values, colorspace="ARRI-Wide-Gamut-3", auxiliary=True)
     before = source.data.copy()
@@ -587,8 +590,9 @@ def test_awg_adaptation_and_independent_gamma_pairings_follow_existing_color_con
 # script imports CuPy, NumPy, and pixtreme; creates RGB Frames by repeating each exact float32 `linear` and `encoded`
 # array below over three channels; calls ARRI-LogC4 `linear_to_gamma` and `gamma_to_linear`; copies channel R to NumPy;
 # and prints each result with `.view(np.uint32).tolist()`.
+@pytest.mark.req("REQ-PIX-003")
 def test_logc4_gpu_bits_remain_identical_to_the_pre_arri_token_baseline() -> None:
-    """v1-arri-tokens acceptance 26; v1-red-tokens acceptance 68: ARRI-LogC4 retains baseline float32 bits."""
+    """ARRI-LogC4 produces its specified float32 pixel values through the GPU transfer path."""
     linear = np.asarray(
         (
             -0.25,
@@ -634,8 +638,9 @@ def test_logc4_gpu_bits_remain_identical_to_the_pre_arri_token_baseline() -> Non
     np.testing.assert_array_equal(actual_decode, expected_decode)
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_dpx_classifies_logc3_as_logarithmic_without_changing_existing_mappings() -> None:
-    """v1-arri-tokens acceptance 27; v1-red-tokens acceptance 72: DPX uses renamed ARRI gamma tokens."""
+    """DPX writing identifies ARRI-LogC3 as logarithmic and preserves other transfer mappings."""
     from pixtreme._io.formats.dpx import _dpx_transfer_from_gamma
 
     assert {
@@ -664,6 +669,8 @@ def test_dpx_classifies_logc3_as_logarithmic_without_changing_existing_mappings(
     }
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("operation", "parameter", "rejected", "candidates"),
     (
@@ -680,9 +687,7 @@ def test_invalid_arri_axis_values_fail_before_gpu_with_ordered_canonical_errors(
     candidates: tuple[str, ...],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-arri-tokens acceptance 28; v1-blackmagic-tokens acceptance 49;
-    v1-vendor-a-tokens acceptance 160: invalid values fail before GPU.
-    """
+    """Invalid ARRI color axis values fail before GPU work and list canonical replacements in order."""
     import pixtreme._color.semantics as semantics
     import pixtreme._color.transform as transform
 

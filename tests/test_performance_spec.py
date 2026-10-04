@@ -1,43 +1,56 @@
 from __future__ import annotations
 
-import inspect
 import json
 import math
 import subprocess
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from functools import lru_cache
 from pathlib import Path
 from statistics import fmean, median
 from time import perf_counter
-from types import SimpleNamespace
 
 import cupy as cp
-import exr_phase4_gate as phase4_gate
+import exr_gate_decision as piz_gate
 import numpy as np
 import pytest
-from exr_phase3_gate import (
+from exr_b44_performance import (
+    B44PerformanceInputs,
+    build_b44_performance_inputs,
+    inspect_b44_gate_fixture,
+    measure_b44_gate_case,
+)
+from exr_gate_decision import (
     GateDecision,
     GateRun,
     synthesize_gate_decision,
 )
-from exr_phase3_performance import (
-    PHASE3_COMPRESSIONS,
-    Phase3PerformanceInputs,
-    build_phase3_performance_inputs,
+from exr_gate_measurement import (
+    GateMeasurement,
+    _gate_source_frames,
     device_identity,
-    inspect_phase3_gate_fixture,
-    measure_phase3_gate_case,
 )
-from exr_phase4_performance import (
-    GateMeasurement as Phase4GateMeasurement,
+from exr_piz_performance import (
+    GateMeasurement as PizGateMeasurement,
 )
-from exr_phase4_performance import (
-    Phase4PerformanceInputs,
-    build_phase4_performance_inputs,
-    inspect_phase4_gate_fixture,
-    measure_phase4_gate_case,
+from exr_piz_performance import (
+    PizPerformanceInputs,
+    build_piz_performance_inputs,
+    inspect_piz_gate_fixture,
+    measure_piz_gate_case,
+)
+from exr_pxr24_performance import (
+    Pxr24PerformanceInputs,
+    build_pxr24_performance_inputs,
+    inspect_pxr24_gate_fixture,
+    measure_pxr24_gate_case,
+)
+from exr_rle_performance import (
+    RlePerformanceInputs,
+    build_rle_performance_inputs,
+    inspect_rle_gate_fixture,
+    measure_rle_gate_case,
 )
 from openexr_dev_oracle import read_frame as read_openexr_frame
 from openexr_dev_oracle import write_frame as write_openexr_frame
@@ -45,6 +58,7 @@ from openexr_dev_oracle import write_frame as write_openexr_frame
 import pixtreme as px
 import pixtreme._io.formats.exr.selection as io
 import pixtreme._io.header as io_header
+from pixtreme._io.formats.exr.container import _container_gpu_eligible
 
 _WIDTH = 1920
 _HEIGHT = 1080
@@ -82,6 +96,7 @@ extern "C" __global__ void pixtreme_performance_copy(
 }
 """
 
+
 _PUBLIC_GPU_PIXEL_FUNCTIONS = frozenset(
     {
         "from_array",
@@ -90,6 +105,7 @@ _PUBLIC_GPU_PIXEL_FUNCTIONS = frozenset(
         "to_v210",
         "to_nv12",
         "to_p010",
+        "to_p210",
         "to_p216",
         "to_yuv420p",
         "to_yuv422p",
@@ -163,6 +179,7 @@ _PUBLIC_GPU_PIXEL_FUNCTIONS = frozenset(
         "from_v210",
         "from_nv12",
         "from_p010",
+        "from_p210",
         "from_p216",
         "from_yuv420p",
         "from_yuv422p",
@@ -175,48 +192,17 @@ _PUBLIC_GPU_PIXEL_FUNCTIONS = frozenset(
         "ssim_map",
     }
 )
-_PERFORMANCE_BOUNDARY_FUNCTIONS = frozenset(
-    {
-        "read_image",
-        "write_image",
-        "write_exr_channels",
-        "read_header",
-        "read_lut",
-        "decode_lut",
-        "write_lut",
-        "decode_image",
-        "encode_image",
-    }
-)
-# ``channels`` only normalizes named channel tokens. The font catalog only inventories file paths. None of these
-# functions touches pixels or a file / bytes / device-array / wire-format data boundary.
-_NON_PIXEL_PUBLIC_FUNCTIONS = frozenset({"channels", "font_path", "available"})
-_PERFORMANCE_FRAME_METHOD_EXCLUSIONS = frozenset()
-_PUBLIC_OPERATION_MODULES = (
-    px.core,
-    px.io,
-    px.color,
-    px.filter,
-    px.transform,
-    px.draw,
-    px.generate,
-    px.morphology,
-    px.metrics,
-    px.feature,
-    px.values,
-    px.channel,
-    px.composite,
-    px.fonts,
-)
 
 
 @dataclass(frozen=True)
 class _Inputs:
     frame: px.core.Frame
-    exr_phase1_frame: px.core.Frame
+    exr_none_zip_frame: px.core.Frame
     exr_mixed_frames: tuple[px.core.Frame, px.core.Frame]
-    exr_phase3: Phase3PerformanceInputs
-    exr_phase4: Phase4PerformanceInputs
+    exr_rle: RlePerformanceInputs
+    exr_pxr24: Pxr24PerformanceInputs
+    exr_b44: B44PerformanceInputs
+    exr_piz: PizPerformanceInputs
     analysis_template: px.core.Frame
     lut: px.core.Lut
     lut1d: px.core.Lut1D
@@ -291,6 +277,7 @@ class _Inputs:
     v210: cp.ndarray
     nv12: cp.ndarray
     p010: cp.ndarray
+    p210: cp.ndarray
     p216: cp.ndarray
     yuv420p: cp.ndarray
     yuv422p10: cp.ndarray
@@ -391,26 +378,46 @@ def _boundary_case(
     )
 
 
-def _read_phase3_exr(inputs: Phase3PerformanceInputs, *, compression: str) -> px.core.Frame:
+def _exr_case_compression_direction(case_id: str) -> tuple[str, str]:
+    general_cases = {
+        "file-read-exr": ("zip", "read"),
+        "file-write-exr": ("zip", "write"),
+        "file-exr-mixed-dtype-write-zip": ("zip", "write"),
+    }
+    if case_id in general_cases:
+        return general_cases[case_id]
+    if not case_id.startswith("file-exr-"):
+        raise ValueError(f"not an EXR performance case: {case_id!r}")
+    compression, separator, direction = case_id.removeprefix("file-exr-").rpartition("-")
+    if not separator or (compression, direction) not in io._EXR_ROUTING:
+        raise ValueError(f"unknown EXR performance case: {case_id!r}")
+    return compression, direction
+
+
+def _read_codec_exr(
+    inputs: RlePerformanceInputs | Pxr24PerformanceInputs | B44PerformanceInputs, *, compression: str
+) -> px.core.Frame:
     return px.io.read_image(inputs.read_path(compression), unchanged=True)
 
 
-def _write_phase3_exr(inputs: Phase3PerformanceInputs, *, compression: str) -> None:
+def _write_codec_exr(
+    inputs: RlePerformanceInputs | Pxr24PerformanceInputs | B44PerformanceInputs, *, compression: str
+) -> None:
     px.io.write_image(inputs.write_path(compression), inputs.frame(compression), compression=compression)
 
 
-def _read_phase4_exr(inputs: Phase4PerformanceInputs) -> px.core.Frame:
+def _read_piz_exr(inputs: PizPerformanceInputs) -> px.core.Frame:
     return px.io.read_image(inputs.read_path("fp16"), unchanged=True)
 
 
-def _write_phase4_exr(inputs: Phase4PerformanceInputs) -> None:
+def _write_piz_exr(inputs: PizPerformanceInputs) -> None:
     px.io.write_image(inputs.write_path("fp16"), inputs.frame("fp16"), compression="piz")
 
 
-def _run_phase4_isolated_repeat(direction: str) -> Phase4GateMeasurement:
-    """Run the acceptance-43 repeat in a fresh process with a bounded timeout and parse its final JSON line."""
+def _run_piz_isolated_repeat(direction: str) -> PizGateMeasurement:
+    """Run the isolated PIZ performance-gate repeat in a fresh process with a bounded timeout and parse its final JSON line."""
     completed = subprocess.run(
-        [sys.executable, str(Path(__file__).with_name("run_exr_phase4_gate_repeat.py")), direction],
+        [sys.executable, str(Path(__file__).with_name("run_exr_piz_gate_repeat.py")), direction],
         check=False,
         capture_output=True,
         text=True,
@@ -418,15 +425,15 @@ def _run_phase4_isolated_repeat(direction: str) -> Phase4GateMeasurement:
     )
     if completed.returncode != 0:
         raise AssertionError(
-            f"Phase 4 isolated repeat failed with exit {completed.returncode}: "
+            f"PIZ isolated repeat failed with exit {completed.returncode}: "
             f"stdout={completed.stdout!r} stderr={completed.stderr!r}"
         )
     json_lines = tuple(line for line in completed.stdout.splitlines() if line.startswith("{"))
     if not json_lines:
-        raise AssertionError(f"Phase 4 isolated repeat produced no JSON payload: {completed.stdout!r}")
+        raise AssertionError(f"PIZ isolated repeat produced no JSON payload: {completed.stdout!r}")
     payload = json.loads(json_lines[-1])
     measurement = payload["measurement"]
-    return Phase4GateMeasurement(
+    return PizGateMeasurement(
         dtype=str(measurement["dtype"]),
         direction=str(measurement["direction"]),
         medians_ms={str(key): float(value) for key, value in measurement["medians_ms"].items()},
@@ -489,7 +496,7 @@ def _measure_durations_ms(
 
 def _assert_compressed_dwa_v2_output(path: Path) -> None:
     container = io_header._parse_exr(path)
-    assert container.dwa_eligible, f"{path} is not eligible for the DWA v2 gate"
+    assert _container_gpu_eligible(container), f"{path} is not eligible for the DWA v2 gate"
     assert any(
         not chunk.raw_stored
         and chunk.dwa is not None
@@ -1384,6 +1391,15 @@ _TRANSFORM_BOUNDARY_CASES = (
         + _FHD_FP32_RGB_BYTES,
     ),
     _case(
+        "from-p210",
+        "from_p210",
+        "FHD 10-bit MSB legal, interpolation=bilinear",
+        lambda *args, **kwargs: px.io.from_p210(*args, **kwargs),
+        input_attribute="p210",
+        kwargs={"width": _WIDTH, "height": _HEIGHT, "range": "legal", "interpolation": "bilinear"},
+        transferred_bytes=_WIDTH * _HEIGHT * 4 + _FHD_FP32_RGB_BYTES,
+    ),
+    _case(
         "from-p216",
         "from_p216",
         "FHD 16-bit legal, interpolation=bilinear",
@@ -1524,6 +1540,15 @@ _TO_FORMAT_CASES = (
         input_attribute="ycbcr_frame",
         kwargs={},
         transferred_bytes=_FHD_FP32_RGB_BYTES + _WIDTH * _HEIGHT * 3 * np.dtype(np.uint16).itemsize // 2,
+    ),
+    _case(
+        "to-p210",
+        "to_p210",
+        "FHD 10-bit MSB area, legal",
+        lambda *args, **kwargs: px.io.to_p210(*args, **kwargs),
+        input_attribute="ycbcr_frame",
+        kwargs={"range": "legal", "interpolation": "area"},
+        transferred_bytes=_FHD_FP32_RGB_BYTES + _WIDTH * _HEIGHT * 4,
     ),
     _case(
         "to-p216",
@@ -1671,7 +1696,7 @@ _FILE_BOUNDARY_CASES = (
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase1-read-none",
+        "file-exr-none-read",
         "read_image",
         "FHD HALF RGB EXR NONE file, unchanged, source-fixed native lane, temporary-file I/O included",
         px.io.read_image,
@@ -1680,7 +1705,7 @@ _FILE_BOUNDARY_CASES = (
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase1-read-zip",
+        "file-exr-zip-read",
         "read_image",
         "FHD HALF RGB EXR ZIP file, unchanged, source-fixed custom CPU lane, temporary-file I/O included",
         px.io.read_image,
@@ -1689,7 +1714,7 @@ _FILE_BOUNDARY_CASES = (
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase1-read-zips",
+        "file-exr-zips-read",
         "read_image",
         "FHD HALF RGB EXR ZIPS file, unchanged, source-fixed custom CPU lane, temporary-file I/O included",
         px.io.read_image,
@@ -1698,7 +1723,7 @@ _FILE_BOUNDARY_CASES = (
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase2-read-dwaa",
+        "file-exr-dwaa-read",
         "read_image",
         "FHD HALF RGB EXR DWAA file, unchanged, dwa_level=45.0, source-fixed GPU lane, temporary-file I/O included",
         px.io.read_image,
@@ -1707,7 +1732,7 @@ _FILE_BOUNDARY_CASES = (
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase2-read-dwab",
+        "file-exr-dwab-read",
         "read_image",
         "FHD HALF RGB EXR DWAB file, unchanged, dwa_level=45.0, source-fixed GPU lane, temporary-file I/O included",
         px.io.read_image,
@@ -1716,47 +1741,47 @@ _FILE_BOUNDARY_CASES = (
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase3-read-rle",
+        "file-exr-rle-read",
         "read_image",
         "FHD HALF RGB EXR RLE file, unchanged, source-fixed GPU lane, temporary-file I/O included",
-        _read_phase3_exr,
-        input_attribute="exr_phase3",
+        _read_codec_exr,
+        input_attribute="exr_rle",
         kwargs={"compression": "rle"},
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase3-read-pxr24",
+        "file-exr-pxr24-read",
         "read_image",
         "FHD HALF RGB EXR PXR24 file, unchanged, source-fixed custom CPU lane, temporary-file I/O included",
-        _read_phase3_exr,
-        input_attribute="exr_phase3",
+        _read_codec_exr,
+        input_attribute="exr_pxr24",
         kwargs={"compression": "pxr24"},
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase3-read-b44",
+        "file-exr-b44-read",
         "read_image",
         "FHD HALF RGB EXR B44 file, unchanged, source-fixed GPU lane, temporary-file I/O included",
-        _read_phase3_exr,
-        input_attribute="exr_phase3",
+        _read_codec_exr,
+        input_attribute="exr_b44",
         kwargs={"compression": "b44"},
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase3-read-b44a",
+        "file-exr-b44a-read",
         "read_image",
         "FHD HALF RGB EXR B44A file, unchanged, source-fixed GPU lane, temporary-file I/O included",
-        _read_phase3_exr,
-        input_attribute="exr_phase3",
+        _read_codec_exr,
+        input_attribute="exr_b44",
         kwargs={"compression": "b44a"},
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase4-read-piz",
+        "file-exr-piz-read",
         "read_image",
         "FHD HALF RGB EXR PIZ file, unchanged, source-fixed GPU lane, temporary-file I/O included",
-        _read_phase4_exr,
-        input_attribute="exr_phase4",
+        _read_piz_exr,
+        input_attribute="exr_piz",
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
@@ -1868,97 +1893,97 @@ _FILE_BOUNDARY_CASES = (
         transferred_bytes=2 * (_FHD_FP16_RGB_BYTES + _FHD_UINT32_Y_BYTES),
     ),
     _boundary_case(
-        "file-exr-phase1-write-none",
+        "file-exr-none-write",
         "write_image",
         "FHD fp32 RGB to EXR NONE/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
         px.io.write_image,
         input_attribute="write_exr_none_path",
-        fixture_kwargs={"frame": "exr_phase1_frame"},
+        fixture_kwargs={"frame": "exr_none_zip_frame"},
         kwargs={"compression": "none"},
         transferred_bytes=_FHD_FP32_TO_FP16_RGB_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase1-write-zip",
+        "file-exr-zip-write",
         "write_image",
         "FHD fp32 RGB to EXR ZIP/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
         px.io.write_image,
         input_attribute="write_exr_zip_path",
-        fixture_kwargs={"frame": "exr_phase1_frame"},
+        fixture_kwargs={"frame": "exr_none_zip_frame"},
         kwargs={"compression": "zip"},
         transferred_bytes=_FHD_FP32_TO_FP16_RGB_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase1-write-zips",
+        "file-exr-zips-write",
         "write_image",
         "FHD fp32 RGB to EXR ZIPS/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
         px.io.write_image,
         input_attribute="write_exr_zips_path",
-        fixture_kwargs={"frame": "exr_phase1_frame"},
+        fixture_kwargs={"frame": "exr_none_zip_frame"},
         kwargs={"compression": "zips"},
         transferred_bytes=_FHD_FP32_TO_FP16_RGB_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase2-write-dwaa",
+        "file-exr-dwaa-write",
         "write_image",
         "FHD fp32 RGB to EXR DWAA/HALF, dtype omitted, dwa_level=45.0, source-fixed GPU lane, temporary-file I/O included",
         px.io.write_image,
         input_attribute="write_exr_dwaa_path",
-        fixture_kwargs={"frame": "exr_phase1_frame"},
+        fixture_kwargs={"frame": "exr_none_zip_frame"},
         kwargs={"compression": "dwaa", "dwa_level": 45.0},
         transferred_bytes=_FHD_FP32_TO_FP16_RGB_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase2-write-dwab",
+        "file-exr-dwab-write",
         "write_image",
         "FHD fp32 RGB to EXR DWAB/HALF, dtype omitted, dwa_level=45.0, source-fixed GPU lane, temporary-file I/O included",
         px.io.write_image,
         input_attribute="write_exr_dwab_path",
-        fixture_kwargs={"frame": "exr_phase1_frame"},
+        fixture_kwargs={"frame": "exr_none_zip_frame"},
         kwargs={"compression": "dwab", "dwa_level": 45.0},
         transferred_bytes=_FHD_FP32_TO_FP16_RGB_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase3-write-rle",
+        "file-exr-rle-write",
         "write_image",
         "FHD fp32 RGB to EXR RLE/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-        _write_phase3_exr,
-        input_attribute="exr_phase3",
+        _write_codec_exr,
+        input_attribute="exr_rle",
         kwargs={"compression": "rle"},
         transferred_bytes=_FHD_FP32_TO_FP16_RGB_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase3-write-pxr24",
+        "file-exr-pxr24-write",
         "write_image",
         "FHD fp32 RGB to EXR PXR24/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-        _write_phase3_exr,
-        input_attribute="exr_phase3",
+        _write_codec_exr,
+        input_attribute="exr_pxr24",
         kwargs={"compression": "pxr24"},
         transferred_bytes=_FHD_FP32_TO_FP16_RGB_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase3-write-b44",
+        "file-exr-b44-write",
         "write_image",
         "FHD fp16 RGB to EXR B44/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-        _write_phase3_exr,
-        input_attribute="exr_phase3",
+        _write_codec_exr,
+        input_attribute="exr_b44",
         kwargs={"compression": "b44"},
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase3-write-b44a",
+        "file-exr-b44a-write",
         "write_image",
         "FHD fp16 RGB to EXR B44A/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-        _write_phase3_exr,
-        input_attribute="exr_phase3",
+        _write_codec_exr,
+        input_attribute="exr_b44",
         kwargs={"compression": "b44a"},
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
-        "file-exr-phase4-write-piz",
+        "file-exr-piz-write",
         "write_image",
         "FHD fp16 RGB to EXR PIZ/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-        _write_phase4_exr,
-        input_attribute="exr_phase4",
+        _write_piz_exr,
+        input_attribute="exr_piz",
         transferred_bytes=_FHD_FP16_RGB_READ_WRITE_BYTES,
     ),
     _boundary_case(
@@ -2268,7 +2293,7 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
         ),
         axis=2,
     )
-    exr_phase1_frame = px.io.from_array(exr_data, colorspace="ACEScg", gamma="linear", channels="RGB")
+    exr_none_zip_frame = px.io.from_array(exr_data, colorspace="ACEScg", gamma="linear", channels="RGB")
     exr_mixed_frames = (
         px.io.from_array(exr_data.astype(cp.float16), colorspace="ACEScg", gamma="linear", channels="RGB"),
         px.io.from_array(
@@ -2333,15 +2358,18 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
     code8_data = generator.integers(0, 256, size=(_HEIGHT, _WIDTH, _CHANNELS), dtype=cp.uint8)
     code8_frame = px.io.from_array(code8_data, colorspace="ACEScg", gamma="linear", channels="RGB")
     io_directory = tmp_path_factory.mktemp("performance-io")
-    exr_phase3 = build_phase3_performance_inputs(io_directory / "exr-phase3")
-    for compression in ("rle", "pxr24"):
+    exr_fp32_frame, exr_fp16_frame = _gate_source_frames()
+    exr_rle = build_rle_performance_inputs(io_directory / "exr-rle", exr_fp32_frame)
+    exr_pxr24 = build_pxr24_performance_inputs(io_directory / "exr-pxr24", exr_fp32_frame)
+    exr_b44 = build_b44_performance_inputs(io_directory / "exr-b44", exr_fp16_frame)
+    for compression, inputs in (("rle", exr_rle), ("pxr24", exr_pxr24)):
         px.io.write_image(
-            exr_phase3.read_path(compression),
-            exr_phase3.fp32_frame,
+            inputs.read_path(compression),
+            inputs.frame(compression),
             compression=compression,
             dtype="float16",
         )
-    exr_phase4 = build_phase4_performance_inputs(io_directory / "exr-phase4")
+    exr_piz = build_piz_performance_inputs(io_directory / "exr-piz")
     read_png_path = io_directory / "read.png"
     read_jpeg_path = io_directory / "read.jpg"
     read_tiff_path = io_directory / "read.tiff"
@@ -2369,13 +2397,13 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
     px.io.write_image(read_jpeg_path, code8_frame, quality=95)
     px.io.write_image(read_tiff_path, code8_frame)
     px.io.write_image(read_exr_path, frame)
-    px.io.write_image(read_exr_none_path, exr_phase1_frame, compression="none")
-    px.io.write_image(read_exr_zip_path, exr_phase1_frame, compression="zip")
-    px.io.write_image(read_exr_zips_path, exr_phase1_frame, compression="zips")
+    px.io.write_image(read_exr_none_path, exr_none_zip_frame, compression="none")
+    px.io.write_image(read_exr_zip_path, exr_none_zip_frame, compression="zip")
+    px.io.write_image(read_exr_zips_path, exr_none_zip_frame, compression="zips")
     assert any(not chunk.raw_stored for chunk in io_header._parse_exr(read_exr_zip_path).chunks)
     assert any(not chunk.raw_stored for chunk in io_header._parse_exr(read_exr_zips_path).chunks)
-    px.io.write_image(read_exr_dwaa_path, exr_phase1_frame, compression="dwaa", dwa_level=45.0, dtype="float16")
-    px.io.write_image(read_exr_dwab_path, exr_phase1_frame, compression="dwab", dwa_level=45.0, dtype="float16")
+    px.io.write_image(read_exr_dwaa_path, exr_none_zip_frame, compression="dwaa", dwa_level=45.0, dtype="float16")
+    px.io.write_image(read_exr_dwab_path, exr_none_zip_frame, compression="dwab", dwa_level=45.0, dtype="float16")
     for dwa_path in (read_exr_dwaa_path, read_exr_dwab_path):
         _assert_compressed_dwa_v2_output(dwa_path)
     px.io.write_image(read_jpeg2000_path, code8_frame, lossless=True)
@@ -2442,10 +2470,12 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
     p010 <<= np.uint16(6)
     return _Inputs(
         frame=frame,
-        exr_phase1_frame=exr_phase1_frame,
+        exr_none_zip_frame=exr_none_zip_frame,
         exr_mixed_frames=exr_mixed_frames,
-        exr_phase3=exr_phase3,
-        exr_phase4=exr_phase4,
+        exr_rle=exr_rle,
+        exr_pxr24=exr_pxr24,
+        exr_b44=exr_b44,
+        exr_piz=exr_piz,
         analysis_template=analysis_template,
         lut=lut,
         lut1d=lut1d,
@@ -2520,6 +2550,7 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
         v210=generator.integers(0, 1 << 30, size=v210_word_count, dtype=cp.uint32),
         nv12=generator.integers(0, 256, size=pixel_count + pixel_count // 2, dtype=cp.uint8),
         p010=p010,
+        p210=generator.integers(0, 1024, size=pixel_count * 2, dtype=cp.uint16) << 6,
         yuv420p=generator.integers(0, 256, size=pixel_count + pixel_count // 2, dtype=cp.uint8),
         yuv422p10=generator.integers(0, 1024, size=pixel_count * 2, dtype=cp.uint16),
         yuv444p=generator.integers(0, 1024, size=pixel_count * 3, dtype=cp.uint16),
@@ -2533,654 +2564,13 @@ def performance_inputs(tmp_path_factory: pytest.TempPathFactory) -> _Inputs:
 
 
 @pytest.mark.performance
-def test_performance_registry_covers_every_public_gpu_pixel_operation() -> None:
-    """REQ-TEST-010; v1-color-semantics acceptance 37; v1-white-balance acceptance 14;
-    v1-white-point-simulation acceptance 14; v1-exr-mixed-dtype-write acceptance 18;
-    v1-fonts-module acceptance 1-2; v1-p216-wire-format acceptance 15:
-    registry classifies every public GPU pixel and boundary operation.
-    """
-    exported_functions = {
-        name
-        for module in _PUBLIC_OPERATION_MODULES
-        for name in module.__all__
-        if inspect.isfunction(getattr(module, name))
-    } | {name for name in px.__all__ if inspect.isfunction(getattr(px, name))}
-    public_frame_targets = {
-        f"Frame.{name}"
-        for name, member in inspect.getmembers(px.core.Frame, inspect.isfunction)
-        if not name.startswith("_") and member.__qualname__.startswith(f"{px.core.Frame.__qualname__}.")
-    }
-    registry_targets = {case.target for case in _PERFORMANCE_CASES}
-    registry_frame_targets = {target for target in registry_targets if target.startswith("Frame.")}
-
-    assert _PERFORMANCE_BOUNDARY_FUNCTIONS == {
-        "read_image",
-        "write_image",
-        "write_exr_channels",
-        "read_header",
-        "read_lut",
-        "decode_lut",
-        "write_lut",
-        "decode_image",
-        "encode_image",
-    }
-    assert _NON_PIXEL_PUBLIC_FUNCTIONS == {"channels", "font_path", "available"}
-    assert exported_functions - _NON_PIXEL_PUBLIC_FUNCTIONS == (
-        _PUBLIC_GPU_PIXEL_FUNCTIONS | _PERFORMANCE_BOUNDARY_FUNCTIONS
-    )
-    assert registry_frame_targets == public_frame_targets - _PERFORMANCE_FRAME_METHOD_EXCLUSIONS
-    assert registry_targets - registry_frame_targets == (
-        _PUBLIC_GPU_PIXEL_FUNCTIONS | _PERFORMANCE_BOUNDARY_FUNCTIONS | {"copy"}
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_covers_each_color_semantics_path() -> None:
-    """v1-view-transform-lut-removal acceptance 8; v1-color-semantics acceptance 37: registry includes
-    technical, both ACES analytics, and BT.2408.
-    """
-    color_cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.startswith("color-"))
-    assert {case.target for case in color_cases} == {
-        "chromatic_adaptation",
-        "gamma_to_linear",
-        "grade",
-        "hsv_to_rgb",
-        "linear_to_gamma",
-        "rgb_to_grayscale",
-        "rgb_to_hsv",
-        "rgb_to_rgb",
-        "rgb_to_ycbcr",
-        "ycbcr_to_rgb",
-        "ycbcr_to_ycbcr",
-        "white_balance",
-        "white_point_simulation",
-    }
-    rgb_to_rgb_cases = tuple(case for case in color_cases if case.target == "rgb_to_rgb")
-    assert tuple((case.case_id, dict(case.kwargs)) for case in rgb_to_rgb_cases) == (
-        ("color-acescg-srgb", {"output_colorspace": "sRGB", "output_gamma": "sRGB"}),
-        (
-            "color-aces13-analytic-srgb",
-            {"output_colorspace": "sRGB", "output_gamma": "sRGB", "tonemap": "ACES-1.3"},
-        ),
-        (
-            "color-aces20-analytic-srgb",
-            {"output_colorspace": "sRGB", "output_gamma": "sRGB", "tonemap": "ACES-2.0"},
-        ),
-        (
-            "color-bt2408-rec2020-pq",
-            {"output_colorspace": "Rec.2020", "output_gamma": "PQ", "tonemap": "BT.2408"},
-        ),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_one_grade_case() -> None:
-    """v1-grade acceptance 11: registry has one FHD float32 public grade call."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target == "grade")
-    assert tuple((case.case_id, case.input_attribute, dict(case.kwargs)) for case in cases) == (
-        (
-            "color-grade",
-            "frame",
-            {"lift": {"R": 0.05}, "gamma": {"G": 0.9}, "gain": {"B": 1.1}},
-        ),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_both_white_balance_public_calls() -> None:
-    """v1-white-balance acceptance 14: registry has one FHD low-level and one FHD convenience call."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target in {"chromatic_adaptation", "white_balance"})
-    assert tuple((case.case_id, case.target, dict(case.kwargs)) for case in cases) == (
-        (
-            "color-chromatic-adaptation",
-            "chromatic_adaptation",
-            {"input_white": (0.34567, 0.35850), "output_white": (0.32168, 0.33767)},
-        ),
-        ("color-white-balance", "white_balance", {"temperature": 5000.0}),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_one_white_point_simulation_case() -> None:
-    """v1-white-point-simulation acceptance 14: registry adds one FHD RGB float32 public-call case."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target == "white_point_simulation")
-    assert tuple((case.case_id, case.input_attribute, dict(case.kwargs)) for case in cases) == (
-        (
-            "color-white-point-simulation",
-            "frame",
-            {"input_white": "D65", "output_white": "D93"},
-        ),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_hsv_cases_use_the_required_deterministic_fixture(
-    performance_inputs: _Inputs,
-) -> None:
-    """v1-hsv acceptance 16: the two FHD cases cover six hue sectors, nominal S, and scene-scale V."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target in {"rgb_to_hsv", "hsv_to_rgb"})
-    assert tuple((case.case_id, case.target, case.input_attribute) for case in cases) == (
-        ("color-rgb-hsv", "rgb_to_hsv", "frame"),
-        ("color-hsv-rgb", "hsv_to_rgb", "hsv_frame"),
-    )
-    hsv = performance_inputs.hsv_frame.data
-    sectors = cp.unique(cp.floor(cp.mod(hsv[..., 0], np.float32(1.0)) * np.float32(6.0))).get()
-    np.testing.assert_array_equal(sectors, np.arange(6, dtype=np.float32))
-    assert float(cp.min(hsv[..., 1]).get()) == 0.0
-    assert float(cp.max(hsv[..., 1]).get()) == 1.0
-    assert float(cp.min(hsv[..., 2]).get()) == 0.0
-    assert float(cp.max(hsv[..., 2]).get()) == 2.0
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_unsharp_mask_case() -> None:
-    """v1-unsharp-mask acceptance 10: registry includes one FHD Gaussian sharpening case."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target == "unsharp_mask")
-
-    assert tuple((case.case_id, case.target, dict(case.kwargs)) for case in cases) == (
-        ("unsharp-2-1", "unsharp_mask", {"sigma": 2.0, "amount": 1.0}),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_sharpen_case() -> None:
-    """v1-sharpen acceptance 12: registry includes FHD fp32 RGB amount=1 with mirror border."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target == "sharpen")
-
-    assert tuple((case.case_id, case.parameters, dict(case.kwargs)) for case in cases) == (
-        ("sharpen-1-mirror", "amount=1, border=mirror", {"amount": 1.0, "border": "mirror"}),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_seven_radius_five_morphology_cases() -> None:
-    """v1-morphology acceptance 12: registry includes one FHD disk radius-5 case for every public operation."""
-    morphology_names = frozenset(px.morphology.__all__)
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target in morphology_names)
-
-    assert tuple((case.case_id, case.target, dict(case.kwargs)) for case in cases) == tuple(
-        (f"morphology-{name}-5", name, {"radius": 5, "shape": "disk"})
-        for name in (
-            "erosion",
-            "dilation",
-            "opening",
-            "closing",
-            "morphological_gradient",
-            "white_tophat",
-            "black_tophat",
-        )
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_all_derivative_filter_paths() -> None:
-    """v1-derivative-filters acceptance 18: registry covers three Sobel paths, Laplacian, and representative DoG."""
-    derivative_cases = tuple(
-        case for case in _DERIVATIVE_CASES if case.target in {"sobel", "laplacian", "difference_of_gaussians"}
-    )
-    assert tuple((case.case_id, case.target, dict(case.kwargs)) for case in derivative_cases) == (
-        ("sobel-x", "sobel", {"direction": "x"}),
-        ("sobel-y", "sobel", {"direction": "y"}),
-        ("sobel-magnitude", "sobel", {"direction": "magnitude"}),
-        ("laplacian-3x3", "laplacian", {}),
-        ("dog-1-2", "difference_of_gaussians", {"sigma1": 1.0, "sigma2": 2.0}),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_canny_case() -> None:
-    """v1-canny acceptance 17: registry includes the specified FHD fp32 RGB Canny case."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target == "canny")
-
-    assert tuple((case.case_id, case.parameters, dict(case.kwargs)) for case in cases) == (
-        (
-            "canny-0.5-1-mirror",
-            "threshold_low=0.5, threshold_high=1.0, border=mirror",
-            {"threshold_low": 0.5, "threshold_high": 1.0, "border": "mirror"},
-        ),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_both_analysis_cases() -> None:
-    """v1-analysis-pair acceptance 26: registry has the exact FHD Harris and 64x64 template cases."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target in {"corner_harris", "match_template"})
-    assert tuple(
-        (
-            case.case_id,
-            case.target,
-            dict(case.kwargs),
-            dict(case.fixture_kwargs),
-            case.input_attribute,
-            case.transferred_bytes,
-        )
-        for case in cases
-    ) == (
-        (
-            "corner-harris-3-004-mirror",
-            "corner_harris",
-            {"block_size": 3, "k": 0.04, "border": "mirror"},
-            {},
-            "frame",
-            _FHD_FP32_RGB_BYTES + _FHD_FP32_Y_BYTES,
-        ),
-        (
-            "match-template-64-ccoeff-normed",
-            "match_template",
-            {"method": "ccoeff_normed"},
-            {"template": "analysis_template"},
-            "frame",
-            _FHD_FP32_RGB_BYTES
-            + 64 * 64 * _CHANNELS * np.dtype(np.float32).itemsize
-            + (1920 - 64 + 1) * (1080 - 64 + 1) * np.dtype(np.float32).itemsize,
-        ),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_three_quality_metric_cases() -> None:
-    """v1-quality-metrics acceptance 24: registry has three default-range FHD fp32 RGB comparisons."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target in {"psnr", "ssim", "ssim_map"})
-    assert tuple(
-        (case.case_id, case.target, case.parameters, dict(case.kwargs), dict(case.fixture_kwargs)) for case in cases
-    ) == (
-        (
-            "quality-psnr-default",
-            "psnr",
-            "FHD fp32 RGB reference/candidate, data_range=1.0 default",
-            {},
-            {"candidate": "frame"},
-        ),
-        (
-            "quality-ssim-default",
-            "ssim",
-            "FHD fp32 RGB reference/candidate, data_range=1.0 default",
-            {},
-            {"candidate": "frame"},
-        ),
-        (
-            "quality-ssim-map-default",
-            "ssim_map",
-            "FHD fp32 RGB reference/candidate, data_range=1.0 default",
-            {},
-            {"candidate": "frame"},
-        ),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_both_histogram_equalization_cases() -> None:
-    """v1-histogram acceptance 22: registry has the two exact FHD fp32 RGB representative cases."""
-    assert tuple((case.case_id, case.target, case.parameters, dict(case.kwargs)) for case in _HISTOGRAM_CASES) == (
-        (
-            "equalize-histogram-1024",
-            "equalize_histogram",
-            "domain=(0,1), bins=1024",
-            {"domain": (0.0, 1.0), "bins": 1024},
-        ),
-        (
-            "clahe-2-8x8-1024",
-            "clahe",
-            "clip_limit=2, tiles_y=8, tiles_x=8, domain=(0,1), bins=1024",
-            {"clip_limit": 2.0, "tiles_y": 8, "tiles_x": 8, "domain": (0.0, 1.0), "bins": 1024},
-        ),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_to_format_cases() -> None:
-    """v1-public-namespace acceptance 15; v1-p216-wire-format acceptance 15: registry covers all nine wire exports."""
-    assert {case.target for case in _TO_FORMAT_CASES} == {
-        f"to_{name}"
-        for name in ("uyvy422", "v210", "nv12", "p010", "p216", "yuv420p", "yuv422p", "yuv444p", "yuva444p")
-    }
-    assert all(case.transferred_bytes is not None for case in _TO_FORMAT_CASES)
-
-
-def test_p216_registry_cases_bind_fhd_public_calls_and_record_storage_traffic() -> None:
-    """v1-p216-wire-format acceptance 15: non-timing contract executes both registered FHD paths once.
-
-    No performance threshold or measurement loop: verify delayed public dispatch, fixture,
-    legal/filter parameters and transferred bytes without invoking the performance suite.
-    """
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target in {"from_p216", "to_p216"})
-    assert [(case.case_id, case.target, case.input_attribute) for case in cases] == [
-        ("from-p216", "from_p216", "p216"),
-        ("to-p216", "to_p216", "ycbcr_frame"),
-    ]
-    assert (_WIDTH, _HEIGHT) == (1920, 1080)
-    assert dict(cases[0].kwargs) == {"width": 1920, "height": 1080, "range": "legal", "interpolation": "bilinear"}
-    assert dict(cases[1].kwargs) == {"range": "legal", "interpolation": "area"}
-    assert all(case.transferred_bytes == 16 * 1920 * 1080 for case in cases)
-    assert {case.target for case in cases} <= _PUBLIC_GPU_PIXEL_FUNCTIONS
-    inputs = SimpleNamespace(
-        p216=cp.full(2 * 1920 * 1080, 4096, dtype=cp.uint16),
-        ycbcr_frame=px.core.Frame(
-            data=cp.zeros((1080, 1920, 3), dtype=cp.float32), colorspace="Rec.709", gamma="Rec.709", channels="YCbCr"
-        ),
-    )
-    decoded = cases[0].bind(inputs)()
-    assert isinstance(decoded, px.core.Frame) and decoded.shape == (1080, 1920, 3)
-    assert decoded.dtype == cp.float32 and decoded.channels == ("Y", "Cb", "Cr")
-    cp.testing.assert_allclose(decoded.data, 0, rtol=0, atol=2e-7)
-    encoded = cases[1].bind(inputs)()
-    assert isinstance(encoded, cp.ndarray) and encoded.shape == (2 * 1920 * 1080,) and encoded.dtype == cp.uint16
-    cp.testing.assert_array_equal(encoded, 4096)
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_bytes_boundary_cases() -> None:
-    """v1-io-formats acceptance 22; v1-bytes-boundary acceptance 15: bytes cases cover every encoded raster format."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target in {"decode_image", "encode_image"})
-
-    assert {case.case_id for case in cases} == {
-        "bytes-decode-png",
-        "bytes-decode-jpeg",
-        "bytes-decode-tiff",
-        "bytes-decode-jpeg2000",
-        "bytes-decode-webp",
-        "bytes-decode-bmp",
-        "bytes-decode-pnm",
-        "bytes-encode-png",
-        "bytes-encode-jpeg",
-        "bytes-encode-tiff",
-        "bytes-encode-jpeg2000",
-        "bytes-encode-webp",
-        "bytes-encode-bmp",
-        "bytes-encode-pnm",
-    }
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_file_boundary_cases() -> None:
-    """v1-io-formats acceptance 22; v1-bytes-boundary acceptance 15;
-    v1-exr-mixed-dtype-write acceptance 18: file cases cover every raster format beside EXR and LUT boundaries.
-    """
-    cases = tuple(
-        case
-        for case in _PERFORMANCE_CASES
-        if case.target in {"read_image", "write_image", "write_exr_channels", "read_header", "read_lut"}
-    )
-
-    assert {case.case_id for case in cases} == {
-        "file-read-png",
-        "file-read-jpeg",
-        "file-read-tiff",
-        "file-read-exr",
-        "file-exr-phase1-read-none",
-        "file-exr-phase1-read-zip",
-        "file-exr-phase1-read-zips",
-        "file-exr-phase2-read-dwaa",
-        "file-exr-phase2-read-dwab",
-        "file-exr-phase3-read-rle",
-        "file-exr-phase3-read-pxr24",
-        "file-exr-phase3-read-b44",
-        "file-exr-phase3-read-b44a",
-        "file-exr-phase4-read-piz",
-        "file-read-jpeg2000",
-        "file-read-webp",
-        "file-read-bmp",
-        "file-read-pnm",
-        "file-read-tga",
-        "file-read-hdr",
-        "file-read-dpx",
-        "file-write-png",
-        "file-write-jpeg",
-        "file-write-tiff",
-        "file-write-exr",
-        "file-exr-mixed-dtype-write-zip",
-        "file-exr-phase1-write-none",
-        "file-exr-phase1-write-zip",
-        "file-exr-phase1-write-zips",
-        "file-exr-phase2-write-dwaa",
-        "file-exr-phase2-write-dwab",
-        "file-exr-phase3-write-rle",
-        "file-exr-phase3-write-pxr24",
-        "file-exr-phase3-write-b44",
-        "file-exr-phase3-write-b44a",
-        "file-exr-phase4-write-piz",
-        "file-write-jpeg2000",
-        "file-write-webp",
-        "file-write-bmp",
-        "file-write-pnm",
-        "file-write-tga",
-        "file-write-hdr",
-        "file-write-dpx",
-        "file-read-header-png",
-        "file-read-lut-cube-65",
-        "file-read-lut-cube-1d",
-        "file-read-lut-3dl",
-        "file-read-lut-spi1d",
-        "file-read-lut-spi3d",
-    }
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_one_mixed_dtype_exr_write_case() -> None:
-    """v1-exr-mixed-dtype-write acceptance 18: registry has one FHD HALF RGB plus UINT ID ZIP file case."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target == "write_exr_channels")
-
-    assert len(cases) == 1
-    case = cases[0]
-    assert (
-        case.case_id,
-        case.parameters,
-        case.input_attribute,
-        dict(case.fixture_kwargs),
-        dict(case.kwargs),
-        case.transferred_bytes,
-    ) == (
-        "file-exr-mixed-dtype-write-zip",
-        "FHD HALF RGB + UINT ID to EXR ZIP, native mixed dtypes, temporary-file I/O included",
-        "write_exr_mixed_path",
-        {"frames": "exr_mixed_frames"},
-        {},
-        2 * (_FHD_FP16_RGB_BYTES + _FHD_UINT32_Y_BYTES),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_phase1_exr_compression_cases() -> None:
-    """v1-exr-gpu-phase1 acceptance 24: NONE, ZIP, and ZIPS each contribute public read/write FHD cases."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.startswith("file-exr-phase1-"))
-
-    assert tuple((case.case_id, case.target, dict(case.kwargs)) for case in cases) == (
-        ("file-exr-phase1-read-none", "read_image", {"unchanged": True}),
-        ("file-exr-phase1-read-zip", "read_image", {"unchanged": True}),
-        ("file-exr-phase1-read-zips", "read_image", {"unchanged": True}),
-        ("file-exr-phase1-write-none", "write_image", {"compression": "none"}),
-        ("file-exr-phase1-write-zip", "write_image", {"compression": "zip"}),
-        ("file-exr-phase1-write-zips", "write_image", {"compression": "zips"}),
-    )
-    assert all(
-        case.minimum_frames == _BOUNDARY_MEASURED_MINIMUM_FRAMES and case.minimum_seconds == _MEASURED_MINIMUM_SECONDS
-        for case in cases
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_phase2_dwa_cases() -> None:
-    """v1-exr-gpu-phase2 acceptance 27-30: DWAA and DWAB add public read/write FHD file cases."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.startswith("file-exr-phase2-"))
-
-    assert tuple((case.case_id, case.target, dict(case.kwargs)) for case in cases) == (
-        ("file-exr-phase2-read-dwaa", "read_image", {"unchanged": True}),
-        ("file-exr-phase2-read-dwab", "read_image", {"unchanged": True}),
-        ("file-exr-phase2-write-dwaa", "write_image", {"compression": "dwaa", "dwa_level": 45.0}),
-        ("file-exr-phase2-write-dwab", "write_image", {"compression": "dwab", "dwa_level": 45.0}),
-    )
-    assert all(
-        case.minimum_frames == _BOUNDARY_MEASURED_MINIMUM_FRAMES and case.minimum_seconds == _MEASURED_MINIMUM_SECONDS
-        for case in cases
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_phase3_exr_cases() -> None:
-    """v1-exr-gpu-phase3 acceptance 40: all four codecs keep source-fixed public read/write FHD cases."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.startswith("file-exr-phase3-"))
-
-    assert tuple((case.case_id, case.target, dict(case.kwargs)) for case in cases) == (
-        ("file-exr-phase3-read-rle", "read_image", {"compression": "rle"}),
-        ("file-exr-phase3-read-pxr24", "read_image", {"compression": "pxr24"}),
-        ("file-exr-phase3-read-b44", "read_image", {"compression": "b44"}),
-        ("file-exr-phase3-read-b44a", "read_image", {"compression": "b44a"}),
-        ("file-exr-phase3-write-rle", "write_image", {"compression": "rle"}),
-        ("file-exr-phase3-write-pxr24", "write_image", {"compression": "pxr24"}),
-        ("file-exr-phase3-write-b44", "write_image", {"compression": "b44"}),
-        ("file-exr-phase3-write-b44a", "write_image", {"compression": "b44a"}),
-    )
-    assert all(
-        case.input_attribute == "exr_phase3"
-        and case.minimum_frames == _BOUNDARY_MEASURED_MINIMUM_FRAMES
-        and case.minimum_seconds == _MEASURED_MINIMUM_SECONDS
-        for case in cases
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_phase4_piz_cases() -> None:
-    """v1-exr-gpu-phase4 acceptance 45: PIZ keeps source-fixed HALF read/write FHD file cases."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.startswith("file-exr-phase4-"))
-
-    assert tuple((case.case_id, case.target, dict(case.kwargs)) for case in cases) == (
-        ("file-exr-phase4-read-piz", "read_image", {}),
-        ("file-exr-phase4-write-piz", "write_image", {}),
-    )
-    assert all(
-        case.input_attribute == "exr_phase4"
-        and case.minimum_frames == _BOUNDARY_MEASURED_MINIMUM_FRAMES
-        and case.minimum_seconds == _MEASURED_MINIMUM_SECONDS
-        and case.transferred_bytes == _WIDTH * _HEIGHT * _CHANNELS * np.dtype(np.float16).itemsize * 2
-        for case in cases
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_tracks_source_fixed_exr_routes_and_storage_dtypes(
-    performance_inputs: _Inputs,
-) -> None:
-    """v1-exr-runtime-independence acceptance 50: keep 22 EXR cases aligned with final routing and dtypes."""
-    fp16_read_write_bytes = _WIDTH * _HEIGHT * _CHANNELS * np.dtype(np.float16).itemsize * 2
-    fp32_to_fp16_bytes = _WIDTH * _HEIGHT * _CHANNELS * (np.dtype(np.float32).itemsize + np.dtype(np.float16).itemsize)
-    expected = {
-        "file-read-exr": (
-            "FHD HALF RGB EXR ZIP file, unchanged, source-fixed custom CPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-exr-phase1-read-none": (
-            "FHD HALF RGB EXR NONE file, unchanged, source-fixed native lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-exr-phase1-read-zip": (
-            "FHD HALF RGB EXR ZIP file, unchanged, source-fixed custom CPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-exr-phase1-read-zips": (
-            "FHD HALF RGB EXR ZIPS file, unchanged, source-fixed custom CPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-exr-phase2-read-dwaa": (
-            "FHD HALF RGB EXR DWAA file, unchanged, dwa_level=45.0, source-fixed GPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-exr-phase2-read-dwab": (
-            "FHD HALF RGB EXR DWAB file, unchanged, dwa_level=45.0, source-fixed GPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-exr-phase3-read-rle": (
-            "FHD HALF RGB EXR RLE file, unchanged, source-fixed GPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-exr-phase3-read-pxr24": (
-            "FHD HALF RGB EXR PXR24 file, unchanged, source-fixed custom CPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-exr-phase3-read-b44": (
-            "FHD HALF RGB EXR B44 file, unchanged, source-fixed GPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-exr-phase3-read-b44a": (
-            "FHD HALF RGB EXR B44A file, unchanged, source-fixed GPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-exr-phase4-read-piz": (
-            "FHD HALF RGB EXR PIZ file, unchanged, source-fixed GPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-write-exr": (
-            "FHD fp32 RGB to EXR ZIP/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-            fp32_to_fp16_bytes,
-        ),
-        "file-exr-phase1-write-none": (
-            "FHD fp32 RGB to EXR NONE/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-            fp32_to_fp16_bytes,
-        ),
-        "file-exr-phase1-write-zip": (
-            "FHD fp32 RGB to EXR ZIP/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-            fp32_to_fp16_bytes,
-        ),
-        "file-exr-phase1-write-zips": (
-            "FHD fp32 RGB to EXR ZIPS/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-            fp32_to_fp16_bytes,
-        ),
-        "file-exr-phase2-write-dwaa": (
-            "FHD fp32 RGB to EXR DWAA/HALF, dtype omitted, dwa_level=45.0, source-fixed GPU lane, temporary-file I/O included",
-            fp32_to_fp16_bytes,
-        ),
-        "file-exr-phase2-write-dwab": (
-            "FHD fp32 RGB to EXR DWAB/HALF, dtype omitted, dwa_level=45.0, source-fixed GPU lane, temporary-file I/O included",
-            fp32_to_fp16_bytes,
-        ),
-        "file-exr-phase3-write-rle": (
-            "FHD fp32 RGB to EXR RLE/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-            fp32_to_fp16_bytes,
-        ),
-        "file-exr-phase3-write-pxr24": (
-            "FHD fp32 RGB to EXR PXR24/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-            fp32_to_fp16_bytes,
-        ),
-        "file-exr-phase3-write-b44": (
-            "FHD fp16 RGB to EXR B44/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-exr-phase3-write-b44a": (
-            "FHD fp16 RGB to EXR B44A/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-        "file-exr-phase4-write-piz": (
-            "FHD fp16 RGB to EXR PIZ/HALF, dtype omitted, source-fixed GPU lane, temporary-file I/O included",
-            fp16_read_write_bytes,
-        ),
-    }
-    cases = {
-        case.case_id: (case.parameters, case.transferred_bytes)
-        for case in _PERFORMANCE_CASES
-        if case.case_id in {"file-read-exr", "file-write-exr"} or case.case_id.startswith("file-exr-phase")
-    }
-
-    assert cases == expected
-
-    fixture_paths = {
-        "file-exr-phase2-read-dwaa": performance_inputs.read_exr_dwaa_path,
-        "file-exr-phase2-read-dwab": performance_inputs.read_exr_dwab_path,
-        "file-exr-phase3-read-rle": performance_inputs.exr_phase3.read_path("rle"),
-        "file-exr-phase3-read-pxr24": performance_inputs.exr_phase3.read_path("pxr24"),
-    }
-    fixture_storage_dtypes = {
-        case_id: {channel.dtype for part in io_header._parse_exr(path).parts for channel in part.channels}
-        for case_id, path in fixture_paths.items()
-    }
-    assert fixture_storage_dtypes == {case_id: {"float16"} for case_id in fixture_paths}
-
-
-@pytest.mark.performance
-def test_exr_phase1_backend_performance_report(
+def test_exr_none_zip_backend_performance_report(
     performance_inputs: _Inputs,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-exr-runtime-independence acceptance 36 and 47: measure and report accepted lanes against the dev baseline;
-    assertions cover measurement completeness and sanity, while fixed-fixture contracts own gate decisions."""
+    """The EXR performance report measures accepted codec paths and records complete, plausible timing against the
+    development baseline.
+    """
     device = cp.cuda.Device()
     properties = cp.cuda.runtime.getDeviceProperties(device.id)
     device_name = properties["name"]
@@ -3214,7 +2604,7 @@ def test_exr_phase1_backend_performance_report(
                         (
                             lambda path=path, compression=compression: write_openexr_frame(
                                 path,
-                                performance_inputs.exr_phase1_frame,
+                                performance_inputs.exr_none_zip_frame,
                                 compression=compression,
                                 dwa_level=None,
                             )
@@ -3223,7 +2613,7 @@ def test_exr_phase1_backend_performance_report(
                         else (
                             lambda path=path, compression=compression: px.io.write_image(
                                 path,
-                                performance_inputs.exr_phase1_frame,
+                                performance_inputs.exr_none_zip_frame,
                                 compression=compression,
                             )
                         )
@@ -3256,8 +2646,8 @@ def test_exr_phase1_backend_performance_report(
 
 
 @pytest.mark.performance
-def test_exr_phase2_performance_gate_rejects_raw_stored_only_output(tmp_path: Path) -> None:
-    """v1-exr-gpu-phase2 acceptance 28: a raw-stored-only DWA file cannot contribute a gate median."""
+def test_exr_dwa_performance_gate_rejects_raw_stored_only_output(tmp_path: Path) -> None:
+    """The EXR performance gate excludes a DWAA or DWAB file containing only uncompressed stored data from its median."""
     path = tmp_path / "raw-stored-only-dwaa.exr"
     frame = px.io.from_array(
         cp.zeros((1, 1, 3), dtype=cp.float32),
@@ -3267,7 +2657,7 @@ def test_exr_phase2_performance_gate_rejects_raw_stored_only_output(tmp_path: Pa
     )
     write_openexr_frame(path, frame, compression="dwaa", dwa_level=45.0)
     container = io_header._parse_exr(path)
-    assert container.dwa_eligible
+    assert _container_gpu_eligible(container)
     assert all(chunk.raw_stored for chunk in container.chunks)
 
     with pytest.raises(AssertionError, match="no compressed DWA v2 chunk"):
@@ -3275,12 +2665,13 @@ def test_exr_phase2_performance_gate_rejects_raw_stored_only_output(tmp_path: Pa
 
 
 @pytest.mark.performance
-def test_exr_phase2_backend_performance_report(
+def test_exr_dwa_backend_performance_report(
     performance_inputs: _Inputs,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-exr-runtime-independence acceptance 36 and 47: measure and report accepted DWA lanes against the dev
-    baseline; assertions cover measurement completeness and sanity, while fixed-fixture contracts own gate decisions."""
+    """The EXR performance report measures DWAA and DWAB paths and records complete, plausible timing against the
+    development baseline.
+    """
     device = cp.cuda.Device()
     properties = cp.cuda.runtime.getDeviceProperties(device.id)
     device_name = properties["name"]
@@ -3311,7 +2702,7 @@ def test_exr_phase2_backend_performance_report(
                         (
                             lambda path=write_path, compression=compression: write_openexr_frame(
                                 path,
-                                performance_inputs.exr_phase1_frame,
+                                performance_inputs.exr_none_zip_frame,
                                 compression=compression,
                                 dwa_level=45.0,
                             )
@@ -3320,7 +2711,7 @@ def test_exr_phase2_backend_performance_report(
                         else (
                             lambda path=write_path, compression=compression: px.io.write_image(
                                 path,
-                                performance_inputs.exr_phase1_frame,
+                                performance_inputs.exr_none_zip_frame,
                                 compression=compression,
                                 dwa_level=45.0,
                             )
@@ -3359,71 +2750,71 @@ def test_exr_phase2_backend_performance_report(
 
 
 @pytest.mark.performance
-def test_exr_phase3_initial_backend_performance_report(performance_inputs: _Inputs) -> None:
-    """v1-exr-runtime-independence acceptance 36 and 47: measure and report Phase 3 lanes against the dev baseline;
-    assertions cover measurement completeness and sanity, while fixed-fixture contracts own gate decisions."""
+@pytest.mark.parametrize(
+    ("compression", "input_attribute", "inspect_fixture", "measure_case"),
+    (
+        pytest.param("rle", "exr_rle", inspect_rle_gate_fixture, measure_rle_gate_case, id="rle"),
+        pytest.param("pxr24", "exr_pxr24", inspect_pxr24_gate_fixture, measure_pxr24_gate_case, id="pxr24"),
+        pytest.param("b44", "exr_b44", inspect_b44_gate_fixture, measure_b44_gate_case, id="b44"),
+        pytest.param("b44a", "exr_b44", inspect_b44_gate_fixture, measure_b44_gate_case, id="b44a"),
+    ),
+)
+def test_exr_compression_initial_backend_performance_report(
+    performance_inputs: _Inputs,
+    compression: str,
+    input_attribute: str,
+    inspect_fixture: Callable[..., object],
+    measure_case: Callable[..., GateMeasurement],
+) -> None:
+    """Measure one EXR compression's read and write backends under the established gate conditions."""
+    inputs = getattr(performance_inputs, input_attribute)
+    report = f"EXR_{compression.upper()}_REPORT"
     identity = device_identity()
-    print(
-        "EXR_PHASE3_REPORT_DEVICE "
-        f"name={identity.name} driver={identity.driver_version} runtime={identity.runtime_version}"
-    )
-    measurements = []
+    print(f"{report}_DEVICE name={identity.name} driver={identity.driver_version} runtime={identity.runtime_version}")
+    inspection = inspect_fixture(inputs.read_path(compression), compression)
+    print(f"{report}_FIXTURE {asdict(inspection)!r}")
+
+    measurements: list[GateMeasurement] = []
     initial_runs: dict[tuple[str, str], GateRun] = {}
     decisions: dict[tuple[str, str], GateDecision] = {}
-    for compression in PHASE3_COMPRESSIONS:
-        inspection = inspect_phase3_gate_fixture(
-            performance_inputs.exr_phase3.read_path(compression),
-            compression,
-        )
+    for direction in ("read", "write"):
+        measurement = measure_case(inputs, compression, direction)
+        measurements.append(measurement)
+        candidates_ms = {backend: value for backend, value in measurement.medians_ms.items() if backend != "cpu"}
+        key = (compression, direction)
+        initial_run = GateRun(openexr_ms=measurement.medians_ms["cpu"], candidates_ms=candidates_ms)
+        initial_runs[key] = initial_run
+        decision = synthesize_gate_decision(initial_run)
+        decisions[key] = decision
         print(
-            "EXR_PHASE3_REPORT_FIXTURE "
-            f"compression={compression} total_chunks={inspection.total_chunks} "
-            f"compressed_chunks={inspection.compressed_chunks} rle_packets={inspection.rle_packets} "
-            f"pxr24_planes={inspection.pxr24_planes} dense_blocks={inspection.dense_blocks} "
-            f"flat_blocks={inspection.flat_blocks}"
+            f"{report}_RESULT compression={compression} direction={direction} medians_ms={measurement.medians_ms!r} "
+            f"iterations={measurement.iterations!r} ratios={dict(decision.initial_ratios)!r} "
+            f"initial_candidate={decision.initial_candidate} initial_ratio={decision.initial_ratio!r} "
+            f"repeat_required={decision.repeat_required} initial_selection={decision.selected}"
         )
-        for direction in ("read", "write"):
-            measurement = measure_phase3_gate_case(performance_inputs.exr_phase3, compression, direction)
-            measurements.append(measurement)
-            candidates_ms = {backend: value for backend, value in measurement.medians_ms.items() if backend != "cpu"}
-            key = (compression, direction)
-            initial_run = GateRun(openexr_ms=measurement.medians_ms["cpu"], candidates_ms=candidates_ms)
-            initial_runs[key] = initial_run
-            decision = synthesize_gate_decision(initial_run)
-            decisions[key] = decision
-            print(
-                "EXR_PHASE3_REPORT_RESULT "
-                f"compression={compression} direction={direction} medians_ms={measurement.medians_ms!r} "
-                f"iterations={measurement.iterations!r} ratios={dict(decision.initial_ratios)!r} "
-                f"initial_candidate={decision.initial_candidate} initial_ratio={decision.initial_ratio!r} "
-                f"repeat_required={decision.repeat_required} initial_selection={decision.selected}"
-            )
 
-    repeat_measurements = []
-    for (compression, direction), decision in tuple(decisions.items()):
+    repeat_measurements: list[GateMeasurement] = []
+    for (measured_compression, direction), decision in tuple(decisions.items()):
         if not decision.repeat_required:
             continue
-        measurement = measure_phase3_gate_case(performance_inputs.exr_phase3, compression, direction)
+        measurement = measure_case(inputs, measured_compression, direction)
         repeat_measurements.append(measurement)
         candidates_ms = {backend: value for backend, value in measurement.medians_ms.items() if backend != "cpu"}
         decision = synthesize_gate_decision(
-            initial_runs[(compression, direction)],
+            initial_runs[(measured_compression, direction)],
             GateRun(openexr_ms=measurement.medians_ms["cpu"], candidates_ms=candidates_ms),
         )
-        decisions[(compression, direction)] = decision
+        decisions[(measured_compression, direction)] = decision
         print(
-            "EXR_PHASE3_REPORT_REPEAT_RESULT "
-            f"compression={compression} direction={direction} medians_ms={measurement.medians_ms!r} "
-            f"iterations={measurement.iterations!r} ratios={dict(decision.repeat_ratios)!r} "
-            f"selected={decision.selected}"
+            f"{report}_REPEAT_RESULT compression={measured_compression} direction={direction} "
+            f"medians_ms={measurement.medians_ms!r} iterations={measurement.iterations!r} "
+            f"ratios={dict(decision.repeat_ratios)!r} selected={decision.selected}"
         )
 
     synthesized_selection = {key: decision.selected for key, decision in decisions.items()}
     source_selection = {key: io._EXR_ROUTING[key] for key in decisions}
-    print(
-        f"EXR_PHASE3_REPORT_SOURCE_COMPARISON synthesized={synthesized_selection!r} source_fixed={source_selection!r}"
-    )
-    assert len(measurements) == 8
+    print(f"{report}_SOURCE_COMPARISON synthesized={synthesized_selection!r} source_fixed={source_selection!r}")
+    assert len(measurements) == 2
     assert all(
         set(measurement.medians_ms)
         == ({"cpu", "custom_cpu", "gpu"} if measurement.direction == "read" else {"cpu", "gpu"})
@@ -3434,9 +2825,20 @@ def test_exr_phase3_initial_backend_performance_report(performance_inputs: _Inpu
 
 
 @pytest.mark.performance
-def test_exr_phase3_public_backend_performance_report(performance_inputs: _Inputs) -> None:
-    """v1-exr-gpu-phase3 acceptance 40: report all eight fixed public boundary medians without forced routing."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.startswith("file-exr-phase3-"))
+@pytest.mark.parametrize(
+    "compression",
+    (
+        pytest.param("rle", id="rle"),
+        pytest.param("pxr24", id="pxr24"),
+        pytest.param("b44", id="b44"),
+        pytest.param("b44a", id="b44a"),
+    ),
+)
+def test_exr_compression_public_backend_performance_report(performance_inputs: _Inputs, compression: str) -> None:
+    """Record the two public read and write case medians for one EXR compression."""
+    case_ids = {f"file-exr-{compression}-read", f"file-exr-{compression}-write"}
+    cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id in case_ids)
+    assert {case.case_id for case in cases} == case_ids
     synchronize = cp.cuda.Device().synchronize
     medians_ms: dict[str, float] = {}
     iterations: dict[str, int] = {}
@@ -3452,64 +2854,65 @@ def test_exr_phase3_public_backend_performance_report(performance_inputs: _Input
         value = median(durations_ms)
         medians_ms[case.case_id] = value
         iterations[case.case_id] = len(durations_ms)
-        compression = case.case_id.rsplit("-", maxsplit=1)[1]
-        direction = "read" if "-read-" in case.case_id else "write"
-        backend = io._EXR_ROUTING[(compression, direction)]
+        observed_compression, direction = _exr_case_compression_direction(case.case_id)
+        assert observed_compression == compression
+        backend = io._EXR_ROUTING[(observed_compression, direction)]
         print(
-            "EXR_PHASE3_PUBLIC_RESULT "
+            f"EXR_{compression.upper()}_PUBLIC_RESULT "
             f"case_id={case.case_id} backend={backend} median_ms={value!r} iterations={len(durations_ms)}"
         )
 
-    assert len(medians_ms) == 8
+    assert len(medians_ms) == 2
     assert all(math.isfinite(value) and value > 0.0 for value in medians_ms.values())
     assert all(count >= _BOUNDARY_MEASURED_MINIMUM_FRAMES for count in iterations.values())
 
 
 @pytest.mark.performance
-def test_exr_phase4_initial_backend_performance_report(performance_inputs: _Inputs) -> None:
-    """v1-exr-runtime-independence acceptance 36 and 47: measure and report PIZ lanes against the dev baseline;
-    assertions cover measurement completeness and sanity, while fixed-fixture contracts own gate decisions."""
+def test_exr_piz_initial_backend_performance_report(performance_inputs: _Inputs) -> None:
+    """The EXR performance report measures PIZ paths and records complete, plausible timing against the development
+    baseline.
+    """
     identity = device_identity()
     print(
-        "EXR_PHASE4_REPORT_DEVICE "
+        "EXR_PIZ_REPORT_DEVICE "
         f"name={identity.name} driver={identity.driver_version} runtime={identity.runtime_version}"
     )
     for dtype in ("fp16", "fp32"):
-        inspection = inspect_phase4_gate_fixture(performance_inputs.exr_phase4.read_path(dtype), dtype)
+        inspection = inspect_piz_gate_fixture(performance_inputs.exr_piz.read_path(dtype), dtype)
         print(
-            "EXR_PHASE4_REPORT_FIXTURE "
+            "EXR_PIZ_REPORT_FIXTURE "
             f"dtype={dtype} total_chunks={inspection.total_chunks} "
             f"compressed_chunks={inspection.compressed_chunks} nonempty_bitmaps={inspection.nonempty_bitmaps} "
             f"maximum_wavelet_levels={inspection.maximum_wavelet_levels} huffman_tables={inspection.huffman_tables} "
             f"huffman_table_bytes={inspection.huffman_table_bytes} huffman_data_bytes={inspection.huffman_data_bytes}"
         )
 
-    initial_measurements: list[Phase4GateMeasurement] = []
-    repeat_measurements: list[Phase4GateMeasurement] = []
-    decisions: dict[tuple[str, str], phase4_gate.GateDecision] = {}
+    initial_measurements: list[PizGateMeasurement] = []
+    repeat_measurements: list[PizGateMeasurement] = []
+    decisions: dict[tuple[str, str], piz_gate.GateDecision] = {}
     for direction in ("read", "write"):
-        measurement = measure_phase4_gate_case(performance_inputs.exr_phase4, direction, dtype="fp16")
+        measurement = measure_piz_gate_case(performance_inputs.exr_piz, direction, dtype="fp16")
         initial_measurements.append(measurement)
         candidates_ms = {backend: value for backend, value in measurement.medians_ms.items() if backend != "cpu"}
-        initial = phase4_gate.GateRun(openexr_ms=measurement.medians_ms["cpu"], candidates_ms=candidates_ms)
-        decision = phase4_gate.synthesize_gate_decision(initial)
+        initial = piz_gate.GateRun(openexr_ms=measurement.medians_ms["cpu"], candidates_ms=candidates_ms)
+        decision = piz_gate.synthesize_gate_decision(initial)
         print(
-            "EXR_PHASE4_REPORT_RESULT "
+            "EXR_PIZ_REPORT_RESULT "
             f"dtype=fp16 direction={direction} medians_ms={measurement.medians_ms!r} "
             f"iterations={measurement.iterations!r} ratios={dict(decision.initial_ratios)!r} "
             f"initial_candidate={decision.initial_candidate} initial_ratio={decision.initial_ratio!r} "
             f"repeat_required={decision.repeat_required} initial_selection={decision.selected}"
         )
         if decision.repeat_required:
-            repeat = _run_phase4_isolated_repeat(direction)
+            repeat = _run_piz_isolated_repeat(direction)
             repeat_measurements.append(repeat)
             repeat_candidates = {backend: value for backend, value in repeat.medians_ms.items() if backend != "cpu"}
-            decision = phase4_gate.synthesize_gate_decision(
+            decision = piz_gate.synthesize_gate_decision(
                 initial,
-                phase4_gate.GateRun(openexr_ms=repeat.medians_ms["cpu"], candidates_ms=repeat_candidates),
+                piz_gate.GateRun(openexr_ms=repeat.medians_ms["cpu"], candidates_ms=repeat_candidates),
             )
             print(
-                "EXR_PHASE4_REPORT_REPEAT_RESULT "
+                "EXR_PIZ_REPORT_REPEAT_RESULT "
                 f"dtype=fp16 direction={direction} medians_ms={repeat.medians_ms!r} "
                 f"iterations={repeat.iterations!r} ratios={dict(decision.repeat_ratios)!r} "
                 f"worst_ratios={dict(decision.worst_ratios)!r} selected={decision.selected}"
@@ -3518,18 +2921,16 @@ def test_exr_phase4_initial_backend_performance_report(performance_inputs: _Inpu
 
     synthesized_selection = {key: decision.selected for key, decision in decisions.items()}
     source_selection = {key: io._EXR_ROUTING[key] for key in decisions}
-    print(
-        f"EXR_PHASE4_REPORT_SOURCE_COMPARISON synthesized={synthesized_selection!r} source_fixed={source_selection!r}"
-    )
+    print(f"EXR_PIZ_REPORT_SOURCE_COMPARISON synthesized={synthesized_selection!r} source_fixed={source_selection!r}")
 
-    reference_measurements: list[Phase4GateMeasurement] = []
+    reference_measurements: list[PizGateMeasurement] = []
     for direction in ("read", "write"):
-        measurement = measure_phase4_gate_case(performance_inputs.exr_phase4, direction, dtype="fp32")
+        measurement = measure_piz_gate_case(performance_inputs.exr_piz, direction, dtype="fp32")
         reference_measurements.append(measurement)
         openexr_ms = measurement.medians_ms["cpu"]
         ratios = {backend: value / openexr_ms for backend, value in measurement.medians_ms.items() if backend != "cpu"}
         print(
-            "EXR_PHASE4_REPORT_REFERENCE_RESULT "
+            "EXR_PIZ_REPORT_REFERENCE_RESULT "
             f"dtype=fp32 direction={direction} medians_ms={measurement.medians_ms!r} "
             f"iterations={measurement.iterations!r} ratios={ratios!r}"
         )
@@ -3544,9 +2945,9 @@ def test_exr_phase4_initial_backend_performance_report(performance_inputs: _Inpu
 
 
 @pytest.mark.performance
-def test_exr_phase4_public_backend_performance_report(performance_inputs: _Inputs) -> None:
-    """v1-exr-gpu-phase4 acceptance 45: report both fixed public fp16 PIZ boundary medians."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.startswith("file-exr-phase4-"))
+def test_exr_piz_public_backend_performance_report(performance_inputs: _Inputs) -> None:
+    """The EXR performance report includes medians for both public float16 PIZ boundary paths."""
+    cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.startswith("file-exr-piz-"))
     synchronize = cp.cuda.Device().synchronize
     medians_ms: dict[str, float] = {}
     iterations: dict[str, int] = {}
@@ -3562,10 +2963,10 @@ def test_exr_phase4_public_backend_performance_report(performance_inputs: _Input
         value = median(durations_ms)
         medians_ms[case.case_id] = value
         iterations[case.case_id] = len(durations_ms)
-        direction = "read" if "-read-" in case.case_id else "write"
-        backend = io._EXR_ROUTING[("piz", direction)]
+        compression, direction = _exr_case_compression_direction(case.case_id)
+        backend = io._EXR_ROUTING[(compression, direction)]
         print(
-            "EXR_PHASE4_PUBLIC_RESULT "
+            "EXR_PIZ_PUBLIC_RESULT "
             f"case_id={case.case_id} backend={backend} median_ms={value!r} iterations={len(durations_ms)}"
         )
 
@@ -3574,320 +2975,10 @@ def test_exr_phase4_public_backend_performance_report(performance_inputs: _Input
     assert all(count >= _BOUNDARY_MEASURED_MINIMUM_FRAMES for count in iterations.values())
 
 
-@pytest.mark.performance
-def test_performance_registry_has_sixteen_new_format_boundary_cases() -> None:
-    """v1-io-formats acceptance 22: four formats each contribute read/write/decode/encode FHD cases."""
-    expected = {
-        f"{boundary}-{operation}-{format_token}"
-        for format_token in ("jpeg2000", "webp", "bmp", "pnm")
-        for boundary, operation in (
-            ("file", "read"),
-            ("file", "write"),
-            ("bytes", "decode"),
-            ("bytes", "encode"),
-        )
-    }
-    assert {case.case_id for case in _PERFORMANCE_CASES} >= expected
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_tga_file_boundary_cases() -> None:
-    """v1-tga acceptance 12: TGA contributes one FHD read and one FHD write file-boundary case."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.endswith("-tga"))
-    assert tuple((case.case_id, case.target, case.input_attribute) for case in cases) == (
-        ("file-read-tga", "read_image", "read_tga_path"),
-        ("file-write-tga", "write_image", "write_tga_path"),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_hdr_file_boundary_cases() -> None:
-    """v1-hdr acceptance 10: HDR contributes one FHD read and one FHD write file-boundary case."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.endswith("-hdr"))
-    assert tuple((case.case_id, case.target, case.input_attribute) for case in cases) == (
-        ("file-read-hdr", "read_image", "read_hdr_path"),
-        ("file-write-hdr", "write_image", "write_hdr_path"),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_dpx_file_boundary_cases() -> None:
-    """v1-dpx acceptance 12: DPX contributes FHD fp32 RGB 10-bit read and write file-boundary cases."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.case_id.endswith("-dpx"))
-    assert tuple((case.case_id, case.target, case.input_attribute, dict(case.kwargs)) for case in cases) == (
-        ("file-read-dpx", "read_image", "read_dpx_path", {}),
-        ("file-write-dpx", "write_image", "write_dpx_path", {"bit_depth": 10}),
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_both_lut_interpolation_tokens() -> None:
-    """v1-lut acceptance 18; v1-lut-extensions acceptance 29; v1-lut-shaper acceptance 12:
-    registry covers 3D, 1D and the shaped/baked comparison pair.
-    """
-    assert [(case.case_id, case.target, dict(case.kwargs), dict(case.fixture_kwargs)) for case in _LUT_CASES] == [
-        ("lut-transform-trilinear", "apply_lut", {"interpolation": "trilinear"}, {"lut": "lut"}),
-        ("lut-transform-tetrahedral", "apply_lut", {"interpolation": "tetrahedral"}, {"lut": "lut"}),
-        ("lut-transform-linear-1d", "apply_lut", {"interpolation": "linear"}, {"lut": "lut1d"}),
-        ("lut-transform-shaper-baked", "apply_lut", {"interpolation": None}, {"lut": "lut_shaper_baked"}),
-        ("lut-transform-shaper-preserved", "apply_lut", {"interpolation": None}, {"lut": "lut_shaped"}),
-    ]
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_every_lut_boundary_format() -> None:
-    """v1-lut-extensions acceptance 29: registry covers every required LUT file, byte, and Cube write path."""
-    lut_boundaries = tuple(
-        case for case in _PERFORMANCE_CASES if case.target in {"read_lut", "decode_lut", "write_lut"}
-    )
-
-    assert {
-        case.target: {item.case_id for item in lut_boundaries if item.target == case.target} for case in lut_boundaries
-    } == {
-        "read_lut": {
-            "file-read-lut-cube-65",
-            "file-read-lut-cube-1d",
-            "file-read-lut-3dl",
-            "file-read-lut-spi1d",
-            "file-read-lut-spi3d",
-        },
-        "decode_lut": {
-            "bytes-decode-lut-cube-1d",
-            "bytes-decode-lut-cube-3d",
-            "bytes-decode-lut-3dl",
-            "bytes-decode-lut-spi1d",
-            "bytes-decode-lut-spi3d",
-        },
-        "write_lut": {"file-write-lut-1d", "file-write-lut-3d"},
-    }
-
-
-@pytest.mark.performance
-def test_performance_registry_boundary_cases_use_the_end_to_end_sampling_contract() -> None:
-    """REQ-TEST-010 acceptance 8: boundary cases retain the time floor with a bounded repetition floor."""
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target in _PERFORMANCE_BOUNDARY_FUNCTIONS)
-
-    assert {case.minimum_frames for case in cases} == {_BOUNDARY_MEASURED_MINIMUM_FRAMES}
-    assert {case.minimum_seconds for case in cases} == {_MEASURED_MINIMUM_SECONDS}
-    assert _BOUNDARY_MEASURED_MINIMUM_FRAMES == 20
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_stack_case() -> None:
-    """v1-stack acceptance 8 / REQ-TEST-010: registry covers vertical concatenation of multiple FHD Frames."""
-    assert [
-        (
-            case.case_id,
-            case.target,
-            dict(case.kwargs),
-            case.input_attribute,
-            case.transferred_bytes,
-        )
-        for case in _STACK_CASES
-    ] == [
-        (
-            "stack-vertical-two-fhd",
-            "stack",
-            {"direction": "vertical", "adapt": False},
-            "stack_frames",
-            _FHD_FP32_RGB_BYTES * 4,
-        )
-    ]
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_warp_affine_case() -> None:
-    """v1-warp-affine acceptance 21: registry fixes the centered FHD auto-lanczos4 representative case."""
-    assert len(_WARP_AFFINE_CASES) == 1
-    case = _WARP_AFFINE_CASES[0]
-    assert (case.case_id, case.target, case.parameters, case.input_attribute, case.transferred_bytes) == (
-        "warp-affine-fhd-auto-lanczos4",
-        "warp_affine",
-        "FHD fp32 RGB, centered 1.01x scale + 5deg rotation, auto lanczos4, constant 0",
-        "frame",
-        _FHD_FP32_RGB_READ_WRITE_BYTES,
-    )
-    kwargs = dict(case.kwargs)
-    assert set(kwargs) == {"matrix"}
-    np.testing.assert_array_equal(kwargs["matrix"], _WARP_MATRIX)
-    np.testing.assert_allclose(
-        np.hypot(_WARP_MATRIX[0, :2], _WARP_MATRIX[1, :2]),
-        np.asarray((1.01, 1.01), dtype=np.float32),
-        rtol=0.0,
-        atol=2e-7,
-    )
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_shuffle_cases() -> None:
-    """v1-channel-shuffle acceptance 23: registry covers reorder, multi-Frame fill, and adaptation."""
-    assert [
-        (
-            case.case_id,
-            case.target,
-            case.parameters,
-            case.input_attribute,
-            case.kwargs_attribute,
-            dict(case.kwargs),
-            case.transferred_bytes,
-        )
-        for case in _SHUFFLE_CASES
-    ] == [
-        (
-            "shuffle-reorder-fhd",
-            "shuffle",
-            "single FHD fp32 Frame BGR reorder, adapt=False",
-            None,
-            "shuffle_reorder_outputs",
-            {},
-            _FHD_FP32_RGB_READ_WRITE_BYTES,
-        ),
-        (
-            "shuffle-multi-fill-fhd",
-            "shuffle",
-            "FHD fp32 RGBA from 2 Frames + constant, adapt=False",
-            None,
-            "shuffle_multi_outputs",
-            {},
-            _FHD_FP32_RGB_BYTES + _FHD_FP32_RGBA_BYTES,
-        ),
-        (
-            "shuffle-adapt-fhd",
-            "shuffle",
-            "2 FHD fp32 RGB Frames, sRGB/sRGB source adapted to ACEScg/linear",
-            None,
-            "shuffle_adapt_outputs",
-            {"adapt": True},
-            _FHD_FP32_RGB_BYTES * 4,
-        ),
-    ]
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_composite_case() -> None:
-    """v1-composite acceptance 20 / REQ-TEST-010: registry covers FHD transform composition."""
-    assert [
-        (case.case_id, case.target, case.parameters, case.input_attribute, case.fixture_kwargs, case.transferred_bytes)
-        for case in _COMPOSITE_CASES
-    ] == [
-        (
-            "composite-transform-fhd",
-            "merge",
-            "FHD background + transformed 960x540 foreground, bilinear, normal",
-            "frame",
-            (("foreground", "composite_foreground"),),
-            _FHD_FP32_RGB_BYTES + 960 * 540 * _CHANNELS * np.dtype(np.float32).itemsize + _FHD_FP32_RGB_BYTES,
-        )
-    ]
-
-
-@pytest.mark.performance
-def test_performance_registry_covers_the_value_quantization_successors() -> None:
-    """v1-quantize-values acceptance 19: registry replaces legacy cases and adds both boundary directions."""
-    expected = {
-        ("full-to-legal-10", "full_to_legal"),
-        ("legal-to-full-10", "legal_to_full"),
-        ("quantize-values-8", "quantize"),
-        ("dequantize-values-8", "dequantize"),
-        ("to-array-bit-depth-10", "to_array"),
-        ("from-array-bit-depth-10", "from_array"),
-    }
-
-    assert expected <= {(case.case_id, case.target) for case in _TRANSFORM_BOUNDARY_CASES}
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_recode_dtype_directions() -> None:
-    """v1-recode-dtype acceptance 10 / REQ-TEST-010: registry covers both everyday FHD dtype directions."""
-    assert hasattr(px.values, "recode_dtype")
-    expected = {
-        ("recode-u8-f32", "recode_dtype", "uint8 -> float32", "code8_frame", (("dtype", "float32"),)),
-        ("recode-f32-u8", "recode_dtype", "float32 -> uint8", "frame", (("dtype", "uint8"),)),
-    }
-    actual = {
-        (case.case_id, case.target, case.parameters, case.input_attribute, case.kwargs)
-        for case in _TRANSFORM_BOUNDARY_CASES
-        if case.target == "recode_dtype"
-    }
-    assert actual == expected
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_raw_copy_bandwidth_diagnostic(monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-performance acceptance 1-4 and provisional 8: execute the registered RawKernel copy entry."""
-    expected_bytes = _WIDTH * _HEIGHT * _CHANNELS * np.dtype(np.float32).itemsize * 2
-    cases = tuple(case for case in _PERFORMANCE_CASES if case.target == "copy")
-    assert [
-        (case.case_id, case.input_attribute, dict(case.fixture_kwargs), case.transferred_bytes) for case in cases
-    ] == [("copy-fhd-fp32-rgb", "copy_source", {"destination": "copy_destination"}, expected_bytes)]
-
-    source = cp.arange(12, dtype=cp.float32).reshape(2, 2, 3)
-    destination = cp.full_like(source, np.float32(-1.0))
-    copy_kernel_factory = _copy_kernel
-    factory_calls: list[None] = []
-
-    def observed_copy_kernel() -> cp.RawKernel:
-        factory_calls.append(None)
-        return copy_kernel_factory()
-
-    monkeypatch.setattr(sys.modules[__name__], "_copy_kernel", observed_copy_kernel)
-    result = cases[0].operation(source, destination=destination)
-
-    assert factory_calls == [None]
-    assert result is destination
-    cp.testing.assert_array_equal(destination, source)
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_hexagonal_lens_radius_32() -> None:
-    """v1-performance acceptance 5-6: the lens registry includes the representative radius-32 hexagon case."""
-    assert [
-        (case.case_id, case.parameters, dict(case.kwargs))
-        for case in _LENS_BLUR_CASES
-        if case.case_id == "lens-hexagon-32"
-    ] == [("lens-hexagon-32", "blades=6, radius=32", {"radius": 32.0, "blades": 6})]
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_draw_text_case() -> None:
-    """v1-draw-text-unification acceptance 15; v1-draw-text-supersample acceptance 11: retain False and add True."""
-    assert [
-        (case.case_id, case.target, case.parameters, dict(case.kwargs)) for case in _DRAW_CASES if case.target == "text"
-    ] == [
-        (
-            "draw-text-cjk-outline",
-            "text",
-            "single-line CJK, size=64, one outline, supersample=False",
-            {
-                "text": "pixtreme 文字描画",
-                "position": (960.0, 540.0),
-                "size": 64.0,
-                "color": (1.2, 0.5, -0.1),
-                "anchor": "center-center",
-                "outlines": (((0.05, 0.1, 0.2), 2.0),),
-                "supersample": False,
-            },
-        ),
-        (
-            "draw-text-cjk-outline-supersample",
-            "text",
-            "single-line CJK, size=64, one outline, supersample=True",
-            {
-                "text": "pixtreme 文字描画",
-                "position": (960.0, 540.0),
-                "size": 64.0,
-                "color": (1.2, 0.5, -0.1),
-                "anchor": "center-center",
-                "outlines": (((0.05, 0.1, 0.2), 2.0),),
-                "supersample": True,
-            },
-        ),
-    ]
-
-
+@pytest.mark.req("REQ-PIX-021")
 @pytest.mark.performance
 def test_draw_text_supersample_warm_performance_gate(performance_inputs: _Inputs) -> None:
-    """v1-draw-text-supersample acceptance 12: cache-hit True stays within the same-run warm ratio and latency gates."""
+    """Warm-cache text supersampling meets the same-run duration ratio and latency thresholds."""
     text_cases = {case.case_id: case for case in _DRAW_CASES if case.target == "text"}
     synchronize = cp.cuda.Device(0).synchronize
     medians: dict[str, float] = {}
@@ -3912,9 +3003,10 @@ def test_draw_text_supersample_warm_performance_gate(performance_inputs: _Inputs
     assert sampled_ms <= 1.0
 
 
+@pytest.mark.req("REQ-PIX-021")
 @pytest.mark.performance
 def test_draw_text_supersample_cold_performance_gate(performance_inputs: _Inputs) -> None:
-    """v1-draw-text-supersample acceptance 13: fully cold text caches meet the same-run ratio and latency gates."""
+    """Cold-cache text supersampling meets the same-run duration ratio and latency thresholds."""
     import pixtreme._draw.text as draw_text_module
 
     text_cases = {case.case_id: case for case in _DRAW_CASES if case.target == "text"}
@@ -3966,35 +3058,8 @@ def test_draw_text_supersample_cold_performance_gate(performance_inputs: _Inputs
 
 
 @pytest.mark.performance
-def test_performance_registry_includes_representative_generator_cases() -> None:
-    """v1-generator acceptance 15 and 19: performance covers one FHD case for each deterministic generator."""
-    assert {case.target for case in _GENERATOR_CASES} == {
-        "ramp",
-        "grid",
-        "checkerboard",
-        "color_bars",
-    }
-    assert all(case.transferred_bytes == _FHD_FP32_RGB_BYTES for case in _GENERATOR_CASES)
-
-
-@pytest.mark.performance
-def test_performance_registry_includes_representative_noise_cases() -> None:
-    """v1-noise acceptance 13: performance registry covers each GPU per-pixel noise generator."""
-    assert {case.target for case in _NOISE_CASES} == {
-        "fractal_noise",
-        "turbulent_noise",
-        "grain",
-    }
-    assert [case.transferred_bytes for case in _NOISE_CASES] == [
-        _FHD_FP32_Y_BYTES,
-        _FHD_FP32_Y_BYTES,
-        _FHD_FP32_RGB_BYTES,
-    ]
-
-
-@pytest.mark.performance
 def test_performance_warmup_runs_until_minimum_elapsed_time() -> None:
-    """v1-performance acceptance 2: warmup continues through synchronized iterations for at least 0.5 seconds."""
+    """Performance warmup runs synchronized iterations for at least half a second."""
     timer_values = iter((0.0, 0.2, 0.4, 0.6))
     operation_calls: list[None] = []
     synchronize_calls: list[None] = []
@@ -4013,7 +3078,7 @@ def test_performance_warmup_runs_until_minimum_elapsed_time() -> None:
 
 @pytest.mark.performance
 def test_performance_measurement_runs_until_minimum_frame_count() -> None:
-    """v1-performance acceptance 3: measurement does not stop before the minimum frame count."""
+    """Performance measurement processes the minimum frame count before stopping."""
     timer_values = iter((0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08))
 
     durations_ms = _measure_durations_ms(
@@ -4029,7 +3094,7 @@ def test_performance_measurement_runs_until_minimum_frame_count() -> None:
 
 @pytest.mark.performance
 def test_performance_measurement_runs_until_minimum_elapsed_time() -> None:
-    """v1-performance acceptance 3: measurement continues after 1000 frames until the minimum duration is met."""
+    """Performance measurement continues beyond one thousand frames until the minimum duration is met."""
     timer_values = iter((0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06))
 
     durations_ms = _measure_durations_ms(
@@ -4045,7 +3110,9 @@ def test_performance_measurement_runs_until_minimum_elapsed_time() -> None:
 
 @pytest.mark.performance
 def test_performance_metrics_include_linear_percentiles_and_median_fps() -> None:
-    """v1-performance acceptance 3-4: metrics report linear p5/p95 and median-derived fps."""
+    """Performance metrics include linearly interpolated fifth and ninety-fifth percentiles and FPS derived from the
+    median.
+    """
     metrics = _performance_metrics([1.0, 2.0, 3.0, 4.0, 5.0])
 
     assert metrics.mean_ms == pytest.approx(3.0)
@@ -4072,9 +3139,10 @@ def lut_shaper_timings(performance_inputs: _Inputs) -> dict[str, list[float]]:
     return timings
 
 
+@pytest.mark.req("REQ-PIX-021")
 @pytest.mark.performance
 def test_lut_shaper_same_run_median_ratio(lut_shaper_timings: dict[str, list[float]]) -> None:
-    """v1-lut-shaper acceptance 12: the added shared linear lookup has a 25% median duration budget."""
+    """The LUT shaper keeps its same-run median duration increase within the 25 percent budget."""
     baked, shaped = (median(lut_shaper_timings[case.case_id]) for case in _LUT_SHAPER_CASES)
     assert shaped / baked <= 1.25, f"shaper/baked={shaped / baked:.6f}; shaped={shaped:.6f} ms; baked={baked:.6f} ms"
 
@@ -4087,7 +3155,7 @@ def test_fhd_steady_state_performance_report(
     performance_results: list[tuple[str, str, float, float, float, float, float, float]],
     request: pytest.FixtureRequest,
 ) -> None:
-    """REQ-TEST-010; v1-lut-shaper acceptance 12: report FHD timing and dispersion after excluded warmup."""
+    """The FHD performance report records duration and dispersion after warmup is excluded."""
     operation = case.bind(performance_inputs)
     synchronize = cp.cuda.Device().synchronize
 

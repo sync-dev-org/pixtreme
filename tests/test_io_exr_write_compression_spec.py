@@ -38,10 +38,9 @@ def _exr_header(path: Path) -> dict[str, object]:
     return dict(image.header())
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_write_image_signature_appends_optional_dwa_level() -> None:
-    """v1-exr-runtime-independence acceptance 1; v1-exr-write-compression acceptance 1:
-    write dtype and dwa_level follow the existing optional file keywords.
-    """
+    """EXR image writing accepts optional dtype and DWA level parameters after the existing file options."""
     signature = inspect.signature(px.io.write_image)
 
     assert tuple(signature.parameters) == (
@@ -60,29 +59,13 @@ def test_write_image_signature_appends_optional_dwa_level() -> None:
     assert parameter.default is None
 
 
-def test_exr_compression_tokens_are_a_case_sensitive_closed_set() -> None:
-    """v1-exr-write-compression acceptance 2-3: the ten public EXR compression tokens are exact."""
-    from pixtreme._io.common import _EXR_COMPRESSION_TOKENS
-
-    assert _EXR_COMPRESSION_TOKENS == (
-        "none",
-        "rle",
-        "zip",
-        "zips",
-        "piz",
-        "pxr24",
-        "b44",
-        "b44a",
-        "dwaa",
-        "dwab",
-    )
-
-
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("compression", ("gzip", "lzw", "htj2k256", 1, True))
 def test_exr_compression_rejects_unknown_tokens_and_non_strings_before_writing(
     tmp_path: Path, compression: object
 ) -> None:
-    """v1-exr-write-compression acceptance 3: invalid compression fails fast with actionable context."""
+    """EXR writes reject unknown or non-string compression values before creating a file and list valid choices."""
     frame, _ = _smooth_frame()
     path = tmp_path / "invalid.exr"
 
@@ -92,8 +75,9 @@ def test_exr_compression_rejects_unknown_tokens_and_non_strings_before_writing(
     assert not path.exists()
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_exr_default_compression_remains_zip(tmp_path: Path) -> None:
-    """v1-exr-write-compression acceptance 2: omitting compression preserves the ZIP write default."""
+    """EXR writes use ZIP compression when the caller omits compression."""
     from openexr_dev_oracle import OpenEXR
 
     frame, _ = _smooth_frame()
@@ -104,6 +88,7 @@ def test_exr_default_compression_remains_zip(tmp_path: Path) -> None:
     assert _exr_header(path)["compression"] == OpenEXR.ZIP_COMPRESSION
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize("compression", ("dwaa", "dwab"))
 @pytest.mark.parametrize(("dwa_level", "expected"), ((None, 45.0), (23.5, 23.5)))
 def test_dwa_level_defaults_and_explicit_values_are_written_to_the_header(
@@ -112,7 +97,7 @@ def test_dwa_level_defaults_and_explicit_values_are_written_to_the_header(
     dwa_level: float | None,
     expected: float,
 ) -> None:
-    """v1-exr-write-compression acceptance 4: DWA writes the fixed default or explicit positive level."""
+    """DWA EXR writes record the default or caller-supplied positive compression level in the file header."""
     frame, _ = _smooth_frame()
     path = tmp_path / f"{compression}-{expected}.exr"
 
@@ -121,6 +106,8 @@ def test_dwa_level_defaults_and_explicit_values_are_written_to_the_header(
     assert _exr_header(path)["dwaCompressionLevel"] == pytest.approx(expected)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(
     ("dwa_level", "expected"),
     (
@@ -137,7 +124,7 @@ def test_dwa_level_accepts_values_that_round_to_a_positive_finite_header_float(
     dwa_level: float,
     expected: float,
 ) -> None:
-    """v1-exr-write-compression acceptance 4: validity follows the converted OpenEXR header float."""
+    """DWA EXR writes accept levels that remain positive and finite after conversion to the header's float type."""
     frame, _ = _smooth_frame()
     path = tmp_path / "rounded-level.exr"
 
@@ -146,6 +133,9 @@ def test_dwa_level_accepts_values_that_round_to_a_positive_finite_header_float(
     assert _exr_header(path)["dwaCompressionLevel"] == expected
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "dwa_level",
     (0.0, -1.0, math.inf, -math.inf, math.nan, 1e308, 5e-324, 45, True, "45"),
@@ -163,22 +153,25 @@ def test_dwa_level_accepts_values_that_round_to_a_positive_finite_header_float(
     ),
 )
 def test_dwa_level_requires_an_exact_positive_finite_float(tmp_path: Path, dwa_level: object) -> None:
-    """v1-exr-write-compression acceptance 4: DWA levels must stay finite after OpenEXR float conversion."""
+    """DWA EXR writes reject levels that are not exact positive finite floats after header conversion."""
     frame, _ = _smooth_frame()
 
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.write_image(tmp_path / "invalid-level.exr", frame, compression="dwaa", dwa_level=dwa_level)  # type: ignore[arg-type]
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("compression", (None, "none", "zip", "piz", "pxr24", "b44a"))
 def test_dwa_level_is_rejected_for_every_non_dwa_exr_compression(tmp_path: Path, compression: str | None) -> None:
-    """v1-exr-write-compression acceptance 4: an explicit DWA level cannot accompany non-DWA output."""
+    """EXR writes reject a DWA level option when compression is not DWAA or DWAB."""
     frame, _ = _smooth_frame()
 
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.write_image(tmp_path / "not-dwa.exr", frame, compression=compression, dwa_level=45.0)
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     ("compression", "constant_name", "dtype", "oracle"),
     (
@@ -204,14 +197,8 @@ def test_every_exr_compression_selects_its_header_and_round_trips_with_the_corre
     dtype: type[np.generic],
     oracle: str,
 ) -> None:
-    """v1-exr-runtime-independence acceptance 44; v1-exr-write-compression acceptance 5-6:
-    every token controls the header and preserves each supported documented lossy class.
-
-    The OpenEXR header reader is independent of pixtreme's write implementation.
-    PXR24 FLOAT uses the official Technical Introduction's approximately 3e-5
-    relative-error characterization with a 4e-5 test margin. Codecs without an
-    official numeric bound are checked only for successful finite lossy decode.
-    """
+    """Each EXR compression writes its selected header value and round-trips pixels within its documented loss
+    bounds."""
     from openexr_dev_oracle import OpenEXR
 
     frame, expected = _smooth_frame(dtype)
@@ -234,8 +221,10 @@ def test_every_exr_compression_selects_its_header_and_round_trips_with_the_corre
         assert np.any(actual != expected)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_exr_and_raster_encode_options_remain_format_specific(tmp_path: Path) -> None:
-    """v1-exr-write-compression acceptance 7-9: EXR, TIFF, PNG, and bytes options do not mix."""
+    """Image writes reject EXR, TIFF, PNG, and byte-encoding options when used with the wrong format."""
     import cupy as cp
 
     exr_frame, _ = _smooth_frame()

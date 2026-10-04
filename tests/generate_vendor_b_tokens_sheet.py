@@ -1,4 +1,4 @@
-"""Generate deterministic visual-acceptance sheets for the vendor-B token group."""
+"""Generate deterministic comparison sheets for visual inspection of the vendor-B token group."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ _CURVE_COLORS = ((72, 207, 205), (247, 197, 72), (175, 126, 242), (244, 116, 146
 
 @dataclass(frozen=True)
 class _Curve:
-    gamma: str
+    gamma: px.core.Gamma
     encode_cut: float
     decode_cut: float
     encode_window: float
@@ -39,7 +39,9 @@ _CURVES = (
 )
 
 
-def _frame(values: np.ndarray, *, colorspace: str = "ACEScg", gamma: str = "linear") -> px.core.Frame:
+def _frame(
+    values: np.ndarray, *, colorspace: px.core.Colorspace = "ACEScg", gamma: px.core.Gamma = "linear"
+) -> px.core.Frame:
     array = np.asarray(values, dtype=np.float32)
     if array.ndim == 1:
         array = np.repeat(array[:, None], 3, axis=1)[None]
@@ -48,17 +50,17 @@ def _frame(values: np.ndarray, *, colorspace: str = "ACEScg", gamma: str = "line
     return px.io.from_array(cp.asarray(array), colorspace=colorspace, gamma=gamma, channels="RGB")
 
 
-def _gpu_encode(values: np.ndarray, gamma: str) -> np.ndarray:
+def _gpu_encode(values: np.ndarray, gamma: px.core.Gamma) -> np.ndarray:
     result = px.color.linear_to_gamma(_frame(values), gamma=gamma)
-    return px.io.to_array(result).get()[0, :, 0]
+    return np.asarray(px.io.to_array(result).get()[0, :, 0], dtype=np.float32)
 
 
-def _gpu_decode(values: np.ndarray, gamma: str) -> np.ndarray:
+def _gpu_decode(values: np.ndarray, gamma: px.core.Gamma) -> np.ndarray:
     result = px.color.gamma_to_linear(_frame(values, gamma=gamma), gamma=gamma)
-    return px.io.to_array(result).get()[0, :, 0]
+    return np.asarray(px.io.to_array(result).get()[0, :, 0], dtype=np.float32)
 
 
-def _encode(values: np.ndarray, gamma: str, *, printed: bool = False) -> np.ndarray:
+def _encode(values: np.ndarray, gamma: px.core.Gamma, *, printed: bool = False) -> np.ndarray:
     source = np.asarray(values, dtype=np.float64)
     result = np.empty_like(source)
     if gamma == "N-Log":
@@ -87,7 +89,7 @@ def _encode(values: np.ndarray, gamma: str, *, printed: bool = False) -> np.ndar
     return result
 
 
-def _decode(values: np.ndarray, gamma: str, *, printed: bool = False) -> np.ndarray:
+def _decode(values: np.ndarray, gamma: px.core.Gamma, *, printed: bool = False) -> np.ndarray:
     source = np.asarray(values, dtype=np.float64)
     result = np.empty_like(source)
     if gamma == "N-Log":
@@ -355,7 +357,7 @@ def _composite_sheet() -> Image.Image:
         (1.35 * np.broadcast_to(x, (height, width)) - 0.1, np.broadcast_to(y, (height, width)), 1.3 - x - 0.45 * y),
         axis=-1,
     )
-    cases = (
+    cases: tuple[tuple[px.core.Colorspace, px.core.Gamma], ...] = (
         ("Rec.2020", "N-Log"),
         ("Rec.2020", "L-Log"),
         ("Rec.2020", "Apple-Log"),

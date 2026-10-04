@@ -1,4 +1,4 @@
-"""Generate the manual visual-acceptance sheet for v1-white-point-simulation."""
+"""Generate a comparison sheet for visual inspection of white point simulation."""
 
 from __future__ import annotations
 

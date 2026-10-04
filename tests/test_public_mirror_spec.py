@@ -87,15 +87,19 @@ def _make_repository(tmp_path: Path, *, public_has_main: bool) -> _RepositoryFix
         "README.md": b"# public surface\n",
         "src/pixtreme/data.bin": b"\x00public\xffblob\n",
         "bin/pixtreme-tool": b"#!/bin/sh\nexit 0\n",
-        "docs_site/tokens.md": b"# Public tokens\n",
+        "docs/tokens.md": b"# Public tokens\n",
         "docs-notes.txt": b"not the docs directory\n",
         ".nfo/visible.txt": b"not the .nf directory\n",
+        ".githubx/visible.txt": b"not the .github directory\n",
         "AGENTS.md.bak": b"not the excluded root file\n",
         "toolshed.txt": b"not the tools directory\n",
     }
     excluded_contents = {
-        "docs/requirements.md": b"private canon\n",
+        ".nf/docs/legacy/requirements.md": b"private canon\n",
+        ".nf/docs/legacy/features/v1-example.md": b"private feature\n",
         ".nf/issues/I-1.md": b"private runtime ledger\n",
+        ".github/ISSUE_TEMPLATE/task.md": b"private issue template\n",
+        ".github/workflows/dev.yml": b"private development workflow\n",
         "AGENTS.md": b"private agent instructions\n",
         "CLAUDE.md": b"private engine instructions\n",
         "tools/internal.py": b"private release tooling\n",
@@ -143,7 +147,7 @@ def repository(tmp_path: Path) -> _RepositoryFixture:
 
 
 def test_dry_run_manifest_is_deterministic_and_remote_is_unchanged(repository: _RepositoryFixture) -> None:
-    """v1-public-mirror acceptance 1-3 and 7: default HEAD dry-run is stable and has no remote write."""
+    """A default HEAD dry run reports a stable manifest without changing remote refs."""
     assert repository.public_tip is not None
     refs_before = _git(repository.public, "show-ref")
 
@@ -154,8 +158,9 @@ def test_dry_run_manifest_is_deterministic_and_remote_is_unchanged(repository: _
     assert "mode: dry-run" in first.stdout
     assert f"source-commit: {repository.source_sha}" in first.stdout
     assert f"manifest-count: {len(repository.included)}" in first.stdout
-    assert "excluded docs/: 1" in first.stdout
-    assert "excluded .nf/: 1" in first.stdout
+    assert "excluded docs/:" not in first.stdout
+    assert "excluded .nf/: 3" in first.stdout
+    assert "excluded .github/: 2" in first.stdout
     assert "excluded AGENTS.md: 1" in first.stdout
     assert "excluded CLAUDE.md: 1" in first.stdout
     assert "excluded tools/: 1" in first.stdout
@@ -164,7 +169,7 @@ def test_dry_run_manifest_is_deterministic_and_remote_is_unchanged(repository: _
 
 
 def test_push_uses_the_selected_ref_and_preserves_the_public_blobs(repository: _RepositoryFixture) -> None:
-    """v1-public-mirror acceptance 1 and 3-5 and 7: push mirrors only the selected ref onto public main."""
+    """Push snapshots the selected ref onto public main with only included source blobs."""
     assert repository.public_tip is not None
     _write(repository.dev, "late.txt", b"must not enter the selected snapshot\n")
     _git(repository.dev, "add", "late.txt")
@@ -193,7 +198,7 @@ def test_push_uses_the_selected_ref_and_preserves_the_public_blobs(repository: _
 def test_push_uses_the_remote_pushurl_without_mutating_the_fetch_endpoint(
     repository: _RepositoryFixture, tmp_path: Path
 ) -> None:
-    """v1-public-mirror acceptance 3: push writes to pushurl while leaving the fetch endpoint unchanged."""
+    """Push writes to the configured push URL without changing the fetch endpoint."""
     assert repository.public_tip is not None
     push_endpoint = tmp_path / "push.git"
     _init_repository(push_endpoint, bare=True)
@@ -213,7 +218,7 @@ def test_push_uses_the_remote_pushurl_without_mutating_the_fetch_endpoint(
 def test_push_resolves_a_relative_local_remote_from_the_development_repository(
     repository: _RepositoryFixture,
 ) -> None:
-    """v1-public-mirror acceptance 3: push preserves repository-relative local remote semantics."""
+    """Push resolves a relative local remote from the development repository."""
     assert repository.public_tip is not None
     _git(repository.dev, "remote", "set-url", "public", "../public.git")
 
@@ -228,7 +233,7 @@ def test_push_resolves_a_relative_local_remote_from_the_development_repository(
 
 
 def test_init_push_creates_a_root_snapshot(tmp_path: Path) -> None:
-    """v1-public-mirror acceptance 5: --init can create public main with a parentless snapshot."""
+    """An initial push creates public main as a snapshot without a parent commit."""
     repository = _make_repository(tmp_path, public_has_main=False)
 
     _run_script(repository.dev, "--push", "--init")
@@ -238,7 +243,7 @@ def test_init_push_creates_a_root_snapshot(tmp_path: Path) -> None:
 
 
 def test_tag_pushes_an_annotated_release_tag(repository: _RepositoryFixture) -> None:
-    """v1-public-mirror acceptance 6-7: --tag publishes an annotated tag and release message."""
+    """A tagged push publishes an annotated tag and release commit message."""
     tag = "v9.9.9"
     remote = "mirror"
     _git(repository.dev, "remote", "add", remote, str(repository.public))
@@ -253,7 +258,7 @@ def test_tag_pushes_an_annotated_release_tag(repository: _RepositoryFixture) -> 
 
 
 def test_script_imports_only_python_standard_library_modules() -> None:
-    """v1-public-mirror acceptance 8; GitHub #29: the script has a stdlib-only structural contract."""
+    """The mirror script imports only Python standard library modules."""
     script = require_repo_file("tools/mirror_public.py")
     tree = ast.parse(script.read_text(encoding="utf-8"), filename=str(script))
     imported: set[str] = set()

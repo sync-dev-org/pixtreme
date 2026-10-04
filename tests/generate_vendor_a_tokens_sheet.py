@@ -1,4 +1,4 @@
-"""Generate deterministic visual-acceptance sheets for the vendor-A token group."""
+"""Generate deterministic comparison sheets for visual inspection of the vendor-A token group."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ _CURVE_COLORS = ((72, 207, 205), (247, 197, 72), (175, 126, 242))
 
 @dataclass(frozen=True)
 class _Curve:
-    gamma: str
+    gamma: px.core.Gamma
     a: float
     b: float
     c: float
@@ -80,7 +80,9 @@ _CURVES = (
 )
 
 
-def _frame(values: np.ndarray, *, colorspace: str = "ACEScg", gamma: str = "linear") -> px.core.Frame:
+def _frame(
+    values: np.ndarray, *, colorspace: px.core.Colorspace = "ACEScg", gamma: px.core.Gamma = "linear"
+) -> px.core.Frame:
     array = np.asarray(values, dtype=np.float32)
     if array.ndim == 1:
         array = np.repeat(array[:, None], 3, axis=1)[None]
@@ -89,14 +91,14 @@ def _frame(values: np.ndarray, *, colorspace: str = "ACEScg", gamma: str = "line
     return px.io.from_array(cp.asarray(array), colorspace=colorspace, gamma=gamma, channels="RGB")
 
 
-def _gpu_encode(values: np.ndarray, gamma: str) -> np.ndarray:
+def _gpu_encode(values: np.ndarray, gamma: px.core.Gamma) -> np.ndarray:
     result = px.color.linear_to_gamma(_frame(values), gamma=gamma)
-    return px.io.to_array(result).get()[0, :, 0]
+    return np.asarray(px.io.to_array(result).get()[0, :, 0], dtype=np.float32)
 
 
-def _gpu_decode(values: np.ndarray, gamma: str) -> np.ndarray:
+def _gpu_decode(values: np.ndarray, gamma: px.core.Gamma) -> np.ndarray:
     result = px.color.gamma_to_linear(_frame(values, gamma=gamma), gamma=gamma)
-    return px.io.to_array(result).get()[0, :, 0]
+    return np.asarray(px.io.to_array(result).get()[0, :, 0], dtype=np.float32)
 
 
 def _encode(values: np.ndarray, curve: _Curve, *, printed: bool = False) -> np.ndarray:
@@ -346,7 +348,7 @@ def _gamut_sheet() -> Image.Image:
     source = np.stack(
         (np.broadcast_to(x, (height, width)), np.broadcast_to(y, (height, width)), 1.2 - 0.8 * x - 0.5 * y), axis=-1
     )
-    definitions = (
+    definitions: tuple[tuple[px.core.Colorspace, tuple[tuple[float, float], ...], tuple[float, float, float]], ...] = (
         (
             "D-Gamut",
             ((0.71, 0.31), (0.21, 0.88), (0.09, -0.08)),

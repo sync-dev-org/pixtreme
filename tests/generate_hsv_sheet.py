@@ -1,4 +1,4 @@
-"""Generate the manual visual-acceptance sheet for v1-hsv."""
+"""Generate a comparison sheet for visual inspection of hsv."""
 
 from __future__ import annotations
 

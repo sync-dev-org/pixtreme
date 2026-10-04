@@ -50,7 +50,7 @@ def _assert_z_contract(
     gamma: np.ndarray | float,
     gain: np.ndarray | float,
 ) -> None:
-    """Apply the v1-grade fp64 inverse-power oracle without production helpers."""
+    """Apply an independent float64 inverse-power grading reference."""
     x64 = np.asarray(source, dtype=np.float32).astype(np.float64)
     lift64 = np.asarray(lift, dtype=np.float32).astype(np.float64)
     gamma64 = np.asarray(gamma, dtype=np.float32).astype(np.float64)
@@ -76,8 +76,9 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError]) -> None:
     assert message.index("why=") < message.index("; what=") < message.index("; how=")
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_neutral_grade_bit_preserves_every_channel_in_a_private_copy() -> None:
-    """v1-grade acceptance 2: neutral resolution preserves all fp32 bits in new private storage."""
+    """Neutral grading returns a separate Frame with every float32 channel bit unchanged."""
     import cupy as cp
 
     bits = np.asarray(
@@ -103,8 +104,9 @@ def test_neutral_grade_bit_preserves_every_channel_in_a_private_copy() -> None:
     np.testing.assert_array_equal(_host(output).view(np.uint32), bits.reshape(1, 1, -1))
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_nuke_default_reduction_matches_the_independent_fp64_oracle() -> None:
-    """v1-grade acceptance 3: the Nuke-default reduction matches within the fixed z-space contract."""
+    """Default Lift/Gamma/Gain grading matches an independent float64 Nuke-style reference."""
     values = np.asarray((0.0, 0.03125, 0.19, 0.53, 0.77, 1.0), dtype=np.float32).reshape(1, 2, 3)
     lift = np.float32(0.08)
     gamma = np.float32(0.73)
@@ -120,8 +122,12 @@ def test_nuke_default_reduction_matches_the_independent_fp64_oracle() -> None:
     _assert_z_contract(actual, values, lift=lift, gamma=gamma, gain=gain)
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("REQ-PIX-103")
 def test_scene_extended_values_use_signed_pure_power_without_clipping() -> None:
-    """v1-grade acceptance 4: negative, overshoot, extrema, cancellation, and signed zero use pure power."""
+    """Grading applies signed pure-power curves to negative, overshoot, extreme, and signed-zero scene values without
+    clipping."""
     values = np.asarray(
         (-4.0, -1.25, -0.0, 0.0, 0.125, 0.99999994, 1.0000001, 2.5, 4.0),
         dtype=np.float32,
@@ -164,8 +170,9 @@ def test_scene_extended_values_use_signed_pure_power_without_clipping() -> None:
         )
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_cdl_and_classic_lgg_parameterizations_match_their_independent_cores() -> None:
-    """v1-grade acceptance 5: CDL full/valid subsets and classic LGG match only their stated affine-power cores."""
+    """CDL and classic Lift/Gamma/Gain options match their independent affine-power reference equations."""
     values = np.asarray((-3.0, -0.5, 0.0, 0.2, 1.0, 2.75), dtype=np.float32).reshape(1, 2, 3)
     lift = np.float32(-0.2)
     gamma = np.float32(1.3)
@@ -223,8 +230,9 @@ def test_cdl_and_classic_lgg_parameterizations_match_their_independent_cores() -
     )
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_mapping_resolves_duplicate_labels_and_bit_preserves_unspecified_channels() -> None:
-    """v1-grade acceptance 6 and 9: mappings affect every exact duplicate label and preserve all unspecified bits."""
+    """Mapped grading changes every channel with the named label and preserves unspecified channel bits."""
     import cupy as cp
 
     values = np.asarray(
@@ -259,8 +267,9 @@ def test_mapping_resolves_duplicate_labels_and_bit_preserves_unspecified_channel
     assert (source.colorspace, source.gamma, source.channels, source.matrix) == metadata
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_scalar_broadcast_and_mixed_mappings_ignore_channel_semantics() -> None:
-    """v1-grade acceptance 7: scalar broadcast and independent mappings include every named and custom channel."""
+    """Scalar and mapped grading parameters apply to every named or custom channel as requested."""
     labels = ("R", "G", "B", "A", "Z", "Cb", "Cr", "H", "application.depth")
     values = np.asarray((-1.0, -0.5, -0.0, 0.0, 0.25, 0.8, 1.0, 1.5, 3.0), dtype=np.float32).reshape(1, 1, -1)
     actual = _host(
@@ -277,6 +286,8 @@ def test_scalar_broadcast_and_mixed_mappings_ignore_channel_semantics() -> None:
     _assert_z_contract(actual, values, lift=0.1, gamma=gammas, gain=0.8)
 
 
+@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "kwargs",
     (
@@ -308,7 +319,7 @@ def test_invalid_parameters_fail_actionably_before_pixel_processing(
     monkeypatch: pytest.MonkeyPatch,
     kwargs: dict[str, object],
 ) -> None:
-    """v1-grade acceptance 8: invalid scalar, mapping, key, fp32 overflow, and gamma underflow fail first."""
+    """Grading rejects invalid scalars, mappings, overflow, and underflow before pixel processing with guidance."""
     import pixtreme._color.grade as implementation
 
     source = _frame((0.2, 0.3, 0.4))
@@ -322,9 +333,11 @@ def test_invalid_parameters_fail_actionably_before_pixel_processing(
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("invalid_frame", (object(), pytest.param("float16", id="float16")))
 def test_invalid_frame_contract_fails_actionably(invalid_frame: object) -> None:
-    """v1-grade acceptance 8: grade accepts only metadata-bearing float32 Frames with a cast recovery path."""
+    """Grading rejects non-Frame and non-float32 inputs and explains how to supply a valid Frame."""
     is_float16 = invalid_frame == "float16"
     if is_float16:
         invalid_frame = _frame((0.2, 0.3, 0.4), dtype=np.float16)
@@ -336,8 +349,10 @@ def test_invalid_frame_contract_fails_actionably(invalid_frame: object) -> None:
         assert "px.values.cast_dtype" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("REQ-PIX-017")
 def test_backend_failure_is_translated_with_its_cause(monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-grade acceptance 8: a backend launch failure retains its cause behind an actionable public error."""
+    """Grading reports a GPU launch failure through a corrective public error that retains its cause."""
     import pixtreme._color.grade as implementation
 
     def failed_kernel() -> object:
@@ -350,8 +365,10 @@ def test_backend_failure_is_translated_with_its_cause(monkeypatch: pytest.Monkey
     assert isinstance(error.value.__cause__, RuntimeError)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-020")
 def test_frame_gamma_metadata_does_not_change_the_curve_and_is_preserved() -> None:
-    """v1-grade acceptance 9-10: frame.gamma is neither interpreted nor changed by the grade curve."""
+    """Grading preserves the Frame's gamma information without changing the grade curve it applies."""
     values = np.asarray((-0.5, 0.18, 1.5), dtype=np.float32)
     linear = _frame(values, gamma="linear")
     encoded_claim = _frame(values, gamma="sRGB")

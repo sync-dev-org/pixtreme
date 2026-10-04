@@ -304,16 +304,14 @@ def _adjacent_float32(center: np.float32, radius: int = 3000) -> np.ndarray:
     return np.concatenate((below, np.asarray((center,), dtype=np.float32), above))
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_standard_tokens_extend_only_the_canonical_vocabulary_and_public_surfaces() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-standard-tokens acceptance 117-119 and 134;
-    v1-vendor-a-tokens acceptance 140-142;
-    v1-vendor-b-tokens acceptance 166-168; v1-io-icc acceptance 1:
-    expose and normalize only current canonical tokens.
-    """
+    """Standard color and transfer tokens appear in the canonical vocabulary and public annotations."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 199
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 200
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -362,8 +360,11 @@ def test_standard_tokens_extend_only_the_canonical_vocabulary_and_public_surface
     assert "colorspace='P3-D65'" in repr(frame) and "gamma='ACEScc'" in repr(frame)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_gamma_25_matches_the_signed_power_oracle_and_rejects_neighbor_exponents() -> None:
-    """v1-standard-tokens acceptance 120: evaluate the exact sign-preserving 2.5 power pair."""
+    """Gamma-2.5 applies the exact sign-preserving power pair to scene values."""
     values = np.asarray((-4.0, -1.0, -0.18, 0.0, 0.18, 1.0, 4.0), dtype=np.float32)
     encoded = _rgb_values(px.color.linear_to_gamma(_frame(values), gamma="Gamma-2.5"))[:, 0]
     expected = np.copysign(np.abs(values.astype(np.float64)) ** 0.4, values)
@@ -388,8 +389,9 @@ def test_gamma_25_matches_the_signed_power_oracle_and_rejects_neighbor_exponents
     np.testing.assert_allclose(reencoded, encoded_values, rtol=2e-6, atol=2e-7)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_acescc_encode_matches_independent_branches_anchors_and_monotonicity() -> None:
-    """v1-standard-tokens acceptance 121: preserve ACEScc encode branches, cuts, anchors, and collapse."""
+    """ACEScc encoding follows its branches, cuts, anchors, and low-end collapse monotonically."""
     anchors = np.asarray((0.0, 2.0**-15, 0.0078125, 0.18, 1.0, 65504.0), dtype=np.float32)
     broad = np.concatenate(
         (
@@ -408,8 +410,11 @@ def test_acescc_encode_matches_independent_branches_anchors_and_monotonicity() -
         assert np.all(np.diff(encoded) >= 0.0)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_acescc_decode_is_unclipped_and_round_trips_only_its_injective_domain() -> None:
-    """v1-standard-tokens acceptance 122-123: decode ACEScc analytically without upper clip."""
+    """ACEScc decoding preserves above-one values and round trips its one-to-one input domain."""
     values = np.linspace(-0.5, 1.5, 200001, dtype=np.float64).astype(np.float32)
     actual = _rgb_values(px.color.gamma_to_linear(_frame(values, gamma="ACEScc"), gamma="ACEScc"))[:, 0]
     expected = _acescc_decode(values)
@@ -434,8 +439,9 @@ def test_acescc_decode_is_unclipped_and_round_trips_only_its_injective_domain() 
     np.testing.assert_allclose(_rgb_values(reencoded)[:, 0], encoded_domain, rtol=2e-6, atol=2e-7)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_acescct_matches_public_branches_cut_residual_and_round_trip() -> None:
-    """v1-standard-tokens acceptance 124-125: evaluate ACEScct with its published decimal cuts."""
+    """ACEScct follows its public branch equations and round trips values through the published cut."""
     anchors = np.asarray((0.0, 2.0**-15, 0.0078125, 0.18, 1.0, 65504.0), dtype=np.float32)
     linear_values = np.concatenate(
         (
@@ -502,9 +508,10 @@ def test_acescct_matches_public_branches_cut_residual_and_round_trip() -> None:
     np.testing.assert_allclose(reencoded, encoded_domain[representable], rtol=2e-6, atol=2e-7)
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize("gamma", ("Gamma-2.5", "ACEScc", "ACEScct"))
 def test_new_transfers_match_standalone_and_fused_paths(gamma: str) -> None:
-    """v1-standard-tokens acceptance 126: keep standalone and fused transfer evaluation identical."""
+    """Standard transfer tokens produce matching pixels through standalone and fused color paths."""
     values = np.asarray(((-0.25, 0.18, 1.5), (0.01, -0.1, 2.0)), dtype=np.float32)
     source = _frame(values, colorspace="P3-D65", auxiliary=True)
     before = source.data.copy()
@@ -521,12 +528,12 @@ def test_new_transfers_match_standalone_and_fused_paths(gamma: str) -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_standard_gamut_definitions_matrices_native_rows_and_adaptation_are_independent() -> None:
-    """v1-standard-tokens acceptance 127-130: derive P3 and SMPTE-C matrices and Bradford conversion from xy."""
+    """P3 and SMPTE-C gamut matrices, native luma rows, and white-point adaptation match independent
+    calculations."""
     from pixtreme._core.colorspace import _COLORSPACE_DEFINITIONS
-    from pixtreme._core.vocabulary import ReferenceWhite
 
-    assert "DCI" not in get_args(ReferenceWhite)
     samples = np.asarray(((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0), (-0.25, 0.18, 1.5)), np.float32)
     for token, definition in _DEFINITIONS.items():
         assert _COLORSPACE_DEFINITIONS[token] == definition
@@ -559,8 +566,10 @@ def test_standard_gamut_definitions_matrices_native_rows_and_adaptation_are_inde
     )
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_representative_frames_compose_independent_transfer_and_gamut_oracles() -> None:
-    """v1-standard-tokens acceptance 131: compose every new metadata token without coupling axes."""
+    """Standard color Frames compose transfer and gamut conversion with independent token choices."""
     encoded = np.asarray(((-0.25, 0.18, 1.5), (0.01, -0.1, 2.0)), dtype=np.float32)
     cases = (
         ("P3-DCI", "Gamma-2.5"),
@@ -593,8 +602,9 @@ def test_representative_frames_compose_independent_transfer_and_gamut_oracles() 
         assert cp.array_equal(source.data, before)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_existing_token_bits_remain_at_the_pre_standard_baseline() -> None:
-    """v1-standard-tokens acceptance 132: preserve every existing transfer and gamut fixture bit."""
+    """Other supported color tokens retain their exact transfer and gamut pixel values."""
     # Provenance: captured from complete pre-standard-token commit
     # 675c5b235b9b4155b42a58bbde8a07ea4d97feb4. Reproduce at that exact SHA with a float32 grid
     # (-0.25, -0.018056996166706085, 0, 0.18000000715255737, 1, 1.5), encode each Gamma,
@@ -733,8 +743,9 @@ def test_existing_token_bits_remain_at_the_pre_standard_baseline() -> None:
         )
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_standard_transfer_dpx_codes_preserve_existing_mapping(tmp_path: Path) -> None:
-    """v1-standard-tokens acceptance 133: classify ACES curves as log and Gamma-2.5 as video."""
+    """DPX writing labels ACES transfers as logarithmic and Gamma-2.5 as video without changing other mappings."""
     from pixtreme._io.formats.dpx import _dpx_transfer_from_gamma
 
     expected = {

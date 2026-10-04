@@ -223,8 +223,9 @@ def _build_tiled_fixture(
     )
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_multipart_parts_own_chunks_deep_state_and_sampling_geometry(tmp_path: Path) -> None:
-    """v1-exr-runtime-independence acceptance 22, 25, and 29: part and lattice ownership is explicit."""
+    """EXR container parsing assigns chunks, deep state, and channel sampling geometry to the correct part."""
     fixture = _build_multipart_sampling_deep_fixture()
     path = tmp_path / "multipart-sampling-deep.exr"
     path.write_bytes(fixture.payload)
@@ -262,6 +263,8 @@ def test_multipart_parts_own_chunks_deep_state_and_sampling_geometry(tmp_path: P
     assert tuple((part.name, part.deep) for part in header.parts) == (("flat", False), ("deep", True))
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("missing", "name", "image_type", "chunk_count"),
     (
@@ -279,7 +282,8 @@ def test_multipart_or_non_image_required_attributes_are_not_defaulted(
     chunk_count: int | None,
     version_flags: int,
 ) -> None:
-    """v1-exr-runtime-independence acceptance 22, 25, and 42: extended layout is explicit."""
+    """Multipart and non-image EXR headers must state the attributes required by their layout instead of receiving
+    defaults."""
     first = _part_attributes(
         data_window=(0, 0, 0, 0),
         name=name,
@@ -305,6 +309,7 @@ def test_multipart_or_non_image_required_attributes_are_not_defaulted(
     _assert_actionable_identity(caught.value, "part=0", f"attribute={missing!r}")
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     ("version_flags", "image_type", "tiles"),
     (
@@ -321,7 +326,7 @@ def test_part_type_and_version_flags_must_describe_the_same_layout(
     image_type: str,
     tiles: tuple[int, int, int, int] | None,
 ) -> None:
-    """v1-exr-runtime-independence acceptance 25 and 42: flags and part type cannot contradict."""
+    """EXR parsing rejects headers whose part types contradict the version flags."""
     first = _part_attributes(
         data_window=(0, 0, 0, 0),
         name="left",
@@ -350,6 +355,8 @@ def test_part_type_and_version_flags_must_describe_the_same_layout(
     _assert_actionable_identity(caught.value, "part=0", f"type={image_type!r}")
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("version_flags", "image_type", "part_version", "max_samples_per_pixel"),
     ((0, "scanlineimage", None, None), (0x800, "deepscanline", 1, 1)),
@@ -361,7 +368,7 @@ def test_non_tiled_parts_must_not_carry_a_tiles_attribute(
     part_version: int | None,
     max_samples_per_pixel: int | None,
 ) -> None:
-    """v1-exr-runtime-independence acceptance 22 and 42: a stray tiles attribute contradicts non-tiled part types."""
+    """EXR parsing rejects a tile description on a part declared as non-tiled."""
     first = _part_attributes(
         data_window=(0, 0, 3, 3),
         name="left",
@@ -380,6 +387,8 @@ def test_non_tiled_parts_must_not_carry_a_tiles_attribute(
     _assert_actionable_identity(caught.value, "part=0", f"type={image_type!r}", "attribute='tiles'")
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("version_flags", "image_type"),
     ((0x200, "tiledimage"), (0x1000, "tiledimage"), (0x800, "deeptile")),
@@ -389,7 +398,7 @@ def test_tiled_part_requires_a_tile_description(
     version_flags: int,
     image_type: str,
 ) -> None:
-    """v1-exr-runtime-independence acceptance 17 and 42: tiled part layout requires tiles."""
+    """EXR parsing rejects tiled parts without a tile description."""
     first = _part_attributes(
         data_window=(0, 0, 0, 0),
         name="tiles",
@@ -417,9 +426,11 @@ def test_tiled_part_requires_a_tile_description(
     _assert_actionable_identity(caught.value, "part=0", "attribute='tiles'")
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("missing", ("version", "maxSamplesPerPixel"))
 def test_deep_part_requires_its_deep_header_attributes(tmp_path: Path, missing: str) -> None:
-    """v1-exr-runtime-independence acceptance 25 and 42: deep headers carry their mandatory metadata."""
+    """EXR parsing requires the mandatory attributes of deep-part headers."""
     part = _part_attributes(
         data_window=(0, 0, 0, 0),
         name="deep",
@@ -437,6 +448,7 @@ def test_deep_part_requires_its_deep_header_attributes(tmp_path: Path, missing: 
     _assert_actionable_identity(caught.value, "part=0", f"attribute={missing!r}")
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     ("level_mode", "rounding_mode", "expected_levels", "expected_count"),
     (
@@ -469,7 +481,7 @@ def test_tiled_level_geometry_derives_every_grid_and_offset_entry(
     expected_levels: tuple[tuple[int, int, int, int, int, int], ...],
     expected_count: int,
 ) -> None:
-    """v1-exr-runtime-independence acceptance 17: tiledesc alone determines every level grid and table entry."""
+    """EXR tiled-level geometry derives each tile grid and offset-table entry from the tile description."""
     fixture = _build_tiled_fixture(level_mode=level_mode, rounding_mode=rounding_mode)
     path = tmp_path / f"levels-{level_mode}-{rounding_mode}.exr"
     path.write_bytes(fixture.payload)
@@ -491,6 +503,8 @@ def test_tiled_level_geometry_derives_every_grid_and_offset_entry(
     )
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("corruption", "expected_context"),
     (
@@ -504,7 +518,7 @@ def test_tiled_level_corruption_reports_part_level_tile_and_action(
     corruption: str,
     expected_context: str,
 ) -> None:
-    """v1-exr-runtime-independence acceptance 21: tile identity and truncation corruption is actionable."""
+    """Corrupt EXR tile data reports the affected part, level, and tile with a way to correct the input."""
     fixture = _build_tiled_fixture(level_mode=1, rounding_mode=1, reverse_physical=False)
     payload = bytearray(fixture.payload)
     final_offset = fixture.offsets[-1]
@@ -523,8 +537,9 @@ def test_tiled_level_corruption_reports_part_level_tile_and_action(
     _assert_actionable_identity(caught.value, "part=0", expected_context)
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_nonselected_tiled_level_offsets_are_validated_eagerly(tmp_path: Path) -> None:
-    """v1-exr-runtime-independence acceptance 20 and 21: nonzero levels get bounds and span validation."""
+    """EXR reads validate offsets and byte spans for tiled levels even when the caller selects only level zero."""
     fixture = _build_tiled_fixture(level_mode=1, rounding_mode=1)
     payload = bytearray(fixture.payload)
     struct.pack_into("<Q", payload, fixture.table_start + (len(fixture.offsets) - 1) * 8, len(payload) - 2)
@@ -537,8 +552,10 @@ def test_nonselected_tiled_level_offsets_are_validated_eagerly(tmp_path: Path) -
     _assert_actionable_identity(caught.value, "part=0", "level=(3, 3)", "tile=(0, 0)")
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_tiled_offset_table_truncation_is_rejected_before_chunk_parsing(tmp_path: Path) -> None:
-    """v1-exr-runtime-independence acceptance 20 and 42: every declared table entry is complete."""
+    """EXR reads reject a truncated tiled offset table before decoding chunk data."""
     fixture = _build_tiled_fixture(level_mode=1, rounding_mode=1)
     table_end = fixture.table_start + len(fixture.offsets) * 8
     path = tmp_path / "truncated-offset-table.exr"
@@ -550,8 +567,10 @@ def test_tiled_offset_table_truncation_is_rejected_before_chunk_parsing(tmp_path
     _assert_actionable_identity(caught.value, f"tables={fixture.table_start}:{table_end}")
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_tiled_chunk_spans_must_not_intersect(tmp_path: Path) -> None:
-    """v1-exr-runtime-independence acceptance 20 and 42: chunk file spans are disjoint."""
+    """EXR reads reject tiled chunks whose file byte spans overlap."""
     fixture = _build_tiled_fixture(level_mode=1, rounding_mode=1, reverse_physical=False, compression=2)
     payload = bytearray(fixture.payload)
     first_offset, second_offset = fixture.offsets[:2]

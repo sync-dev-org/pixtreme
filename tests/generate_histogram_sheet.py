@@ -1,4 +1,4 @@
-"""Generate the manual visual-acceptance sheet for v1-histogram."""
+"""Generate a comparison sheet for visual inspection of histogram."""
 
 from __future__ import annotations
 

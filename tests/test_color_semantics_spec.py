@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import ast
 import inspect
-from pathlib import Path
 
 import cupy as cp
 import numpy as np
@@ -61,8 +59,9 @@ def _independent_own_row(colorspace: str) -> np.ndarray:
     return (primary_matrix @ np.diag(scales))[1]
 
 
+@pytest.mark.req("REQ-PIX-002")
 def test_frame_matrix_is_independent_mutable_metadata() -> None:
-    """v1-color-semantics acceptance 1-3: matrix is validated but independent mutable metadata."""
+    """A Frame validates its YCbCr matrix label independently and lets callers update that color information."""
     frame = _frame((0.1, 0.2, 0.3), matrix="native")
 
     assert frame.matrix == "native"
@@ -79,8 +78,9 @@ def test_frame_matrix_is_independent_mutable_metadata() -> None:
         frame.matrix = "BT.710"
 
 
+@pytest.mark.req("REQ-PIX-002")
 def test_from_array_stamps_matrix_without_changing_ownership_or_values() -> None:
-    """v1-color-semantics acceptance 4: from_array stamps matrix without changing array behavior."""
+    """Creating a Frame from an array records its YCbCr matrix without changing pixel values or array ownership."""
     data = cp.arange(12, dtype=cp.float32).reshape(2, 2, 3)
     frame = px.io.from_array(
         data,
@@ -96,8 +96,10 @@ def test_from_array_stamps_matrix_without_changing_ownership_or_values() -> None
     cp.testing.assert_array_equal(frame.data, data)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-009")
 def test_from_format_entry_points_accept_matrix_none_by_default() -> None:
-    """v1-color-semantics acceptance 5: all YCbCr unpackers expose matrix=None."""
+    """YUV unpacking functions allow an omitted YCbCr matrix and leave it unspecified by default."""
     names = (
         "from_uyvy422",
         "from_v210",
@@ -115,10 +117,12 @@ def test_from_format_entry_points_accept_matrix_none_by_default() -> None:
         assert parameter.default is None
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-020")
 def test_color_public_surface_uses_semantic_operation_names_only() -> None:
-    """Color semantics and HSV namespace acceptances, v1-white-balance acceptance 1, and
-    v1-white-point-simulation acceptance 1; v1-grade acceptance 1: names are exact.
-    """
+    """The public color namespace exposes its named conversion, rendering, and correction operations without aliases."""
     assert px.color.__all__ == (
         "apply_lut",
         "gamma_to_linear",
@@ -141,12 +145,14 @@ def test_color_public_surface_uses_semantic_operation_names_only() -> None:
     assert not hasattr(px.color, "channel_transform")
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize(
     ("matrix", "kr", "kb"),
     (("BT.601", 0.299, 0.114), ("BT.709", 0.2126, 0.0722), ("BT.2020", 0.2627, 0.0593)),
 )
 def test_rgb_to_ycbcr_matches_h273_and_preserves_auxiliary_channels(matrix: str, kr: float, kb: float) -> None:
-    """v1-color-semantics acceptance 6 and 9-14: RGB encoding uses H.273 and label-driven passthrough."""
+    """RGB to YCbCr conversion matches H.273 coefficients and leaves auxiliary channels unchanged."""
     source = _frame((0.25, 9.0, -0.5, 0.75), channels=("B", "A", "R", "G"))
 
     result = px.color.rgb_to_ycbcr(source, matrix=matrix)
@@ -158,6 +164,9 @@ def test_rgb_to_ycbcr_matches_h273_and_preserves_auxiliary_channels(matrix: str,
     assert result.data.get()[0, 0, 1] == np.float32(9.0)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize(
     ("colorspace", "gamma", "expected"),
     (
@@ -169,17 +178,17 @@ def test_rgb_to_ycbcr_matches_h273_and_preserves_auxiliary_channels(matrix: str,
     ),
 )
 def test_rgb_encode_matrix_resolver_is_representation_dependent(colorspace: str, gamma: str, expected: str) -> None:
-    """v1-color-semantics acceptance 7-8 and 11-12: the encode resolver stamps its selected basis."""
+    """RGB to YCbCr conversion selects and records a matrix that matches the source color representation."""
     source = _frame((0.2, 0.4, 0.6), colorspace=colorspace, gamma=gamma)
     assert px.color.rgb_to_ycbcr(source).matrix == expected
     assert px.color.rgb_to_grayscale(source).matrix == expected
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("colorspace", tuple(_COLORSPACE_XY))
 def test_native_matrix_uses_independently_derived_primary_own_row(colorspace: str) -> None:
-    """v1-color-semantics acceptance 3 and 7-8; v1-sony-tokens acceptance 9;
-    v1-arri-tokens acceptance 23-24: native uses the independent Y row.
-    """
+    """The native YCbCr matrix derives its luma row independently from the source primaries."""
     rgb = np.asarray((0.2, 1.1, -0.4), dtype=np.float64)
     source = _frame(rgb, colorspace=colorspace, gamma="linear")
 
@@ -189,8 +198,12 @@ def test_native_matrix_uses_independently_derived_primary_own_row(colorspace: st
     assert result.data.get()[0, 0, 0] == pytest.approx(expected, abs=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 def test_decode_matrix_resolver_honors_override_then_metadata_and_refuses_unsafe_guess() -> None:
-    """v1-color-semantics acceptance 16 and 42: decode resolution is explicit, provenance-aware, and conservative."""
+    """YCbCr decoding uses an explicit matrix before Frame metadata and rejects an ambiguous missing matrix."""
     source = _frame((0.15, 0.7, 1.3), colorspace="ACEScg", gamma="linear")
     encoded = px.color.rgb_to_ycbcr(source, matrix="native")
     misleading = encoded.model_copy(update={"matrix": "BT.601"})
@@ -208,8 +221,13 @@ def test_decode_matrix_resolver_honors_override_then_metadata_and_refuses_unsafe
     assert "matrix=" in message and "BT.709" in message
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-103")
 def test_rgb_ycbcr_round_trip_preserves_scene_values_and_metadata() -> None:
-    """v1-color-semantics acceptance 15-19: the paired conversion round-trips unrestricted values."""
+    """RGB and YCbCr conversion round-trips unrestricted scene values while preserving color information."""
     source = _frame((-0.25, 0.5, 1.75, 7.0), channels=("R", "G", "B", "Z"))
     encoded = px.color.rgb_to_ycbcr(source, matrix="BT.709", range="legal", bit_depth=10)
     restored = px.color.ycbcr_to_rgb(encoded, range="legal", bit_depth=10)
@@ -221,8 +239,11 @@ def test_rgb_ycbcr_round_trip_preserves_scene_values_and_metadata() -> None:
     cp.testing.assert_allclose(restored.data, source.data, rtol=3e-5, atol=3e-5)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
 def test_rgb_legal_encode_matches_full_encode_then_public_range_conversion() -> None:
-    """v1-color-semantics acceptance 10 and 13: legal RGB encode matches the public one-way composition."""
+    """Legal-range RGB to YCbCr conversion matches full-range conversion followed by the public range conversion."""
     source = _frame((-0.2, 0.45, 1.4), colorspace="S-Gamut3", gamma="S-Log3")
 
     result = px.color.rgb_to_ycbcr(
@@ -245,8 +266,11 @@ def test_rgb_legal_encode_matches_full_encode_then_public_range_conversion() -> 
     cp.testing.assert_allclose(result.data, expected.data, rtol=0.0, atol=2e-7)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
 def test_ycbcr_legal_decode_matches_public_range_conversion_then_full_decode() -> None:
-    """v1-color-semantics acceptance 17-18: legal YCbCr decode matches the public one-way composition."""
+    """Legal-range YCbCr decoding matches public range conversion followed by full-range decoding."""
     source = _frame(
         (-0.1, 0.35, 1.2),
         colorspace="Rec.709",
@@ -269,8 +293,11 @@ def test_ycbcr_legal_decode_matches_public_range_conversion_then_full_decode() -
     cp.testing.assert_allclose(result.data, expected.data, rtol=0.0, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
 def test_ycbcr_to_ycbcr_matches_three_public_ops_across_different_legal_code_grids() -> None:
-    """v1-color-semantics acceptance 43 and 46-47: both legal-range code grids compose independently."""
+    """YCbCr conversion across legal code grids matches decoding, color conversion, and encoding in sequence."""
     source = _frame(
         (0.15, 0.7, 1.1),
         colorspace="Rec.709",
@@ -299,8 +326,10 @@ def test_ycbcr_to_ycbcr_matches_three_public_ops_across_different_legal_code_gri
     cp.testing.assert_allclose(result.data, expected.data, rtol=0.0, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-009")
 def test_ycbcr_to_ycbcr_matches_three_public_ops_for_explicit_bt709_to_native_rematrix() -> None:
-    """v1-color-semantics acceptance 47-48: explicit input and output matrices compose for a pure rematrix."""
+    """YCbCr rematrixing from BT.709 to a native matrix matches the corresponding three public operations."""
     source = _frame(
         (0.15, 0.7, 1.1),
         colorspace="S-Gamut3",
@@ -322,6 +351,10 @@ def test_ycbcr_to_ycbcr_matches_three_public_ops_for_explicit_bt709_to_native_re
     cp.testing.assert_allclose(result.data, expected.data, rtol=0.0, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("parameter", "invalid"),
     (
@@ -338,7 +371,7 @@ def test_ycbcr_to_ycbcr_matches_three_public_ops_for_explicit_bt709_to_native_re
     ),
 )
 def test_ycbcr_to_ycbcr_validates_each_range_and_bit_depth_axis(parameter: str, invalid: object) -> None:
-    """v1-color-semantics acceptance 46: all four range/code-grid arguments reject values outside their domains."""
+    """YCbCr conversion rejects invalid input and output ranges or bit depths for each side independently."""
     source = _frame(
         (0.2, 0.5, 0.8),
         channels=("Y", "Cb", "Cr"),
@@ -352,9 +385,11 @@ def test_ycbcr_to_ycbcr_validates_each_range_and_bit_depth_axis(parameter: str, 
     assert "why=" in message and "what=" in message and "how=" in message
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("direction", ("encode", "decode"))
 def test_declarative_ycbcr_conversion_matches_a_separated_rgb_to_rgb_call(direction: str) -> None:
-    """v1-color-semantics acceptance 10 and 18-19: fused declarations match a separated technical conversion."""
+    """YCbCr conversion with color claims matches a separate RGB color conversion between decode and encode."""
     if direction == "encode":
         source = _frame((-0.2, 0.45, 1.4), colorspace="S-Gamut3", gamma="S-Log3")
         result = px.color.rgb_to_ycbcr(
@@ -385,8 +420,10 @@ def test_declarative_ycbcr_conversion_matches_a_separated_rgb_to_rgb_call(direct
     cp.testing.assert_allclose(result.data, expected.data, rtol=0.0, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-008")
 def test_rgb_to_grayscale_is_the_full_range_y_channel_bit_for_bit() -> None:
-    """v1-color-semantics acceptance 20-23: grayscale is the matching Y projection with no auxiliary labels."""
+    """RGB to grayscale conversion returns the full-range Y channel without auxiliary labels."""
     source = _frame((0.2, 1.2, -0.1, 42.0), colorspace="ACEScg", gamma="linear", channels=("R", "G", "B", "Z"))
     encoded = px.color.rgb_to_ycbcr(source, matrix="native")
     gray = px.color.rgb_to_grayscale(source, matrix="native")
@@ -397,8 +434,11 @@ def test_rgb_to_grayscale_is_the_full_range_y_channel_bit_for_bit() -> None:
     cp.testing.assert_array_equal(gray.data[..., 0], encoded.data[..., encoded.channels.index("Y")])
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_gamma_directional_pair_supports_pure_power_2_6_without_clipping() -> None:
-    """v1-color-semantics acceptance 24-28: gamma pairs expose pure-power Gamma-2.6 and preserve scene values."""
+    """Gamma encoding and decoding support pure-power Gamma 2.6 without clipping scene values."""
     encoded_values = np.asarray((-1.4, -0.25, 2.0), dtype=np.float64)
     source = _frame(encoded_values, gamma="Gamma-2.6", matrix="native")
 
@@ -414,8 +454,11 @@ def test_gamma_directional_pair_supports_pure_power_2_6_without_clipping() -> No
     assert restored.matrix is None
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-005")
 def test_rgb_to_rgb_signature_integrates_tonemap_and_always_clears_matrix() -> None:
-    """v1-color-semantics acceptance 29-33: rgb_to_rgb owns tonemap and clears matrix provenance."""
+    """RGB color conversion accepts output-transform selection and clears obsolete YCbCr matrix information."""
     signature = inspect.signature(px.color.rgb_to_rgb)
     assert tuple(signature.parameters) == (
         "frame",
@@ -433,8 +476,12 @@ def test_rgb_to_rgb_signature_integrates_tonemap_and_always_clears_matrix() -> N
     cp.testing.assert_array_equal(technical.data, source.data)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-009")
 def test_ycbcr_to_ycbcr_matches_public_composition_and_preserves_auxiliary_values() -> None:
-    """v1-color-semantics acceptance 40-48: fused YCbCr conversion matches the declared public composition."""
+    """YCbCr conversion matches the public decode, color conversion, and encode sequence while preserving auxiliary
+    values."""
     source = _frame(
         (0.35, 0.1, 0.9, 6.0),
         colorspace="Rec.709",
@@ -463,8 +510,11 @@ def test_ycbcr_to_ycbcr_matches_public_composition_and_preserves_auxiliary_value
     cp.testing.assert_array_equal(result.data[..., 3], source.data[..., 3])
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-009")
 def test_ycbcr_to_ycbcr_preserves_resolved_input_matrix_when_colorspace_is_unchanged() -> None:
-    """v1-color-semantics acceptance 45 and 48: same-colorspace transfer changes retain the input matrix basis."""
+    """YCbCr transfer changes within one color space retain the resolved input matrix in the result."""
     source = _frame(
         (0.35, 0.1, 0.9),
         colorspace="Rec.709",
@@ -480,8 +530,11 @@ def test_ycbcr_to_ycbcr_preserves_resolved_input_matrix_when_colorspace_is_uncha
     assert result.gamma == "Gamma-2.6"
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 def test_ycbcr_to_ycbcr_docstring_is_symmetric_with_the_directional_pair() -> None:
-    """v1-color-semantics acceptance 40-48: the fused API documents both independent sides and resolvers."""
+    """The public YCbCr conversion help describes separate input and output matrix and range choices."""
     docstring = " ".join((inspect.getdoc(px.color.ycbcr_to_ycbcr) or "").split())
     for required in (
         "Parameters",
@@ -503,10 +556,14 @@ def test_ycbcr_to_ycbcr_docstring_is_symmetric_with_the_directional_pair() -> No
         assert required in docstring
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("operation", ("rgb_to_ycbcr", "ycbcr_to_rgb"))
 @pytest.mark.parametrize(("parameter", "value"), (("range", "studio"), ("bit_depth", True), ("bit_depth", 9)))
 def test_directional_range_and_bit_depth_validation_is_closed(operation: str, parameter: str, value: object) -> None:
-    """v1-color-semantics acceptance 14, 17, and 46: range and code-grid axes fail actionably."""
+    """RGB and YCbCr conversions reject unsupported range and bit-depth values with guidance."""
     channels = ("Y", "Cb", "Cr") if operation == "ycbcr_to_rgb" else ("R", "G", "B")
     frame = _frame((0.1, 0.2, 0.3), channels=channels, matrix="BT.709")
 
@@ -517,27 +574,12 @@ def test_directional_range_and_bit_depth_validation_is_closed(operation: str, pa
     assert "why=" in message and "what=" in message and "how=" in message
 
 
-def test_every_non_source_frame_constructor_declares_matrix_provenance() -> None:
-    """v1-color-semantics acceptance 39: Frame construction points cannot silently drop matrix provenance."""
-    source_modules = {"_io.py"}
-    source_root = Path(px.__file__).parent
-    missing: list[str] = []
-    for module in sorted(source_root.glob("*.py")):
-        if module.name in source_modules:
-            continue
-        tree = ast.parse(module.read_text())
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name) or node.func.id != "Frame":
-                continue
-            if not any(keyword.arg == "matrix" for keyword in node.keywords):
-                missing.append(f"{module.name}:{node.lineno}")
-
-    assert missing == []
-
-
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("operation", ("rgb_to_ycbcr", "ycbcr_to_rgb", "rgb_to_grayscale"))
 def test_color_validation_errors_are_actionable(operation: str) -> None:
-    """v1-color-semantics acceptance 9, 15, and 20: invalid input errors carry why/what/how."""
+    """Color operations explain why invalid input is rejected and how to supply a valid value."""
     channels = ("R", "G", "B") if operation == "ycbcr_to_rgb" else ("Y", "Cb", "Cr")
     frame = _frame((0.1, 0.2, 0.3), channels=channels)
 

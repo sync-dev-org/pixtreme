@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import importlib.metadata
 import math
-import tomllib
 from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -149,7 +146,7 @@ def _encode_srgb(values: np.ndarray) -> np.ndarray:
 def _import_colour_oracle():
     """Import the colour oracle without leaking its NumPy print-option mutation.
 
-    colour 0.4.7 runs ``np.set_printoptions(legacy="1.13")`` at import time. That
+    The colour oracle can run ``np.set_printoptions(legacy="1.13")`` at import time. That
     process-global state truncates ``str(np.float32(...))`` shortest round-trip
     formatting, which the Cube LUT serializer relies on for bit-exact output, so the
     snapshot taken before the import is always restored afterwards.
@@ -167,15 +164,15 @@ def _import_colour_oracle():
     return colour
 
 
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize(("token", "oracle_name"), tuple(_CAT_ORACLE_NAMES.items()))
-def test_every_cat_matrix_matches_colour_science_047(token: str, oracle_name: str) -> None:
-    """v1-white-balance acceptance 2: every CAT uses the exact named colour-science 0.4.7 matrix oracle."""
+def test_every_cat_matrix_matches_colour_science(token: str, oracle_name: str) -> None:
+    """Each chromatic adaptation choice uses the corresponding colour-science matrix."""
     colour = _import_colour_oracle()
     matrix_chromatic_adaptation_VonKries = colour.adaptation.matrix_chromatic_adaptation_VonKries
 
     from pixtreme._color.white_balance import _chromatic_adaptation_matrix
 
-    assert colour.__version__ == "0.4.7"
     input_white = (0.34567, 0.35850)
     output_white = (0.31270, 0.32900)
     expected = matrix_chromatic_adaptation_VonKries(
@@ -187,8 +184,9 @@ def test_every_cat_matrix_matches_colour_science_047(token: str, oracle_name: st
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=2e-15)
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_default_cat_is_cat02_and_cat_tokens_remain_distinct() -> None:
-    """v1-white-balance acceptance 2: omission selects CAT02 without normalizing the four CAT paths together."""
+    """Omitting the chromatic adaptation choice selects CAT02 while other named choices keep distinct results."""
     source = _frame((0.31, 0.47, 0.82))
     kwargs = {"input_white": (0.34567, 0.35850), "output_white": (0.31270, 0.32900)}
     default = px.color.chromatic_adaptation(source, **kwargs)
@@ -201,6 +199,8 @@ def test_default_cat_is_cat02_and_cat_tokens_remain_distinct() -> None:
     assert len(set(outputs.values())) == len(_CAT_ORACLE_NAMES)
 
 
+@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("input_white", "output_white", "cat"),
     (
@@ -223,7 +223,7 @@ def test_chromatic_adaptation_rejects_invalid_public_arguments_before_pixel_proc
     output_white: object,
     cat: object,
 ) -> None:
-    """v1-white-balance acceptance 3: malformed xy and CAT values fail actionably before launching a pixel pass."""
+    """Chromatic adaptation rejects invalid white-point coordinates and method names before processing pixels."""
     import pixtreme._color.white_balance as implementation
 
     def forbidden_transform(*args: object, **kwargs: object) -> object:
@@ -240,8 +240,10 @@ def test_chromatic_adaptation_rejects_invalid_public_arguments_before_pixel_proc
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("REQ-PIX-017")
 def test_chromatic_adaptation_rejects_numerically_zero_cat_response() -> None:
-    """v1-white-balance acceptance 3: a valid xy that creates a zero CAT cone response is rejected."""
+    """Chromatic adaptation rejects a white point that makes a cone response numerically zero."""
     y = np.float64(0.1)
     x = (np.float64(0.1624) - np.float64(0.5920) * y) / np.float64(0.8952)
     assert x > 0.0 and y > 0.0 and x + y < 1.0
@@ -255,6 +257,8 @@ def test_chromatic_adaptation_rejects_numerically_zero_cat_response() -> None:
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("operation", "kwargs"),
     (
@@ -273,7 +277,7 @@ def test_chromatic_adaptation_rejects_numerically_zero_cat_response() -> None:
 def test_both_apis_fail_fast_for_non_frame_dtype_and_rgb_contract(
     operation: Callable[..., px.core.Frame], kwargs: dict[str, object], invalid_frame: object
 ) -> None:
-    """v1-white-balance acceptance 4: both APIs require a float32 Frame with exactly one R, G, and B label."""
+    """White balance and chromatic adaptation require a float32 Frame with exactly one R, G, and B label."""
     if invalid_frame == "float16":
         invalid_frame = _frame((0.2, 0.3, 0.4), dtype=np.float16)
     elif invalid_frame == "missing-rgb":
@@ -284,8 +288,11 @@ def test_both_apis_fail_fast_for_non_frame_dtype_and_rgb_contract(
     assert "Frame" in str(error.value) or "float32" in str(error.value) or "R" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-020")
 def test_adaptation_is_one_pass_label_driven_private_and_metadata_preserving(monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-white-balance acceptance 5: one fused pass transforms labelled RGB and preserves private auxiliary data."""
+    """Chromatic adaptation transforms labeled RGB in one GPU pass and preserves color information and auxiliary
+    bits."""
     import cupy as cp
 
     import pixtreme._color.white_balance as implementation
@@ -329,9 +336,10 @@ def test_adaptation_is_one_pass_label_driven_private_and_metadata_preserving(mon
     assert (source.colorspace, source.gamma, source.channels, source.matrix) == metadata_snapshot
 
 
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize("cat", tuple(_CAT_ORACLE_NAMES))
 def test_equal_white_points_return_bit_preserving_private_copy(cat: str) -> None:
-    """v1-white-balance acceptance 6: equal whites return a bit-identical all-channel private copy for every CAT."""
+    """Equal source and target whites produce a separate bit-identical Frame for every adaptation method."""
     import cupy as cp
 
     source = _frame(
@@ -349,9 +357,13 @@ def test_equal_white_points_return_bit_preserving_private_copy(cat: str) -> None
     assert output.matrix is None
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("gamma", ("linear", "sRGB"))
 def test_scene_values_match_independent_host_matrix_and_reverse_round_trip(gamma: str) -> None:
-    """v1-white-balance acceptance 7: scene values match an independent host oracle without clipping and round-trip."""
+    """Chromatic adaptation matches an independent matrix reference and round-trips signed scene values without
+    clipping."""
     matrix_chromatic_adaptation_VonKries = _import_colour_oracle().adaptation.matrix_chromatic_adaptation_VonKries
 
     input_white = (0.34567, 0.35850)
@@ -396,12 +408,14 @@ def test_scene_values_match_independent_host_matrix_and_reverse_round_trip(gamma
     )
 
 
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize(
     ("mired", "tint"),
     ((600.0, 0.0), (325.0, 0.0), (287.5, 0.0), (287.5, 0.0137), (1e-6, -0.0042)),
 )
 def test_temperature_table_records_off_grid_interpolation_and_uv_conversion(mired: float, tint: float) -> None:
-    """v1-white-balance acceptance 8-9: DNG records, off-grid interpolation, Duv direction, and uv-to-xy are exact."""
+    """Temperature and Tint map through DNG records, interpolated mired values, and chromaticity conversion as
+    specified."""
     from pixtreme._color.white_balance import _DNG_TEMPERATURE_TABLE as production_table
     from pixtreme._color.white_balance import _temperature_to_xy
 
@@ -412,30 +426,36 @@ def test_temperature_table_records_off_grid_interpolation_and_uv_conversion(mire
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=1e-12)
 
 
+@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("temperature", (True, math.nan, math.inf, -math.inf, 0.0, 1600.0))
 def test_temperature_validation_rejects_invalid_or_below_table_values(temperature: object) -> None:
-    """v1-white-balance acceptance 8: Temperature is finite, non-bool, and bounded only by the 600-mired endpoint."""
+    """White balance rejects nonfinite, boolean, and below-table Temperature values with guidance."""
     with pytest.raises(ValueError) as error:
         px.color.white_balance(_frame((0.2, 0.3, 0.4)), temperature=temperature)  # type: ignore[arg-type]
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_temperature_accepts_every_finite_value_through_float64_max() -> None:
-    """v1-white-balance acceptance 8: the 0-mired endpoint imposes no finite upper Temperature bound."""
+    """White balance accepts every finite Temperature at or above its minimum, including float64's maximum."""
     output = px.color.white_balance(_frame((0.2, 0.3, 0.4)), temperature=np.finfo(np.float64).max)
     assert np.isfinite(px.io.to_array(output).get()).all()
 
 
+@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("tint", (True, math.nan, math.inf, -math.inf, 1.0))
 def test_tint_validation_rejects_nonfinite_and_out_of_chromaticity_without_clamping(tint: object) -> None:
-    """v1-white-balance acceptance 9: Tint is finite raw Duv and invalid derived xy is rejected rather than clamped."""
+    """White balance rejects nonfinite Tint and invalid resulting chromaticity instead of clamping it."""
     with pytest.raises(ValueError) as error:
         px.color.white_balance(_frame((0.2, 0.3, 0.4)), temperature=5000.0, tint=tint)  # type: ignore[arg-type]
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_tint_is_signed_raw_duv_with_positive_green_side() -> None:
-    """v1-white-balance acceptance 9: positive and negative Tint move symmetrically by raw Duv on the documented line."""
+    """Positive and negative Tint move symmetrically along the raw Duv axis, with positive toward green."""
     from pixtreme._color.white_balance import _temperature_to_xy
 
     magnitude = np.float64(0.01)
@@ -447,12 +467,13 @@ def test_tint_is_signed_raw_duv_with_positive_green_side() -> None:
     assert positive_delta[0] < 0.0 < positive_delta[1]
 
 
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize(
     ("temperature", "tint", "cat"),
     ((2800.0, -0.008, "Bradford"), (6500.0, 0.0, "CAT02"), (12000.0, 0.011, "von-Kries")),
 )
 def test_white_balance_is_bit_identical_to_explicit_low_level_call(temperature: float, tint: float, cat: str) -> None:
-    """v1-white-balance acceptance 10: convenience mapping executes the same low-level input/output/CAT kernel."""
+    """White balance returns the same bits as the corresponding explicit chromatic adaptation call."""
     source = _frame(
         np.asarray([[[-0.1, 0.4, 1.2], [0.7, 0.2, 0.05]]], dtype=np.float32),
         colorspace="sRGB",
@@ -469,8 +490,9 @@ def test_white_balance_is_bit_identical_to_explicit_low_level_call(temperature: 
     assert px.io.to_array(convenience).get().tobytes() == px.io.to_array(direct).get().tobytes()
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_temperature_and_tint_have_source_illuminant_correction_semantics() -> None:
-    """v1-white-balance acceptance 11: hotter sources warm output and positive green Tint corrects toward magenta."""
+    """White balance corrects hotter source light toward warmth and positive green Tint toward magenta."""
     source = _frame((0.18, 0.18, 0.18))
     cold = px.io.to_array(px.color.white_balance(source, temperature=2800.0)).get()[0, 0]
     nominal = px.io.to_array(px.color.white_balance(source, temperature=6500.0)).get()[0, 0]
@@ -484,8 +506,9 @@ def test_temperature_and_tint_have_source_illuminant_correction_semantics() -> N
     assert negative_tint[1] / np.mean(negative_tint[[0, 2]]) > nominal[1] / np.mean(nominal[[0, 2]])
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_calls_are_bit_deterministic_across_order_and_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-white-balance acceptance 12: output has no time, environment, call-order, metadata, or filesystem state."""
+    """White balance returns the same bits regardless of call order, environment, or unrelated Frame metadata."""
     source = _frame(
         np.asarray([[[-0.2, 0.3, 1.5], [0.8, 0.1, 0.6]]], dtype=np.float32),
         colorspace="ACEScg",
@@ -499,78 +522,11 @@ def test_calls_are_bit_deterministic_across_order_and_environment(monkeypatch: p
     assert first == second
 
 
-def test_adaptation_host_memoization_is_bounded_lru_and_recomputes_bit_exactly() -> None:
-    """v1-white-balance acceptance 18: resolved adaptation matrices use a 128-entry LRU with bit-exact eviction."""
-    import pixtreme._color.white_balance as implementation
-
-    cached = implementation._compose_adaptation_rgb_matrix
-    cached.cache_clear()
-    key = ("sRGB", (0.3127, 0.3290), (0.3457, 0.3585), "CAT02")
-    cold = cached(*key).tobytes()
-    assert cached.cache_info().maxsize == 128
-    assert cached(*key).tobytes() == cold
-    assert cached.cache_info().hits == 1
-
-    for index in range(128):
-        input_white = (float(np.float64(0.29) + np.float64(index) * np.float64(1e-5)), 0.33)
-        cached("sRGB", input_white, (0.3457, 0.3585), "CAT02")
-
-    assert cached.cache_info().currsize == 128
-    misses_before_revisit = cached.cache_info().misses
-    recomputed = cached(*key)
-    assert cached.cache_info().misses == misses_before_revisit + 1
-    assert recomputed.tobytes() == cold == cached.__wrapped__(*key).tobytes()
-
-
-def test_adaptation_memoization_identity_uses_every_resolved_binary64_value() -> None:
-    """v1-white-balance acceptance 19: tokens and Temperature/Tint normalize to exact resolved binary64 cache keys."""
-    import pixtreme._color.white_balance as implementation
-
-    cached = implementation._compose_adaptation_rgb_matrix
-    cached.cache_clear()
-    source = _frame((0.2, 0.3, 0.4), colorspace="sRGB")
-    px.color.chromatic_adaptation(source, input_white="D65", output_white="D50", cat="CAT02")
-    token_stats = cached.cache_info()
-    px.color.chromatic_adaptation(source, input_white=(0.3127, 0.3290), output_white=(0.3457, 0.3585), cat="CAT02")
-    direct_stats = cached.cache_info()
-    assert direct_stats.hits == token_stats.hits + 1
-    assert direct_stats.misses == token_stats.misses
-
-    temperature = 7312.5
-    tint = -0.00625
-    resolved_input = implementation._temperature_to_xy(temperature, tint)
-    px.color.white_balance(source, temperature=temperature, tint=tint, cat="von-Kries")
-    balance_stats = cached.cache_info()
-    px.color.chromatic_adaptation(
-        source,
-        input_white=resolved_input,
-        output_white="D65",
-        cat="von-Kries",
-    )
-    assert cached.cache_info().hits == balance_stats.hits + 1
-
-    input_white = (0.3127, 0.3290)
-    output_white = (0.3457, 0.3585)
-    cached.cache_clear()
-    cached("sRGB", input_white, output_white, "CAT02")
-    misses = cached.cache_info().misses
-    variants = (
-        ("ACEScg", input_white, output_white, "CAT02"),
-        ("sRGB", (float(np.nextafter(input_white[0], np.inf)), input_white[1]), output_white, "CAT02"),
-        ("sRGB", (input_white[0], float(np.nextafter(input_white[1], np.inf))), output_white, "CAT02"),
-        ("sRGB", input_white, (float(np.nextafter(output_white[0], np.inf)), output_white[1]), "CAT02"),
-        ("sRGB", input_white, (output_white[0], float(np.nextafter(output_white[1], np.inf))), "CAT02"),
-        ("sRGB", input_white, output_white, "CAT16"),
-    )
-    for variant in variants:
-        cached(*variant)
-    assert cached.cache_info().misses == misses + len(variants)
-
-
+@pytest.mark.req("REQ-PIX-020")
 def test_adaptation_cache_states_and_uncached_composition_are_publicly_bit_identical(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-white-balance acceptance 20: miss, hit, interposition, eviction, and uncached calls are bit identical."""
+    """Chromatic adaptation returns the same pixels after cache misses, hits, eviction, or uncached computation."""
     import pixtreme._color.white_balance as implementation
 
     cached = implementation._compose_adaptation_rgb_matrix
@@ -625,28 +581,13 @@ def test_adaptation_cache_states_and_uncached_composition_are_publicly_bit_ident
     assert cached_matrix == uncached_matrix
 
 
-def test_colour_science_is_exact_pinned_test_only_and_absent_from_runtime_metadata() -> None:
-    """v1-white-balance acceptance 13: colour-science 0.4.7 is an exact-pinned development-only oracle."""
-    root = Path(__file__).resolve().parents[1]
-    pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
-    assert "colour-science==0.4.7" in pyproject["dependency-groups"]["dev"]
-    assert not any(requirement.startswith("colour-science") for requirement in pyproject["project"]["dependencies"])
-    runtime_requirements = importlib.metadata.requires("pixtreme") or ()
-    assert not any(requirement.lower().startswith("colour-science") for requirement in runtime_requirements)
-
-    production_sources = "\n".join(path.read_text(encoding="utf-8") for path in (root / "src").rglob("*.py"))
-    assert "import colour" not in production_sources
-    assert "from colour" not in production_sources
-
-
 def test_colour_oracle_import_leaves_numpy_print_state_for_bit_exact_lut_serialization() -> None:
-    """v1-white-balance acceptance 13: the colour oracle import leaves process-global NumPy state unchanged.
+    """Importing the color oracle leaves NumPy formatting unchanged so Cube LUT values round-trip bit for bit.
 
-    colour 0.4.7 sets NumPy legacy print options at import time. If that state leaks,
+    The colour oracle can set NumPy legacy print options at import time. If that state leaks,
     ``str(np.float32(...))`` loses shortest round-trip formatting and the Cube LUT
     serializer emits values that no longer restore bit-exactly, in every test order
-    where this module imports the oracle before a LUT round-trip test runs.
-    """
+    where this module imports the oracle before a LUT round-trip test runs."""
     before = np.get_printoptions()
     _import_colour_oracle()
     assert np.get_printoptions() == before

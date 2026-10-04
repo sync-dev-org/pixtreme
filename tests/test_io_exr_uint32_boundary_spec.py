@@ -80,10 +80,11 @@ def _recode_oracle(values: np.ndarray, target_dtype: str) -> np.ndarray:
     return np.floor(np.clip(source.astype(np.float64), 0.0, 1.0) * maximum + 0.5).astype(target)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 def test_hand_built_uint_and_mixed_wire_reads_follow_the_public_dtype_contract(tmp_path: Path) -> None:
-    """v1-exr-runtime-independence acceptance 10-12, 44, and 46:
-    hand-built UINT wire fixes the supported lossy default-read and native unchanged semantics.
-    """
+    """EXR reads apply documented float32 and unchanged native type rules to UINT and mixed type files, including
+    lossy storage."""
     uint_values = np.asarray([[0, 1], [16777217, 4294967295]], dtype=np.uint32)
     uint_path = tmp_path / "uint.exr"
     uint_path.write_bytes(_none_exr({label: uint_values for label in "RGB"}))
@@ -122,24 +123,32 @@ def test_hand_built_uint_and_mixed_wire_reads_follow_the_public_dtype_contract(t
         px.io.read_image(mixed_path, unchanged=True)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("suffix", ("png", "tga", "hdr", "dpx"))
 def test_explicit_write_dtype_is_rejected_outside_exr(tmp_path: Path, suffix: str) -> None:
-    """v1-exr-runtime-independence acceptance 2: non-EXR dtype claims fail with format and recovery guidance."""
+    """Image writes reject an EXR-only dtype option for other formats and explain how to choose a valid format."""
     frame = px.io.from_array(cp.ones((1, 1, 3), dtype=cp.float32), colorspace="sRGB", gamma="linear", channels="RGB")
 
     with pytest.raises(ValueError, match=rf"why=.*dtype.*what=.*{suffix.upper()}.*how=.*EXR"):
         px.io.write_image(tmp_path / f"image.{suffix}", frame, dtype="float16")
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("dtype", ("uint16", "fp32", "FLOAT", "", 32, True))
 def test_exr_write_dtype_rejects_values_outside_the_three_token_set(tmp_path: Path, dtype: object) -> None:
-    """v1-exr-runtime-independence acceptance 1: EXR dtype is an exact three-token closed set."""
+    """EXR writes reject dtype values outside the three supported storage type names."""
     frame = px.io.from_array(cp.ones((1, 1, 3), dtype=cp.float32), colorspace="ACEScg", gamma="linear", channels="RGB")
 
     with pytest.raises(ValueError, match=r"why=.*dtype.*what=.*how=.*float16.*float32.*uint32"):
         px.io.write_image(tmp_path / "invalid.exr", frame, dtype=dtype)  # type: ignore[arg-type]
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(
     ("input_dtype", "dtype", "storage_dtype"),
     (
@@ -154,7 +163,8 @@ def test_exr_write_dtype_rejects_values_outside_the_three_token_set(tmp_path: Pa
 def test_exr_write_dtype_resolution_matches_independent_full_scale_oracle(
     tmp_path: Path, input_dtype: str, dtype: str | None, storage_dtype: str
 ) -> None:
-    """v1-exr-runtime-independence acceptance 13-14: default and explicit write dtype use full-scale recoding."""
+    """EXR writes apply full-scale recoding for default and explicit storage types according to an independent
+    calculation."""
     if input_dtype.startswith("uint"):
         maximum = int(np.iinfo(input_dtype).max)
         values = np.asarray([0, maximum // 4, maximum // 2, maximum], dtype=input_dtype)
@@ -182,9 +192,11 @@ def test_exr_write_dtype_resolution_matches_independent_full_scale_oracle(
     cp.testing.assert_array_equal(frame.data, before)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("compression", _COMPRESSIONS)
 def test_native_uint32_write_is_bit_exact_for_every_compression(tmp_path: Path, compression: str) -> None:
-    """v1-exr-runtime-independence acceptance 10 and 15: all UINT codecs preserve bits and promote literally."""
+    """Every EXR compression preserves native UINT32 bits and returns literal values on default reads."""
     values = np.asarray(
         [[[0, 1, 16777217], [4294967295, 2147483648, 305419896]]],
         dtype=np.uint32,

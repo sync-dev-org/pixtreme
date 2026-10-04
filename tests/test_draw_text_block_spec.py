@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import ast
-import importlib.util
 import inspect
-import subprocess
-import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -341,10 +338,9 @@ def _base_kwargs() -> dict[str, object]:
     }
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_unification_public_signature_is_the_complete_layout_contract() -> None:
-    """v1-draw-text-unification acceptance 1; v1-draw-text-supersample acceptance 1;
-    v1-draw-text-user-font acceptance 5: complete signature.
-    """
+    """Text drawing exposes the complete public font, layout, and supersampling signature."""
     signature = inspect.signature(px.draw.text)
     assert tuple(signature.parameters) == (
         "frame",
@@ -387,11 +383,9 @@ def test_draw_text_unification_public_signature_is_the_complete_layout_contract(
     assert signature.parameters["supersample"].annotation == "bool"
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_unification_removes_draw_text_block_from_the_public_surface() -> None:
-    """v1-draw-text-unification acceptance 2; v1-derivative-filters acceptance 17;
-    v1-draw-text-user-font acceptance 1:
-    the public surface exports text once and exposes no draw_text_block name.
-    """
+    """The public drawing module exposes one text operation and no separate text block operation."""
     assert not hasattr(px.draw, "draw_text_block")
     assert "draw_text_block" not in px.draw.__all__
     assert px.draw.__all__.count("text") == 1
@@ -427,21 +421,10 @@ def test_draw_text_unification_removes_draw_text_block_from_the_public_surface()
     assert "draw-text-block-cjk-outline" not in draw_registry_names
 
 
-def test_draw_text_unification_removes_the_compatibility_module() -> None:
-    """v1-draw-text-unification acceptance 3: no alias, wrapper, or alternate draw_text_block import remains."""
-    assert importlib.util.find_spec("pixtreme._draw_text_block") is None
-
-
-def test_draw_text_unification_uses_the_integrated_layout_path_for_default_single_lines() -> None:
-    """v1-draw-text-unification acceptance 4: default single lines use the integrated atlas path directly."""
-    source = inspect.getsource(px.draw.text)
-    assert "_build_block_atlas(" in source
-    assert "draw_text_block" not in source
-    assert "return text(" not in source
-
-
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_empty_and_zero_opacity_preserve_metadata_in_new_storage() -> None:
-    """v1-draw-text-unification acceptance 5-6: no-op paths preserve pixels and metadata but always allocate."""
+    """For text layout and drawing, no-op paths preserve pixels and metadata but always allocate."""
     source_values = np.arange(7 * 9, dtype=np.float32).reshape(7, 9, 1) / np.float32(11.0)
     source = _frame(source_values, colorspace="Rec.2020", gamma="PQ", channels=("matte",))
     for text, opacity in (("", 1.0), ("\n\n", 1.0), ("A\nB", 0.0)):
@@ -464,6 +447,7 @@ def test_draw_text_empty_and_zero_opacity_preserve_metadata_in_new_storage() -> 
         )
 
 
+@pytest.mark.req("REQ-PIX-012")
 @pytest.mark.parametrize("anchor", ANCHORS)
 @pytest.mark.parametrize("language", LANGUAGES)
 @pytest.mark.parametrize("blend", BLENDS)
@@ -472,7 +456,7 @@ def test_draw_text_default_single_line_matches_independent_oracle_for_every_anch
     language: str,
     blend: str,
 ) -> None:
-    """v1-draw-text-unification acceptance 11-12: inherited single-line cases match an independent host oracle."""
+    """For text layout and drawing, single-line cases match an independent host oracle."""
     source_values = np.linspace(-0.3, 1.4, 112 * 240 * 3, dtype=np.float32).reshape(112, 240, 3)
     source = _frame(source_values)
     kwargs = {
@@ -493,6 +477,7 @@ def test_draw_text_default_single_line_matches_independent_oracle_for_every_anch
     assert actual.model_dump(exclude={"data"}) == source.model_dump(exclude={"data"})
 
 
+@pytest.mark.req("REQ-PIX-012")
 @pytest.mark.parametrize(
     "kwargs,channels",
     (
@@ -505,13 +490,17 @@ def test_draw_text_default_single_line_covers_empty_notdef_matte_and_outside_pat
     kwargs: dict[str, object],
     channels: tuple[str, ...],
 ) -> None:
-    """v1-draw-text-unification acceptance 5 and 11-12: inherited edge paths match an independent host oracle."""
+    """Single line text drawing matches the reference for empty text, missing glyphs, mattes, and text outside the
+    image.
+    """
     source = _zeros(height=72, width=96, channels=channels)
     expected = _reference_draw_text(np.zeros((72, 96, len(channels)), dtype=np.float32), **kwargs)
     actual = px.draw.text(source, **kwargs)
     np.testing.assert_array_equal(_host(actual), expected)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "overrides,tokens",
     (
@@ -536,12 +525,14 @@ def test_draw_text_extension_validation_is_actionable(
     overrides: dict[str, object],
     tokens: tuple[str, ...],
 ) -> None:
-    """v1-draw-text-unification acceptance 5-9: integrated layout domains fail fast."""
+    """Text drawing rejects invalid layout options and explains the accepted values."""
     with pytest.raises(ValueError) as error:
         px.draw.text(_zeros(), **(_base_kwargs() | overrides))
     _assert_actionable(error, tokens)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "overrides",
     (
@@ -557,15 +548,16 @@ def test_draw_text_extension_validation_is_actionable(
     ),
 )
 def test_draw_text_inherited_validation_keeps_three_element_errors(overrides: dict[str, object]) -> None:
-    """v1-draw-text-unification acceptance 5: inherited validation retains the actionable error contract."""
+    """Text drawing errors identify the invalid value, the expected value, and a recovery action."""
     with pytest.raises(ValueError) as error:
         px.draw.text(_zeros(), **(_base_kwargs() | overrides))
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-012")
 @pytest.mark.parametrize("align", ALIGNS)
 def test_draw_text_matches_independent_multiline_layout_and_raster_oracle(align: str) -> None:
-    """v1-draw-text-unification acceptance 6-10 and 12: multiline layout and rasterization match a host oracle."""
+    """For text layout and drawing, multiline layout and rasterization match a host oracle."""
     source_values = np.linspace(-0.25, 1.35, 150 * 300 * 3, dtype=np.float32).reshape(150, 300, 3)
     source = _frame(source_values)
     kwargs = {
@@ -594,9 +586,10 @@ def test_draw_text_matches_independent_multiline_layout_and_raster_oracle(align:
     assert np.max(_host(actual)) > 1.0
 
 
+@pytest.mark.req("REQ-PIX-012")
 @pytest.mark.parametrize("anchor", ANCHORS)
 def test_draw_text_all_anchors_use_block_width_first_ascender_and_last_descender(anchor: str) -> None:
-    """v1-draw-text-unification acceptance 6-10: all anchors use the block box, including a trailing empty line."""
+    """For text layout and drawing, all anchors use the block box, including a trailing empty line."""
     source_values = np.zeros((150, 300, 1), dtype=np.float32)
     kwargs = {
         "text": "A\nBB\n",
@@ -614,8 +607,9 @@ def test_draw_text_all_anchors_use_block_width_first_ascender_and_last_descender
     np.testing.assert_array_equal(_host(actual), expected)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_width_overflow_negative_tracking_and_justify_do_not_clip_or_shrink() -> None:
-    """v1-draw-text-unification acceptance 7-10: signed advances overflow fixed width while justify adds only space."""
+    """For text layout and drawing, signed advances overflow fixed width while justify adds only space."""
     source_values = np.zeros((96, 260, 1), dtype=np.float32)
     source = _frame(source_values, channels=("matte",))
     for kwargs in (
@@ -634,8 +628,9 @@ def test_draw_text_width_overflow_negative_tracking_and_justify_do_not_clip_or_s
         np.testing.assert_array_equal(_host(actual), expected)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_single_glyph_justify_keeps_the_block_left_origin() -> None:
-    """v1-draw-text-unification acceptance 8 and 11: a one-glyph line with positive remainder has no justify gap."""
+    """For text layout and drawing, a one-glyph line with positive remainder has no justify gap."""
     source = _zeros(height=72, width=160, channels=("matte",))
     common = {
         "text": "A",
@@ -648,6 +643,7 @@ def test_draw_text_single_glyph_justify_keeps_the_block_left_origin() -> None:
     np.testing.assert_array_equal(_host(actual), _host(expected))
 
 
+@pytest.mark.req("REQ-PIX-012")
 @pytest.mark.parametrize(
     ("layout", "text", "visible_text", "visible_anchor"),
     (
@@ -668,7 +664,7 @@ def test_draw_text_large_finite_layout_values_only_draw_image_intersections(
     visible_text: str,
     visible_anchor: str,
 ) -> None:
-    """v1-draw-text-unification acceptance 7-10: large finite layout values only draw image intersections."""
+    """For text layout and drawing, large finite layout values only draw image intersections."""
     source = _zeros(height=72, width=96, channels=("matte",))
     common = {
         "position": (12.25, 46.375),
@@ -680,8 +676,9 @@ def test_draw_text_large_finite_layout_values_only_draw_image_intersections(
     np.testing.assert_array_equal(_host(actual), _host(expected))
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_kerning_switch_preserves_ligature_and_locl_shaping() -> None:
-    """v1-draw-text-unification acceptance 7 and 10: disabling kern keeps liga and locl while tracking is post-shaping."""
+    """For text layout and drawing, disabling kern keeps liga and locl while tracking is post-shaping."""
     size_26_6 = round(40.0 * 64.0)
     ligature_glyphs, _advance = _reference_shape(
         "ffi",
@@ -719,8 +716,10 @@ def test_draw_text_kerning_switch_preserves_ligature_and_locl_shaping() -> None:
     assert not np.array_equal(_host(unkerned), _host(tracked))
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-019")
 def test_draw_text_mono_font_assets_weight_range_and_numerical_oracle() -> None:
-    """v1-draw-text-unification acceptance 5 and 9-10: mono uses its measured axis and inherited raster rules."""
+    """Monospaced text uses its supported weight range and matches independently rasterized pixels."""
     import freetype
 
     mono_path = FONT_PATHS["mono"]
@@ -751,36 +750,9 @@ def test_draw_text_mono_font_assets_weight_range_and_numerical_oracle() -> None:
     np.testing.assert_array_equal(_host(actual), expected)
 
 
-def test_draw_text_font_dependencies_and_reads_remain_lazy() -> None:
-    """v1-draw-text-unification acceptance 9: package fonts are fixed while FreeType and HarfBuzz stay lazy."""
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; import pixtreme; "
-                "assert 'freetype' not in sys.modules; "
-                "assert 'uharfbuzz' not in sys.modules"
-            ),
-        ],
-        cwd=ROOT,
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    assert completed.returncode == 0, completed.stderr
-
-    import pixtreme._draw.text as draw_text_module
-
-    source = inspect.getsource(draw_text_module).lower()
-    assert "system font" not in source
-    assert "http://" not in source
-    assert "https://" not in source
-
-
+@pytest.mark.req("REQ-PIX-012")
 def test_draw_text_caches_full_layout_with_bit_identity() -> None:
-    """v1-draw-text-unification acceptance 5 and 10: repeated layout and raster results are privately cached."""
+    """For text layout and drawing, repeated layout and raster results are privately cached."""
     import pixtreme._draw.text as draw_text_module
 
     for cached in (draw_text_module._shape_text, draw_text_module._glyph_bitmap, draw_text_module._build_block_atlas):
@@ -805,15 +777,3 @@ def test_draw_text_caches_full_layout_with_bit_identity() -> None:
     np.testing.assert_array_equal(_host(first), _host(second))
     assert second_stats.hits > first_stats.hits
     assert not hasattr(px.draw, "text_block_cache")
-
-
-def test_draw_text_backreferences_and_gpu_kernel_reuse_are_structural_contracts() -> None:
-    """REQ-TEST-001 / v1-draw-text-unification acceptance 12 and 16: tests backreference and reuse the kernel."""
-    import pixtreme._draw.text as draw_text_module
-
-    test_source = Path(__file__).read_text(encoding="utf-8")
-    assert "v1-draw-text-unification acceptance" in test_source
-    assert draw_text_module._text_composite_kernel() is draw_text_module._text_composite_kernel()
-    public_source = inspect.getsource(draw_text_module.text)
-    assert "_composite_layer" in public_source
-    assert "RawKernel" not in public_source

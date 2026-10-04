@@ -8,24 +8,23 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import median
-from time import perf_counter
+from time import perf_counter as perf_counter
 from types import MappingProxyType
 from typing import Mapping
 
 import cupy as cp
 import numpy as np
+from exr_gate_measurement import _measure, _warmup
 from openexr_dev_oracle import read_frame as read_openexr_frame
 from openexr_dev_oracle import write_frame as write_openexr_frame
 
 import pixtreme as px
 import pixtreme._io.formats.exr.selection as io
 import pixtreme._io.header as io_header
+from pixtreme._io.formats.exr.container import _container_gpu_eligible
 
 WIDTH = 1920
 HEIGHT = 1080
-WARMUP_MINIMUM_SECONDS = 0.5
-MEASURED_MINIMUM_ITERATIONS = 20
-MEASURED_MINIMUM_SECONDS = 3.0
 DWA_COMPRESSIONS = ("dwaa", "dwab")
 DWA_DTYPES = ("fp16", "fp32")
 _DWA_READ_BACKENDS = ("cpu", "custom_cpu", "gpu")
@@ -198,7 +197,7 @@ def inspect_dwa_fixture(path: Path, compression: str, dtype: str) -> FixtureInsp
     if not math.isclose(dwa_level, _DWA_LEVEL, rel_tol=0.0, abs_tol=1e-6):
         raise AssertionError(f"{path} DWA level does not match the gate: parsed={dwa_level!r} expected={_DWA_LEVEL!r}")
     compressed_chunks = sum(not chunk.raw_stored for chunk in container.chunks)
-    if container.compression != compression or not container.dwa_eligible or not compressed_chunks:
+    if container.compression != compression or not _container_gpu_eligible(container) or not compressed_chunks:
         raise AssertionError(f"{path} is not an eligible {compression.upper()} file with a compressed DWA v2 chunk")
     return FixtureInspection(
         compression=compression,
@@ -211,42 +210,6 @@ def inspect_dwa_fixture(path: Path, compression: str, dtype: str) -> FixtureInsp
         compressed_chunks=compressed_chunks,
         file_bytes=path.stat().st_size,
     )
-
-
-def _warmup(
-    operation: Callable[[], object],
-    synchronize: Callable[[], None],
-    *,
-    timer: Callable[[], float] = perf_counter,
-) -> None:
-    started_at = timer()
-    while timer() - started_at < WARMUP_MINIMUM_SECONDS:
-        synchronize()
-        output = operation()
-        synchronize()
-        del output
-
-
-def _measure(
-    operation: Callable[[], object],
-    synchronize: Callable[[], None],
-    *,
-    timer: Callable[[], float] = perf_counter,
-) -> list[float]:
-    durations_ms: list[float] = []
-    synchronize()
-    measurement_started_at = timer()
-    elapsed_seconds = 0.0
-    while len(durations_ms) < MEASURED_MINIMUM_ITERATIONS or elapsed_seconds < MEASURED_MINIMUM_SECONDS:
-        synchronize()
-        iteration_started_at = timer()
-        output = operation()
-        synchronize()
-        iteration_finished_at = timer()
-        durations_ms.append((iteration_finished_at - iteration_started_at) * 1000.0)
-        del output
-        elapsed_seconds = iteration_finished_at - measurement_started_at
-    return durations_ms
 
 
 def _boundary_operation(

@@ -152,8 +152,10 @@ def _resize_reference(source: np.ndarray, *, width: int, height: int, interpolat
     return output.astype(np.float32)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_resize_public_signature_and_frame_only_entry_are_actionable() -> None:
-    """v1-resize acceptance 1: resize is public, keyword-sized, Frame-only, and returns a Frame."""
+    """Developers resize a Frame through the public transform operation and receive guidance for array inputs."""
     import cupy as cp
 
     signature = inspect.signature(px.transform.resize)
@@ -169,6 +171,8 @@ def test_resize_public_signature_and_frame_only_entry_are_actionable() -> None:
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "kwargs",
     (
@@ -181,7 +185,7 @@ def test_resize_public_signature_and_frame_only_entry_are_actionable() -> None:
     ),
 )
 def test_resize_rejects_ambiguous_or_incomplete_size_modes(kwargs: dict[str, Any]) -> None:
-    """v1-resize acceptance 2: exactly width+height or factor alone is required with an actionable error."""
+    """Resizing requires either width and height together or a factor alone and explains ambiguous size requests."""
     source = _frame(np.zeros((2, 3, 1), dtype=np.float32), channels=["signal"])
 
     with pytest.raises(ValueError) as error:
@@ -189,6 +193,8 @@ def test_resize_rejects_ambiguous_or_incomplete_size_modes(kwargs: dict[str, Any
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "kwargs",
     (
@@ -204,7 +210,7 @@ def test_resize_rejects_ambiguous_or_incomplete_size_modes(kwargs: dict[str, Any
     ),
 )
 def test_resize_rejects_invalid_dimensions_and_factors(kwargs: dict[str, Any]) -> None:
-    """v1-resize acceptance 4: dimensions are positive ints and factor is positive with nonempty output."""
+    """Resizing rejects invalid dimensions and factors that cannot produce a nonempty image with guidance."""
     source = _frame(np.zeros((2, 3, 1), dtype=np.float32), channels=["signal"])
 
     with pytest.raises(ValueError) as error:
@@ -212,8 +218,10 @@ def test_resize_rejects_invalid_dimensions_and_factors(kwargs: dict[str, Any]) -
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_resize_rejects_unrepresentable_factor_derived_dimensions_actionably() -> None:
-    """REQ-API-012: factor-derived dimensions fail before rounding or allocation when they overflow."""
+    """Resizing rejects a factor whose derived dimensions overflow and identifies the factor and dimensions."""
     source = _frame(np.zeros((2, 2, 3), dtype=np.float32), channels=("R", "G", "B"))
 
     with pytest.raises(ValueError) as error:
@@ -225,8 +233,10 @@ def test_resize_rejects_unrepresentable_factor_derived_dimensions_actionably() -
     assert "height" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_resize_translates_factor_conversion_overflow_actionably() -> None:
-    """REQ-API-012: a valid Real factor whose float conversion overflows raises the actionable error."""
+    """Resizing reports a factor conversion overflow as an actionable input error while retaining its cause."""
     source = _frame(np.zeros((2, 2, 3), dtype=np.float32), channels=("R", "G", "B"))
 
     with pytest.raises(ValueError) as error:
@@ -237,8 +247,9 @@ def test_resize_translates_factor_conversion_overflow_actionably() -> None:
     assert isinstance(error.value.__cause__, OverflowError)
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_resize_factor_uses_half_up_rounding_and_accepts_real_scalars() -> None:
-    """v1-resize acceptance 3 and 4: factor uses floor(dim*factor+0.5), including the 1080 regression."""
+    """Resizing accepts real scalar factors and rounds derived dimensions half up."""
     source = _frame(np.zeros((1080, 3, 1), dtype=np.float32), channels=["signal"])
 
     result = px.transform.resize(source, factor=np.float32(2.0 / 3.0), interpolation="nearest")
@@ -246,8 +257,10 @@ def test_resize_factor_uses_half_up_rounding_and_accepts_real_scalars() -> None:
     assert result.shape == (720, 2, 1)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_resize_accepts_all_tokens_and_unknown_token_lists_the_vocabulary() -> None:
-    """v1-resize acceptance 5: all nine exact tokens work and unknown vocabulary fails with the accepted set."""
+    """Resizing accepts every supported interpolation token and lists them when a token is unknown."""
     source = _frame(np.arange(12, dtype=np.float32).reshape(3, 4, 1), channels=["signal"])
 
     for interpolation in INTERPOLATIONS:
@@ -260,12 +273,13 @@ def test_resize_accepts_all_tokens_and_unknown_token_lists_the_vocabulary() -> N
         assert interpolation in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-010")
 @pytest.mark.parametrize(
     ("width", "height", "expected"),
     ((3, 3, "area"), (7, 6, "lanczos4"), (7, 3, "area"), (5, 4, "lanczos4")),
 )
 def test_resize_auto_default_is_size_driven(width: int, height: int, expected: str) -> None:
-    """v1-resize acceptance 6: any shrinking axis selects area, otherwise auto selects lanczos4."""
+    """Automatic resize interpolation uses area when any axis shrinks and lanczos4 otherwise."""
     values = np.linspace(-0.25, 1.25, 4 * 5 * 2, dtype=np.float32).reshape(4, 5, 2)
     source = _frame(values, channels=["left", "right"])
 
@@ -282,6 +296,7 @@ def test_resize_auto_default_is_size_driven(width: int, height: int, expected: s
     )
 
 
+@pytest.mark.req("REQ-PIX-010")
 @pytest.mark.parametrize("interpolation", INTERPOLATIONS)
 @pytest.mark.parametrize(("width", "height"), ((3, 2), (7, 6)))
 def test_resize_kernels_match_an_independent_centered_numpy_oracle(
@@ -289,7 +304,7 @@ def test_resize_kernels_match_an_independent_centered_numpy_oracle(
     width: int,
     height: int,
 ) -> None:
-    """v1-resize acceptance 7, 8, 10, and 13-15: centered fixed-support kernels match NumPy."""
+    """Resize filters produce centered samples with the expected support and edge behavior within the NumPy reference tolerance."""
     rng = np.random.default_rng(20260716)
     values = rng.uniform(-0.25, 1.25, size=(4, 5, 3)).astype(np.float32)
     source = _frame(values, channels=["temperature", "mask", "depth"])
@@ -309,8 +324,9 @@ def test_resize_kernels_match_an_independent_centered_numpy_oracle(
     )
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_resize_known_nearest_bilinear_and_area_solutions_fix_center_and_edge_rules() -> None:
-    """v1-resize acceptance 7, 8, and 13: hand-computed small images fix center mapping and replicate edges."""
+    """Nearest, bilinear, and area resizing produce the hand-computed center and edge values of small images."""
     horizontal = _frame(np.asarray([[[0.0], [10.0]]], dtype=np.float32), channels=["signal"])
     bilinear = px.transform.resize(horizontal, width=4, height=1, interpolation="bilinear")
     nearest = px.transform.resize(horizontal, width=4, height=1, interpolation="nearest")
@@ -337,8 +353,10 @@ def test_resize_known_nearest_bilinear_and_area_solutions_fix_center_and_edge_ru
     )
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-010")
 def test_resize_is_per_channel_label_independent_and_preserves_metadata() -> None:
-    """v1-resize acceptance 9 and 16; v1-red-tokens acceptance 68: renamed ARRI metadata survives."""
+    """Resizing filters each labeled channel independently and carries the Frame's color and channel metadata forward."""
     values = np.asarray(
         [
             [[0.0, 100.0, -5.0], [1.0, 200.0, -4.0]],
@@ -374,8 +392,11 @@ def test_resize_is_per_channel_label_independent_and_preserves_metadata() -> Non
     )
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-103")
 def test_resize_keeps_scene_values_and_filter_overshoot_unclamped() -> None:
-    """v1-resize acceptance 10: input excursions and cubic undershoot pass through without clamping."""
+    """Resizing retains negative and above-one scene values and does not clamp cubic filter undershoot."""
     excursions = _frame(np.asarray([[[-0.5], [1.5]]], dtype=np.float32), channels=["signal"])
     linear = px.io.to_array(
         px.transform.resize(excursions, width=4, height=1, interpolation="bilinear"),
@@ -394,8 +415,9 @@ def test_resize_keeps_scene_values_and_filter_overshoot_unclamped() -> None:
     assert float(cubic.min()) < 0.0
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_resize_calculates_float32_and_same_size_kernel_classes_are_distinct() -> None:
-    """v1-resize acceptance 11 and 12: output is fp32; interpolating kernels are identity, approximating ones smooth."""
+    """Same-size resizing returns float32 pixels, preserves interpolating filters, and allows approximation filters to smooth."""
     rng = np.random.default_rng(11)
     values = rng.uniform(-0.2, 1.2, size=(5, 6, 2)).astype(np.float32)
     source = _frame(values, channels=["first", "second"])
@@ -425,8 +447,10 @@ def test_resize_calculates_float32_and_same_size_kernel_classes_are_distinct() -
         )
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-010")
 def test_resize_always_returns_a_new_frame_and_private_allocation() -> None:
-    """v1-resize acceptance 16 and 17: even an identity-sized call returns a new Frame and allocation."""
+    """Even at the input size, resizing returns a separate Frame with its pixels and color metadata intact."""
     values = np.arange(18, dtype=np.float32).reshape(2, 3, 3)
     source = _frame(values, colorspace="Rec.2020", gamma="PQ", channels="BGR")
 
@@ -444,8 +468,10 @@ def test_resize_always_returns_a_new_frame_and_private_allocation() -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_resize_docstring_is_a_self_contained_llm_readable_contract() -> None:
-    """v1-resize acceptance 19: the docstring states every non-obvious call and numeric rule."""
+    """Developers can find resize sizing, sampling, default interpolation, and unclamped value rules in the public docstring."""
     docstring = inspect.getdoc(px.transform.resize)
     assert docstring is not None
     for required in (

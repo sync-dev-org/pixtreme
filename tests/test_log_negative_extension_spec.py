@@ -118,8 +118,11 @@ def _red_values(frame: px.core.Frame) -> np.ndarray:
     return px.io.to_array(frame).get()[0, :, red]
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_slog3_encode_directly_applies_the_vendor_lower_branch_and_anchors() -> None:
-    """v1-log-negative-extension acceptance 1 and 5: S-Log3 encode matches the independent vendor oracle."""
+    """Sony S-Log3 encoding follows the vendor lower branch and published anchors for negative scene values."""
     cut = np.float32(_SLOG3_CUT)
     values = np.asarray(
         (
@@ -147,8 +150,11 @@ def test_slog3_encode_directly_applies_the_vendor_lower_branch_and_anchors() -> 
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_slog3_decode_directly_applies_the_vendor_lower_branch_through_the_cut() -> None:
-    """v1-log-negative-extension acceptance 2 and 5: S-Log3 decode matches the independent branch oracle."""
+    """Sony S-Log3 decoding follows the vendor lower branch through its cut for negative scene values."""
     cut = np.float32(_SLOG3_CODE_CUT)
     values = np.asarray(
         (
@@ -173,8 +179,11 @@ def test_slog3_decode_directly_applies_the_vendor_lower_branch_through_the_cut()
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=1e-5)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_logc4_encode_directly_selects_log_or_linear_at_the_negative_cut() -> None:
-    """v1-log-negative-extension acceptance 3 and 5; v1-red-tokens acceptance 68: retain ARRI-LogC4 encode."""
+    """ARRI-LogC4 encoding selects its logarithmic or linear branch at the negative scene cut."""
     cut = np.float32(_LOGC4_T)
     values = np.asarray(
         (
@@ -203,8 +212,11 @@ def test_logc4_encode_directly_selects_log_or_linear_at_the_negative_cut() -> No
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_logc4_decode_uses_the_linear_branch_for_every_negative_code() -> None:
-    """v1-log-negative-extension acceptance 4 and 5; v1-red-tokens acceptance 68: retain ARRI-LogC4 decode."""
+    """ARRI-LogC4 decoding uses the linear branch for negative code values without clipping them."""
     values = np.asarray(
         (
             -0.5,
@@ -227,6 +239,9 @@ def test_logc4_decode_uses_the_linear_branch_for_every_negative_code() -> None:
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=2e-5)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize(
     ("gamma", "encode", "decode", "linear"),
     (
@@ -240,7 +255,7 @@ def test_log_transfers_round_trip_both_directions_against_independent_oracles(
     decode: Callable[[np.ndarray], np.ndarray],
     linear: tuple[float, ...],
 ) -> None:
-    """v1-log-negative-extension acceptance 5; v1-red-tokens acceptance 68: renamed transfers round-trip."""
+    """Sony S-Log3 and ARRI-LogC4 round trip signed values in both directions against vendor equations."""
     linear_values = np.asarray(linear, dtype=np.float32)
     encoded_values = encode(linear_values.astype(np.float64)).astype(np.float32)
 
@@ -255,9 +270,11 @@ def test_log_transfers_round_trip_both_directions_against_independent_oracles(
     np.testing.assert_allclose(_red_values(restored_encoded), encoded_values, rtol=0.0, atol=8e-6)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize("gamma", ("S-Log3", "ARRI-LogC4"))
 def test_all_public_transfer_paths_bind_vendor_results_and_preserve_frame_contract(gamma: str) -> None:
-    """v1-log-negative-extension acceptance 6; v1-red-tokens acceptance 68: paths preserve renamed labels."""
+    """Sony S-Log3 and ARRI-LogC4 public paths preserve vendor transfer values and Frame properties."""
     values = np.asarray((-0.25, -0.01, 0.0, 0.18, 1.0, 1.5), dtype=np.float32)
     source = _frame(values, auxiliary=True)
     source_before = source.data.copy()
@@ -283,6 +300,7 @@ def test_all_public_transfer_paths_bind_vendor_results_and_preserve_frame_contra
     assert one_way_encoded.data.data.ptr != source.data.data.ptr
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(
     ("gamma", "linear", "encode_bits", "encoded", "decode_bits"),
     (
@@ -323,11 +341,7 @@ def test_corrected_transfers_keep_pre_correction_nonnegative_bits_characterizati
     encoded: tuple[float, ...],
     decode_bits: tuple[int, ...],
 ) -> None:
-    """characterization: v1-log-negative-extension acceptance 6; v1-red-tokens acceptance 68 freezes GPU bits.
-
-    The vendor formulas establish correctness independently. Keep this snapshot until the explicit nonnegative
-    bit-identity contract changes or the CUDA arithmetic implementation is intentionally replaced.
-    """
+    """characterization: Sony S-Log3 and ARRI-LogC4 retain exact nonnegative GPU transfer pixels."""
     actual_encode = _red_values(
         px.color.linear_to_gamma(_frame(np.asarray(linear, dtype=np.float32)), gamma=gamma)
     ).view(np.uint32)
@@ -377,12 +391,9 @@ _UNCHANGED_TRANSFER_BITS = {
 }
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_out_of_scope_transfers_keep_pre_correction_bits_characterization() -> None:
-    """characterization: v1-log-negative-extension acceptance 7 freezes every out-of-scope transfer bit pattern.
-
-    Existing public-formula tests establish correctness. Keep this snapshot until one of those transfer contracts or
-    its CUDA arithmetic is intentionally changed.
-    """
+    """characterization: Other supported transfers retain their exact GPU pixel values."""
     values = np.asarray((-0.25, 0.0, 0.18, 1.0, 1.5), dtype=np.float32)
     for gamma, (encode_bits, decode_bits) in _UNCHANGED_TRANSFER_BITS.items():
         actual_encode = _red_values(px.color.linear_to_gamma(_frame(values), gamma=gamma)).view(np.uint32)

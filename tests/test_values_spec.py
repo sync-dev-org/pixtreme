@@ -37,11 +37,14 @@ def _frame(
     return px.io.from_array(cp.asarray(array), colorspace=colorspace, gamma=gamma, channels=labels)
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("shape", ((0, 2, 3), (2, 0, 3)), ids=("zero-height", "zero-width"))
 def test_frame_construction_rejects_empty_spatial_input_before_value_operations(
     shape: tuple[int, int, int],
 ) -> None:
-    """REQ-ARCH-002: empty spatial input is rejected before any values operation can receive a Frame."""
+    """Frame rejects empty spatial dimensions before a value operation can receive the image."""
     import cupy as cp
 
     with pytest.raises(ValueError) as error:
@@ -56,8 +59,9 @@ def test_frame_construction_rejects_empty_spatial_input_before_value_operations(
     assert "at least 1" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-008")
 def test_quantize_values_clips_and_rounds_half_away_from_zero_at_ties() -> None:
-    """v1-quantize-values acceptance 1 and 5: unsigned full-scale ties round upward after clipping."""
+    """Quantizing float32 pixels clips to the unsigned range and rounds exact half ties upward."""
     values = np.asarray(
         [-1.0, 0.0, 0.5 / 255.0, 1.5 / 255.0, 0.5, 254.5 / 255.0, 1.0, 2.0],
         dtype=np.float32,
@@ -77,9 +81,10 @@ def test_quantize_values_clips_and_rounds_half_away_from_zero_at_ties() -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("bit_depth", BIT_DEPTHS)
 def test_quantize_values_derives_the_container_and_full_scale(bit_depth: int) -> None:
-    """v1-quantize-values acceptance 1 and 3: every accepted depth uses maximum code 2^B-1."""
+    """Quantization chooses an unsigned container and maximum code of two to the declared bit depth minus one."""
     maximum = (1 << bit_depth) - 1
     container = np.uint8 if bit_depth == 8 else np.uint16
     source = _frame([0.0, 0.5, 1.0])
@@ -97,9 +102,10 @@ def test_quantize_values_derives_the_container_and_full_scale(bit_depth: int) ->
     )
 
 
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("bit_depth", BIT_DEPTHS)
 def test_dequantize_values_divides_by_the_declared_maximum_without_rounding(bit_depth: int) -> None:
-    """v1-quantize-values acceptance 2 and 3: integer codes divide by 2^B-1 into fp32."""
+    """Dequantization divides integer codes by the declared maximum and returns float32 pixels without rounding."""
     maximum = (1 << bit_depth) - 1
     container = np.uint8 if bit_depth == 8 else np.uint16
     codes = np.asarray([0, maximum // 2, maximum], dtype=container)
@@ -118,8 +124,11 @@ def test_dequantize_values_divides_by_the_declared_maximum_without_rounding(bit_
     )
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_dequantize_values_preserves_codes_above_the_declared_maximum() -> None:
-    """v1-quantize-values acceptance 2: container-valid overshoot remains above 1.0."""
+    """Dequantization preserves container-valid codes above the declared maximum as float32 values above one."""
     source = _frame([0, 1023, 2046, 65535], dtype=np.uint16)
 
     result = px.values.dequantize(source, bit_depth=10)
@@ -134,10 +143,12 @@ def test_dequantize_values_preserves_codes_above_the_declared_maximum() -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("invalid", (0, 7, 9, 11, 13, 15, 17, 18, "8", True, 10.0))
 @pytest.mark.parametrize("operation", ("quantize", "dequantize"))
 def test_value_quantization_rejects_bit_depths_outside_the_closed_set(operation: str, invalid: object) -> None:
-    """REQ-API-012 / v1-quantize-values acceptance 3: invalid bit depths fail actionably."""
+    """Quantization and dequantization reject unsupported bit depths and list the accepted depths."""
     dtype = np.float32 if operation == "quantize" else np.uint8
     source = _frame([0, 0, 0], dtype=dtype)
 
@@ -146,6 +157,8 @@ def test_value_quantization_rejects_bit_depths_outside_the_closed_set(operation:
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "routes"),
     (
@@ -158,7 +171,7 @@ def test_quantize_values_rejects_non_float32_with_a_conversion_route(
     dtype: type[np.generic],
     routes: tuple[str, ...],
 ) -> None:
-    """REQ-API-012 / v1-recode-dtype acceptance 9: fp32 errors retain an actionable conversion route."""
+    """Quantization rejects non-float32 Frame pixels and explains the public conversion route."""
     source = _frame([0, 0, 0], dtype=dtype)
 
     with pytest.raises(ValueError) as error:
@@ -170,6 +183,8 @@ def test_quantize_values_rejects_non_float32_with_a_conversion_route(
     assert positions == tuple(sorted(positions))
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("bit_depth", "dtype"),
     ((8, np.float32), (8, np.float16), (8, np.uint16), (10, np.float32), (10, np.float16), (10, np.uint8)),
@@ -178,7 +193,7 @@ def test_dequantize_values_requires_the_bit_depth_container(
     bit_depth: int,
     dtype: type[np.generic],
 ) -> None:
-    """REQ-API-012 / v1-quantize-values acceptance 2: container mismatches fail actionably."""
+    """Dequantization rejects a container inconsistent with the declared bit depth and explains the valid pairing."""
     source = _frame([0, 0, 0], dtype=dtype)
     expected = "uint8" if bit_depth == 8 else "uint16"
 
@@ -187,8 +202,10 @@ def test_dequantize_values_requires_the_bit_depth_container(
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-002")
 def test_value_quantization_returns_new_frames_and_preserves_input_and_metadata() -> None:
-    """v1-quantize-values acceptance 4: both directions allocate and preserve all metadata axes."""
+    """Quantization and dequantization allocate new Frames, preserve input pixels, and carry color metadata forward."""
     float_source = _frame(
         [0.0, 0.5, 1.0],
         colorspace="ACEScg",
@@ -232,8 +249,9 @@ def test_value_quantization_returns_new_frames_and_preserves_input_and_metadata(
     )
 
 
+@pytest.mark.req("REQ-PIX-008")
 def test_uint16_all_codes_round_trip_through_fp32_quantization() -> None:
-    """v1-quantize-values acceptance 5: every 16-bit code survives code-to-fp32-to-code."""
+    """Every uint16 code survives conversion to float32 and back under 16-bit quantization."""
     codes = np.arange(1 << 16, dtype=np.uint16).reshape(256, 256, 1)
     source = _frame(codes, channels="Y", dtype=np.uint16)
 
@@ -247,6 +265,7 @@ def test_uint16_all_codes_round_trip_through_fp32_quantization() -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(
     ("bit_depth", "denominator", "y_min", "y_max", "c_min", "c_max"),
     (
@@ -265,7 +284,7 @@ def test_range_functions_use_the_h273_luma_and_chroma_positions(
     c_min: float,
     c_max: float,
 ) -> None:
-    """v1-quantize-values acceptance 6 and 7: direction-named functions preserve the former H.273 oracle."""
+    """Legal and full range conversion uses H.273 luma and chroma code positions for each direction."""
     legal_positions = np.asarray(
         [
             [[y_min / denominator, c_min / denominator, c_max / denominator]],
@@ -296,8 +315,11 @@ def test_range_functions_use_the_h273_luma_and_chroma_positions(
     )
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_range_functions_apply_luma_positions_to_rgb_and_round_trip_overshoot() -> None:
-    """v1-quantize-values acceptance 7 and 8: RGB uses luma scale and linear overshoot round-trips."""
+    """Range conversion applies luma positions to RGB and preserves values outside the nominal interval on a round trip."""
     rgb = _frame([16.0 / 255.0, 125.5 / 255.0, 235.0 / 255.0], channels="RGB")
     np.testing.assert_allclose(
         px.io.to_array(
@@ -326,9 +348,10 @@ def test_range_functions_apply_luma_positions_to_rgb_and_round_trip_overshoot() 
     )
 
 
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("operation", (px.values.legal_to_full, px.values.full_to_legal))
 def test_range_functions_default_to_eight_bit_positions(operation: Callable[..., px.core.Frame]) -> None:
-    """v1-subpackage-reorg acceptance 4: omitting bit_depth is bit-identical to an explicit value of eight."""
+    """Range conversion without a bit-depth argument matches an explicit eight-bit conversion."""
     source = _frame([0.0, 0.5, 1.0], channels="RGB")
 
     default = operation(source)
@@ -344,9 +367,14 @@ def test_range_functions_default_to_eight_bit_positions(operation: Callable[...,
     )
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("operation", ("legal_to_full", "full_to_legal"))
 def test_range_functions_allocate_preserve_metadata_and_reject_undefined_channels(operation: str) -> None:
-    """REQ-API-012 / v1-quantize-values acceptance 7: undefined channel ranges fail actionably."""
+    """Range conversion allocates a new Frame, preserves color metadata, and rejects undefined channel ranges with
+    guidance.
+    """
     source = _frame(
         [0.1, 0.2, 0.3],
         colorspace="ACEScg",
@@ -378,6 +406,8 @@ def test_range_functions_allocate_preserve_metadata_and_reject_undefined_channel
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "routes"),
     (
@@ -392,7 +422,7 @@ def test_range_functions_reject_non_float32_with_the_dtype_specific_route(
     dtype: type[np.generic],
     routes: tuple[str, ...],
 ) -> None:
-    """v1-recode-dtype acceptance 9: fp32 errors prioritize recoding and retain bit-grid guidance."""
+    """Range conversion rejects non-float32 Frame pixels and explains the dtype conversion route."""
     source = _frame([0, 0, 0], dtype=dtype)
 
     with pytest.raises(ValueError) as error:
@@ -401,16 +431,20 @@ def test_range_functions_reject_non_float32_with_the_dtype_specific_route(
     assert positions == tuple(sorted(positions))
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("invalid", (0, 7, 9, 11, 13, 15, 17, 18, "8", True, 10.0))
 @pytest.mark.parametrize("operation", ("legal_to_full", "full_to_legal"))
 def test_range_functions_reject_bit_depths_outside_the_closed_set(operation: str, invalid: object) -> None:
-    """v1-quantize-values acceptance 8: both range directions share the five-value bit-depth domain."""
+    """Both range conversion directions reject bit depths outside their declared five-value domain."""
     source = _frame([0.0, 0.5, 1.0], channels="RGB")
 
     with pytest.raises(ValueError, match=r"expected one of \(8, 10, 12, 14, 16\)"):
         getattr(px.values, operation)(source, bit_depth=invalid)
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "operation",
     (
@@ -421,7 +455,7 @@ def test_range_functions_reject_bit_depths_outside_the_closed_set(operation: str
     ),
 )
 def test_value_operations_reject_non_frames(operation: Callable[[], object]) -> None:
-    """REQ-API-012 / v1-quantize-values acceptance 1, 2, and 6: non-Frames fail actionably."""
+    """Value operations reject non-Frame input and explain how to provide the required image value."""
     with pytest.raises(ValueError, match="Frame") as error:
         operation()
     _assert_actionable(error)

@@ -25,17 +25,21 @@ def _map(profile: bytes, *, compatible: bool = True) -> tuple[dict[str, object],
     return info.raw, info.colorspace, info.gamma, info.mappable
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize("version", (2, 4))
 @pytest.mark.parametrize("profile_class", (b"mntr", b"scnr", b"spac"))
 def test_valid_matrix_trc_profiles_map_independently_of_version_and_supported_class(
     version: int, profile_class: bytes
 ) -> None:
-    """v1-io-icc acceptance 9 and 11: supported versions and classes interpret the same device-to-PCS tags."""
+    """Supported ICC versions and profile classes map identical device-to-PCS tags to the same color metadata."""
     profile = icc_profile(version=version, profile_class=profile_class, colorspace="sRGB", gamma="sRGB")
 
     assert _map(profile) == ({"ICC": profile}, "sRGB", "sRGB", True)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     "profile",
     (
@@ -50,12 +54,14 @@ def test_valid_matrix_trc_profiles_map_independently_of_version_and_supported_cl
     ids=("version", "class", "space", "pcs", "signature", "incomplete", "hybrid"),
 )
 def test_unsupported_profile_structures_preserve_exact_raw_but_map_neither_component(profile: bytes) -> None:
-    """v1-io-icc acceptance 9, 16, and 18: unsupported profile structure is optional unmappable metadata."""
+    """Unsupported ICC structures preserve exact raw profile bytes without assigning color-space or gamma metadata."""
     assert _map(profile) == ({"ICC": profile}, None, None, False)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_profile_size_tag_table_alignment_overlap_and_duplicate_signature_are_validated() -> None:
-    """v1-io-icc acceptance 9 and 18: the exact size and every tag range obey bounded table structure."""
+    """ICC profile parsing validates declared size, tag table bounds, alignment, overlap, and duplicate signatures."""
     valid = icc_profile()
     wrong_size = bytearray(valid)
     struct.pack_into(">I", wrong_size, 0, len(valid) - 1)
@@ -68,8 +74,10 @@ def test_profile_size_tag_table_alignment_overlap_and_duplicate_signature_are_va
         assert _map(profile) == ({"ICC": profile}, None, None, False)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_exact_tag_payload_sharing_is_accepted_for_the_three_identical_trcs() -> None:
-    """v1-io-icc acceptance 9: identical offset-and-size records may share one tag data payload."""
+    """ICC parsing accepts three identical transfer curves that share the same tag payload offset and size."""
     profile = icc_profile(colorspace="Adobe-RGB", gamma="Adobe-RGB")
     count = struct.unpack_from(">I", profile, 128)[0]
     records = {
@@ -81,8 +89,12 @@ def test_exact_tag_payload_sharing_is_accepted_for_the_three_identical_trcs() ->
     assert _map(profile) == ({"ICC": profile}, "Adobe-RGB", "Adobe-RGB", True)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_numerically_identical_colorspaces_use_only_the_fixed_icc_priorities() -> None:
-    """v1-io-icc acceptance 11: ICC maps shared sRGB/Rec.709 and S-Gamut/S-Gamut3 definitions predictably."""
+    """ICC mapping applies fixed priorities when numerically identical definitions name sRGB, Rec.709, or Sony gamut
+    variants.
+    """
     srgb = icc_profile(colorspace="sRGB", gamma="linear")
     sgamut = icc_profile(colorspace="S-Gamut", gamma="linear")
 
@@ -90,8 +102,12 @@ def test_numerically_identical_colorspaces_use_only_the_fixed_icc_priorities() -
     assert _map(sgamut)[1] == "S-Gamut"
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_chad_v2_and_v4_recovery_follow_the_fixed_source_white_rules() -> None:
-    """v1-io-icc acceptance 10: chad, v2 wtpt, and D50-native v4 recovery have distinct fixed paths."""
+    """ICC color-space recovery follows the specified source-white rules for chad, v2 wtpt, and D50-native v4
+    profiles.
+    """
     chad = icc_profile(version=4, colorspace="Adobe-RGB", gamma="Adobe-RGB", with_chad=True)
     v2_without_chad = icc_profile(version=2, colorspace="Adobe-RGB", gamma="Adobe-RGB", with_chad=False)
     v4_d50 = icc_profile(version=4, colorspace="ProPhoto-RGB", gamma="ProPhoto-RGB", with_chad=False)
@@ -103,8 +119,12 @@ def test_chad_v2_and_v4_recovery_follow_the_fixed_source_white_rules() -> None:
     assert _map(v4_d65)[1:] == (None, "Gamma-2.2", False)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_singular_chad_and_xyz_scale_guard_only_remove_colorspace_mapping() -> None:
-    """v1-io-icc acceptance 10 and 15: matrix failure preserves an independently valid transfer mapping."""
+    """An invalid ICC color matrix prevents color-space mapping while preserving an independently valid gamma
+    mapping.
+    """
     singular = icc_profile(
         colorspace="Adobe-RGB",
         gamma="Adobe-RGB",
@@ -116,6 +136,8 @@ def test_singular_chad_and_xyz_scale_guard_only_remove_colorspace_mapping() -> N
         assert _map(profile) == ({"ICC": profile}, None, "Gamma-2.2", False)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     ("colorspace", "gamma", "expected"),
     (
@@ -132,12 +154,14 @@ def test_singular_chad_and_xyz_scale_guard_only_remove_colorspace_mapping() -> N
 def test_curv_and_para_realized_curves_map_only_to_the_closed_target_set(
     colorspace: str, gamma: str, expected: str
 ) -> None:
-    """v1-io-icc acceptance 12: supported curv and para curves map by independent realized-curve comparisons."""
+    """ICC curv and para transfer curves map only when their realized values match a supported gamma name."""
     profile = icc_profile(colorspace=colorspace, gamma=gamma)
 
     assert _map(profile)[2] == expected
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     "payload",
     (
@@ -149,14 +173,18 @@ def test_curv_and_para_realized_curves_map_only_to_the_closed_target_set(
     ),
 )
 def test_all_para_types_accept_equivalent_degenerate_pure_power_forms(payload: bytes) -> None:
-    """v1-io-icc acceptance 12: para types zero through four compare their realized functions, not parameters."""
+    """All ICC parametric curve types recognize equivalent pure-power forms from their realized values."""
     profile = icc_profile(gamma="Gamma-2.4", trcs=(payload,) * 3)
 
     assert _map(profile)[2] == "Gamma-2.4"
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_sampled_curve_uses_knots_grid_and_branch_points_to_reject_sparse_false_positive() -> None:
-    """v1-io-icc acceptance 12 and 21: the fixed evaluation union accepts dense data and rejects three knots."""
+    """ICC sampled-curve mapping checks knots, a dense grid, and branch points so sparse matches do not select a
+    gamma name.
+    """
     x = np.linspace(0.0, 1.0, 4097, dtype=np.float64)
     dense = curv_tag(samples=x**2.2)
     sparse = curv_tag(samples=np.asarray((0.0, 0.5, 1.0), dtype=np.float64) ** 2.2)
@@ -168,8 +196,10 @@ def test_sampled_curve_uses_knots_grid_and_branch_points_to_reject_sparse_false_
     assert _map(sparse_profile)[2] is None
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_adobe_count_one_tie_break_depends_only_on_recovered_colorspace() -> None:
-    """v1-io-icc acceptance 13: the u8Fixed8 Adobe exponent has the sole specified gamma tie-break."""
+    """An ICC one-sample Adobe transfer curve uses only the recovered color space to break its gamma-name tie."""
     adobe_curve = trc_payload("Adobe-RGB")
     adobe = icc_profile(colorspace="Adobe-RGB", trcs=(adobe_curve,) * 3)
     srgb = icc_profile(colorspace="sRGB", trcs=(adobe_curve,) * 3)
@@ -180,8 +210,12 @@ def test_adobe_count_one_tie_break_depends_only_on_recovered_colorspace() -> Non
     assert _map(para_adobe)[2] == "Adobe-RGB"
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_channel_mismatch_and_container_incompatibility_preserve_partial_contract() -> None:
-    """v1-io-icc acceptance 12, 15, 18, and 26: TRC mismatch and non-RGB containers retain exact raw bytes."""
+    """ICC transfer-curve mismatch and non-RGB containers preserve raw bytes and any independently valid metadata
+    component.
+    """
     profile = icc_profile(
         colorspace="Adobe-RGB",
         trcs=(trc_payload("sRGB"), trc_payload("Rec.709"), trc_payload("sRGB")),
@@ -191,8 +225,10 @@ def test_channel_mismatch_and_container_incompatibility_preserve_partial_contrac
     assert _map(profile, compatible=False) == ({"ICC": profile}, None, None, False)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_description_header_illuminant_and_reserved_values_do_not_affect_mapping() -> None:
-    """v1-io-icc acceptance 9 and 11: ignored descriptive and header fields never select a token."""
+    """ICC description and non-color header fields do not change the selected color-space or gamma names."""
     profile = bytearray(icc_profile(extra_tags={b"desc": b"desc" + b"\x00" * 28}))
     profile[68:80] = b"\xff" * 12
     profile[100:128] = b"ignored reserved field bytes!"[:28]
@@ -202,16 +238,20 @@ def test_description_header_illuminant_and_reserved_values_do_not_affect_mapping
     assert _map(value) == ({"ICC": value}, "sRGB", "sRGB", True)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_malformed_trc_type_and_count_leave_valid_colorspace_available() -> None:
-    """v1-io-icc acceptance 9, 12, and 15: malformed curve data fails only the gamma component."""
+    """Malformed ICC transfer-curve data blocks gamma mapping while leaving a valid color-space mapping available."""
     malformed = b"para\x00\x00\x00\x00" + struct.pack(">HH", 5, 0) + b"\x00" * 28
     profile = icc_profile(colorspace="P3-D65", trcs=(malformed,) * 3)
 
     assert _map(profile) == ({"ICC": profile}, "P3-D65", None, False)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_lcms_generated_v4_srgb_profile_maps_without_becoming_a_runtime_dependency() -> None:
-    """v1-io-icc acceptance 14 and 21: the deterministic lcms2 v4 sRGB profile is an independent dev oracle."""
+    """An independently generated ICC v4 sRGB profile maps to sRGB metadata without requiring lcms2 at runtime."""
     profile = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
 
     assert _map(profile) == ({"ICC": profile}, "sRGB", "sRGB", True)

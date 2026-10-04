@@ -1,4 +1,4 @@
-"""Generate the manual visual-acceptance sheet for v1-sharpen."""
+"""Generate a comparison sheet for visual inspection of sharpen."""
 
 from __future__ import annotations
 

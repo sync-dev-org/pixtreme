@@ -21,9 +21,11 @@ from pixtreme._core.vocabulary import _BORDER_TOKENS, Border, Interpolation
 _INTERPOLATION_TOKENS = (*_POINT_INTERPOLATION_TOKENS, "area")
 
 _RAW_KERNEL_BLOCK = (16, 16)
+_POINT_TILE_BYTES = 16 * 1024
 
 _WARP_AFFINE_KERNEL_SOURCE = (
-    _POINT_INTERPOLATION_DEVICE_SOURCE
+    f"#define PIXTREME_WARP_TILE_FLOATS {_POINT_TILE_BYTES // 4}\n"
+    + _POINT_INTERPOLATION_DEVICE_SOURCE
     + _BORDER_PREAMBLE
     + r"""
 __device__ float pixtreme_warp_normalize_coordinate(
@@ -84,6 +86,16 @@ __device__ float pixtreme_warp_cell_sample(
     );
 }
 
+__device__ float4 pixtreme_warp_bounds_reduce(float4 bounds) {
+    for (int offset = 16; offset > 0; offset /= 2) {
+        bounds.x = fminf(bounds.x, __shfl_down_sync(0xffffffff, bounds.x, offset));
+        bounds.y = fminf(bounds.y, __shfl_down_sync(0xffffffff, bounds.y, offset));
+        bounds.z = fmaxf(bounds.z, __shfl_down_sync(0xffffffff, bounds.z, offset));
+        bounds.w = fmaxf(bounds.w, __shfl_down_sync(0xffffffff, bounds.w, offset));
+    }
+    return bounds;
+}
+
 extern "C" __global__ void pixtreme_warp_affine_point(
     const float* __restrict__ source,
     float* __restrict__ output,
@@ -104,24 +116,96 @@ extern "C" __global__ void pixtreme_warp_affine_point(
 ) {
     const long long output_x = (long long)blockIdx.x * blockDim.x + threadIdx.x;
     const long long output_y = (long long)blockIdx.y * blockDim.y + threadIdx.y;
-    if (output_x >= output_width || output_y >= output_height) {
-        return;
-    }
+    const bool active = output_x < output_width && output_y < output_height;
     const float mapped_x = inverse_00 * (float)output_x + inverse_01 * (float)output_y + inverse_02;
     const float mapped_y = inverse_10 * (float)output_x + inverse_11 * (float)output_y + inverse_12;
     const long long output_offset = (output_y * output_width + output_x) * channel_count;
 
-    if (border == 3 && (
+    const bool constant_only = border == 3 && (
         mapped_x < -8.0f || mapped_x > (float)input_width + 7.0f ||
         mapped_y < -8.0f || mapped_y > (float)input_height + 7.0f
-    )) {
+    );
+    const float source_x = pixtreme_warp_normalize_coordinate(mapped_x, input_width, border);
+    const float source_y = pixtreme_warp_normalize_coordinate(mapped_y, input_height, border);
+
+    extern __shared__ float tile[];
+    __shared__ float4 warp_bounds[8]; // The 16 x 16 output block contains eight warps.
+    __shared__ long long tile_x;
+    __shared__ long long tile_y;
+    __shared__ int tile_width;
+    __shared__ int tile_values;
+    if (interpolation == 7) {
+        const int thread = threadIdx.y * blockDim.x + threadIdx.x;
+        const int lane = thread % 32;
+        const int warp = thread / 32;
+        const float infinity = __int_as_float(0x7f800000);
+        float4 bounds = make_float4(infinity, infinity, -infinity, -infinity);
+        if (active && !constant_only) {
+            // Bound the actual fp32 sampling coordinates, including periodic
+            // normalization seams. A corner-only bound can miss those seams.
+            bounds = isfinite(source_x) && isfinite(source_y)
+                ? make_float4(source_x, source_y, source_x, source_y)
+                : make_float4(-infinity, -infinity, infinity, infinity);
+        }
+        bounds = pixtreme_warp_bounds_reduce(bounds);
+        if (lane == 0) {
+            warp_bounds[warp] = bounds;
+        }
+        __syncthreads();
+        if (warp == 0) {
+            bounds = lane < 8 ? warp_bounds[lane] : make_float4(infinity, infinity, -infinity, -infinity);
+            bounds = pixtreme_warp_bounds_reduce(bounds);
+            if (lane == 0) {
+                tile_values = 0;
+                const double minimum_x = floor((double)bounds.x);
+                const double minimum_y = floor((double)bounds.y);
+                const double maximum_x = floor((double)bounds.z);
+                const double maximum_y = floor((double)bounds.w);
+                const double width = maximum_x - minimum_x + 8.0;
+                const double height = maximum_y - minimum_y + 8.0;
+                // Check in double before narrowing or multiplying integer
+                // extents. Large footprints use the original direct reads.
+                if (
+                    width >= 8.0 && height >= 8.0 &&
+                    width * height * (double)channel_count <= PIXTREME_WARP_TILE_FLOATS &&
+                    fabs(minimum_x) < 9.0e18 && fabs(maximum_x) < 9.0e18 &&
+                    fabs(minimum_y) < 9.0e18 && fabs(maximum_y) < 9.0e18
+                ) {
+                    tile_x = (long long)minimum_x - 3;
+                    tile_y = (long long)minimum_y - 3;
+                    tile_width = (int)width;
+                    tile_values = (int)(width * height * (double)channel_count);
+                }
+            }
+        }
+        __syncthreads();
+        for (int index = thread; index < tile_values; index += 256) {
+            const int pixel = index / channel_count;
+            tile[index] = pixtreme_border_sample(
+                source,
+                tile_x + pixel % tile_width,
+                tile_y + pixel / tile_width,
+                input_width,
+                input_height,
+                channel_count,
+                index % channel_count,
+                border,
+                border_value
+            );
+        }
+        __syncthreads();
+    }
+    // Partial output blocks and constant-only pixels must participate in all
+    // cooperative loads and barriers before they can return.
+    if (!active) {
+        return;
+    }
+    if (constant_only) {
         for (long long channel = 0; channel < channel_count; ++channel) {
             output[output_offset + channel] = border_value;
         }
         return;
     }
-    const float source_x = pixtreme_warp_normalize_coordinate(mapped_x, input_width, border);
-    const float source_y = pixtreme_warp_normalize_coordinate(mapped_y, input_height, border);
 
     if (interpolation == 0) {
         const long long nearest_x = (long long)floorf(source_x + 0.5f);
@@ -171,7 +255,10 @@ extern "C" __global__ void pixtreme_warp_affine_point(
         float value = 0.0f;
         for (int offset_y = 0; offset_y < sample_count; ++offset_y) {
             for (int offset_x = 0; offset_x < sample_count; ++offset_x) {
-                value += pixtreme_border_sample(
+                const float sample = interpolation == 7 && tile_values > 0 ? tile[
+                    ((start_y + offset_y - tile_y) * tile_width + start_x + offset_x - tile_x)
+                    * channel_count + channel
+                ] : pixtreme_border_sample(
                     source,
                     start_x + offset_x,
                     start_y + offset_y,
@@ -181,7 +268,8 @@ extern "C" __global__ void pixtreme_warp_affine_point(
                     channel,
                     border,
                     border_value
-                ) * weights_x[offset_x] * weights_y[offset_y];
+                );
+                value += sample * weights_x[offset_x] * weights_y[offset_y];
             }
         }
         output[output_offset + channel] = value;
@@ -656,10 +744,11 @@ def _launch(
     width: int,
     height: int,
     arguments: tuple[object, ...],
+    shared_memory_bytes: int = 0,
 ) -> None:
     block_x, block_y = _RAW_KERNEL_BLOCK
     grid = ((width + block_x - 1) // block_x, (height + block_y - 1) // block_y)
-    kernel(grid, _RAW_KERNEL_BLOCK, arguments)
+    kernel(grid, _RAW_KERNEL_BLOCK, arguments, shared_mem=shared_memory_bytes)
 
 
 def warp_affine(
@@ -742,6 +831,7 @@ def warp_affine(
             _point_kernel(),
             width=output_width,
             height=output_height,
+            shared_memory_bytes=_POINT_TILE_BYTES if checked_interpolation == "lanczos4" else 0,
             arguments=(
                 *common_arguments,
                 np.int32(_INTERPOLATION_TOKENS.index(checked_interpolation)),

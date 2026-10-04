@@ -135,8 +135,10 @@ def _bilateral_reference(
     return output.astype(np.float32)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_blur_public_signatures_and_frame_only_entries_are_actionable() -> None:
-    """v1-blur acceptance 1 + v1-blur-vector acceptance 13: signatures expose constant border values."""
+    """Public blur operations accept Frames and expose constant border values in their signatures and input errors."""
     import cupy as cp
 
     expected = {
@@ -170,13 +172,15 @@ def test_blur_public_signatures_and_frame_only_entries_are_actionable() -> None:
         _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "parameter"),
     (("gaussian_blur", "sigma"), ("bilateral_blur", "sigma_space"), ("bilateral_blur", "sigma_value")),
 )
 @pytest.mark.parametrize("value", (0, -0.5, True, "1", float("nan"), float("inf")))
 def test_blur_rejects_nonpositive_or_nonfinite_real_sigmas(name: str, parameter: str, value: object) -> None:
-    """v1-blur acceptance 2: all sigma parameters are finite positive real numbers with actionable errors."""
+    """Blur operations reject nonpositive, nonfinite, and nonreal sigma values with guidance."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=["signal"])
     kwargs: dict[str, object] = {"sigma": 1.0} if name == "gaussian_blur" else {"sigma_space": 1.0, "sigma_value": 1.0}
     kwargs[parameter] = value
@@ -186,10 +190,12 @@ def test_blur_rejects_nonpositive_or_nonfinite_real_sigmas(name: str, parameter:
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("name", ("box_blur", "median_blur"))
 @pytest.mark.parametrize("size", (0, -1, 2, 2.0, True))
 def test_square_blurs_reject_invalid_odd_sizes(name: str, size: object) -> None:
-    """v1-blur acceptance 3: square box and median sizes are positive odd built-in integers."""
+    """Box and median blur accept only positive odd built-in integer sizes."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=["signal"])
 
     with pytest.raises(ValueError) as error:
@@ -197,8 +203,10 @@ def test_square_blurs_reject_invalid_odd_sizes(name: str, size: object) -> None:
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_median_accepts_seven_and_rejects_the_first_larger_odd_size() -> None:
-    """v1-blur acceptance 3 and provisional 3: median's measured GPU implementation limit is seven."""
+    """Median blur accepts an odd size of seven and rejects the next larger odd size with guidance."""
     source = _frame(np.arange(9, dtype=np.float32).reshape(3, 3, 1), channels=["signal"])
     assert px.filter.median_blur(source, size=MEDIAN_MAX_SIZE).shape == source.shape
 
@@ -208,12 +216,14 @@ def test_median_accepts_seven_and_rejects_the_first_larger_odd_size() -> None:
     assert str(MEDIAN_MAX_SIZE) in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "size",
     (0, -1, 2, 2.0, True, (), (3,), (3, 3, 3), (0, 3), (3, 0), (2, 3), (3, 2), [3, 3]),
 )
 def test_convolve_box_rejects_invalid_scalar_or_pair_sizes(size: object) -> None:
-    """v1-blur acceptance 4: box convolution accepts a positive odd int or a two-int height-width pair."""
+    """Box convolution accepts a positive odd size or a positive odd height and width pair and rejects other sizes."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=["signal"])
 
     with pytest.raises(ValueError) as error:
@@ -221,8 +231,10 @@ def test_convolve_box_rejects_invalid_scalar_or_pair_sizes(size: object) -> None
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_convolve_box_requires_an_explicit_boolean_normalize() -> None:
-    """v1-blur acceptance 5: normalize has no default and rejects non-bool values actionably."""
+    """Box convolution requires an explicit Boolean normalize value and explains invalid values."""
     signature = inspect.signature(px.filter.convolve_box)
     assert signature.parameters["normalize"].default is inspect.Parameter.empty
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=["signal"])
@@ -235,6 +247,8 @@ def test_convolve_box_requires_an_explicit_boolean_normalize() -> None:
         _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "kwargs"),
     (
@@ -246,7 +260,7 @@ def test_convolve_box_requires_an_explicit_boolean_normalize() -> None:
     ),
 )
 def test_blur_border_axis_accepts_exact_tokens_and_lists_them_on_error(name: str, kwargs: dict[str, object]) -> None:
-    """v1-blur acceptance 6 + v1-blur-vector acceptance 13: filters accept four exact border tokens."""
+    """Blur operations accept four border modes and list their names when a mode is invalid."""
     source = _frame(np.arange(12, dtype=np.float32).reshape(3, 4, 1), channels=["signal"])
     function = _blur_operation(name)
     default = function(source, **kwargs)
@@ -270,8 +284,9 @@ def test_blur_border_axis_accepts_exact_tokens_and_lists_them_on_error(name: str
         assert token in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_box_known_corner_solutions_fix_all_border_definitions() -> None:
-    """v1-blur acceptance 7-10 and 19 + v1-blur-vector acceptance 12-13: hand-computed borders."""
+    """Box blur produces the hand calculated corner values for every supported border mode."""
     values = np.arange(9, dtype=np.float32).reshape(3, 3, 1)
     source = _frame(values, channels=["signal"])
     expected_corner = {"mirror": 24.0, "replicate": 12.0, "wrap": 36.0, "constant": 58.0}
@@ -290,8 +305,9 @@ def test_box_known_corner_solutions_fix_all_border_definitions() -> None:
         assert result.shape == source.shape
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_wrap_uses_modulo_when_the_kernel_is_larger_than_the_image() -> None:
-    """v1-blur acceptance 9 and 10: wrap remains periodic for a kernel wider and taller than the image."""
+    """For blur operations, wrap remains periodic for a kernel wider and taller than the image."""
     values = np.arange(6, dtype=np.float32).reshape(2, 3, 1)
     source = _frame(values, channels=["signal"])
     expected = _box_reference(values, size=(7, 9), normalize=False, border="wrap")
@@ -306,6 +322,7 @@ def test_wrap_uses_modulo_when_the_kernel_is_larger_than_the_image() -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("border", BORDERS)
 @pytest.mark.parametrize(
     ("name", "kwargs"),
@@ -318,7 +335,7 @@ def test_wrap_uses_modulo_when_the_kernel_is_larger_than_the_image() -> None:
     ),
 )
 def test_blur_kernels_match_independent_numpy_oracles(name: str, kwargs: dict[str, object], border: str) -> None:
-    """v1-blur acceptance 7-13 and 16-19 + v1-blur-vector acceptance 12-13: NumPy border oracle."""
+    """Blur filters produce the same pixels as independent NumPy calculations for each supported border mode."""
     rng = np.random.default_rng(20260716)
     values = rng.uniform(-0.4, 1.4, size=(3, 4, 3)).astype(np.float32)
     source = _frame(values, channels=["temperature", "mask", "depth"])
@@ -368,8 +385,14 @@ def test_blur_kernels_match_independent_numpy_oracles(name: str, kwargs: dict[st
     assert result.dtype == np.dtype(np.float32)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-103")
 def test_blur_is_label_independent_unclamped_and_preserves_metadata_privately() -> None:
-    """v1-blur acceptance 11-14; v1-red-tokens acceptance 68: ARRI metadata survives privately."""
+    """Blur filters preserve color metadata and out of range pixel values, regardless of channel names, in separate
+    storage.
+    """
     values = np.asarray(
         [
             [[-0.5, 1.5], [-0.5, 1.5]],
@@ -396,6 +419,7 @@ def test_blur_is_label_independent_unclamped_and_preserves_metadata_privately() 
     assert float(result.data.max()) > 1.0
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize(
     ("name", "kwargs"),
     (
@@ -406,7 +430,7 @@ def test_blur_is_label_independent_unclamped_and_preserves_metadata_privately() 
     ),
 )
 def test_size_one_is_an_identity_with_private_storage(name: str, kwargs: dict[str, object]) -> None:
-    """v1-blur acceptance 15: every size-one box or median path is an identity in a new allocation."""
+    """For blur operations, every size-one box or median path is an identity in a new allocation."""
     values = np.linspace(-0.5, 1.5, 18, dtype=np.float32).reshape(2, 3, 3)
     source = _frame(values)
 
@@ -421,8 +445,9 @@ def test_size_one_is_an_identity_with_private_storage(name: str, kwargs: dict[st
     )
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_bilateral_value_distance_couples_all_channels() -> None:
-    """v1-blur acceptance 11 and 17: one Euclidean all-channel distance supplies the weight for every channel."""
+    """For blur operations, one Euclidean all-channel distance supplies the weight for every channel."""
     values = np.asarray([[[0.0, 0.0], [0.1, 2.0], [0.2, 0.0]]], dtype=np.float32)
     source = _frame(values, channels=["first", "second"])
     kwargs = {"sigma_space": 0.6, "sigma_value": 0.5, "border": "replicate"}
@@ -440,8 +465,10 @@ def test_bilateral_value_distance_couples_all_channels() -> None:
     assert not np.allclose(result, uncoupled, rtol=1e-4, atol=1e-4)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_blur_docstrings_are_self_contained_llm_readable_contracts() -> None:
-    """v1-blur acceptance 21 + v1-blur-vector acceptance 17: docstrings expose constant border values."""
+    """Developers can find blur signatures, border values, and sampling rules in the public docstrings."""
     for name in ("gaussian_blur", "box_blur", "median_blur", "bilateral_blur", "convolve_box"):
         docstring = inspect.getdoc(_blur_operation(name))
         assert docstring is not None

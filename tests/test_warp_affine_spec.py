@@ -288,8 +288,9 @@ def _area_reference(
     return output.astype(np.float32)
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_warp_affine_public_signature_and_unique_surface() -> None:
-    """v1-warp-affine acceptance 1 and 17: the sole public entry has the exact call shape."""
+    """Developers call the single public affine-warp operation through its documented transform signature."""
     signature = inspect.signature(px.transform.warp_affine)
     assert tuple(signature.parameters) == (
         "frame",
@@ -317,6 +318,8 @@ def test_warp_affine_public_signature_and_unique_surface() -> None:
     assert not hasattr(px.transform, "get_inverse_matrix")
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "kwargs",
     (
@@ -329,7 +332,7 @@ def test_warp_affine_public_signature_and_unique_surface() -> None:
     ),
 )
 def test_warp_affine_canvas_is_omitted_or_a_positive_builtin_int_pair(kwargs: dict[str, Any]) -> None:
-    """v1-warp-affine acceptance 2 and 19: canvas dimensions form one strict optional pair."""
+    """Affine warping keeps the input canvas size when omitted and rejects incomplete or invalid output dimensions with guidance."""
     source = _frame(np.zeros((2, 3, 1), dtype=np.float32))
     with pytest.raises(ValueError) as error:
         px.transform.warp_affine(source, np.eye(2, 3), **kwargs)
@@ -339,8 +342,10 @@ def test_warp_affine_canvas_is_omitted_or_a_positive_builtin_int_pair(kwargs: di
     assert same_size.shape == source.shape
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_warp_affine_rejects_non_frame_and_non_fp32_inputs_before_sampling() -> None:
-    """v1-warp-affine acceptance 3 and 19: Frame and fp32 are fail-fast operation contracts."""
+    """Affine warping rejects non-Frame and non-float32 input before sampling and explains how to convert it."""
     import cupy as cp
 
     invalid_inputs: tuple[Any, ...] = (
@@ -362,6 +367,8 @@ def test_warp_affine_rejects_non_frame_and_non_fp32_inputs_before_sampling() -> 
                 assert "px.values.dequantize" in message
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "matrix",
     (
@@ -377,7 +384,7 @@ def test_warp_affine_rejects_non_frame_and_non_fp32_inputs_before_sampling() -> 
     ),
 )
 def test_warp_affine_matrix_type_shape_dtype_and_finite_domain_are_strict(matrix: Any) -> None:
-    """v1-warp-affine acceptance 4 and 19: only finite real NumPy/CuPy 2x3 matrices enter."""
+    """Affine warping accepts only finite real 2-by-3 NumPy or CuPy matrices and explains invalid matrices."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32))
     with pytest.raises(ValueError) as error:
         px.transform.warp_affine(source, matrix, interpolation="nearest")
@@ -385,8 +392,9 @@ def test_warp_affine_matrix_type_shape_dtype_and_finite_domain_are_strict(matrix
     assert "(2, 3)" in str(error.value) or "numpy.ndarray or cupy.ndarray" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_warp_affine_accepts_host_and_device_matrices_without_mutating_them() -> None:
-    """v1-warp-affine acceptance 4 and 14: host/device matrices are normalized privately and remain unchanged."""
+    """Affine warping accepts host and device matrices with equal results and leaves both input matrices unchanged."""
     import cupy as cp
 
     source = _frame(np.arange(6, dtype=np.float32).reshape(2, 3, 1))
@@ -403,6 +411,8 @@ def test_warp_affine_accepts_host_and_device_matrices_without_mutating_them() ->
     np.testing.assert_array_equal(device_matrix.get(), device_before.get())
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "matrix",
     (
@@ -411,7 +421,7 @@ def test_warp_affine_accepts_host_and_device_matrices_without_mutating_them() ->
     ),
 )
 def test_warp_affine_requires_a_finite_fp32_inverse_without_regularization(matrix: np.ndarray) -> None:
-    """v1-warp-affine acceptance 5 and 19: singular and fp32-overflow inverses fail actionably."""
+    """Affine warping rejects matrices whose inverse is singular or not finite in float32 and explains the failure."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32))
     with pytest.raises(ValueError) as error:
         px.transform.warp_affine(source, matrix, interpolation="nearest")
@@ -419,8 +429,10 @@ def test_warp_affine_requires_a_finite_fp32_inverse_without_regularization(matri
     assert "inverse" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_warp_affine_inverse_is_builtin_bool_and_reverses_the_declared_forward_transform() -> None:
-    """v1-warp-affine acceptance 6 and 16: one matrix plus inverse composes integer translation exactly."""
+    """The inverse option reverses a declared translation and rejects values other than built-in booleans."""
     source_values = np.asarray([[[1.0], [2.0], [3.0]]], dtype=np.float32)
     source = _frame(source_values)
     matrix = np.asarray([[1.0, 0.0, 1.0], [0.0, 1.0, 0.0]], dtype=np.float32)
@@ -443,8 +455,10 @@ def test_warp_affine_inverse_is_builtin_bool_and_reverses_the_declared_forward_t
         _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_warp_affine_accepts_all_interpolations_and_auto_uses_effective_forward_column_norms() -> None:
-    """v1-warp-affine acceptance 8-9: nine shared tokens and both effective-matrix auto branches work."""
+    """Affine warping accepts its interpolation tokens, chooses area for shrinkage and lanczos4 otherwise, and lists valid tokens on error."""
     values = np.linspace(-0.25, 1.25, 4 * 5 * 2, dtype=np.float32).reshape(4, 5, 2)
     source = _frame(values, channels=("left", "right"))
     shrink = np.asarray([[0.75, 0.0, 0.0], [0.0, 1.1, 0.0]], dtype=np.float32)
@@ -476,6 +490,8 @@ def test_warp_affine_accepts_all_interpolations_and_auto_uses_effective_forward_
             assert interpolation in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "invalid",
     (
@@ -484,7 +500,7 @@ def test_warp_affine_accepts_all_interpolations_and_auto_uses_effective_forward_
     ),
 )
 def test_warp_affine_rejects_array_like_non_string_interpolation_tokens(invalid: np.ndarray) -> None:
-    """v1-warp-affine acceptance 8 and 19: every non-str interpolation token fails actionably."""
+    """Affine warping rejects array-valued interpolation tokens and lists the accepted string tokens."""
     source = _frame(np.asarray([[[1.0]]], dtype=np.float32))
 
     with pytest.raises(ValueError) as error:
@@ -495,10 +511,11 @@ def test_warp_affine_rejects_array_like_non_string_interpolation_tokens(invalid:
         assert interpolation in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-010")
 @pytest.mark.parametrize("interpolation", INTERPOLATIONS[:-1])
 @pytest.mark.parametrize("border", BORDERS)
 def test_warp_affine_point_kernels_match_an_independent_numpy_oracle(interpolation: str, border: str) -> None:
-    """v1-warp-affine acceptance 7-10 and 12: centered fixed-support kernels match independent NumPy."""
+    """Affine warping produces centered point-filtered pixels for each interpolation and border mode within the NumPy reference tolerance."""
     rng = np.random.default_rng(20260804)
     values = rng.uniform(-0.4, 1.6, size=(4, 5, 3)).astype(np.float32)
     source = _frame(values, channels=("temperature", "mask", "depth"))
@@ -529,9 +546,10 @@ def test_warp_affine_point_kernels_match_an_independent_numpy_oracle(interpolati
     np.testing.assert_allclose(result.data.get(), expected, rtol=8e-5, atol=8e-5)
 
 
+@pytest.mark.req("REQ-PIX-010")
 @pytest.mark.parametrize("border", BORDERS)
 def test_warp_affine_area_matches_parallelogram_cell_intersection_oracle(border: str) -> None:
-    """v1-warp-affine acceptance 11-12: area integrates the inverse-mapped parallelogram over border cells."""
+    """Area interpolation integrates each inverse-mapped output footprint over the selected border extension."""
     values = np.arange(4 * 5 * 2, dtype=np.float32).reshape(4, 5, 2) / np.float32(7.0) - np.float32(1.0)
     source = _frame(values, channels=("negative", "high"))
     matrix = np.asarray([[0.72, 0.31, 0.2], [-0.24, 0.83, 0.45]], dtype=np.float32)
@@ -559,8 +577,9 @@ def test_warp_affine_area_matches_parallelogram_cell_intersection_oracle(border:
     np.testing.assert_allclose(result.data.get(), expected, rtol=5e-5, atol=5e-5)
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_warp_affine_area_large_wrap_footprint_averages_nonuniform_period_without_phase_lock() -> None:
-    """v1-warp-affine acceptance 11-12: large area footprints integrate the infinite wrap extension."""
+    """A large wrapped area footprint averages the repeated image pattern without locking to one phase."""
     source = _frame(np.asarray([[[0.0], [1.0]]], dtype=np.float32))
     matrix = np.asarray([[1.0 / 8192.0, 0.0, 0.0], [0.0, 1.0, 0.0]], dtype=np.float32)
 
@@ -580,8 +599,9 @@ def test_warp_affine_area_large_wrap_footprint_averages_nonuniform_period_withou
     )
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_warp_affine_area_wrap_preserves_huge_finite_translation_phase() -> None:
-    """v1-warp-affine acceptance 4 and 11-12: wrap preserves a huge finite translation's exact phase."""
+    """Wrapped area interpolation retains the sampling phase under a very large finite translation."""
     values = np.asarray([[[10.0], [20.0], [30.0]]], dtype=np.float32)
     source = _frame(values)
     translation = np.float32(1.0e20)
@@ -603,8 +623,9 @@ def test_warp_affine_area_wrap_preserves_huge_finite_translation_phase() -> None
     np.testing.assert_array_equal(result.data.get(), expected)
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_warp_affine_area_axis_scale_equals_resize_coverage_average() -> None:
-    """v1-warp-affine acceptance 11: centered axis scale reduces to resize's coverage-box area result."""
+    """Axis-aligned area warping matches the coverage average from area resizing."""
     values = np.arange(6 * 8, dtype=np.float32).reshape(6, 8, 1)
     source = _frame(values)
     output_width, output_height = 4, 3
@@ -631,8 +652,9 @@ def test_warp_affine_area_axis_scale_equals_resize_coverage_average() -> None:
     np.testing.assert_allclose(warped.data.get(), resized.data.get(), rtol=0.0, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_warp_affine_extreme_finite_fp32_geometry_terminates_deterministically() -> None:
-    """v1-warp-affine acceptance 4-5 and 11: finite fp32 extremes do not overflow index loops or hang."""
+    """Affine warping returns defined border pixels for extreme finite float32 scales and translations."""
     source = _frame(np.asarray([[[2.0]]], dtype=np.float32))
     tiny_scale = np.asarray([[1.0e-38, 0.0, 0.0], [0.0, 1.0e-38, 0.0]], dtype=np.float32)
     huge_translation = np.asarray([[1.0, 0.0, 1.0e30], [0.0, 1.0, -1.0e30]], dtype=np.float32)
@@ -650,8 +672,10 @@ def test_warp_affine_extreme_finite_fp32_geometry_terminates_deterministically()
     np.testing.assert_array_equal(wrapped_point.data.get(), np.asarray([[[2.0]]], dtype=np.float32))
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_warp_affine_border_tokens_values_and_one_pixel_axes_follow_the_shared_contract() -> None:
-    """v1-warp-affine acceptance 12-13 and 19: border tokens, one-pixel axes, and value pairing are strict."""
+    """Affine warping applies each supported border mode to one-pixel axes and rejects invalid border or fill values with guidance."""
     single = _frame(np.asarray([[[2.5]]], dtype=np.float32))
     translation = np.asarray([[1.0, 0.0, 7.0], [0.0, 1.0, -9.0]], dtype=np.float32)
     for border in ("mirror", "replicate", "wrap"):
@@ -682,6 +706,8 @@ def test_warp_affine_border_tokens_values_and_one_pixel_axes_follow_the_shared_c
         _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "invalid",
     (
@@ -690,7 +716,7 @@ def test_warp_affine_border_tokens_values_and_one_pixel_axes_follow_the_shared_c
     ),
 )
 def test_warp_affine_rejects_array_like_non_string_border_tokens(invalid: np.ndarray) -> None:
-    """v1-warp-affine acceptance 12 and 19: every non-str border token fails actionably."""
+    """Affine warping rejects array-valued border tokens and lists the accepted string tokens."""
     source = _frame(np.asarray([[[1.0]]], dtype=np.float32))
 
     with pytest.raises(ValueError) as error:
@@ -701,8 +727,11 @@ def test_warp_affine_rejects_array_like_non_string_border_tokens(invalid: np.nda
         assert border in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-103")
 def test_warp_affine_preserves_metadata_channels_scene_values_and_all_inputs() -> None:
-    """v1-warp-affine acceptance 14-15: output is private fp32 HWC and geometry is metadata-neutral."""
+    """Affine warping preserves color and channel metadata, scene values, and inputs while returning a separate float32 Frame."""
     values = np.asarray(
         [
             [[-2.0, 11.0, 101.0], [3.0, 21.0, 201.0]],
@@ -738,8 +767,9 @@ def test_warp_affine_preserves_metadata_channels_scene_values_and_all_inputs() -
     assert float(result.data.max()) == 401.0
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_warp_affine_identity_distinguishes_interpolating_and_approximating_kernels() -> None:
-    """v1-warp-affine acceptance 16: identity preserves interpolating kernels while cubic approximants smooth."""
+    """An identity affine warp preserves samples for interpolating filters while approximation filters may smooth them."""
     rng = np.random.default_rng(19)
     values = rng.uniform(-0.3, 1.4, size=(5, 6, 2)).astype(np.float32)
     source = _frame(values, channels=("first", "second"))

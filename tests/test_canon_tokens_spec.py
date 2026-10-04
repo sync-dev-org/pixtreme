@@ -318,17 +318,14 @@ def _conversion(
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_canon_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-canon-tokens acceptance 76-77;
-    v1-panasonic-tokens acceptance 99-100;
-    v1-standard-tokens acceptance 117; v1-vendor-a-tokens acceptance 140-141;
-    v1-vendor-b-tokens acceptance 166-167; v1-io-icc acceptance 1:
-    expose only the exact current canonical vocabulary.
-    """
+    """Canon color tokens appear in the canonical vocabulary and public annotations without extra aliases."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 199
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 200
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -342,10 +339,10 @@ def test_canon_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -
     assert not any("Canon" in item for alias in _PERMANENT_TOKEN_ALIASES for item in alias)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_canon_token_keys_and_invalid_inputs_follow_the_shared_boundary(monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-canon-tokens acceptance 78 and 92; v1-vendor-a-tokens acceptance 142 and 160:
-    normalize keys and reject raw invalid values before GPU work.
-    """
+    """Canon tokens normalize within their families, and invalid values receive canonical recovery guidance."""
     from pixtreme._core.validation import _normalized_closed_token
 
     translation = str.maketrans("", "", " .-_")
@@ -390,6 +387,9 @@ def test_canon_token_keys_and_invalid_inputs_follow_the_shared_boundary(monkeypa
         assert repr(_GAMMAS) in message
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize(
     ("gamma", "reflectance", "float64_codes", "integer_codes"),
     (
@@ -413,7 +413,7 @@ def test_canon_log_and_log2_encode_match_independent_piecewise_oracles(
     float64_codes: tuple[float, ...],
     integer_codes: tuple[int, ...],
 ) -> None:
-    """v1-canon-tokens acceptance 79 and 81: encode signed scene values and published anchors."""
+    """Canon Log and Canon Log 2 encode signed scene values with their published piecewise curves and anchors."""
     values = np.asarray(reflectance, dtype=np.float32)
     source = _frame(values, auxiliary=True)
     before = source.data.copy()
@@ -441,9 +441,12 @@ def test_canon_log_and_log2_encode_match_independent_piecewise_oracles(
     assert encoded.data.dtype == cp.float32
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("gamma", ("Canon-Log", "Canon-Log-2"))
 def test_canon_log_and_log2_decode_grids_ulp_and_round_trips_match_independent_inverses(gamma: str) -> None:
-    """v1-canon-tokens acceptance 80 and 82: decode full grids and preserve signed overshoot round trips."""
+    """Canon Log and Canon Log 2 decode signed values and round trip within the independent inverse tolerance."""
     c = np.float32(_CURVES[gamma]["c"])
     grid = np.linspace(-0.5, 1.5, 200_001, dtype=np.float32)
     special = np.asarray(
@@ -480,8 +483,9 @@ def test_canon_log_and_log2_decode_grids_ulp_and_round_trips_match_independent_i
     np.testing.assert_allclose(_rgb_values(reencoded)[:, 0], round_trip_encoded, rtol=2e-6, atol=2e-7)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_canon_log3_encode_includes_both_cuts_in_the_linear_branch_and_matches_anchors() -> None:
-    """v1-canon-tokens acceptance 83: encode the three branches, exact cut policy, and published anchors."""
+    """Canon Log 3 encoding puts both branch cuts in the linear branch and matches published anchors."""
     cut = np.float32(_CURVES["Canon-Log-3"]["cut"])
     x_values = np.asarray(
         (
@@ -522,8 +526,11 @@ def test_canon_log3_encode_includes_both_cuts_in_the_linear_branch_and_matches_a
     assert (encoded.gamma, encoded.matrix, encoded.channels) == ("Canon-Log-3", None, ("Z", "B", "R", "G"))
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_canon_log3_decode_thresholds_monotonicity_ulp_and_round_trips_match_oracle() -> None:
-    """v1-canon-tokens acceptance 84-85: decode derived cuts uniquely and preserve monotone signed overshoot."""
+    """Canon Log 3 decoding selects its derived thresholds and round trips signed values monotonically."""
     constants = _CURVES["Canon-Log-3"]
     lower = np.float32(constants["c"] - constants["m"] * constants["cut"])
     upper = np.float32(constants["c"] + constants["m"] * constants["cut"])
@@ -590,9 +597,10 @@ def test_canon_log3_decode_thresholds_monotonicity_ulp_and_round_trips_match_ora
     np.testing.assert_allclose(_rgb_values(reencoded)[:, 0], encoded_round_trip, rtol=2e-6, atol=2e-7)
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize("gamma", ("Canon-Log", "Canon-Log-2", "Canon-Log-3"))
 def test_canon_transfer_standalone_and_fused_paths_are_bit_identical(gamma: str) -> None:
-    """v1-canon-tokens acceptance 86: keep standalone and fused transfer paths bit-identical."""
+    """Canon transfers produce identical pixels through standalone and fused color paths."""
     linear_values = np.asarray((-0.25, -0.0126, 0.0, 0.18, 1.0, 1.5), dtype=np.float32)
     linear = _frame(linear_values, auxiliary=True)
     standalone_encoded = px.color.linear_to_gamma(linear, gamma=gamma)
@@ -607,8 +615,9 @@ def test_canon_transfer_standalone_and_fused_paths_are_bit_identical(gamma: str)
     assert cp.array_equal(standalone_decoded.data[..., 0], encoded.data[..., 0])
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_canon_cinema_gamut_matrix_conversions_and_native_row_match_independent_oracles() -> None:
-    """v1-canon-tokens acceptance 87: derive the normalized gamut, conversions, and native luma row."""
+    """Canon Cinema Gamut matrices, conversions, and native luma row match independent calculations."""
     from pixtreme._core.colorspace import _COLORSPACE_DEFINITIONS
 
     assert _COLORSPACE_DEFINITIONS["Canon-Cinema-Gamut"] == _CANON_GAMUT
@@ -632,8 +641,9 @@ def test_canon_cinema_gamut_matrix_conversions_and_native_row_match_independent_
     assert np.any(_rgb_values(converted) < 0.0) and np.any(_rgb_values(converted) > 1.0)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_canon_cinema_gamut_uses_d65_identity_bradford_and_cat02_only_as_auxiliary_oracle() -> None:
-    """v1-canon-tokens acceptance 88: preserve D65 identity, Bradford production, and independent CAT02 evidence."""
+    """Canon Cinema Gamut uses D65 identity and Bradford adaptation for public color conversion."""
     from pixtreme._color.transform import _compose_matrix
 
     canon_to_rec709 = _conversion(_CANON_GAMUT, _REC709)
@@ -650,10 +660,12 @@ def test_canon_cinema_gamut_uses_d65_identity_bradford_and_cat02_only_as_auxilia
     assert np.max(np.abs(canon_to_aces_bradford - _CANON_CAT02_TO_ACES)) > 5e-3
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize("gamma", ("Canon-Log", "Canon-Log-2", "Canon-Log-3"))
 @pytest.mark.parametrize("target", ("Rec.709", "ACES2065-1"))
 def test_canon_frames_convert_end_to_end_with_independent_transfer_and_gamut_oracle(gamma: str, target: str) -> None:
-    """v1-canon-tokens acceptance 89: fuse Canon decode and gamut conversion with auxiliary-bit preservation."""
+    """Canon Frames combine transfer and gamut conversion while preserving auxiliary channels."""
     linear_rgb = np.asarray(((-0.25, 0.18, 1.5), (0.18, 1.25, -0.05)), dtype=np.float64)
     encoded_rgb = _canon_encode(gamma, linear_rgb).astype(np.float32)
     source = _frame(encoded_rgb, colorspace="Canon-Cinema-Gamut", gamma=gamma, auxiliary=True)
@@ -675,8 +687,9 @@ def test_canon_frames_convert_end_to_end_with_independent_transfer_and_gamut_ora
     assert np.any(_rgb_values(converted) < 0.0) and np.any(_rgb_values(converted) > 1.0)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_existing_token_bits_remain_at_the_pre_canon_baseline() -> None:
-    """v1-canon-tokens acceptance 90: preserve representative existing transfer and gamut output bits."""
+    """Other supported color tokens retain their exact transfer and gamut pixel values."""
     # Provenance: captured from the complete pre-Canon commit
     # 7b2881e3c415da58bcb2d37d5a816da345a493a6.  Reproduce from a detached worktree at that SHA with:
     #
@@ -735,8 +748,9 @@ def test_existing_token_bits_remain_at_the_pre_canon_baseline() -> None:
         )
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_canon_dpx_transfer_codes_are_logarithmic_and_existing_mappings_remain_unchanged(tmp_path: Path) -> None:
-    """v1-canon-tokens acceptance 91: classify Canon logs as DPX logarithmic without disturbing prior mappings."""
+    """DPX writing identifies Canon Log transfers as logarithmic and preserves other transfer mappings."""
     from pixtreme._io.formats.dpx import _dpx_transfer_from_gamma
 
     expected = {

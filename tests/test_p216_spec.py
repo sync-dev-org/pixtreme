@@ -25,9 +25,13 @@ from test_to_format_spec import _frame
 import pixtreme as px
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("direction", ("from", "to"))
 def test_p216_has_the_exact_static_signature(direction: str) -> None:
-    """v1-p216-wire-format acceptance 1 and 19: no bit-depth, siting, options, pitch, or extra positional surface."""
+    """P216 conversion exposes its documented parameters without extra bit-depth, siting, pitch, or positional
+    options.
+    """
     function = getattr(px.io, f"{direction}_p216")
     assert not hasattr(px, f"{direction}_p216")
     assert not hasattr(px.core.Frame, f"{direction}_p216")
@@ -48,11 +52,12 @@ def test_p216_has_the_exact_static_signature(direction: str) -> None:
         assert all(parameters[name].default is None for name in ("colorspace", "gamma", "matrix"))
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 def test_from_p216_asymmetric_words_keep_layout_low_bits_and_row_phase(range_token: str) -> None:
-    """v1-p216-wire-format acceptance 2, 4, 6 and 10: explicit indices catch planar, UV-swap, mask and 420 errors.
-
-    AC-43-10 fixes the range/layout anchor tolerance at 2e-7 (fp32 affine only).
+    """P216 reading decodes asymmetric packed words in the correct plane order and row phase while retaining low code
+    bits.
     """
     codes = asymmetric_codes()
     # nearest half-up: luma x=1 chooses chroma sample 1, not sample 0.
@@ -70,9 +75,11 @@ def test_from_p216_asymmetric_words_keep_layout_low_bits_and_row_phase(range_tok
     np.testing.assert_allclose(result.data.get(), expected, rtol=0, atol=2e-7)
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 def test_to_p216_direct_layout_owns_all_sixteen_bits(range_token: str) -> None:
-    """v1-p216-wire-format acceptance 2, 4 and 10: independent code-derived 444 input packs directly and exactly."""
+    """P216 writing packs all sixteen code bits directly into its luma and chroma planes."""
     expected = asymmetric_codes()
     y, cb, cr = unpack_codes(expected, 3, 6)
     values = np.stack(
@@ -90,12 +97,12 @@ def test_to_p216_direct_layout_owns_all_sixteen_bits(range_token: str) -> None:
     np.testing.assert_array_equal(result.get(), expected)
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 def test_from_p216_h273_endpoints_center_and_headroom(range_token: str) -> None:
-    """v1-p216-wire-format acceptance 4 and 10: n=16 hand anchors preserve legal headroom without clipping.
-
-    Expected fractions use 219*256/224*256 or 65535 from H.273, with AC's 2e-7 fp32 tolerance.
-    """
+    """P216 reading maps H.273 endpoints and chroma center while preserving legal-range headroom without clipping."""
     levels = np.asarray([0, 4096, 32768, 60160, 61440, 65535], dtype=np.uint16)
     # One chroma pair per row avoids interpolation in this range-only anchor.
     codes = pack_planes(np.repeat(levels[:, None], 2, axis=1), levels[:, None], levels[::-1, None])
@@ -109,12 +116,12 @@ def test_from_p216_h273_endpoints_center_and_headroom(range_token: str) -> None:
     np.testing.assert_allclose(result, expected, rtol=0, atol=2e-7)
 
 
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 @pytest.mark.parametrize("interpolation", FROM_FILTERS)
 def test_from_p216_every_filter_matches_fp64_horizontal_reference(range_token: str, interpolation: str) -> None:
-    """v1-p216-wire-format acceptance 6 and 10: all 8 filters preserve row identity, co-siting and replicate edges.
-
-    AC-43-10 fixes atol=3e-6 for fp32 filter evaluation versus the independent fp64 weights.
+    """Every P216 input filter matches an independent horizontal sampling reference with co-sited chroma and
+    replicated edges.
     """
     codes = asymmetric_codes()
     expected = from_reference(codes, 3, 6, range_token, interpolation)
@@ -122,12 +129,13 @@ def test_from_p216_every_filter_matches_fp64_horizontal_reference(range_token: s
     np.testing.assert_allclose(actual.data.get(), expected, rtol=0, atol=3e-6)
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 @pytest.mark.parametrize("interpolation", TO_FILTERS)
 def test_to_p216_fixed_corpus_matches_bounded_near_tie_oracle(range_token: str, interpolation: str) -> None:
-    """v1-p216-wire-format acceptance 5, 6 and 10: fixed seed-43 corpus uses per-case ±1/2%/0.125-code bounds.
-
-    The tolerance is AC-43-10's fp32 sampling/affine budget; it does not apply to exact anchors or round trips.
+    """P216 writing matches an independent sampling and quantization oracle within its specified near-tie code
+    bounds.
     """
     values = fixed_corpus()
     expected, q64 = to_reference(values, range_token, interpolation)
@@ -136,13 +144,13 @@ def test_to_p216_fixed_corpus_matches_bounded_near_tie_oracle(range_token: str, 
     assert_corpus_codes(actual.get(), expected, q64)
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 def test_to_p216_hand_rounded_ties_and_container_only_clip(range_token: str) -> None:
-    """v1-p216-wire-format acceptance 4, 5 and 10: half-away, signed near-ties and headroom have exact hand codes.
-
-    Binary fractions make the mapped positive ties exact. Negative mapped ties must clip to zero;
-    their rounding direction is unobservable after unsigned clipping. Negative input with positive
-    legal mapped code still distinguishes truncation and ties-to-even from half-away.
+    """P216 writing rounds half away from zero and clips only at unsigned container bounds while retaining legal
+    headroom.
     """
     if range_token == "legal":
         ys = [-1, -129 / 512, -1 / 32, -1 / 512, 0, 1 / 512, 1 / 512 - 1 / 65536, 1 / 512 + 1 / 65536, 1, 33 / 32, 2]
@@ -174,9 +182,11 @@ def test_to_p216_hand_rounded_ties_and_container_only_clip(range_token: str) -> 
     np.testing.assert_array_equal(actual.get(), expected)
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("bit_depth", (10, 12))
 def test_to_p216_low_depth_origin_is_quantized_to_sixteen_effective_bits(bit_depth: int) -> None:
-    """v1-p216-wire-format acceptance 4 and 19: lower-depth signal values do not select an MSB-padding mode."""
+    """P216 writing quantizes lower-depth source values into sixteen effective bits without high-bit padding."""
     maximum = (1 << bit_depth) - 1
     codes = np.asarray([1, 17, maximum // 2, maximum - 1], dtype=np.int64)
     values = np.repeat(np.repeat((codes / maximum).astype(np.float32)[:, None, None], 2, axis=1), 3, axis=2)
@@ -186,13 +196,14 @@ def test_to_p216_low_depth_origin_is_quantized_to_sixteen_effective_bits(bit_dep
     np.testing.assert_array_equal(actual.get(), expected)
 
 
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 @pytest.mark.parametrize("from_filter", FROM_FILTERS)
 @pytest.mark.parametrize("to_filter", TO_FILTERS)
 def test_p216_constant_chroma_round_trips_all_32_filter_pairs(
     range_token: str, from_filter: str, to_filter: str
 ) -> None:
-    """v1-p216-wire-format acceptance 11: both ranges preserve all words in all 32 constant-chroma filter pairs."""
+    """P216 data with constant chroma preserves every word through all supported input and output filter pairs."""
     codes = asymmetric_codes()
     codes[18::2] = 17011
     codes[19::2] = 53003
@@ -201,16 +212,21 @@ def test_p216_constant_chroma_round_trips_all_32_filter_pairs(
     np.testing.assert_array_equal(result.get(), codes)
 
 
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 def test_p216_nonconstant_nearest_code_origin_round_trip(range_token: str) -> None:
-    """v1-p216-wire-format acceptance 12: nearest preserves nonconstant code-origin words, including low bits."""
+    """P216 data with varying chroma round-trips all code bits through nearest sampling."""
     codes = asymmetric_codes()
     frame = px.io.from_p216(cp.asarray(codes), width=6, height=3, range=range_token, interpolation="nearest")
     np.testing.assert_array_equal(px.io.to_p216(frame, range=range_token, interpolation="nearest").get(), codes)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-009")
 def test_p216_default_metadata_and_filters_have_the_specified_behavior() -> None:
-    """v1-p216-wire-format acceptance 6 and 7: defaults act as legal/bilinear and legal/area, with fp32 placeholders."""
+    """P216 conversion uses legal range, bilinear input sampling, area output sampling, and documented float32
+    metadata defaults.
+    """
     codes = asymmetric_codes()
     default = px.io.from_p216(cp.asarray(codes), width=6, height=3)
     explicit_none = px.io.from_p216(cp.asarray(codes), width=6, height=3, colorspace=None, gamma=None, matrix=None)
@@ -231,6 +247,8 @@ def test_p216_default_metadata_and_filters_have_the_specified_behavior() -> None
     assert_corpus_codes(px.io.to_p216(_frame(values)).get(), expected, q64)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize(
     ("axis", "token", "canonical"),
     [
@@ -241,7 +259,7 @@ def test_p216_default_metadata_and_filters_have_the_specified_behavior() -> None
     + [("colorspace", "rec_2020", "Rec.2020"), ("gamma", "p q", "PQ"), ("matrix", "bt_2020", "BT.2020")],
 )
 def test_from_p216_metadata_tokens_stamp_without_changing_pixels(axis: str, token: str, canonical: str) -> None:
-    """v1-p216-wire-format acceptance 7: every canonical metadata token and normalized spelling is a value-neutral claim."""
+    """P216 input accepts supported color metadata names without changing decoded pixel values."""
     source = cp.asarray(asymmetric_codes())
     result = px.io.from_p216(source, width=6, height=3, **{axis: token})
     assert getattr(result, axis) == canonical
@@ -252,9 +270,10 @@ def test_from_p216_metadata_tokens_stamp_without_changing_pixels(axis: str, toke
     )
 
 
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("direction", ("from", "to"))
 def test_p216_calls_leave_inputs_unchanged_and_return_private_storage(direction: str) -> None:
-    """v1-p216-wire-format acceptance 2 and 9: repeated calls allocate independent output without mutating inputs."""
+    """Repeated P216 conversions leave inputs unchanged and return independent output storage."""
     function = getattr(px.io, f"{direction}_p216")
     source = cp.asarray(asymmetric_codes()) if direction == "from" else _frame(fixed_corpus())
     data = source if direction == "from" else source.data
@@ -298,6 +317,8 @@ def _reject_without_pixel_work(function: Any, source: Any, kwargs: dict[str, Any
     assert not graph.debug_dot_str(cp.cuda.runtime.cudaGraphDebugDotFlagsVerbose).count('label="{KERNEL')
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("case", "recovery"),
     [
@@ -316,7 +337,9 @@ def _reject_without_pixel_work(function: Any, source: Any, kwargs: dict[str, Any
     ],
 )
 def test_from_p216_rejects_invalid_buffer_before_pixel_work(case: str, recovery: str) -> None:
-    """v1-p216-wire-format acceptance 3 and 17: device/type/dtype/count/shape/contiguity fail with actionable errors."""
+    """P216 input rejects buffers with an invalid device, type, dtype, element count, shape, or contiguity before
+    pixel work.
+    """
     function = px.io.from_p216
     codes = asymmetric_codes()
     source: Any = cp.asarray(codes)
@@ -339,24 +362,28 @@ def test_from_p216_rejects_invalid_buffer_before_pixel_work(case: str, recovery:
     _reject_without_pixel_work(function, source, {"width": 6, "height": 3}, recovery)
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("axis", "value"),
     [("width", v) for v in (0, -2, 1, 3, 2.5, True, "6", None)]
     + [("height", v) for v in (0, -1, 1.5, True, "3", None)],
 )
 def test_from_p216_rejects_invalid_dimensions_before_pixel_work(axis: str, value: Any) -> None:
-    """v1-p216-wire-format acceptance 3 and 17: dimensions are positive integers and width is even, never coerced."""
+    """P216 input rejects dimensions that are not positive integers or have an odd width before pixel work."""
     function = px.io.from_p216
     _reject_without_pixel_work(
         function, cp.asarray(asymmetric_codes()), {"width": 6, "height": 3} | {axis: value}, axis
     )
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "case", ("object", "array", "RGB", "swapped", "alpha", "Y", "float16", "uint8", "uint16", "uint32", "odd-width")
 )
 def test_to_p216_rejects_invalid_frames_before_pixel_work(case: str) -> None:
-    """v1-p216-wire-format acceptance 3, 8 and 17: require fp32 YCbCr Frame with even width and concrete recovery paths."""
+    """P216 output requires an even-width float32 YCbCr Frame and explains how to correct invalid inputs."""
     function = px.io.to_p216
     source: Any = _frame(np.zeros((3, 6, 3), dtype=np.float32))
     recovery = "Frame"
@@ -379,6 +406,8 @@ def test_to_p216_rejects_invalid_frames_before_pixel_work(case: str) -> None:
     _reject_without_pixel_work(function, source, {}, recovery)
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("direction", "axis", "value", "recovery"),
     [
@@ -399,7 +428,7 @@ def test_to_p216_rejects_invalid_frames_before_pixel_work(case: str) -> None:
     ],
 )
 def test_p216_rejects_invalid_tokens_before_pixel_work(direction: str, axis: str, value: Any, recovery: str) -> None:
-    """v1-p216-wire-format acceptance 7, 8 and 17: closed token/subset failures precede GPU work and show canonical choices."""
+    """P216 conversion rejects unsupported range, filter, and metadata names before GPU work and lists valid choices."""
     function = getattr(px.io, f"{direction}_p216")
     source = cp.asarray(asymmetric_codes()) if direction == "from" else _frame(fixed_corpus())
     kwargs = {"width": 6, "height": 3} if direction == "from" else {}

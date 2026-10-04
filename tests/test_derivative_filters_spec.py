@@ -78,7 +78,7 @@ def _convolve_reference(
     border: str,
     border_value: float,
 ) -> np.ndarray:
-    """Independent scalar NumPy oracle derived from v1-derivative-filters acceptance 8 and 11."""
+    """Independent scalar NumPy reference for Sobel and Laplacian kernels."""
     output = np.empty_like(source, dtype=np.float32)
     height, width, channel_count = source.shape
     radius_y = kernel.shape[0] // 2
@@ -149,8 +149,10 @@ def _gaussian_reference(
     return output.astype(np.float32)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_derivative_public_signatures_and_frame_only_entries_are_exact() -> None:
-    """v1-derivative-filters acceptance 1, 6, 10, and 13: three exact Frame APIs are public."""
+    """The three public derivative filters accept Frames through their documented signatures."""
     import cupy as cp
 
     expected = {
@@ -190,10 +192,11 @@ def test_derivative_public_signatures_and_frame_only_entries_are_exact() -> None
         _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("border", BORDERS)
 @pytest.mark.parametrize("direction", DIRECTIONS)
 def test_sobel_matches_independent_small_image_oracle_for_every_token(direction: str, border: str) -> None:
-    """v1-derivative-filters acceptance 4 and 7-8: every direction and border matches a hand-derived oracle."""
+    """For derivative filters, every direction and border matches a hand-derived oracle."""
     values = np.asarray(
         [
             [[-0.5, 0.2], [0.0, 1.1], [1.5, -0.3], [2.0, 0.7]],
@@ -224,8 +227,9 @@ def test_sobel_matches_independent_small_image_oracle_for_every_token(direction:
     )
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_sobel_standard_scale_and_magnitude_composition_are_fixed() -> None:
-    """v1-derivative-filters acceptance 8-9: unit ramp response is 8 and magnitude composes x/y."""
+    """For derivative filters, unit ramp response is 8 and magnitude composes x/y."""
     ramp = np.broadcast_to(np.arange(5, dtype=np.float32)[None, :, None], (5, 5, 1)).copy()
     source = _frame(ramp, channels=["signal"])
     horizontal = px.io.to_array(
@@ -243,9 +247,10 @@ def test_sobel_standard_scale_and_magnitude_composition_are_fixed() -> None:
     np.testing.assert_allclose(magnitude, np.sqrt(horizontal * horizontal + vertical * vertical), rtol=2e-6, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("border", BORDERS)
 def test_laplacian_matches_independent_oracle_and_uniform_neutrality(border: str) -> None:
-    """v1-derivative-filters acceptance 4 and 10-12: fixed Laplacian and uniform neutrality cover all borders."""
+    """For derivative filters, fixed Laplacian and uniform neutrality cover all borders."""
     values = np.asarray(
         [[[-0.5], [0.2], [1.5]], [[0.7], [2.0], [-0.4]], [[1.2], [0.1], [0.8]]],
         dtype=np.float32,
@@ -269,10 +274,13 @@ def test_laplacian_matches_independent_oracle_and_uniform_neutrality(border: str
     )
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("border", BORDERS)
 @pytest.mark.parametrize(("sigma1", "sigma2"), ((0.7, 1.2), (1.2, 0.7), (0.9, 0.9)))
 def test_difference_of_gaussians_matches_independent_host_reference(border: str, sigma1: float, sigma2: float) -> None:
-    """v1-derivative-filters acceptance 4 and 13-15: DoG preserves order and equality for every border."""
+    """Difference of Gaussians preserves the requested sigma order and matches independent host calculations at every
+    border.
+    """
     values = np.asarray(
         [[[-0.5], [0.0], [1.2], [1.8]], [[0.3], [1.5], [-0.2], [0.7]], [[1.1], [0.4], [2.0], [-0.7]]],
         dtype=np.float32,
@@ -293,8 +301,9 @@ def test_difference_of_gaussians_matches_independent_host_reference(border: str,
         np.testing.assert_array_equal(actual, 0.0)
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_difference_of_gaussians_equals_the_public_blur_composition() -> None:
-    """v1-derivative-filters acceptance 14: the public Gaussian composition is the numerical contract."""
+    """For derivative filters, the public Gaussian composition is the numerical contract."""
     rng = np.random.default_rng(20260730)
     source = _frame(rng.uniform(-1.0, 2.0, size=(4, 5, 2)).astype(np.float32), channels=["A", "Z"])
     expected = (
@@ -310,9 +319,11 @@ def test_difference_of_gaussians_equals_the_public_blur_composition() -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("direction", ("horizontal", "diagonal", "length", None, 1))
 def test_sobel_rejects_unknown_direction_actionably(direction: object) -> None:
-    """v1-derivative-filters acceptance 5 and 7; v1-token-vocabulary acceptance 7: direction stays closed."""
+    """Sobel filtering rejects unknown directions and lists the accepted directions."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=["signal"])
     with pytest.raises(ValueError) as error:
         px.filter.sobel(source, direction=direction)  # type: ignore[arg-type]
@@ -321,10 +332,12 @@ def test_sobel_rejects_unknown_direction_actionably(direction: object) -> None:
         assert token in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("parameter", ("sigma1", "sigma2"))
 @pytest.mark.parametrize("value", (True, "1", 0.0, -1.0, float("inf"), float("-inf"), float("nan")))
 def test_difference_of_gaussians_rejects_invalid_sigmas_actionably(parameter: str, value: object) -> None:
-    """v1-derivative-filters acceptance 5 and 15: both sigmas require positive finite real values."""
+    """For derivative filters, both sigmas require positive finite real values."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=["signal"])
     kwargs: dict[str, object] = {"sigma1": 1.0, "sigma2": 2.0}
     kwargs[parameter] = value
@@ -334,10 +347,12 @@ def test_difference_of_gaussians_rejects_invalid_sigmas_actionably(parameter: st
     assert parameter in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("name", ("sobel", "laplacian", "difference_of_gaussians"))
 @pytest.mark.parametrize("dtype", ("float16", "uint8", "uint16"))
 def test_derivative_filters_reject_non_fp32_with_conversion_guidance(name: str, dtype: str) -> None:
-    """v1-derivative-filters acceptance 2: every derivative operation requires fp32 with a cast path."""
+    """For derivative filters, every derivative operation requires fp32 with a cast path."""
     source = _frame(np.ones((2, 2, 1)), channels=["signal"], dtype=dtype)
     kwargs = {"sigma1": 1.0, "sigma2": 2.0} if name == "difference_of_gaussians" else {}
     with pytest.raises(ValueError) as error:
@@ -347,9 +362,11 @@ def test_derivative_filters_reject_non_fp32_with_conversion_guidance(name: str, 
     assert any(token in str(error.value) for token in ("cast_dtype", "recode_dtype", "dequantize"))
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("name", ("sobel", "laplacian", "difference_of_gaussians"))
 def test_derivative_filters_share_the_border_error_contract(name: str) -> None:
-    """v1-derivative-filters acceptance 4-5: four borders and constant-only finite values fail fast."""
+    """Derivative filters accept four border modes and require a finite border value only for constant mode."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=["signal"])
     base = {"sigma1": 1.0, "sigma2": 2.0} if name == "difference_of_gaussians" else {}
     function = getattr(px.filter, name)
@@ -362,8 +379,12 @@ def test_derivative_filters_share_the_border_error_contract(name: str) -> None:
         _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-103")
 def test_derivative_filters_preserve_metadata_channels_scene_values_and_input() -> None:
-    """v1-derivative-filters acceptance 1-3; v1-red-tokens acceptance 68: ARRI metadata survives filters."""
+    """Derivative filters preserve channels, color metadata, and out of range values without changing the input."""
     values = np.asarray(
         [[[-1.0, 2.0], [0.5, -0.5], [3.0, 1.0]], [[2.0, -1.0], [-2.0, 4.0], [1.5, 0.0]]],
         dtype=np.float32,
@@ -404,8 +425,10 @@ def test_derivative_filters_preserve_metadata_channels_scene_values_and_input() 
     )
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_derivative_docstrings_are_self_contained_operational_contracts() -> None:
-    """v1-derivative-filters acceptance 1-15: public docstrings expose kernels, tokens, and value contracts."""
+    """For derivative filters, public docstrings expose kernels, tokens, and value contracts."""
     docstrings = {
         name: inspect.getdoc(getattr(px.filter, name)) or ""
         for name in ("sobel", "laplacian", "difference_of_gaussians")

@@ -43,3 +43,9 @@ def _read_exr_none(
         even_odd_grouped=np.zeros(len(container.chunks), dtype=np.uint8),
         output_dtype=output_dtype,
     )
+
+
+def _none_gpu_eligible(channels: Sequence[_ExrChannel]) -> bool:
+    return all(
+        channel.pixel_type in (0, 1, 2) and channel.x_sampling == channel.y_sampling == 1 for channel in channels
+    )

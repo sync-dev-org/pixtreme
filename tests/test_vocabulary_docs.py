@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import pytest
 
+
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 def test_legal_to_full_docstring_contains_the_reverse_composition_recipe() -> None:
-    """v1-color-semantics acceptance 34: API docs use the directional color pair in the repair recipe."""
+    """The public legal-to-full documentation shows color conversion, range conversion, and the reverse color
+    step in order."""
     import inspect
 
     docstring = inspect.getdoc(__import__("pixtreme").values.legal_to_full)

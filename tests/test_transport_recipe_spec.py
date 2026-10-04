@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import pytest
+
 import pixtreme as px
 
 
+@pytest.mark.req("REQ-PIX-015")
+@pytest.mark.req("REQ-PIX-105")
 def test_from_array_passes_the_current_consumer_stream_to_dlpack() -> None:
-    """v1-transport-recipe acceptance 4: DLPack import performs the producer-consumer stream handshake."""
+    """DLPack array import passes the current CUDA consumer stream to the producer before using its GPU pixels."""
     import cupy as cp
 
     class RecordingProducer:

@@ -33,7 +33,7 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError]) -> None:
 
 
 def _numpy_rgb_to_hsv(rgb: np.ndarray) -> np.ndarray:
-    """Independent host implementation of v1-hsv acceptance 5-6."""
+    """The host reference converts RGB values to HSV using independent piecewise equations."""
     values = np.asarray(rgb, dtype=np.float64)
     red, green, blue = np.moveaxis(values, -1, 0)
     maximum = np.maximum(red, np.maximum(green, blue))
@@ -55,7 +55,7 @@ def _numpy_rgb_to_hsv(rgb: np.ndarray) -> np.ndarray:
 
 
 def _numpy_hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
-    """Independent host implementation of v1-hsv acceptance 8-9."""
+    """The host reference converts HSV values to RGB across all six hue sectors."""
     values = np.asarray(hsv, dtype=np.float64)
     hue, saturation, value = np.moveaxis(values, -1, 0)
     h6 = 6.0 * np.mod(hue, 1.0)
@@ -79,8 +79,9 @@ def _numpy_hsv_to_rgb(hsv: np.ndarray) -> np.ndarray:
     return np.stack((red + minimum, green + minimum, blue + minimum), axis=-1)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_hsv_public_signatures_and_namespace_are_exact() -> None:
-    """v1-hsv acceptance 1 and 12: two frame-only color paths exist without aliases or methods."""
+    """The public color namespace exposes RGB and HSV conversion as Frame-only functions without aliases."""
     assert tuple(inspect.signature(px.color.rgb_to_hsv).parameters) == ("frame",)
     assert tuple(inspect.signature(px.color.hsv_to_rgb).parameters) == ("frame",)
     assert inspect.signature(px.color.rgb_to_hsv).parameters["frame"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
@@ -93,8 +94,9 @@ def test_hsv_public_signatures_and_namespace_are_exact() -> None:
         assert not hasattr(px.color, name)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_rgb_to_hsv_matches_hand_calculated_primary_secondary_and_achromatic_values() -> None:
-    """v1-hsv acceptance 5-7 and 10: known colors, gray, black, and scene values have fixed HSV values."""
+    """RGB to HSV conversion matches hand-calculated primary, secondary, gray, black, and scene values."""
     rgb = np.asarray(
         (
             (0.0, 0.0, 0.0),
@@ -127,9 +129,10 @@ def test_rgb_to_hsv_matches_hand_calculated_primary_secondary_and_achromatic_val
     np.testing.assert_allclose(result.data.get()[:, 0], expected, rtol=0.0, atol=1e-7)
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize("channels", tuple(itertools.permutations(("R", "G", "B"))))
 def test_rgb_to_hsv_reads_each_rgb_permutation_by_label(channels: tuple[str, ...]) -> None:
-    """v1-hsv acceptance 3-4: every RGB input order is label-driven and output is canonical HSV."""
+    """RGB to HSV conversion reads every RGB channel order by label and emits canonical HSV labels."""
     rgb_by_label = {"R": 0.25, "G": 1.5, "B": 0.75}
     source = _frame(tuple(rgb_by_label[label] for label in channels), channels=channels)
 
@@ -140,9 +143,10 @@ def test_rgb_to_hsv_reads_each_rgb_permutation_by_label(channels: tuple[str, ...
     np.testing.assert_allclose(result.data.get()[0, 0], expected, rtol=0.0, atol=2e-7)
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize("channels", tuple(itertools.permutations(("H", "S", "V"))))
 def test_hsv_to_rgb_reads_each_hsv_permutation_by_label(channels: tuple[str, ...]) -> None:
-    """v1-hsv acceptance 3-4 and 8: every HSV input order is label-driven and output is canonical RGB."""
+    """HSV to RGB conversion reads every HSV channel order by label and emits canonical RGB labels."""
     hsv_by_label = {"H": 4.5 / 6.0, "S": 0.75, "V": 1.8}
     source = _frame(tuple(hsv_by_label[label] for label in channels), channels=channels)
 
@@ -153,8 +157,11 @@ def test_hsv_to_rgb_reads_each_hsv_permutation_by_label(channels: tuple[str, ...
     np.testing.assert_allclose(result.data.get()[0, 0], expected, rtol=0.0, atol=3e-7)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_rgb_to_hsv_matches_independent_numpy_for_nonnegative_scene_values() -> None:
-    """v1-hsv acceptance 5-7: independent host equations cover random finite RGB values above one."""
+    """RGB to HSV conversion matches independent equations for finite nonnegative values above one."""
     generator = np.random.default_rng(20260804)
     rgb = generator.uniform(0.0, 8.0, size=(9, 11, 3)).astype(np.float32)
     source = px.core.Frame(data=cp.asarray(rgb), colorspace="ACEScg", gamma="linear", channels="RGB")
@@ -168,8 +175,11 @@ def test_rgb_to_hsv_matches_independent_numpy_for_nonnegative_scene_values() -> 
     np.testing.assert_array_equal(result.data.get()[..., 2], np.max(rgb, axis=-1))
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_rgb_to_hsv_preserves_positive_scale_in_hue_saturation_and_value() -> None:
-    """v1-hsv acceptance 7: positive RGB scaling preserves H/S and scales V without clipping."""
+    """Positive RGB scaling keeps hue and saturation and scales HSV value without clipping."""
     rgb = np.asarray(((0.2, 0.7, 1.3), (2.0, 0.4, 0.9), (0.1, 4.0, 1.2)), dtype=np.float32)
     source = px.color.rgb_to_hsv(_frame(rgb))
     scaled = px.color.rgb_to_hsv(_frame(rgb * np.float32(3.25)))
@@ -180,8 +190,9 @@ def test_rgb_to_hsv_preserves_positive_scale_in_hue_saturation_and_value() -> No
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_hsv_to_rgb_wraps_hue_and_matches_all_six_host_sectors() -> None:
-    """v1-hsv acceptance 8-9: negative, seam, and over-one hues wrap across all six exact sectors."""
+    """HSV to RGB conversion wraps negative and above-one hue through all six sectors."""
     hues = np.asarray((-1.0, -1.0 / 6.0, 0.0, 1.0 / 6.0, 2.0 / 6.0, 3.0 / 6.0, 4.0 / 6.0, 5.0 / 6.0, 1.0, 2.25))
     hsv = np.stack((hues, np.ones_like(hues), np.full_like(hues, 2.0)), axis=-1).astype(np.float32)
     expected = np.asarray(
@@ -205,8 +216,11 @@ def test_hsv_to_rgb_wraps_hue_and_matches_all_six_host_sectors() -> None:
     np.testing.assert_allclose(result.data.get()[:, 0], expected, rtol=0.0, atol=3e-7)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_hsv_to_rgb_does_not_clip_saturation_or_value() -> None:
-    """v1-hsv acceptance 9 and 14: S/V outside nominal bounds are formula inputs rather than errors."""
+    """HSV to RGB conversion accepts saturation and value outside the unit range without clipping."""
     hsv = np.asarray(
         ((0.25, 2.0, 3.0), (0.75, -0.5, 1.5), (0.4, 0.0, -2.0), (123.0, 0.0, 0.0), (-123.0, 0.0, 2.0)),
         dtype=np.float32,
@@ -221,8 +235,11 @@ def test_hsv_to_rgb_does_not_clip_saturation_or_value() -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_nonnegative_rgb_round_trip_restores_values_above_one() -> None:
-    """v1-hsv acceptance 10: fp32 round-trip restores nonnegative scene RGB within operation-depth tolerance."""
+    """RGB to HSV and back restores nonnegative scene values above one within float32 tolerance."""
     generator = np.random.default_rng(20360804)
     rgb = generator.uniform(0.0, 12.0, size=(13, 17, 3)).astype(np.float32)
     source = px.core.Frame(data=cp.asarray(rgb), colorspace="ACEScg", gamma="linear", channels="RGB")
@@ -233,8 +250,11 @@ def test_nonnegative_rgb_round_trip_restores_values_above_one() -> None:
     np.testing.assert_allclose(restored.data.get(), rgb, rtol=2e-6, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_negative_and_nonfinite_rgb_values_are_not_prevalidated_or_clipped() -> None:
-    """v1-hsv acceptance 11 and 14: negative and nonfinite pixels reach the documented equations."""
+    """RGB to HSV conversion passes negative and nonfinite pixels through its equations without preclipping."""
     finite = np.asarray(((-2.0, -1.0, -3.0), (-1.0, 0.0, -0.5), (0.5, -0.5, 0.25)), dtype=np.float32)
     result = px.color.rgb_to_hsv(_frame(finite))
     np.testing.assert_allclose(result.data.get()[:, 0], _numpy_rgb_to_hsv(finite), rtol=3e-7, atol=3e-7)
@@ -244,8 +264,11 @@ def test_negative_and_nonfinite_rgb_values_are_not_prevalidated_or_clipped() -> 
     assert output.shape == nonfinite.shape
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_hsv_operations_preserve_claims_reset_matrix_and_leave_input_storage_unchanged() -> None:
-    """v1-hsv acceptance 4: outputs are private canonical Frames and inputs remain byte-for-byte unchanged."""
+    """RGB and HSV conversion return separate canonical Frames without mutating input storage or retaining YCbCr
+    matrix claims."""
     source = _frame(
         ((0.25, 1.5, 0.75), (2.0, 0.5, 0.1)),
         channels=("B", "R", "G"),
@@ -273,19 +296,23 @@ def test_hsv_operations_preserve_claims_reset_matrix_and_leave_input_storage_unc
     assert source.matrix == "BT.601"
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("operation", ("rgb_to_hsv", "hsv_to_rgb"))
 def test_hsv_operations_reject_non_frame_with_actionable_error(operation: str) -> None:
-    """v1-hsv acceptance 2 and 14: non-Frame inputs fail before pixel processing with recovery guidance."""
+    """RGB and HSV conversion reject non-Frame inputs before pixel work with recovery guidance."""
     with pytest.raises(ValueError) as error:
         getattr(px.color, operation)(object())
     _assert_actionable(error)
     assert "Frame" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("operation", ("rgb_to_hsv", "hsv_to_rgb"))
 @pytest.mark.parametrize("dtype", (np.float16, np.uint8, np.uint16))
 def test_hsv_operations_reject_each_non_float32_dtype_with_cast_guidance(operation: str, dtype: object) -> None:
-    """v1-hsv acceptance 2 and 14: every supported non-fp32 Frame dtype names the three conversion paths."""
+    """RGB and HSV conversion reject non-float32 Frames and name the available cast paths."""
     channels = ("R", "G", "B") if operation == "rgb_to_hsv" else ("H", "S", "V")
     source = _frame((0, 0, 0), channels=channels, dtype=dtype)
 
@@ -297,6 +324,8 @@ def test_hsv_operations_reject_each_non_float32_dtype_with_cast_guidance(operati
         assert required in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("operation", "channels"),
     (
@@ -313,7 +342,7 @@ def test_hsv_operations_reject_each_non_float32_dtype_with_cast_guidance(operati
 def test_hsv_operations_reject_non_exact_triplets_with_expected_and_received_channels(
     operation: str, channels: tuple[str, ...]
 ) -> None:
-    """v1-hsv acceptance 3 and 14: missing, duplicate, foreign, and extra labels fail without implicit routing."""
+    """RGB and HSV conversion reject missing, duplicate, foreign, and extra channel labels."""
     source = _frame(np.zeros(len(channels), dtype=np.float32), channels=channels)
 
     with pytest.raises(ValueError) as error:
@@ -326,9 +355,11 @@ def test_hsv_operations_reject_non_exact_triplets_with_expected_and_received_cha
     assert "px.channel.shuffle" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("operation", ("rgb_to_hsv", "hsv_to_rgb"))
 def test_hsv_docstrings_state_the_complete_public_contract(operation: str) -> None:
-    """v1-hsv acceptance 12: each public docstring is self-contained for invisible numeric and Frame rules."""
+    """The public RGB and HSV help states numeric and Frame behavior for both directions."""
     docstring = inspect.getdoc(getattr(px.color, operation)) or ""
     for required in (
         "float32",

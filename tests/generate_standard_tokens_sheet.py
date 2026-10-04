@@ -1,4 +1,4 @@
-"""Generate deterministic visual evidence for v1-standard-tokens acceptance 138."""
+"""Generate deterministic standard transfer-curve and gamut comparison sheets."""
 
 from __future__ import annotations
 
@@ -39,19 +39,21 @@ _BRADFORD = np.asarray(
 )
 
 
-def _frame(values: np.ndarray, *, colorspace: str = "ACEScg", gamma: str = "linear") -> px.core.Frame:
+def _frame(
+    values: np.ndarray, *, colorspace: px.core.Colorspace = "ACEScg", gamma: px.core.Gamma = "linear"
+) -> px.core.Frame:
     rgb = np.repeat(np.asarray(values, dtype=np.float32)[:, None], 3, axis=1)[None]
     return px.io.from_array(cp.asarray(rgb), colorspace=colorspace, gamma=gamma, channels="RGB")
 
 
-def _encode(values: np.ndarray, gamma: str) -> np.ndarray:
+def _encode(values: np.ndarray, gamma: px.core.Gamma) -> np.ndarray:
     encoded = px.color.linear_to_gamma(_frame(values), gamma=gamma)
-    return px.io.to_array(encoded).get()[0, :, 0].astype(np.float64)
+    return np.asarray(px.io.to_array(encoded).get()[0, :, 0], dtype=np.float64)
 
 
-def _decode(values: np.ndarray, gamma: str) -> np.ndarray:
+def _decode(values: np.ndarray, gamma: px.core.Gamma) -> np.ndarray:
     decoded = px.color.gamma_to_linear(_frame(values, gamma=gamma), gamma=gamma)
-    return px.io.to_array(decoded).get()[0, :, 0].astype(np.float64)
+    return np.asarray(px.io.to_array(decoded).get()[0, :, 0], dtype=np.float64)
 
 
 def _acescc_encode(values: np.ndarray) -> np.ndarray:
@@ -99,7 +101,7 @@ def _map(values: np.ndarray, lower: float, upper: float, start: int, extent: int
 
 def _panel(
     draw: ImageDraw.ImageDraw,
-    font: ImageFont.ImageFont,
+    font: ImageFont.ImageFont | ImageFont.FreeTypeFont,
     *,
     box: tuple[int, int, int, int],
     title: str,
@@ -190,10 +192,13 @@ def _transfer_sheet() -> Image.Image:
     )
 
     positive = np.linspace(0.0, 1.5, _SAMPLES, dtype=np.float64).astype(np.float32)
-    powers = tuple(
-        (_encode(positive, gamma), color)
-        for gamma, color in (("Gamma-2.2", _ACCENT), ("Gamma-2.4", _ORACLE), ("Gamma-2.5", _GPU), ("Gamma-2.6", _ERROR))
+    power_cases: tuple[tuple[px.core.Gamma, tuple[int, int, int]], ...] = (
+        ("Gamma-2.2", _ACCENT),
+        ("Gamma-2.4", _ORACLE),
+        ("Gamma-2.5", _GPU),
+        ("Gamma-2.6", _ERROR),
     )
+    powers = tuple((_encode(positive, gamma), color) for gamma, color in power_cases)
     _panel(
         draw,
         font,
@@ -271,16 +276,18 @@ def _rgb_to_xyz(definition: tuple[tuple[tuple[float, float], ...], tuple[float, 
         (tuple(x / y for x, y in primaries), (1.0, 1.0, 1.0), tuple((1.0 - x - y) / y for x, y in primaries)),
         dtype=np.float64,
     )
-    return unscaled @ np.diag(np.linalg.solve(unscaled, _xy_to_xyz(white)))
+    return np.asarray(unscaled @ np.diag(np.linalg.solve(unscaled, _xy_to_xyz(white))), dtype=np.float64)
 
 
-def _conversion(source: str, target: str) -> np.ndarray:
+def _conversion(source: px.core.Colorspace, target: px.core.Colorspace) -> np.ndarray:
     source_definition = _DEFINITIONS[source]
     target_definition = _DEFINITIONS[target]
     source_cones = _BRADFORD @ _xy_to_xyz(source_definition[1])
     target_cones = _BRADFORD @ _xy_to_xyz(target_definition[1])
     adaptation = np.linalg.inv(_BRADFORD) @ np.diag(target_cones / source_cones) @ _BRADFORD
-    return np.linalg.inv(_rgb_to_xyz(target_definition)) @ adaptation @ _rgb_to_xyz(source_definition)
+    return np.asarray(
+        np.linalg.inv(_rgb_to_xyz(target_definition)) @ adaptation @ _rgb_to_xyz(source_definition), dtype=np.float64
+    )
 
 
 def _display_strip(values: np.ndarray, height: int) -> np.ndarray:
@@ -303,7 +310,8 @@ def _gamut_sheet() -> Image.Image:
         fill=_TEXT,
         font=font,
     )
-    for row, token in enumerate(("P3-DCI", "P3-D60", "P3-D65", "SMPTE-C")):
+    gamut_tokens: tuple[px.core.Colorspace, ...] = ("P3-DCI", "P3-D60", "P3-D65", "SMPTE-C")
+    for row, token in enumerate(gamut_tokens):
         source = px.io.from_array(cp.asarray(source_values[None]), colorspace=token, gamma="linear", channels="RGB")
         actual = px.io.to_array(px.color.rgb_to_rgb(source, output_colorspace="Rec.709", output_gamma="linear")).get()[
             0

@@ -108,10 +108,10 @@ def _logc4_decode(values: np.ndarray) -> np.ndarray:
 
 
 def _mirror(values: np.ndarray, function: Callable[[np.ndarray], np.ndarray]) -> np.ndarray:
-    return np.copysign(function(np.abs(values)), values)
+    return np.asarray(np.copysign(function(np.abs(values)), values), dtype=np.float64)
 
 
-def _public_target(linear: np.ndarray, gamma: str) -> tuple[np.ndarray, np.ndarray]:
+def _public_target(linear: np.ndarray, gamma: px.core.Gamma) -> tuple[np.ndarray, np.ndarray]:
     rgb = np.repeat(linear.astype(np.float32)[:, None], 3, axis=1)[None, :, :]
     source = px.io.from_array(cp.asarray(rgb), colorspace="ACEScg", gamma="linear", channels="RGB")
     encoded = px.color.linear_to_gamma(source, gamma=gamma)
@@ -122,7 +122,7 @@ def _public_target(linear: np.ndarray, gamma: str) -> tuple[np.ndarray, np.ndarr
     )
 
 
-def _public_encode_rgb(linear: np.ndarray, gamma: str) -> np.ndarray:
+def _public_encode_rgb(linear: np.ndarray, gamma: px.core.Gamma) -> np.ndarray:
     source = px.io.from_array(
         cp.asarray(linear.astype(np.float32)[None, :, :]),
         colorspace="ACEScg",
@@ -130,7 +130,7 @@ def _public_encode_rgb(linear: np.ndarray, gamma: str) -> np.ndarray:
         channels="RGB",
     )
     encoded = px.color.linear_to_gamma(source, gamma=gamma)
-    return px.io.to_array(encoded).get()[0].astype(np.float64)
+    return np.asarray(px.io.to_array(encoded).get()[0], dtype=np.float64)
 
 
 def _x_pixel(values: np.ndarray, value: float) -> int:
@@ -140,7 +140,7 @@ def _x_pixel(values: np.ndarray, value: float) -> int:
 
 def _draw_markers(
     draw: ImageDraw.ImageDraw,
-    font: ImageFont.ImageFont,
+    font: ImageFont.ImageFont | ImageFont.FreeTypeFont,
     values: np.ndarray,
     markers: Sequence[tuple[float, str]],
     top: int,
@@ -179,7 +179,7 @@ def _draw_strip(image: Image.Image, curve: np.ndarray, *, top: int, lower: float
 
 
 def _sheet(
-    gamma: str,
+    gamma: px.core.Gamma,
     direct_encode: Callable[[np.ndarray], np.ndarray],
     direct_decode: Callable[[np.ndarray], np.ndarray],
     markers: Sequence[tuple[float, str]],

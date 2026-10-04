@@ -531,14 +531,14 @@ def _encoded_sets(gamma: str) -> tuple[tuple[np.ndarray, ...], np.ndarray, np.nd
     return (grid[~np.isin(grid, excluded)],), fixture, window, anchors
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_vendor_b_tokens_extend_only_canonical_vocabulary_and_public_surfaces() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 1;
-    v1-vendor-b-tokens acceptance 166-167: expose canonical tokens without aliases.
-    """
+    """Nikon, Leica, Apple, and Samsung color tokens appear in the canonical public vocabulary."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 199
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 200
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -561,8 +561,11 @@ def test_vendor_b_tokens_extend_only_canonical_vocabulary_and_public_surfaces() 
     assert not any(token in new_tokens for alias in _PERMANENT_TOKEN_ALIASES for token in alias)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_vendor_b_token_keys_alias_boundaries_and_fail_fast_errors(monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-vendor-b-tokens acceptance 168 and 187: normalize separators and reject raw invalid inputs."""
+    """Nikon, Leica, Apple, and Samsung tokens normalize within families and reject invalid values with
+    guidance."""
     from pixtreme._core.validation import _normalized_closed_token
 
     translation = str.maketrans("", "", " .-_")
@@ -623,13 +626,13 @@ def test_vendor_b_token_keys_alias_boundaries_and_fail_fast_errors(monkeypatch: 
         assert "Nikon N-Log" not in message.replace(f"received gamma={value!r}", "")
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(
-    ("gamma", "acceptance"),
-    (("N-Log", 169), ("L-Log", 172), ("Apple-Log", 175), ("Samsung-Log", 178)),
+    "gamma",
+    ("N-Log", "L-Log", "Apple-Log", "Samsung-Log"),
 )
-def test_vendor_b_encode_matches_dense_oracle_branch_fixtures_and_anchors(gamma: str, acceptance: int) -> None:
-    """v1-vendor-b-tokens acceptance 169, 172, 175, 178: encode reflectance with each public branch model."""
-    del acceptance
+def test_vendor_b_encode_matches_dense_oracle_branch_fixtures_and_anchors(gamma: str) -> None:
+    """Nikon, Leica, Apple, and Samsung transfers encode scene values with their public branch models."""
     dense, _, _, _ = _linear_sets(gamma)
     expected_dense_counts = (400_001, 200_001, 200_001) if gamma == "N-Log" else (400_001, 200_001)
     assert tuple(len(grid) for grid in dense) < expected_dense_counts
@@ -664,13 +667,15 @@ def test_vendor_b_encode_matches_dense_oracle_branch_fixtures_and_anchors(gamma:
     assert encoded.gamma == gamma
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize(
-    ("gamma", "acceptance"),
-    (("N-Log", 170), ("L-Log", 173), ("Apple-Log", 176), ("Samsung-Log", 179)),
+    "gamma",
+    ("N-Log", "L-Log", "Apple-Log", "Samsung-Log"),
 )
-def test_vendor_b_decode_matches_dense_oracle_branch_fixtures_and_anchors(gamma: str, acceptance: int) -> None:
-    """v1-vendor-b-tokens acceptance 170, 173, 176, 179: decode every branch and signed extension."""
-    del acceptance
+def test_vendor_b_decode_matches_dense_oracle_branch_fixtures_and_anchors(gamma: str) -> None:
+    """Nikon, Leica, Apple, and Samsung transfers decode each branch and its signed extension."""
     (values,), _, _, _ = _encoded_sets(gamma)
     decoded = px.color.gamma_to_linear(_frame(values, gamma=gamma, auxiliary=True), gamma=gamma)
     actual = _rgb_values(decoded)[:, 0]
@@ -699,6 +704,7 @@ def test_vendor_b_decode_matches_dense_oracle_branch_fixtures_and_anchors(gamma:
     assert decoded.gamma == "linear"
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(
     ("gamma", "path", "input_bits", "expected_bits", "envelope"),
     tuple(
@@ -714,7 +720,7 @@ def test_vendor_b_explicit_samples_reject_printed_substitutions(
     expected_bits: int,
     envelope: float,
 ) -> None:
-    """v1-vendor-b-tokens acceptance 171, 174, and 180: explicit samples separate production identities."""
+    """Nikon, Leica, Apple, and Samsung transfers produce their specified values at distinct sample points."""
     source = _from_bits(input_bits)
     if path == "encode":
         actual = _rgb_values(px.color.linear_to_gamma(_frame(source), gamma=gamma))[0, 0]
@@ -723,13 +729,13 @@ def test_vendor_b_explicit_samples_reject_printed_substitutions(
     assert abs(float(actual) - float(_from_bits(expected_bits)[0])) <= envelope
 
 
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize(
-    ("gamma", "acceptance"),
-    (("N-Log", 171), ("L-Log", 174), ("Apple-Log", 177), ("Samsung-Log", 180)),
+    "gamma",
+    ("N-Log", "L-Log", "Apple-Log", "Samsung-Log"),
 )
-def test_vendor_b_derived_constants_cut_windows_mutants_and_round_trips(gamma: str, acceptance: int) -> None:
-    """v1-vendor-b-tokens acceptance 171, 174, 177, 180: derive cuts, bound seams, and round-trip four sets."""
-    del acceptance
+def test_vendor_b_derived_constants_cut_windows_mutants_and_round_trips(gamma: str) -> None:
+    """Nikon, Leica, Apple, and Samsung transfers meet at derived cuts and round trip supported scene values."""
     assert float(_DERIVED["nlog_x"]) == 0.3784157394368526
     assert abs(_DERIVED["nlog_left"] - Decimal("0.316730607914939475650508228913")) < Decimal("5e-31")
     assert float(_DERIVED["nlog_encoded_cut"]) == 0.4625960144726521
@@ -778,8 +784,10 @@ def test_vendor_b_derived_constants_cut_windows_mutants_and_round_trips(gamma: s
         np.testing.assert_allclose(reencoded, roundtrip_values, rtol=5e-6, atol=2e-7)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_vendor_b_standalone_and_fused_paths_preserve_frame_contracts() -> None:
-    """v1-vendor-b-tokens acceptance 181: keep standalone and fused transfer paths bit-identical."""
+    """Nikon, Leica, Apple, and Samsung transfers preserve Frame properties through public color paths."""
     for gamma in _CURVES:
         linear_sets = _linear_sets(gamma)
         encoded_sets = _encoded_sets(gamma)
@@ -801,8 +809,9 @@ def test_vendor_b_standalone_and_fused_paths_preserve_frame_contracts() -> None:
         assert (encoded.gamma, encoded.matrix, encoded.data.dtype) == (gamma, None, cp.float32)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_apple_wide_gamut_definition_matrix_native_row_and_adaptation() -> None:
-    """v1-vendor-b-tokens acceptance 182-183: derive AWG and use D65 identity plus Bradford adaptation."""
+    """Apple Wide Gamut matrices and native luma row match public coordinates with Bradford adaptation."""
     from pixtreme._color.transform import _compose_matrix
     from pixtreme._core.colorspace import _COLORSPACE_DEFINITIONS
 
@@ -828,9 +837,11 @@ def test_apple_wide_gamut_definition_matrix_native_row_and_adaptation() -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize("target", ("Rec.709", "ACES2065-1"))
 def test_vendor_b_representative_frames_compose_independent_transfer_and_gamut_oracles(target: str) -> None:
-    """v1-vendor-b-tokens acceptance 184: compose every new token in representative Frames."""
+    """Nikon, Leica, Apple, and Samsung Frames compose transfer and gamut conversion independently."""
     target_definition = _REC709 if target == "Rec.709" else _ACES2065
     linear_rgb = np.asarray(((-0.05, 0.18, 1.5), (0.18, 1.25, 0.0)), dtype=np.float64)
     cases = (
@@ -859,8 +870,9 @@ def test_vendor_b_representative_frames_compose_independent_transfer_and_gamut_o
         )
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_existing_token_bits_remain_at_the_pre_vendor_b_baseline() -> None:
-    """v1-io-icc acceptance 3; v1-vendor-b-tokens acceptance 185: preserve pre-feature transfer and gamut bits."""
+    """Other supported color tokens retain their exact transfer and gamut pixel values."""
     # Characterization provenance: captured from the complete pre-vendor-B commit
     # 7d625404cbf2ddaa412dcc95055ab8b3e0891f3c. At that SHA, construct an ACEScg/linear RGB Frame
     # from float32 (-0.25, -0.018056996166706085, 0, 0.18000000715255737, 1, 1.5), then concatenate
@@ -889,8 +901,10 @@ def test_existing_token_bits_remain_at_the_pre_vendor_b_baseline() -> None:
     assert gamut_digest.hexdigest() == "7c0e43e049008d2bd219c98122693be4e05772f9812befdec5f5e5771c36ea34"
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_vendor_b_dpx_codes_are_logarithmic_and_existing_mappings_remain_unchanged(tmp_path: Path) -> None:
-    """v1-vendor-b-tokens acceptance 186: classify four transfers as DPX logarithmic."""
+    """DPX writing identifies Nikon, Leica, Apple, and Samsung transfers as logarithmic and preserves other
+    mappings."""
     from pixtreme._io.formats.dpx import _dpx_transfer_from_gamma
 
     expected = {

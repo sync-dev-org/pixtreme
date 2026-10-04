@@ -1,4 +1,4 @@
-"""Generate deterministic visual comparisons for v1-sony-tokens acceptance 14."""
+"""Generate deterministic Sony transfer-curve and gamut comparison sheets."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ def _sony_encode(values: np.ndarray, *, slog2: bool) -> np.ndarray:
     return (np.float64(64.0) + np.float64(876.0) * y) / np.float64(1023.0)
 
 
-def _public_curve(linear: np.ndarray, gamma: str) -> tuple[np.ndarray, np.ndarray]:
+def _public_curve(linear: np.ndarray, gamma: px.core.Gamma) -> tuple[np.ndarray, np.ndarray]:
     rgb = np.repeat(linear.astype(np.float32)[:, None], 3, axis=1)[None, :, :]
     source = px.io.from_array(cp.asarray(rgb), colorspace="ACEScg", gamma="linear", channels="RGB")
     encoded = px.color.linear_to_gamma(source, gamma=gamma)
@@ -76,7 +76,7 @@ def _x_pixel(values: np.ndarray, value: float) -> int:
 
 def _draw_markers(
     draw: ImageDraw.ImageDraw,
-    font: ImageFont.ImageFont,
+    font: ImageFont.ImageFont | ImageFont.FreeTypeFont,
     values: np.ndarray,
     markers: Sequence[tuple[float, str]],
     top: int,
@@ -116,7 +116,7 @@ def _draw_strip(image: Image.Image, curve: np.ndarray, *, top: int, lower: float
     image.paste(resized, (_LEFT, top))
 
 
-def _curve_sheet(gamma: str, *, slog2: bool, anchors: tuple[int, int, int]) -> Image.Image:
+def _curve_sheet(gamma: px.core.Gamma, *, slog2: bool, anchors: tuple[int, int, int]) -> Image.Image:
     linear = np.linspace(-0.3, 1.5, _SAMPLES, dtype=np.float32).astype(np.float64)
     gpu_encoded, gpu_round_trip = _public_curve(linear, gamma)
     oracle_encoded = _sony_encode(linear, slog2=slog2)
@@ -218,7 +218,7 @@ def _linear_rgb_strip(values: np.ndarray, *, lower: float, upper: float, height:
     )
 
 
-def _gamut_target(source_rgb: np.ndarray, colorspace: str) -> np.ndarray:
+def _gamut_target(source_rgb: np.ndarray, colorspace: px.core.Colorspace) -> np.ndarray:
     frame = px.io.from_array(
         cp.asarray(source_rgb.astype(np.float32)[None, :, :]),
         colorspace=colorspace,
@@ -226,7 +226,7 @@ def _gamut_target(source_rgb: np.ndarray, colorspace: str) -> np.ndarray:
         channels="RGB",
     )
     target = px.color.rgb_to_rgb(frame, output_colorspace="Rec.709", output_gamma="linear")
-    return px.io.to_array(target).get()[0]
+    return np.asarray(px.io.to_array(target).get()[0], dtype=np.float32)
 
 
 def _gamut_sheet() -> Image.Image:

@@ -69,7 +69,7 @@ def _primitive_reference(
     border_value: float,
     dilate: bool,
 ) -> np.ndarray:
-    """Independent scalar NumPy reference derived from v1-morphology acceptance 2, 4, and 7."""
+    """Independent scalar NumPy reference for disk and square morphology support and borders."""
     output = np.empty_like(source, dtype=np.float32)
     height, width, channel_count = source.shape
     for y in range(height):
@@ -117,8 +117,10 @@ def _compound_reference(
     return closed - source
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_morphology_public_signatures_are_exact_frame_only_contracts() -> None:
-    """v1-morphology acceptance 1: seven exact keyword APIs require radius and return Frame values."""
+    """The seven public morphology operations accept Frames, require a radius, and return Frames."""
     import cupy as cp
 
     source = _frame(np.arange(9, dtype=np.float32).reshape(3, 3, 1), channels=["matte"])
@@ -139,17 +141,21 @@ def test_morphology_public_signatures_are_exact_frame_only_contracts() -> None:
         _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("radius", (0, -1, 1.0, True, np.int64(1), "1"))
 def test_morphology_radius_is_a_built_in_int_of_at_least_one(radius: object) -> None:
-    """v1-morphology acceptance 2-3: radius rejects non-int values and integers below one actionably."""
+    """For morphology operations, radius rejects non-int values and integers below one actionably."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=["matte"])
     with pytest.raises(ValueError) as error:
         px.morphology.erosion(source, radius=radius)  # type: ignore[arg-type]
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_morphology_shape_is_the_exact_disk_square_axis() -> None:
-    """v1-morphology acceptance 2-3; v1-token-vocabulary acceptance 7: shape accepts only disk and square."""
+    """For morphology operations, shape accepts only disk and square."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=["matte"])
     for shape in SHAPES:
         assert px.morphology.dilation(source, radius=1, shape=shape).shape == source.shape
@@ -160,8 +166,9 @@ def test_morphology_shape_is_the_exact_disk_square_axis() -> None:
         assert shape in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_hand_computed_radius_one_support_and_corner_borders() -> None:
-    """v1-morphology acceptance 2, 4, and 7: hand-counted disk/square support fixes all border corners."""
+    """Radius one morphology selects the hand calculated disk and square neighbors at image corners."""
     values = np.asarray([[5.0, 1.0, 9.0], [7.0, 3.0, 4.0], [8.0, 2.0, 6.0]], dtype=np.float32)[..., None]
     source = _frame(values, channels=["matte"])
     expected_disk_corner = {
@@ -191,13 +198,14 @@ def test_hand_computed_radius_one_support_and_corner_borders() -> None:
     assert float(square[1, 1, 0]) == 9.0
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("shape", SHAPES)
 @pytest.mark.parametrize("border", BORDERS)
 @pytest.mark.parametrize(("name", "dilate"), (("erosion", False), ("dilation", True)))
 def test_morphology_primitives_match_independent_numpy_reference(
     name: str, dilate: bool, border: str, shape: str
 ) -> None:
-    """v1-morphology acceptance 4 and 7: min/max match an independent NumPy scalar oracle for every token."""
+    """For morphology operations, min/max match an independent NumPy scalar oracle for every token."""
     rng = np.random.default_rng(20260730)
     values = rng.uniform(-0.7, 1.8, size=(3, 4, 3)).astype(np.float32)
     source = _frame(values, colorspace="ACEScg", channels=["A", "custom", "Z"])
@@ -220,11 +228,12 @@ def test_morphology_primitives_match_independent_numpy_reference(
     )
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("name", MORPHOLOGY_NAMES[2:])
 @pytest.mark.parametrize("shape", SHAPES)
 @pytest.mark.parametrize("border", BORDERS)
 def test_morphology_compounds_match_the_defined_primitive_compositions(name: str, shape: str, border: str) -> None:
-    """v1-morphology acceptance 8: open/close/differences match independently composed min/max references."""
+    """For morphology operations, open/close/differences match independently composed min/max references."""
     values = np.asarray(
         [[[0.2], [1.5], [-0.4]], [[0.8], [0.3], [1.2]], [[-0.2], [0.9], [0.1]]],
         dtype=np.float32,
@@ -249,10 +258,11 @@ def test_morphology_compounds_match_the_defined_primitive_compositions(name: str
     )
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("name", MORPHOLOGY_NAMES)
 @pytest.mark.parametrize("channel_count", (2, 5))
 def test_morphology_all_operations_are_bit_exact_across_radius_shape_and_border(name: str, channel_count: int) -> None:
-    """v1-morphology acceptance 2, 4, 7, and 8: every optimized path stays bit exact to the scalar oracle."""
+    """For morphology operations, every optimized path stays bit exact to the scalar oracle."""
     rng = np.random.default_rng(20260817)
     values = rng.uniform(-1.7, 2.3, size=(4, 5, channel_count)).astype(np.float32)
     source = _frame(values, colorspace="ACEScg", channels=[f"channel-{index}" for index in range(channel_count)])
@@ -285,11 +295,12 @@ def test_morphology_all_operations_are_bit_exact_across_radius_shape_and_border(
                 np.testing.assert_array_equal(actual.view(np.uint32), expected.view(np.uint32))
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("name", MORPHOLOGY_NAMES)
 @pytest.mark.parametrize("shape", SHAPES)
 @pytest.mark.parametrize("border", BORDERS)
 def test_morphology_large_radius_fallback_is_bit_exact(name: str, shape: str, border: str) -> None:
-    """v1-morphology acceptance 2, 4, 7, and 8: radii beyond the tiled budget retain exact behavior."""
+    """For morphology operations, radii beyond the tiled budget retain exact behavior."""
     values = np.asarray([[[0.625]]], dtype=np.float32)
     source = _frame(values, colorspace="ACEScg", channels=["matte"])
     border_value = -0.375
@@ -306,8 +317,9 @@ def test_morphology_large_radius_fallback_is_bit_exact(name: str, shape: str, bo
     np.testing.assert_array_equal(actual.view(np.uint32), expected.view(np.uint32))
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_replicate_default_is_neutral_for_uniform_frames() -> None:
-    """v1-morphology acceptance 4 and 9: default replicate preserves uniform values at every edge."""
+    """For morphology operations, default replicate preserves uniform values at every edge."""
     values = np.full((2, 3, 2), (-0.5, 1.75), dtype=np.float32)
     source = _frame(values, channels=["negative", "highlight"])
     for name in MORPHOLOGY_NAMES[:2]:
@@ -321,8 +333,12 @@ def test_replicate_default_is_neutral_for_uniform_frames() -> None:
         np.testing.assert_array_equal(default, explicit)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-103")
 def test_morphology_preserves_metadata_channels_scene_values_and_input_privately() -> None:
-    """v1-morphology acceptance 5-6; v1-red-tokens acceptance 68: ARRI metadata survives privately."""
+    """Morphology operations preserve channels, color metadata, and out of range values without modifying the input."""
     values = np.asarray(
         [[[-1.0, 2.0], [-0.5, 4.0], [-0.2, 3.0]], [[-0.8, 5.0], [-0.4, 6.0], [-0.1, 7.0]]],
         dtype=np.float32,
@@ -343,10 +359,12 @@ def test_morphology_preserves_metadata_channels_scene_values_and_input_privately
     assert float(result.data.max()) > 1.0
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("name", MORPHOLOGY_NAMES)
 @pytest.mark.parametrize("dtype", ("float16", "uint8", "uint16"))
 def test_morphology_rejects_non_fp32_frames_with_conversion_guidance(name: str, dtype: str) -> None:
-    """v1-morphology acceptance 5: every public operation requires fp32 with an actionable cast path."""
+    """For morphology operations, every public operation requires fp32 with an actionable cast path."""
     source = _frame(np.ones((2, 2, 1)), channels=["matte"], dtype=dtype)
     with pytest.raises(ValueError) as error:
         getattr(px.morphology, name)(source, radius=1)
@@ -354,8 +372,10 @@ def test_morphology_rejects_non_fp32_frames_with_conversion_guidance(name: str, 
     assert any(token in str(error.value) for token in ("cast_dtype", "recode_dtype", "dequantize"))
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_morphology_border_and_border_value_follow_the_shared_contract() -> None:
-    """v1-morphology acceptance 3-4: four borders and constant-only finite border_value fail fast symmetrically."""
+    """Morphology operations accept four border modes and require a finite border value only for constant mode."""
     source = _frame(np.arange(6, dtype=np.float32).reshape(2, 3, 1), channels=["matte"])
     for border in BORDERS:
         kwargs = {"border_value": -1.25} if border == "constant" else {}

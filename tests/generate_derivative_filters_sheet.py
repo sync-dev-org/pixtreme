@@ -1,4 +1,4 @@
-"""Generate the manual visual-acceptance sheet for v1-derivative-filters."""
+"""Generate a comparison sheet for visual inspection of derivative filters."""
 
 from __future__ import annotations
 
@@ -84,26 +84,27 @@ def _sobel_direction_row(source: px.core.Frame) -> px.core.Frame:
 
 def _border_row(source: px.core.Frame, *, operation: str) -> px.core.Frame:
     if operation == "sobel":
-        apply = lambda border, border_value=None: px.filter.sobel(  # noqa: E731
-            source, direction="magnitude", border=border, border_value=border_value
-        )
         scale = 0.08
         offset = 0.0
         title = "SOBEL mag VIEW=.08*r"
     elif operation == "laplacian":
-        apply = lambda border, border_value=None: px.filter.laplacian(  # noqa: E731
-            source, border=border, border_value=border_value
-        )
         scale = 0.20
         offset = 0.5
         title = "LAPLACIAN VIEW=.5+.2*r"
     else:
-        apply = lambda border, border_value=None: px.filter.difference_of_gaussians(  # noqa: E731
-            source, sigma1=1.0, sigma2=2.0, border=border, border_value=border_value
-        )
         scale = 2.0
         offset = 0.5
         title = "DoG 1-2 VIEW=.5+2*r"
+
+    def apply(border: px.core.Border, border_value: float | None = None) -> px.core.Frame:
+        if operation == "sobel":
+            return px.filter.sobel(source, direction="magnitude", border=border, border_value=border_value)
+        if operation == "laplacian":
+            return px.filter.laplacian(source, border=border, border_value=border_value)
+        return px.filter.difference_of_gaussians(
+            source, sigma1=1.0, sigma2=2.0, border=border, border_value=border_value
+        )
+
     panels = (
         _source_panel(source),
         _label(_display(apply("mirror"), scale=scale, offset=offset), f"{title} / mirror"),

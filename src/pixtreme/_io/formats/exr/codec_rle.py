@@ -2,19 +2,26 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from dataclasses import dataclass, field
 from functools import lru_cache
 
 import cupy as cp
 import numpy as np
 
+from pixtreme._io.formats.exr.codec_common import (
+    _codec_error,
+    _ExrByteSpan,
+    _ExrChunkDescriptor,
+    _raw_channel_rows,
+)
 from pixtreme._io.formats.exr.container import (
     _EXR_MAX_GRID_X,
     _EXR_MAX_GRID_Y,
     _EXR_THREADS_PER_BLOCK,
     _ExrChannel,
+    _ExrChunk,
     _ExrContainer,
-    _ExrRleReadChunks,
     _gpu_error,
 )
 from pixtreme._io.formats.exr.packing import (
@@ -37,7 +44,7 @@ def _prepare_exr_rle_read_chunks(container: _ExrContainer) -> _ExrRleReadChunks:
     host_staging = np.frombuffer(container.data, dtype=np.uint8)
     packet_counts = np.zeros(len(chunks), dtype=np.int64)
     for chunk_index, chunk in enumerate(chunks):
-        descriptor = chunk.phase3
+        descriptor = chunk.rle
         if descriptor is None or descriptor.codec != "rle":
             raise _gpu_error(
                 why="the RLE read batch received a chunk without its validated RLE descriptor",
@@ -464,3 +471,166 @@ def _read_exr_rle_custom_cpu(
         even_odd_grouped=prepared.compressed,
         output_dtype=output_dtype,
     )
+
+
+@dataclass(frozen=True)
+class _RlePacket:
+    literal: bool
+    input_span: _ExrByteSpan
+    output_span: _ExrByteSpan
+
+
+@dataclass(frozen=True)
+class _RlePackets:
+    payload: memoryview = field(repr=False, compare=False)
+    payload_start: int
+    packet_count: int
+
+    def __len__(self) -> int:
+        return self.packet_count
+
+    def __iter__(self) -> Iterator[_RlePacket]:
+        input_offset = 0
+        output_offset = 0
+        while input_offset < len(self.payload):
+            packet_start = input_offset
+            header_byte = int(self.payload[input_offset])
+            header = header_byte if header_byte < 128 else header_byte - 256
+            input_offset += 1
+            literal = header < 0
+            output_size = -header if literal else header + 1
+            input_offset += output_size if literal else 1
+            output_end = output_offset + output_size
+            yield _RlePacket(
+                literal=literal,
+                input_span=_ExrByteSpan(
+                    self.payload_start + packet_start,
+                    self.payload_start + input_offset,
+                ),
+                output_span=_ExrByteSpan(output_offset, output_end),
+            )
+            output_offset = output_end
+
+    def __getitem__(self, index: int) -> _RlePacket:
+        resolved = index if index >= 0 else self.packet_count + index
+        if not 0 <= resolved < self.packet_count:
+            raise IndexError(index)
+        for packet_index, packet in enumerate(self):
+            if packet_index == resolved:
+                return packet
+        raise IndexError(index)
+
+
+@dataclass(frozen=True)
+class _ExrRleReadChunks:
+    host_staging: np.ndarray = field(repr=False)
+    stage_offsets: np.ndarray
+    stage_sizes: np.ndarray
+    decoded_offsets: np.ndarray
+    decoded_sizes: np.ndarray
+    compressed: np.ndarray
+    packet_offsets: np.ndarray
+    packet_counts: np.ndarray
+
+
+def _parse_rle_packets(
+    payload: bytes | memoryview,
+    *,
+    payload_start: int,
+    chunk_y: int,
+    expected_size: int,
+) -> _RlePackets:
+    payload_view = memoryview(payload).cast("B")
+    input_offset = 0
+    output_offset = 0
+    packet_count = 0
+    while input_offset < len(payload_view):
+        packet_start = input_offset
+        header_byte = int(payload_view[input_offset])
+        header = header_byte if header_byte < 128 else header_byte - 256
+        input_offset += 1
+        literal = header < 0
+        output_size = -header if literal else header + 1
+        packet_data_size = output_size if literal else 1
+        packet_end = input_offset + packet_data_size
+        if packet_end > len(payload_view):
+            raise _codec_error(
+                why="the RLE packet payload is truncated after its signed header",
+                what=(
+                    f"chunk_y={chunk_y}, packet_offset={payload_start + packet_start}, "
+                    f"declared_bytes={packet_data_size}, remaining={len(payload_view) - input_offset}"
+                ),
+                how="provide every literal byte or the repeated run byte declared by the RLE packet head",
+            )
+        output_end = output_offset + output_size
+        if output_end > expected_size:
+            raise _codec_error(
+                why="the RLE packet stream expands beyond the descriptor materialized size",
+                what=f"chunk_y={chunk_y}, output_end={output_end}, expected={expected_size}",
+                how="make the packet output consume the expected transformed chunk bytes exactly",
+            )
+        packet_count += 1
+        input_offset = packet_end
+        output_offset = output_end
+    if output_offset != expected_size:
+        raise _codec_error(
+            why="the RLE packet stream does not produce the descriptor materialized size",
+            what=f"chunk_y={chunk_y}, produced={output_offset}, expected={expected_size}",
+            how="make the RLE packets consume the input and produce the transformed chunk exactly once",
+        )
+    return _RlePackets(
+        payload=payload_view,
+        payload_start=payload_start,
+        packet_count=packet_count,
+    )
+
+
+@dataclass(frozen=True)
+class _RleChunkDescriptor(_ExrChunkDescriptor):
+    packets: tuple[_RlePacket, ...] | _RlePackets
+
+
+def _parse_rle_chunk_descriptor(
+    data: bytes,
+    channels: Sequence[_ExrChannel],
+    *,
+    width: int,
+    lines_per_chunk: int,
+    chunk_y: int,
+    row_start: int,
+    row_count: int,
+    payload_start: int,
+    payload_end: int,
+    expected_raw_size: int,
+    raw_stored: bool,
+) -> _RleChunkDescriptor:
+    packets: tuple[_RlePacket, ...] | _RlePackets = ()
+    if not raw_stored:
+        packets = _parse_rle_packets(
+            memoryview(data)[payload_start:payload_end],
+            payload_start=payload_start,
+            chunk_y=chunk_y,
+            expected_size=expected_raw_size,
+        )
+    return _RleChunkDescriptor(
+        codec="rle",
+        lines_per_chunk=lines_per_chunk,
+        chunk_y=chunk_y,
+        row_start=row_start,
+        row_count=row_count,
+        payload_span=_ExrByteSpan(payload_start, payload_end),
+        stored_size=payload_end - payload_start,
+        expected_raw_size=expected_raw_size,
+        expected_materialized_size=expected_raw_size,
+        raw_stored=raw_stored,
+        channel_rows=_raw_channel_rows(
+            channels, width=width, chunk_y=chunk_y, row_start=row_start, row_count=row_count
+        ),
+        packets=packets,
+    )
+
+
+def _rle_gpu_eligible(channels: Sequence[_ExrChannel], chunks: Sequence[_ExrChunk]) -> bool:
+    return all(
+        channel.pixel_type in (0, 1, 2) and channel.x_sampling == channel.y_sampling == 1 for channel in channels
+    ) and all(chunk.rle is not None for chunk in chunks)

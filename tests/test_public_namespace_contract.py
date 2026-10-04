@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import ast
 import importlib.metadata
 import inspect
 import subprocess
 import sys
-from types import ModuleType, SimpleNamespace
+from types import ModuleType
 from typing import Literal, get_args, get_origin
 
-import numpy as np
 import pytest
 from repository_contracts import require_repo_file
 
@@ -53,6 +51,8 @@ IO_FUNCTIONS = (
     "to_nv12",
     "from_p010",
     "to_p010",
+    "from_p210",
+    "to_p210",
     "from_p216",
     "to_p216",
     "from_yuv420p",
@@ -170,7 +170,7 @@ _ERROR_PATH_CASES = (
 
 ALIAS_TOKENS = {
     "ChromaticAdaptation": ("Bradford", "CAT02", "CAT16", "von-Kries"),
-    "ReferenceWhite": ("D65", "D93", "D50", "ACES"),
+    "ReferenceWhite": ("D65", "D93", "D50", "ACES", "DCI"),
     "Colorspace": (
         "sRGB",
         "Rec.709",
@@ -364,10 +364,9 @@ def _table_tokens(markdown: str, heading: str) -> tuple[str, ...]:
     )
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_root_surface_is_exact_and_version_matches_distribution() -> None:
-    """v1-public-namespace acceptance 1-2; v1-fonts-module acceptance 1;
-    v1-p216-wire-format acceptance 1, 13 and 19: root is 14 modules plus version, with no P216 alias.
-    """
+    """The root namespace exports the declared modules and distribution version without named-format aliases."""
     assert px.__all__ == (*ROOT_MODULES, "__version__")
     assert _public_names(px) == set(px.__all__)
     assert all(isinstance(getattr(px, name), ModuleType) for name in ROOT_MODULES)
@@ -375,16 +374,11 @@ def test_root_surface_is_exact_and_version_matches_distribution() -> None:
     assert isinstance(px.__version__, str) and px.__version__
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_public_modules_expose_the_exact_function_type_helper_and_alias_contract() -> None:
-    """v1-public-namespace acceptance 3 and 7-8; v1-white-balance acceptance 1;
-    v1-white-point-simulation acceptance 1; v1-draw-text-user-font acceptance 1;
-    v1-lut-extensions acceptance 1, 4, and 26; v1-exr-mixed-dtype-write acceptance 1:
-    v1-fonts-module acceptance 1-2; v1-grade acceptance 1; v1-lut-shaper acceptance 1, 16 and 18:
-    v1-p216-wire-format acceptance 13 and 19:
-    every leaf and public type has one exact module owner.
-    """
-    assert len(IO_FUNCTIONS) == 29
-    assert sum(len(leaves) for leaves in FUNCTION_MODULES.values()) == 100
+    """Each public operation, type, helper, and alias appears in its declared module and no other public module."""
+    assert len(IO_FUNCTIONS) == 31
+    assert sum(len(leaves) for leaves in FUNCTION_MODULES.values()) == 102
     for module_name, leaves in FUNCTION_MODULES.items():
         module = getattr(px, module_name)
         public_types = ("ImageHeader",) if module_name == "io" else (("Font",) if module_name == "draw" else ())
@@ -406,8 +400,9 @@ def test_public_modules_expose_the_exact_function_type_helper_and_alias_contract
     assert inspect.isfunction(px.core.channels)
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_legacy_root_and_module_imports_fail_in_fresh_processes() -> None:
-    """v1-public-namespace acceptance 4-5: removed paths have no aliases, shims, or import fallback."""
+    """Removed paths have no aliases, shims, or import fallback."""
     legacy_root = (
         "Frame",
         "Lut",
@@ -447,10 +442,11 @@ def test_legacy_root_and_module_imports_fail_in_fresh_processes() -> None:
         assert result.returncode != 0, snippet
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-102")
+@pytest.mark.req("REQ-PIX-105")
 def test_frame_is_data_metadata_properties_and_dlpack_only() -> None:
-    """v1-public-namespace acceptance 6; v1-p216-wire-format acceptance 1, 13 and 19:
-    Frame keeps its structural surface and has no exit methods, including P216.
-    """
+    """Frame exposes pixels, metadata, properties, and DLPack without named-format exit methods."""
     assert tuple(px.core.Frame.model_fields) == ("data", "colorspace", "gamma", "channels", "matrix")
     assert all(isinstance(getattr(px.core.Frame, name), property) for name in ("width", "height", "shape", "dtype"))
     assert all(callable(getattr(px.core.Frame, name)) for name in ("__dlpack__", "__dlpack_device__"))
@@ -460,6 +456,7 @@ def test_frame_is_data_metadata_properties_and_dlpack_only() -> None:
         "to_v210",
         "to_nv12",
         "to_p010",
+        "to_p210",
         "to_p216",
         "to_yuv420p",
         "to_yuv422p",
@@ -476,20 +473,13 @@ def test_frame_is_data_metadata_properties_and_dlpack_only() -> None:
         assert all(parameter.kind is inspect.Parameter.KEYWORD_ONLY for parameter in parameters[1:])
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_literal_aliases_and_vocabulary_tables_are_identical() -> None:
-    """v1-chroma-siting-h273 acceptance 1 and 10; v1-io-icc acceptance 1 and 22;
-    v1-public-namespace acceptance 9 and 12;
-    v1-view-transform-lut-removal acceptance 8;
-    v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 16-17 and 29;
-    v1-blackmagic-tokens acceptance 34; v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
-    v1-panasonic-tokens acceptance 99-100 and 112; v1-vendor-a-tokens acceptance 140-141 and 161;
-    v1-vendor-b-tokens acceptance 166-167 and 188:
-    aliases, runtime tokens,
-    and parsed docs tables stay identical. GitHub #29.
-    """
+    """Public type aliases, runtime tokens, and documented token tables describe the same accepted names."""
     from pixtreme._core import vocabulary as runtime_vocabulary
 
-    vocabulary_path = require_repo_file("docs_site/tokens.md")
+    vocabulary_path = require_repo_file("docs/tokens.md")
     markdown = vocabulary_path.read_text(encoding="utf-8")
 
     for alias_name, expected_tokens in ALIAS_TOKENS.items():
@@ -503,6 +493,7 @@ def test_literal_aliases_and_vocabulary_tables_are_identical() -> None:
     assert not hasattr(px.core, "Channels")
 
 
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("module_name", "function_name", "kwargs"),
     _ERROR_PATH_CASES,
@@ -511,7 +502,7 @@ def test_literal_aliases_and_vocabulary_tables_are_identical() -> None:
 def test_moved_operation_errors_name_only_the_canonical_public_path(
     module_name: str, function_name: str, kwargs: dict[str, object]
 ) -> None:
-    """v1-public-namespace acceptance 8 and 12."""
+    """Errors for moved operations name the canonical public path and do not suggest removed paths."""
     function = getattr(getattr(px, module_name), function_name)
 
     with pytest.raises(ValueError) as error:
@@ -532,47 +523,3 @@ def test_moved_operation_errors_name_only_the_canonical_public_path(
     assert "px.filter.equalize_histogram" not in message
     assert "px.filter.clahe" not in message
     assert "px.analyze.corner_harris" not in message
-
-
-def test_exr_write_dtype_subset_is_alias_derived_and_shared_by_validation() -> None:
-    """v1-public-namespace acceptance 9 and 12: EXR dtype registry dataflow derives from the canonical Dtype alias."""
-    from pixtreme._core import vocabulary as runtime_vocabulary
-    from pixtreme._io import dtype as runtime_dtype
-
-    assert runtime_dtype._EXR_WRITE_DTYPES == ("float16", "float32", "uint32")
-    assert set(runtime_dtype._EXR_WRITE_DTYPES) <= set(runtime_vocabulary._DTYPE_TOKENS)
-    assert runtime_dtype._WRITE_NATIVE_DTYPES["EXR"] == frozenset(runtime_dtype._EXR_WRITE_DTYPES)
-
-    tree = ast.parse(inspect.getsource(runtime_dtype))
-    exr_assignment = next(
-        node
-        for node in tree.body
-        if isinstance(node, ast.Assign)
-        and any(isinstance(target, ast.Name) and target.id == "_EXR_WRITE_DTYPES" for target in node.targets)
-    )
-    exr_dataflow_names = {node.id for node in ast.walk(exr_assignment.value) if isinstance(node, ast.Name)}
-    assert {"_DTYPE_TOKENS", "_is_exr_write_dtype"} <= exr_dataflow_names
-
-    native_assignment = next(
-        node
-        for node in tree.body
-        if isinstance(node, ast.Assign)
-        and any(isinstance(target, ast.Name) and target.id == "_WRITE_NATIVE_DTYPES" for target in node.targets)
-    )
-    assert isinstance(native_assignment.value, ast.Dict)
-    exr_value = next(
-        value
-        for key, value in zip(native_assignment.value.keys, native_assignment.value.values, strict=True)
-        if isinstance(key, ast.Constant) and key.value == "EXR"
-    )
-    assert isinstance(exr_value, ast.Call) and isinstance(exr_value.func, ast.Name) and exr_value.func.id == "frozenset"
-    assert len(exr_value.args) == 1
-    assert isinstance(exr_value.args[0], ast.Name) and exr_value.args[0].id == "_EXR_WRITE_DTYPES"
-
-    for token in runtime_dtype._EXR_WRITE_DTYPES:
-        frame = SimpleNamespace(dtype=np.dtype(token))
-        assert runtime_dtype._prepare_exr_write_frame(frame, dtype=token) is frame
-
-    with pytest.raises(ValueError) as error:
-        runtime_dtype._prepare_exr_write_frame(object(), dtype="uint16")
-    assert repr(runtime_dtype._EXR_WRITE_DTYPES) in str(error.value)

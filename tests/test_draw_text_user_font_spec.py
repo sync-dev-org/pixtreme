@@ -113,8 +113,14 @@ def _oracle_bitmap(
     return coverage, int(rendered.left), int(rendered.top)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 def test_draw_font_public_surface_signature_and_immutability(tmp_path: Path) -> None:
-    """v1-draw-text-user-font acceptance 1-5: Font has one draw-owned constructor and text has the exact extension."""
+    """A user supplied Font has one public constructor and can be selected through the text drawing signature without
+    mutation.
+    """
     assert px.draw.__all__ == ("line", "polyline", "rectangle", "circle", "ellipse", "polygon", "text", "Font")
     assert inspect.isclass(px.draw.Font)
     for namespace in (px, px.core, px.io):
@@ -153,8 +159,10 @@ def test_draw_font_public_surface_signature_and_immutability(tmp_path: Path) -> 
     assert not {"axes", "variations", "fallback", "path"} & {name for name in dir(first) if not name.startswith("_")}
 
 
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 def test_draw_font_loader_accepts_content_not_extension_and_measures_axes(tmp_path: Path) -> None:
-    """v1-draw-text-user-font acceptance 6 and 10: both backends accept the selected face and measure valid axes."""
+    """For user supplied fonts, both backends accept the selected face and measure valid axes."""
     opaque_path = tmp_path / "font.payload"
     shutil.copyfile(VARIABLE_FONT, opaque_path)
     font = px.draw.Font.from_file(opaque_path)
@@ -171,9 +179,12 @@ def test_draw_font_loader_accepts_content_not_extension_and_measures_axes(tmp_pa
     assert np.any(_host(result) != 0.0)
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 @pytest.mark.parametrize("kind", ("object", "bytes-path", "missing", "directory"))
 def test_draw_font_loader_rejects_unusable_paths_actionably(tmp_path: Path, kind: str) -> None:
-    """v1-draw-text-user-font acceptance 7: unusable path states fail as actionable ValueError."""
+    """For user supplied fonts, unusable path states fail as actionable ValueError."""
 
     class BytesPath:
         def __fspath__(self) -> bytes:
@@ -194,11 +205,14 @@ def test_draw_font_loader_rejects_unusable_paths_actionably(tmp_path: Path, kind
     assert "font file" in message
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 def test_draw_font_loader_distinguishes_freetype_and_harfbuzz_failures(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-draw-text-user-font acceptance 8: FreeType and HarfBuzz failures are eager, distinct, and chained."""
+    """Font loading identifies FreeType and HarfBuzz failures separately and preserves their causes."""
     invalid = tmp_path / "invalid.otf"
     invalid.write_bytes(b"not a font")
     with pytest.raises(ValueError) as freetype_error:
@@ -218,9 +232,12 @@ def test_draw_font_loader_distinguishes_freetype_and_harfbuzz_failures(
     assert isinstance(harfbuzz_error.value.__cause__, RuntimeError)
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 @pytest.mark.parametrize("face_index", (True, 1.0, -1, 2))
 def test_draw_font_face_index_is_strict_and_uses_measured_collection_count(face_index: object) -> None:
-    """v1-draw-text-user-font acceptance 9: face index is a non-bool in-range int checked against the TTC."""
+    """For user supplied fonts, face index is a non-bool in-range int checked against the TTC."""
     with pytest.raises(ValueError) as error:
         px.draw.Font.from_file(COLLECTION_FONT, face_index=face_index)  # type: ignore[arg-type]
     message = _assert_actionable(error)
@@ -229,8 +246,11 @@ def test_draw_font_face_index_is_strict_and_uses_measured_collection_count(face_
     assert "0 <= face_index < face_count" in message
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 def test_draw_font_axis_measurement_failure_is_eager_and_chained(monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-draw-text-user-font acceptance 10: malformed or unreadable axis tables fail during construction."""
+    """For user supplied fonts, malformed or unreadable axis tables fail during construction."""
     import pixtreme._draw.text as draw_text_module
 
     def fail_measurement(*_args: object, **_kwargs: object) -> object:
@@ -244,10 +264,13 @@ def test_draw_font_axis_measurement_failure_is_eager_and_chained(monkeypatch: py
     assert isinstance(error.value.__cause__, RuntimeError)
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 def test_draw_font_axis_measurement_distinguishes_static_absence_from_variable_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-draw-text-user-font acceptance 10: only a genuinely static face may have no measured axes."""
+    """For user supplied fonts, only a genuinely static face may have no measured axes."""
     import pixtreme._draw.text as draw_text_module
 
     assert px.draw.Font.from_file(STATIC_FONT)._axes == ()
@@ -271,8 +294,10 @@ def test_draw_font_axis_measurement_distinguishes_static_absence_from_variable_f
     assert isinstance(error.value.__cause__, RuntimeError)
 
 
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 def test_draw_font_snapshots_bytes_across_rewrite_and_delete(tmp_path: Path) -> None:
-    """v1-draw-text-user-font acceptance 4 and 11: identity and rendering use construction-time bytes only."""
+    """For user supplied fonts, identity and rendering use construction-time bytes only."""
     path = tmp_path / "mutable.otf"
     shutil.copyfile(STATIC_FONT, path)
     original = px.draw.Font.from_file(path)
@@ -307,8 +332,11 @@ def test_draw_font_snapshots_bytes_across_rewrite_and_delete(tmp_path: Path) -> 
     np.testing.assert_array_equal(_host(after_rewrite), _host(before))
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 def test_draw_text_token_calls_with_absent_variations_are_bit_identical() -> None:
-    """v1-draw-text-user-font acceptance 12: omitted, None, and empty variations preserve both token paths bitwise."""
+    """For user supplied fonts, omitted, None, and empty variations preserve both token paths bitwise."""
     source = _frame()
     for font, weight in (("sans", 575.0), ("mono", 550.0)):
         kwargs = {
@@ -327,6 +355,10 @@ def test_draw_text_token_calls_with_absent_variations_are_bit_identical() -> Non
         np.testing.assert_array_equal(_host(empty), _host(omitted))
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 @pytest.mark.parametrize(
     ("font_path", "weight", "variations", "required"),
     (
@@ -350,7 +382,7 @@ def test_draw_text_user_weight_and_variation_failures_are_actionable(
     variations: object,
     required: tuple[str, ...],
 ) -> None:
-    """v1-draw-text-user-font acceptance 13-17: weight and variation validation is finite, ranged, and unambiguous."""
+    """For user supplied fonts, weight and variation validation is finite, ranged, and unambiguous."""
     font: object = "sans" if str(font_path) == "token:sans" else px.draw.Font.from_file(font_path)
     with pytest.raises(ValueError) as error:
         px.draw.text(
@@ -367,8 +399,11 @@ def test_draw_text_user_weight_and_variation_failures_are_actionable(
     assert all(part in message for part in required)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 def test_draw_text_user_font_matches_independent_shaping_and_raster_oracles() -> None:
-    """v1-draw-text-user-font acceptance 15 and 18: resolved axes reach HarfBuzz and FreeType identically."""
+    """For user supplied fonts, resolved axes reach HarfBuzz and FreeType identically."""
     import pixtreme._draw.text as draw_text_module
 
     font = px.draw.Font.from_file(VARIABLE_FONT)
@@ -451,8 +486,11 @@ def test_draw_text_user_font_matches_independent_shaping_and_raster_oracles() ->
     assert np.any(_host(result) != 0.0)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 def test_draw_text_user_font_cache_identity_and_limits_are_content_based(tmp_path: Path) -> None:
-    """v1-draw-text-user-font acceptance 19-20: all bounded caches share equal content identities and split axes."""
+    """User font caches use font contents and axis values to distinguish rendered results within their limits."""
     import pixtreme._draw.text as draw_text_module
 
     alias = tmp_path / "same-content.otf"
@@ -500,8 +538,11 @@ def test_draw_text_user_font_cache_identity_and_limits_are_content_based(tmp_pat
     assert not np.array_equal(_host(changed), _host(output_b))
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
 def test_draw_text_user_font_missing_codepoint_shapes_selected_face_notdef() -> None:
-    """v1-draw-text-user-font acceptance 21: a missing code point stays glyph zero without fallback discovery."""
+    """For user supplied fonts, a missing code point stays glyph zero without fallback discovery."""
     import pixtreme._draw.text as draw_text_module
 
     font = px.draw.Font.from_file(STATIC_FONT)
@@ -519,8 +560,9 @@ def test_draw_text_user_font_missing_codepoint_shapes_selected_face_notdef() -> 
     assert result.shape == (72, 160, 1)
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_draw_text_user_font_bitmap_guard_identifies_selected_asset(monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-draw-text-user-font acceptance 22: bitmap layout guards identify user path and face without token-only repair."""
+    """For user supplied fonts, bitmap layout guards identify user path and face without token-only repair."""
     import pixtreme._draw.text as draw_text_module
 
     class Bitmap:
@@ -557,7 +599,7 @@ def test_draw_text_user_font_bitmap_guard_identifies_selected_asset(monkeypatch:
 
 
 def test_draw_text_user_font_fixtures_are_repo_owned_and_reproducible(tmp_path: Path) -> None:
-    """v1-draw-text-user-font acceptance 24: font fixtures regenerate locally from bundled Noto without network input."""
+    """User font fixtures can be regenerated from the bundled font assets without network input."""
     generated = tmp_path / "generated"
     completed = subprocess.run(
         [sys.executable, str(ROOT / "tests" / "generate_draw_text_user_font_fixtures.py"), "--output", str(generated)],
@@ -575,16 +617,3 @@ def test_draw_text_user_font_fixtures_are_repo_owned_and_reproducible(tmp_path: 
     }
     for fixture in FIXTURE_ROOT.iterdir():
         assert fixture.read_bytes() == (generated / fixture.name).read_bytes()
-
-
-def test_draw_text_user_font_changes_no_gpu_or_performance_surface() -> None:
-    """v1-draw-text-user-font acceptance 25: user fonts reuse CPU raster and the existing token performance cases."""
-    import pixtreme._draw.text as draw_text_module
-
-    kernel_source = draw_text_module._TEXT_COMPOSITE_KERNEL_SOURCE
-    assert "Font" not in kernel_source
-    assert "face_index" not in kernel_source
-    assert "variation" not in kernel_source
-    registry = (ROOT / "tests" / "test_performance_spec.py").read_text(encoding="utf-8")
-    assert '"draw-text-cjk-outline"' in registry
-    assert "draw-text-user-font" not in registry

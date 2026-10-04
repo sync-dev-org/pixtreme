@@ -12,7 +12,7 @@ import pixtreme as px
 
 EXPECTED_VOCABULARY: dict[str, tuple[str, ...]] = {
     "ChromaticAdaptation": ("Bradford", "CAT02", "CAT16", "von-Kries"),
-    "ReferenceWhite": ("D65", "D93", "D50", "ACES"),
+    "ReferenceWhite": ("D65", "D93", "D50", "ACES", "DCI"),
     "Colorspace": (
         "sRGB",
         "Rec.709",
@@ -323,25 +323,40 @@ def _expected_parameter_families(module_name: str, operation: str, parameter: st
     return (family,)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("REQ-PIX-017")
 def test_literal_aliases_are_the_independent_canonical_vocabulary() -> None:
-    """v1-chroma-siting-h273 acceptance 1 and 10; v1-token-vocabulary acceptance 1;
-    v1-sony-tokens acceptance 1; v1-arri-tokens acceptance 16;
-    v1-blackmagic-tokens acceptance 33; v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
-    v1-panasonic-tokens acceptance 99-100; v1-standard-tokens acceptance 117;
-    v1-vendor-a-tokens acceptance 140; v1-vendor-b-tokens acceptance 166; v1-io-icc acceptance 1.
-    """
+    """Public Literal aliases contain the canonical names for supported image operations and metadata."""
     assert len(EXPECTED_VOCABULARY) == 30
-    assert sum(map(len, EXPECTED_VOCABULARY.values())) == 199
+    assert sum(map(len, EXPECTED_VOCABULARY.values())) == 200
     assert {name: get_args(getattr(px.core, name)) for name in EXPECTED_VOCABULARY} == EXPECTED_VOCABULARY
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("REQ-PIX-017")
 def test_public_token_annotations_use_only_canonical_literal_aliases() -> None:
-    """v1-chroma-siting-h273 acceptance 3; v1-token-vocabulary acceptance 2; v1-sony-tokens acceptance 2;
-    v1-blackmagic-tokens acceptance 34; v1-red-tokens acceptance 55; v1-canon-tokens acceptance 77;
-    v1-panasonic-tokens acceptance 100; v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167;
-    v1-grade acceptance 1:
-    annotations expose canonical literals.
-    """
+    """Public image operation and metadata annotations expose canonical Literal names without legacy spellings."""
     frame_hints = get_type_hints(px.core.Frame)
     for parameter, family in (("colorspace", "Colorspace"), ("gamma", "Gamma"), ("matrix", "Matrix")):
         annotation = frame_hints[parameter]
@@ -384,12 +399,9 @@ def test_public_token_annotations_use_only_canonical_literal_aliases() -> None:
                     assert descriptor.default in expected, (module.__name__, operation, parameter, descriptor.default)
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_every_canonical_token_accepts_case_and_separator_variants() -> None:
-    """v1-chroma-siting-h273 acceptance 1; v1-token-vocabulary acceptance 3; v1-sony-tokens acceptance 3;
-    v1-blackmagic-tokens acceptance 35; v1-red-tokens acceptance 56; v1-panasonic-tokens acceptance 101;
-    v1-vendor-a-tokens acceptance 142; v1-vendor-b-tokens acceptance 168:
-    canonical tokens resolve all variants.
-    """
+    """Every canonical image operation and metadata token accepts case and separator variants at runtime."""
     from pixtreme._core.validation import _normalized_closed_token
 
     for family, canonical_tokens in EXPECTED_VOCABULARY.items():
@@ -398,10 +410,9 @@ def test_every_canonical_token_accepts_case_and_separator_variants() -> None:
                 assert _normalized_closed_token(variant, axis=family, accepted=canonical_tokens) == canonical
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_all_legacy_spellings_are_permanent_runtime_aliases() -> None:
-    """v1-token-vocabulary acceptance 4; v1-sony-tokens acceptance 1;
-    v1-red-tokens acceptance 56: the 30 aliases retain their runtime contract.
-    """
+    """Legacy spellings for color, display, and test-pattern tokens resolve to their canonical runtime names."""
     from pixtreme._core.validation import _normalized_closed_token
 
     assert sum(map(len, LEGACY_ALIASES.values())) == 30
@@ -410,11 +421,9 @@ def test_all_legacy_spellings_are_permanent_runtime_aliases() -> None:
             assert _normalized_closed_token(legacy, axis=family, accepted=EXPECTED_VOCABULARY[family]) == canonical
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_token_keys_are_collision_free_per_family_and_never_cross_families() -> None:
-    """v1-chroma-siting-h273 acceptance 1; v1-token-vocabulary acceptance 5; v1-sony-tokens acceptance 3;
-    v1-blackmagic-tokens acceptance 35; v1-panasonic-tokens acceptance 101;
-    v1-vendor-a-tokens acceptance 142; v1-vendor-b-tokens acceptance 168: keys remain unique and family-local.
-    """
+    """Normalized token keys are unique within each family and do not resolve across families."""
     from pixtreme._core.validation import _normalized_closed_token
 
     for family, canonical_tokens in EXPECTED_VOCABULARY.items():
@@ -427,10 +436,10 @@ def test_token_keys_are_collision_free_per_family_and_never_cross_families() -> 
         _normalized_closed_token("PQ", axis="colorspace", accepted=EXPECTED_VOCABULARY["Colorspace"])
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_frame_and_array_boundary_expose_only_canonical_metadata() -> None:
-    """v1-token-vocabulary acceptance 6; v1-blackmagic-tokens acceptance 34-35;
-    v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167: metadata is canonical.
-    """
+    """Frame construction and array boundaries expose canonical color metadata after accepting token variants."""
     frame = px.io.from_array(
         cp.zeros((1, 2, 3), dtype=cp.float32),
         colorspace="REC_709",
@@ -451,13 +460,11 @@ def test_frame_and_array_boundary_expose_only_canonical_metadata() -> None:
     assert (frame.colorspace, frame.gamma, frame.matrix) == ("ACEScg", "S-Log3", "native")
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("rejected", ["unknown", "", " .-_ ", 709, None])
 def test_invalid_tokens_fail_with_raw_actionable_errors(rejected: object) -> None:
-    """v1-token-vocabulary acceptance 7; v1-sony-tokens acceptance 11;
-    v1-blackmagic-tokens acceptance 49; v1-panasonic-tokens acceptance 111;
-    v1-vendor-a-tokens acceptance 160; v1-vendor-b-tokens acceptance 187:
-    invalid tokens fail with canonical errors.
-    """
+    """Invalid color and metadata tokens produce errors with the supplied value and accepted canonical names."""
     with pytest.raises(ValueError) as error:
         px.io.from_array(
             cp.zeros((1, 1, 3), dtype=cp.float32),
@@ -471,8 +478,10 @@ def test_invalid_tokens_fail_with_raw_actionable_errors(rejected: object) -> Non
     assert repr(EXPECTED_VOCABULARY["Colorspace"]) in message
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_gamma_aliases_preserve_pixels_and_non_token_observables() -> None:
-    """v1-token-vocabulary acceptance 8: canonical, case, separator, and legacy inputs are observably equivalent."""
+    """Canonical and alias gamma names produce the same pixels and preserve other Frame properties."""
     source = px.io.from_array(
         cp.asarray([[[-0.1, 0.18, 1.25]]], dtype=cp.float32),
         colorspace="sRGB",

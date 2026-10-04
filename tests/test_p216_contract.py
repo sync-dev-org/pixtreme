@@ -14,12 +14,12 @@ from test_to_format_spec import _frame
 import pixtreme as px
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("direction", ("from", "to"))
 def test_p216_docstrings_expose_the_full_source_contract(direction: str) -> None:
-    """v1-p216-wire-format acceptance 16: structural source-docstring contract for every invisible boundary obligation.
-
-    Check contract vocabulary and equations, not a particular sentence or private module layout.
-    Human review still establishes the meaning and completeness of the prose.
+    """The public P216 conversion documentation states its buffer layout, range mapping, sampling, and error
+    contracts.
     """
     function = getattr(px.io, f"{direction}_p216")
     doc = " ".join((inspect.getdoc(function) or "").lower().replace("`", "").split())
@@ -67,19 +67,15 @@ class _AllocationTrace(cp.cuda.MemoryHook):
         self.sizes.append(kwargs["size"])
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-018")
 @pytest.mark.parametrize(
     "direction,interpolation", [("from", token) for token in FROM_FILTERS] + [("to", token) for token in TO_FILTERS]
 )
 def test_p216_uses_one_kernel_and_one_output_allocation_on_the_current_stream(
     direction: str, interpolation: str
 ) -> None:
-    """v1-p216-wire-format acceptance 9: real CUDA graph and allocator trace detect extra passes, buffers and host copies.
-
-    Structural execution contract: warm compilation first, then capture on a non-default stream.
-    A single KERNEL node (no memcpy/host node), one output-sized allocation, and oracle output
-    bind the public operation without naming factories, private helpers or kernel entry points.
-    Stream capture also rejects synchronous device-to-host reads. No timing threshold is used.
-    """
+    """P216 conversion performs one GPU kernel pass and one output allocation on the current stream."""
     function = getattr(px.io, f"{direction}_p216")
     codes = asymmetric_codes()
     values = from_reference(codes, 3, 6, "full", "nearest").astype(np.float32)
@@ -123,9 +119,11 @@ def test_p216_uses_one_kernel_and_one_output_allocation_on_the_current_stream(
         assert np.all(np.abs(q64[changed] - boundary[changed]) <= 0.125)
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("direction", ("from", "to"))
 def test_p216_preserves_the_cause_if_a_backend_failure_is_converted(direction: str) -> None:
-    """v1-p216-wire-format acceptance 17: an allocator boundary failure is propagated or retained as the explicit cause."""
+    """P216 conversion propagates backend allocation errors or retains them as the cause of a public error."""
     function = getattr(px.io, f"{direction}_p216")
     source = cp.asarray(asymmetric_codes()) if direction == "from" else _frame(np.zeros((3, 6, 3), dtype=np.float32))
     kwargs = {"width": 6, "height": 3} if direction == "from" else {}

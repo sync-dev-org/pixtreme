@@ -264,20 +264,14 @@ def _rgb_to_xyz(
     return primary_matrix @ np.diag(scales)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_sony_tokens_extend_the_canonical_vocabulary_and_public_static_surfaces() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 1;
-    v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 16-17;
-    v1-blackmagic-tokens acceptance 33-34;
-    v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77; v1-panasonic-tokens acceptance 99-100;
-    v1-standard-tokens acceptance 117; v1-vendor-a-tokens acceptance 140-141;
-    v1-vendor-b-tokens acceptance 166-167.
-
-    Canonical aliases and public surfaces expose only the feature token additions.
-    """
+    """Sony color tokens appear in the canonical vocabulary and public annotations without extra aliases."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 199
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 200
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -288,10 +282,9 @@ def test_sony_tokens_extend_the_canonical_vocabulary_and_public_static_surfaces(
     assert "gamma='S-Log'" in repr(frame)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_sony_token_keys_are_collision_free_family_local_and_separator_normalized() -> None:
-    """v1-sony-tokens acceptance 3; v1-blackmagic-tokens acceptance 35; v1-vendor-a-tokens acceptance 142:
-    token keys remain local and unique.
-    """
+    """Sony token variants normalize to unique keys within their color and gamma families."""
     from pixtreme._core.validation import _normalized_closed_token
     from pixtreme._core.vocabulary import _PERMANENT_TOKEN_ALIASES
 
@@ -319,6 +312,9 @@ def test_sony_token_keys_are_collision_free_family_local_and_separator_normalize
         _normalized_closed_token("S-Gamut", axis="gamma", accepted=_GAMMAS)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize(("gamma", "encode", "_decode", "anchors"), _CURVES)
 def test_sony_log_encode_matches_independent_float64_oracles_and_published_anchors(
     gamma: str,
@@ -326,7 +322,7 @@ def test_sony_log_encode_matches_independent_float64_oracles_and_published_ancho
     _decode: Callable[[np.ndarray], np.ndarray],
     anchors: tuple[int, int, int],
 ) -> None:
-    """v1-sony-tokens acceptance 4-7: encode uses signed Sony branches, normalization, and exact anchors."""
+    """Sony S-Log encoding matches signed vendor branches, normalization, and published anchors."""
     zero = np.float32(0.0)
     values = np.asarray(
         (-0.25, np.nextafter(zero, np.float32(-np.inf)), zero, np.nextafter(zero, np.float32(np.inf)), 0.18, 0.9, 1.5),
@@ -344,6 +340,9 @@ def test_sony_log_encode_matches_independent_float64_oracles_and_published_ancho
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize(("gamma", "encode", "decode", "_anchors"), _CURVES)
 def test_sony_log_decode_matches_independent_float64_oracles_through_the_branch_cut(
     gamma: str,
@@ -351,7 +350,7 @@ def test_sony_log_decode_matches_independent_float64_oracles_through_the_branch_
     decode: Callable[[np.ndarray], np.ndarray],
     _anchors: tuple[int, int, int],
 ) -> None:
-    """v1-sony-tokens acceptance 4-7: decode inverts legal embedding and selects the signed lower branch."""
+    """Sony S-Log decoding reverses legal embedding and selects the signed lower branch at its cut."""
     code_cut = np.float32((np.float64(64.0) + np.float64(876.0) * _C) / np.float64(1023.0))
     encoded = encode(np.asarray((-0.25, 0.0, 0.18, 0.9, 1.5), dtype=np.float64)).astype(np.float32)
     values = np.concatenate(
@@ -373,6 +372,9 @@ def test_sony_log_decode_matches_independent_float64_oracles_through_the_branch_
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=2e-5)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize(("gamma", "encode", "decode", "_anchors"), _CURVES)
 def test_sony_log_round_trips_both_directions_without_clipping(
     gamma: str,
@@ -380,7 +382,7 @@ def test_sony_log_round_trips_both_directions_without_clipping(
     decode: Callable[[np.ndarray], np.ndarray],
     _anchors: tuple[int, int, int],
 ) -> None:
-    """v1-sony-tokens acceptance 8: negative, boundary, anchor, and overshoot values round-trip both ways."""
+    """Sony S-Log round trips negative, boundary, and above-one values without clipping."""
     linear = np.asarray((-0.25, -1e-6, 0.0, 1e-6, 0.18, 0.9, 1.5), dtype=np.float32)
     encoded_values = encode(linear.astype(np.float64)).astype(np.float32)
 
@@ -395,8 +397,10 @@ def test_sony_log_round_trips_both_directions_without_clipping(
     np.testing.assert_allclose(_red_values(restored_encoded), encoded_values, rtol=0.0, atol=2e-5)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_slog3_nonnegative_bits_and_metadata_identity_remain_unchanged() -> None:
-    """v1-sony-tokens acceptance 6: S-Log3 keeps its established nonnegative GPU bits and token identity."""
+    """Sony S-Log3 produces exact nonnegative GPU pixels while retaining its gamma metadata name."""
     linear = np.asarray((0.0, 0.01125, 0.18, 1.0, 1.5), dtype=np.float32)
     encoded = _red_values(px.color.linear_to_gamma(_frame(linear), gamma="S-Log3"))
     np.testing.assert_array_equal(
@@ -407,9 +411,11 @@ def test_slog3_nonnegative_bits_and_metadata_identity_remain_unchanged() -> None
     assert frame.gamma == "S-Log3"
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize("gamma", ("S-Log", "S-Log2"))
 def test_all_transfer_paths_preserve_frame_contract_and_auxiliary_bits(gamma: str) -> None:
-    """v1-sony-tokens acceptance 8: standalone and fused paths preserve copy, labels, metadata, and auxiliary bits."""
+    """Sony transfers preserve Frame labels, color metadata, and auxiliary pixel bits through public paths."""
     values = np.asarray((-0.25, 0.0, 0.18, 0.9, 1.5), dtype=np.float32)
     source = _frame(values, auxiliary=True)
     before = source.data.copy()
@@ -445,8 +451,9 @@ def test_all_transfer_paths_preserve_frame_contract_and_auxiliary_bits(gamma: st
     assert encoded is not source and encoded.data.data.ptr != source.data.data.ptr
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_sgamut_primaries_and_native_row_match_an_independent_float64_matrix() -> None:
-    """v1-sony-tokens acceptance 9: S-Gamut conversion and native luma match the independent xy matrix oracle."""
+    """Sony S-Gamut primaries, conversion matrices, and native luma row match independent calculations."""
     sgamut = _rgb_to_xyz(
         ((0.73, 0.28), (0.14, 0.855), (0.10, -0.05)),
         (0.3127, 0.3290),
@@ -467,8 +474,10 @@ def test_sgamut_primaries_and_native_row_match_an_independent_float64_matrix() -
     assert grayscale.matrix == "native"
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_sgamut_and_sgamut3_are_bit_identical_but_keep_distinct_metadata() -> None:
-    """v1-sony-tokens acceptance 9-10: equivalent gamuts preserve pixels while retaining distinct token identity."""
+    """Sony S-Gamut and S-Gamut3 yield identical pixels while preserving distinct metadata names."""
     values = np.asarray(((1.0, -0.25, 0.18), (0.2, 0.4, 1.5)), dtype=np.float32)
     sgamut = _frame(values, colorspace="S-Gamut")
     sgamut3 = _frame(values, colorspace="S-Gamut3")
@@ -488,6 +497,8 @@ def test_sgamut_and_sgamut3_are_bit_identical_but_keep_distinct_metadata() -> No
     assert (gray_sgamut.matrix, gray_sgamut3.matrix) == ("native", "native")
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("operation", "parameter", "rejected", "candidates"),
     (
@@ -504,9 +515,7 @@ def test_invalid_tokens_fail_before_gpu_with_raw_ordered_canonical_errors(
     candidates: tuple[str, ...],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-sony-tokens acceptance 11; v1-blackmagic-tokens acceptance 49;
-    v1-vendor-a-tokens acceptance 160: invalid values fail before GPU.
-    """
+    """Invalid Sony color tokens fail before GPU work and report ordered canonical replacements."""
     import pixtreme._color.semantics as semantics
     import pixtreme._color.transform as transform
 

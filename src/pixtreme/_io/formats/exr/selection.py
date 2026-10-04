@@ -24,15 +24,19 @@ from pixtreme._io.formats.exr.codec_b44 import (
     _read_exr_b44_custom_cpu,
     _read_exr_b44_gpu,
 )
+from pixtreme._io.formats.exr.codec_common import _ExrCodecError
 from pixtreme._io.formats.exr.codec_dwa import (
+    _classify_default_dwa_channels,
     _decode_dwa_ac_block_host,
     _decode_dwa_byte_rle_host,
     _decode_dwa_huffman_host,
     _decompress_dwa_zlib_host,
     _dwa_lossy_units,
     _dwa_sample_array,
+    _DwaChannelLayout,
     _inverse_dwa_dct_host,
     _inverse_dwa_transfer_host,
+    _parse_dwa_huffman_table,
     _read_exr_dwa_custom_cpu,
     _read_exr_dwa_gpu,
     _write_exr_dwa_gpu,
@@ -41,12 +45,16 @@ from pixtreme._io.formats.exr.codec_none import (
     _read_exr_none,
 )
 from pixtreme._io.formats.exr.codec_piz import (
+    _decode_piz_huffman_host,
     _encode_piz_chunks_gpu,
+    _ExrPizError,
     _piz_chunk_decode_control,
+    _piz_inverse_wavelet_host,
     _read_exr_piz_custom_cpu,
     _read_exr_piz_gpu,
 )
 from pixtreme._io.formats.exr.codec_pxr24 import (
+    _EXR_PXR24_PLANE_COUNTS,
     _decode_pxr24_rows_host,
     _encode_pxr24_rows_gpu,
     _prepare_exr_pxr24_read_chunks,
@@ -67,21 +75,14 @@ from pixtreme._io.formats.exr.codec_zip import (
 )
 from pixtreme._io.formats.exr.container import (
     _EXR_LINES_PER_CHUNK,
-    _EXR_PIZ_COMPRESSION,
-    _EXR_PXR24_PLANE_COUNTS,
     _build_exr_decoder_view,
-    _classify_default_dwa_channels,
-    _decode_piz_huffman_host,
-    _DwaChannelLayout,
+    _container_gpu_eligible,
     _ExrChannel,
     _ExrChunk,
     _ExrContainer,
     _ExrGpuError,
     _ExrPart,
-    _ExrPizError,
     _gpu_error,
-    _parse_dwa_huffman_table,
-    _piz_inverse_wavelet_host,
 )
 from pixtreme._io.formats.exr.packing import (
     _checksum_exr_chunks,
@@ -287,7 +288,7 @@ def _sampled_stored_payload(
     compression: str | None = None,
 ) -> bytes:
     payload = container.data[chunk.payload_start : chunk.payload_end]
-    if not payload and (container.compression if compression is None else compression) == _EXR_PIZ_COMPRESSION:
+    if not payload and (container.compression if compression is None else compression) == "piz":
         return bytes(chunk.expected_size)
     return payload
 
@@ -322,7 +323,7 @@ def _sampled_pxr24_payloads(view: _ExrContainer) -> tuple[bytes, ...]:
         if not prepared.compressed[chunk_index]:
             payloads.append(_sampled_stored_payload(view, chunk))
             continue
-        descriptor = chunk.phase3
+        descriptor = chunk.pxr24
         if descriptor is None or descriptor.codec != "pxr24":
             raise RuntimeError(
                 _actionable_error(
@@ -357,7 +358,7 @@ def _sampled_b44_payloads(view: _ExrContainer) -> tuple[bytes, ...]:
         if chunk.raw_stored:
             payloads.append(_sampled_stored_payload(view, chunk))
             continue
-        descriptor = chunk.phase3
+        descriptor = chunk.b44
         if descriptor is None or descriptor.codec not in ("b44", "b44a"):
             raise RuntimeError(
                 _actionable_error(
@@ -1009,9 +1010,7 @@ def _read_exr_gpu(
     output_dtype: str,
 ) -> cp.ndarray:
     try:
-        if not (
-            container.gpu_eligible or container.dwa_eligible or container.phase3_eligible or container.piz_eligible
-        ):
+        if not _container_gpu_eligible(container):
             raise _gpu_error(
                 why="the internal GPU EXR reader received a container outside the eligible scanline codecs",
                 what=(
@@ -1023,15 +1022,15 @@ def _read_exr_gpu(
         part = container.parts[0]
         channels_by_name = {channel.name: channel for channel in part.channels}
         selected = [channels_by_name[name] for name in selected_channels]
-        if container.piz_eligible:
+        if container.compression == "piz":
             return _read_exr_piz_gpu(container, selected, output_dtype=output_dtype)
-        if container.dwa_eligible:
+        if container.compression in ("dwaa", "dwab"):
             return _read_exr_dwa_gpu(container, selected, output_dtype=output_dtype)
-        if container.phase3_eligible:
-            if container.compression == "rle":
-                return _read_exr_rle_gpu(container, selected, output_dtype=output_dtype)
-            if container.compression == "pxr24":
-                return _read_exr_pxr24_gpu(container, selected, output_dtype=output_dtype)
+        if container.compression == "rle":
+            return _read_exr_rle_gpu(container, selected, output_dtype=output_dtype)
+        if container.compression == "pxr24":
+            return _read_exr_pxr24_gpu(container, selected, output_dtype=output_dtype)
+        if container.compression in ("b44", "b44a"):
             return _read_exr_b44_gpu(container, selected, output_dtype=output_dtype)
         prepared = _prepare_exr_read_chunks(container)
         host_staging = prepared.host_staging
@@ -1087,10 +1086,10 @@ def _read_exr_gpu(
             prepared.compressed,
             output_dtype=output_dtype,
         )
-    except (_ExrGpuError, _ExrPizError):
+    except (_ExrGpuError, _ExrCodecError, _ExrPizError):
         raise
     except Exception as error:
-        if container.piz_eligible:
+        if container.compression == "piz":
             raise RuntimeError(
                 _actionable_error(
                     why=f"CUDA could not decode the eligible PIZ chunks: {error}",
@@ -1117,9 +1116,7 @@ def _read_exr_custom_cpu(
     output_dtype: str,
 ) -> cp.ndarray:
     try:
-        if not (
-            container.gpu_eligible or container.dwa_eligible or container.phase3_eligible or container.piz_eligible
-        ):
+        if not _container_gpu_eligible(container):
             raise _gpu_error(
                 why="the internal custom CPU EXR reader received a container outside the eligible scanline codecs",
                 what=(
@@ -1133,15 +1130,15 @@ def _read_exr_custom_cpu(
         selected = [channels_by_name[name] for name in selected_channels]
         if container.compression in ("zip", "zips"):
             return _read_exr_zip_custom_cpu(container, selected, output_dtype=output_dtype)
-        if container.piz_eligible:
+        if container.compression == "piz":
             return _read_exr_piz_custom_cpu(container, selected, output_dtype=output_dtype)
-        if container.dwa_eligible:
+        if container.compression in ("dwaa", "dwab"):
             return _read_exr_dwa_custom_cpu(container, selected, output_dtype=output_dtype)
-        if container.phase3_eligible:
-            if container.compression == "rle":
-                return _read_exr_rle_custom_cpu(container, selected, output_dtype=output_dtype)
-            if container.compression == "pxr24":
-                return _read_exr_pxr24_custom_cpu(container, selected, output_dtype=output_dtype)
+        if container.compression == "rle":
+            return _read_exr_rle_custom_cpu(container, selected, output_dtype=output_dtype)
+        if container.compression == "pxr24":
+            return _read_exr_pxr24_custom_cpu(container, selected, output_dtype=output_dtype)
+        if container.compression in ("b44", "b44a"):
             return _read_exr_b44_custom_cpu(container, selected, output_dtype=output_dtype)
         prepared = _prepare_exr_read_chunks(container)
         restored = _restore_exr_host_chunks(prepared)
@@ -1156,7 +1153,7 @@ def _read_exr_custom_cpu(
             raw_flags,
             output_dtype=output_dtype,
         )
-    except (_ExrGpuError, _ExrPizError):
+    except (_ExrGpuError, _ExrCodecError, _ExrPizError):
         raise
     except Exception as error:
         raise RuntimeError(
@@ -1205,7 +1202,7 @@ def _write_exr_gpu(
         if compression == "none":
             payload_blob = raw
             payload_sizes = raw_sizes
-        elif compression == _EXR_PIZ_COMPRESSION:
+        elif compression == "piz":
             payload_blob, payload_sizes = _encode_piz_chunks_gpu(
                 raw,
                 raw_offsets,
@@ -1306,14 +1303,14 @@ def _write_exr_gpu(
     except _ExrGpuError:
         raise
     except Exception as error:
-        encoder = "PIZ/CUDA" if compression == _EXR_PIZ_COMPRESSION else "nvCOMP/CUDA"
+        encoder = "PIZ/CUDA" if compression == "piz" else "nvCOMP/CUDA"
         raise RuntimeError(
             _actionable_error(
                 why=f"{encoder} could not encode the eligible EXR chunks: {error}",
                 what=f"compression={compression!r}, shape={data.shape!r}, channels={tuple(channels)!r}",
                 how=(
                     "verify NVIDIA GPU availability, CUDA compatibility, and the output Frame layout"
-                    if compression == _EXR_PIZ_COMPRESSION
+                    if compression == "piz"
                     else "verify NVIDIA GPU availability, CUDA compatibility, nvCOMP, and the output Frame layout"
                 ),
             )

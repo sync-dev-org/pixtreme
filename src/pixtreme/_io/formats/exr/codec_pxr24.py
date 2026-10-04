@@ -5,23 +5,29 @@ from __future__ import annotations
 import zlib
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field, replace
 from functools import lru_cache
 from typing import cast
 
 import cupy as cp
 import numpy as np
 
+from pixtreme._io.formats.exr.codec_common import (
+    _chunk_channel_geometry,
+    _codec_error,
+    _ExrByteSpan,
+    _ExrChunkDescriptor,
+    _raw_channel_rows,
+)
 from pixtreme._io.formats.exr.codec_zip import (
     _decode_deflate_chunks,
 )
 from pixtreme._io.formats.exr.container import (
-    _EXR_PXR24_PLANE_COUNTS,
     _EXR_THREADS_PER_BLOCK,
     _ExrChannel,
+    _ExrChunk,
     _ExrContainer,
-    _ExrPxr24ReadChunks,
     _gpu_error,
-    _Phase3ChunkDescriptor,
 )
 from pixtreme._io.formats.exr.packing import (
     _gather_raw_chunks,
@@ -40,7 +46,7 @@ def _prepare_exr_pxr24_read_chunks(
     raw_sizes = np.fromiter((chunk.expected_size for chunk in chunks), dtype=np.int64, count=len(chunks))
     raw_offsets = _numpy_offsets(raw_sizes)
     materialized_sizes = np.fromiter(
-        (cast(_Phase3ChunkDescriptor, chunk.phase3).expected_materialized_size for chunk in chunks),
+        (cast(_Pxr24ChunkDescriptor, chunk.pxr24).expected_materialized_size for chunk in chunks),
         dtype=np.int64,
         count=len(chunks),
     )
@@ -48,7 +54,7 @@ def _prepare_exr_pxr24_read_chunks(
     compressed = np.fromiter((not chunk.raw_stored for chunk in chunks), dtype=np.uint8, count=len(chunks))
     payloads: list[bytes] = []
     for chunk_index, chunk in enumerate(chunks):
-        descriptor = chunk.phase3
+        descriptor = chunk.pxr24
         if descriptor is None or descriptor.codec != "pxr24":
             raise _gpu_error(
                 why="the PXR24 read batch received a chunk without its validated PXR24 descriptor",
@@ -332,7 +338,7 @@ def _pxr24_channel_row_records(
     for chunk_index_value in compressed_indices:
         chunk_index = int(chunk_index_value)
         chunk = container.chunks[chunk_index]
-        descriptor = cast(_Phase3ChunkDescriptor, chunk.phase3)
+        descriptor = cast(_Pxr24ChunkDescriptor, chunk.pxr24)
         materialized_base = int(prepared.materialized_offsets[chunk_index])
         if (
             len(descriptor.channel_rows) != chunk.row_count * channel_count
@@ -523,3 +529,176 @@ def _read_exr_pxr24_custom_cpu(
     )
     _scatter_pxr24_gpu(container, selected, prepared, materialized, output, output_dtype=output_dtype)
     return output
+
+
+_EXR_PXR24_PLANE_COUNTS = {0: 4, 1: 2, 2: 3}
+
+
+@dataclass(frozen=True)
+class _Pxr24Plane:
+    channel_index: int
+    channel_name: str
+    chunk_row: int
+    output_row: int
+    plane_index: int
+    materialized_span: _ExrByteSpan
+
+
+@dataclass(frozen=True)
+class _ExrPxr24ReadChunks:
+    host_staging: np.ndarray = field(repr=False)
+    host_materialized: np.ndarray = field(repr=False)
+    stage_offsets: np.ndarray
+    stage_sizes: np.ndarray
+    materialized_offsets: np.ndarray
+    materialized_sizes: np.ndarray
+    raw_offsets: np.ndarray
+    raw_sizes: np.ndarray
+    compressed: np.ndarray
+
+
+def _parse_pxr24_planes(
+    payload: bytes,
+    channels: Sequence[_ExrChannel],
+    *,
+    width: int,
+    payload_start: int,
+    chunk_y: int,
+    row_start: int,
+    row_count: int,
+    expected_size: int,
+) -> tuple[_Pxr24Plane, ...]:
+    if len(payload) < 6:
+        raise _codec_error(
+            why="the PXR24 zlib wrapper is truncated before its Deflate payload and Adler-32 trailer",
+            what=f"chunk_y={chunk_y}, stored_size={len(payload)}",
+            how="provide one complete RFC 1950 stream for the PXR24 chunk",
+        )
+    cmf, flg = payload[0], payload[1]
+    if (cmf & 0x0F) != 8 or (cmf >> 4) > 7 or ((cmf << 8) | flg) % 31:
+        raise _codec_error(
+            why="the PXR24 zlib header has an invalid method, window, or FCHECK",
+            what=f"chunk_y={chunk_y}, CMF=0x{cmf:02x}, FLG=0x{flg:02x}",
+            how="encode one valid RFC 1950 Deflate stream with a correct header check",
+        )
+    if flg & 0x20:
+        raise _codec_error(
+            why="the PXR24 zlib stream requests a preset dictionary",
+            what=f"chunk_y={chunk_y}, FLG=0x{flg:02x}",
+            how="encode PXR24 without an RFC 1950 preset dictionary",
+        )
+    decompressor = zlib.decompressobj()
+    try:
+        materialized = decompressor.decompress(payload, expected_size + 1)
+    except zlib.error as error:
+        raise _codec_error(
+            why="the PXR24 chunk contains an invalid zlib stream",
+            what=f"chunk_y={chunk_y}, payload={payload_start}:{payload_start + len(payload)}, error={error}",
+            how="encode one complete zlib stream covering the row-channel plane bytes",
+        ) from error
+    if not decompressor.eof or decompressor.unused_data or decompressor.unconsumed_tail:
+        raise _codec_error(
+            why="the PXR24 zlib stream does not end exactly at the chunk payload boundary",
+            what=(
+                f"chunk_y={chunk_y}, eof={decompressor.eof}, trailing={len(decompressor.unused_data)}, "
+                f"unconsumed={len(decompressor.unconsumed_tail)}"
+            ),
+            how="store exactly one complete RFC 1950 stream and no trailing bytes in the chunk",
+        )
+    if len(materialized) != expected_size:
+        raise _codec_error(
+            why="the PXR24 plane stream does not match the descriptor materialized size",
+            what=f"chunk_y={chunk_y}, inflated={len(materialized)}, expected={expected_size}",
+            how="emit every row-channel byte plane exactly once in the zlib stream",
+        )
+
+    planes: list[_Pxr24Plane] = []
+    materialized_offset = 0
+    for chunk_row in range(row_count):
+        file_y = chunk_y + chunk_row
+        for channel_index, channel in enumerate(channels):
+            if file_y % channel.y_sampling:
+                continue
+            channel_width, _ = _chunk_channel_geometry(
+                channel,
+                width=width,
+                chunk_y=chunk_y,
+                row_count=row_count,
+            )
+            for plane_index in range(_EXR_PXR24_PLANE_COUNTS[channel.pixel_type]):
+                plane_end = materialized_offset + channel_width
+                planes.append(
+                    _Pxr24Plane(
+                        channel_index=channel_index,
+                        channel_name=channel.name,
+                        chunk_row=chunk_row,
+                        output_row=row_start + chunk_row,
+                        plane_index=plane_index,
+                        materialized_span=_ExrByteSpan(materialized_offset, plane_end),
+                    )
+                )
+                materialized_offset = plane_end
+    return tuple(planes)
+
+
+@dataclass(frozen=True)
+class _Pxr24ChunkDescriptor(_ExrChunkDescriptor):
+    planes: tuple[_Pxr24Plane, ...]
+
+
+def _parse_pxr24_chunk_descriptor(
+    data: bytes,
+    channels: Sequence[_ExrChannel],
+    *,
+    width: int,
+    lines_per_chunk: int,
+    chunk_y: int,
+    row_start: int,
+    row_count: int,
+    payload_start: int,
+    payload_end: int,
+    expected_raw_size: int,
+    raw_stored: bool,
+) -> _Pxr24ChunkDescriptor:
+    raw_rows = _raw_channel_rows(channels, width=width, chunk_y=chunk_y, row_start=row_start, row_count=row_count)
+    materialized_cursor = 0
+    channel_rows = []
+    for row in raw_rows:
+        channel_width = row.raw_span.size // row.bytes_per_sample
+        size = channel_width * _EXR_PXR24_PLANE_COUNTS[row.pixel_type]
+        channel_rows.append(
+            replace(row, materialized_span=_ExrByteSpan(materialized_cursor, materialized_cursor + size))
+        )
+        materialized_cursor += size
+    planes: tuple[_Pxr24Plane, ...] = ()
+    if not raw_stored:
+        planes = _parse_pxr24_planes(
+            data[payload_start:payload_end],
+            channels,
+            width=width,
+            payload_start=payload_start,
+            chunk_y=chunk_y,
+            row_start=row_start,
+            row_count=row_count,
+            expected_size=materialized_cursor,
+        )
+    return _Pxr24ChunkDescriptor(
+        codec="pxr24",
+        lines_per_chunk=lines_per_chunk,
+        chunk_y=chunk_y,
+        row_start=row_start,
+        row_count=row_count,
+        payload_span=_ExrByteSpan(payload_start, payload_end),
+        stored_size=payload_end - payload_start,
+        expected_raw_size=expected_raw_size,
+        expected_materialized_size=materialized_cursor,
+        raw_stored=raw_stored,
+        channel_rows=tuple(channel_rows),
+        planes=planes,
+    )
+
+
+def _pxr24_gpu_eligible(channels: Sequence[_ExrChannel], chunks: Sequence[_ExrChunk]) -> bool:
+    return all(
+        channel.pixel_type in (0, 1, 2) and channel.x_sampling == channel.y_sampling == 1 for channel in channels
+    ) and all(chunk.pxr24 is not None for chunk in chunks)

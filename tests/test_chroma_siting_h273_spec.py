@@ -66,8 +66,9 @@ def _digest(array: np.ndarray) -> str:
     return hashlib.sha256(array.tobytes()).hexdigest()
 
 
+@pytest.mark.req("REQ-PIX-009")
 def test_chroma_siting_literal_and_normalization_follow_the_h273_table() -> None:
-    """v1-chroma-siting-h273 acceptance 1 and 2: the independent six-position table drives the closed token."""
+    """YUV 4:2:0 conversion accepts the six H.273 chroma locations by their canonical names."""
     from pixtreme._core.validation import _normalized_closed_token
 
     assert get_args(px.core.ChromaSiting) == tuple(SITING_OFFSETS)
@@ -88,8 +89,10 @@ def test_chroma_siting_literal_and_normalization_follow_the_h273_table() -> None
     assert len(keys) == len(set(keys)) == 6
 
 
+@pytest.mark.req("REQ-PIX-009")
 def test_six_420_functions_retain_their_static_signatures() -> None:
-    """v1-chroma-siting-h273 acceptance 3: only the ChromaSiting Literal value set expands."""
+    """The six YUV 4:2:0 conversion functions retain their documented signatures while accepting all chroma
+    locations."""
     expected = {
         "from_nv12": (
             ("buf", "width", "height", "colorspace", "gamma", "matrix", "range", "siting", "interpolation"),
@@ -135,9 +138,11 @@ def test_six_420_functions_retain_their_static_signatures() -> None:
             assert parameters[parameter_name].default == default
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("rejected", ("diagonal", 3, ("top", "bottom"), "", " .-_ "))
 def test_420_functions_reject_non_singular_or_unknown_siting_before_pixels(rejected: object) -> None:
-    """v1-chroma-siting-h273 acceptance 9: all six boundaries fail fast with raw actionable errors."""
+    """YUV 4:2:0 conversion rejects unknown or nonscalar chroma locations before processing pixels."""
     import cupy as cp
 
     from_cases = {
@@ -162,12 +167,12 @@ def test_420_functions_reject_non_singular_or_unknown_siting_before_pixels(rejec
         assert repr(tuple(SITING_OFFSETS)) in message
 
 
+@pytest.mark.req("REQ-PIX-009")
 def test_existing_three_siting_paths_remain_bit_exact_characterization() -> None:
-    """characterization: freezes base d16ccc7 output because numerical correctness belongs to independent oracles.
+    """characterization: Three established YUV 4:2:0 chroma locations retain their recorded output pixels for fixed
+    inputs.
 
-    v1-chroma-siting-h273 acceptance 8: retire only if a later specification intentionally breaks 4:2:0 compatibility.
-    The digests were generated from base commit d16ccc7 with this test's fixed inputs, full range, and bicubic filter.
-    """
+    The digests use full range and bicubic filtering; independent oracles establish numerical correctness."""
     expected = {
         "from_nv12:omitted": "5f24d5b0ce862d3bc7d9d11a6071d83ed7b2637adb3439135a0d84dc52b8bf0d",
         "from_nv12:left": "5f24d5b0ce862d3bc7d9d11a6071d83ed7b2637adb3439135a0d84dc52b8bf0d",
@@ -215,8 +220,10 @@ def test_existing_three_siting_paths_remain_bit_exact_characterization() -> None
     assert actual == expected
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 def test_six_420_docstrings_explain_the_single_progressive_frame_offset_contract() -> None:
-    """v1-chroma-siting-h273 acceptance 12: all six public boundaries expose the same LLM-readable contract."""
+    """The six YUV 4:2:0 conversion help texts explain progressive-frame chroma offsets."""
     h273_mapping = (
         (0, "left", "(0, 0.5)"),
         (1, "center", "(0.5, 0.5)"),

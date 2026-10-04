@@ -1,4 +1,4 @@
-"""Generate deterministic visual comparisons for v1-arri-tokens acceptance 31."""
+"""Generate deterministic ARRI transfer-curve and gamut comparison sheets."""
 
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ def _x_pixel(values: np.ndarray, value: float) -> int:
 
 def _draw_markers(
     draw: ImageDraw.ImageDraw,
-    font: ImageFont.ImageFont,
+    font: ImageFont.ImageFont | ImageFont.FreeTypeFont,
     values: np.ndarray,
     markers: Sequence[tuple[float, str]],
     top: int,
@@ -218,7 +218,7 @@ def _linear_rgb_strip(values: np.ndarray, *, lower: float, upper: float, height:
     )
 
 
-def _gamut_target(source_rgb: np.ndarray, colorspace: str) -> np.ndarray:
+def _gamut_target(source_rgb: np.ndarray, colorspace: px.core.Colorspace) -> np.ndarray:
     frame = px.io.from_array(
         cp.asarray(source_rgb.astype(np.float32)[None, :, :]),
         colorspace=colorspace,
@@ -226,7 +226,7 @@ def _gamut_target(source_rgb: np.ndarray, colorspace: str) -> np.ndarray:
         channels="RGB",
     )
     target = px.color.rgb_to_rgb(frame, output_colorspace="Rec.709", output_gamma="linear")
-    return px.io.to_array(target).get()[0]
+    return np.asarray(px.io.to_array(target).get()[0], dtype=np.float32)
 
 
 def _gamut_sheet() -> Image.Image:

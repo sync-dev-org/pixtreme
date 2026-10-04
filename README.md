@@ -7,7 +7,7 @@
 
 GPU-first image processing for Python, built on CUDA and CuPy.
 
-**[API reference and documentation](https://sync-dev-org.github.io/pixtreme/)** — the complete public API (14 modules, 100 operations) with per-function contracts, plus the full performance report.
+**[API reference and documentation](https://sync-dev-org.github.io/pixtreme/)** — the complete public API (14 modules, 102 operations) with per-function contracts, plus the full performance report.
 
 ## Why pixtreme
 
@@ -20,8 +20,10 @@ so color meaning travels with pixels instead of living in ambient configuration.
   where their contracts allow it.
 - Floating-point working values are not clipped to `[0, 1]`: negative values, highlights above 1.0, and filter
   overshoot remain valid scene data until an explicit quantization or clipping boundary.
-- The package root exposes 14 focused modules, including `core`, and `__version__`. Named tokens are case-sensitive,
-  validated immediately, and have no environment-dependent defaults.
+- The package root exposes 14 focused modules, including `core`, and `__version__`. Named tokens match
+  case-insensitively and separator-insensitively (`Rec.709`, `rec 709`, and `REC_709` name the same token; see the
+  [token reference](https://sync-dev-org.github.io/pixtreme/tokens/)), are validated immediately, and have no
+  environment-dependent defaults.
 - `Frame` is the working currency; device arrays and encoded/file formats cross explicit `from_*`, `to_*`,
   `read`/`write`, and `decode`/`encode` boundaries.
 
@@ -103,13 +105,13 @@ unclipped; `px.values.quantize` is the explicit normalized-float-to-integer boun
 
 ## API tour
 
-The package root exposes 14 modules and `__version__`. Types, helpers, and all 100 operations live under one canonical
+The package root exposes 14 modules and `__version__`. Types, helpers, and all 102 operations live under one canonical
 two-level path; the root does not re-export them, and `Frame` has no operation methods:
 
 | Namespace | Public members | Responsibility |
 |---|---|---|
 | `px.core` | `Frame`, `Lut`, `Lut1D`, `channels`, and the named-token `Literal` aliases | Core types, channel normalization, and closed vocabulary |
-| `px.io` | `read_image`, `write_image`, `write_exr_channels`, `read_header`, `read_lut`, `decode_lut`, `write_lut`, `decode_image`, `encode_image`, `from_array`, `to_array`, and nine named-format `from_*` / `to_*` pairs | File, byte, device-array, LUT, and wire-format boundaries |
+| `px.io` | `read_image`, `write_image`, `write_exr_channels`, `read_header`, `read_lut`, `decode_lut`, `write_lut`, `decode_image`, `encode_image`, `from_array`, `to_array`, and ten named-format `from_*` / `to_*` pairs | File, byte, device-array, LUT, and wire-format boundaries |
 | `px.color` | `apply_lut`, `gamma_to_linear`, `hsv_to_rgb`, `linear_to_gamma`, `rgb_to_grayscale`, `rgb_to_hsv`, `rgb_to_rgb`, `rgb_to_ycbcr`, `ycbcr_to_rgb`, `ycbcr_to_ycbcr`, `equalize_histogram`, `clahe`, `chromatic_adaptation`, `white_balance`, `white_point_simulation`, `grade` | Colorimetry, transfer functions, YCbCr/HSV, LUTs, histogram operations, white-point adaptation, per-channel Lift / Gamma / Gain, and explicit tonemapping |
 | `px.filter` | `gaussian_blur`, `box_blur`, `median_blur`, `bilateral_blur`, `directional_blur`, `zoom_blur`, `spin_blur`, `vector_blur`, `lens_blur`, `sobel`, `laplacian`, `difference_of_gaussians`, `canny`, `sharpen`, `unsharp_mask`, `convolve_box` | Blur, derivatives, edges, sharpening, and convolution |
 | `px.transform` | `resize`, `warp_affine`, `stack` | Geometry and multi-image layout |

@@ -19,6 +19,8 @@ def _save_png(path: Path, values: np.ndarray, *, chunks: dict[bytes, bytes] | No
     Image.fromarray(values).save(path, pnginfo=info)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(
     ("name", "values", "mode", "labels"),
     (
@@ -34,7 +36,7 @@ def test_read_image_returns_normalized_contiguous_rgb_alpha_and_gray(
     mode: str,
     labels: tuple[str, ...],
 ) -> None:
-    """v1-io acceptance 2, 3, 4, and 6: raster decode fixes shape, order, defaults, and normalized dtype."""
+    """Raster image reading returns contiguous normalized float32 pixels with the documented shape and channel order."""
     path = tmp_path / name
     Image.fromarray(values, mode=mode).save(path, format="PNG")
 
@@ -53,8 +55,10 @@ def test_read_image_returns_normalized_contiguous_rgb_alpha_and_gray(
     )
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 def test_read_image_unchanged_preserves_native_16_bit_and_default_normalizes(tmp_path: Path) -> None:
-    """v1-io acceptance 4 and 12: allow_any_depth preserves uint16 and default divides by its own maximum."""
+    """Unchanged raster reading preserves uint16 codes, while ordinary reading normalizes by the container maximum."""
     values = np.array([[0, 1, 32768, 65535]], dtype=np.uint16)
     path = tmp_path / "gray16.png"
     Image.fromarray(values).save(path)
@@ -77,8 +81,10 @@ def test_read_image_unchanged_preserves_native_16_bit_and_default_normalizes(tmp
     )
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_read_image_channel_selection_is_label_driven_and_ordered(tmp_path: Path) -> None:
-    """v1-io acceptance 8: selection reads requested labels in requested order and rejects absent labels."""
+    """Raster reading selects requested channel labels in order and rejects labels absent from the image."""
     values = np.array([[[1, 2, 3, 4], [5, 6, 7, 8]]], dtype=np.uint8)
     path = tmp_path / "rgba.png"
     Image.fromarray(values, mode="RGBA").save(path)
@@ -96,8 +102,10 @@ def test_read_image_channel_selection_is_label_driven_and_ordered(tmp_path: Path
         px.io.read_image(path, channels="Z")
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_png_file_metadata_and_per_call_claims_follow_the_fixed_priority(tmp_path: Path) -> None:
-    """v1-io acceptance 5, 6, and 7: per-call claims beat mapped file metadata, which beats defaults."""
+    """PNG reading resolves per-call color claims before mapped file metadata and then format defaults."""
     values = np.array([[[1, 2, 3]]], dtype=np.uint8)
     path = tmp_path / "cicp.png"
     _save_png(path, values, chunks={b"cICP": bytes((9, 16, 0, 1))})
@@ -112,8 +120,10 @@ def test_png_file_metadata_and_per_call_claims_follow_the_fixed_priority(tmp_pat
     assert (header.color.colorspace, header.color.gamma, header.color.mappable) == ("Rec.2020", "PQ", True)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_png_srgb_gama_and_unmappable_metadata_have_deterministic_mapping(tmp_path: Path) -> None:
-    """v1-io acceptance 7: supported PNG chunks map, while unknown explicit values warn and fall back."""
+    """PNG color chunks map supported values to metadata and warn before falling back from unsupported values."""
     values = np.array([[[1, 2, 3]]], dtype=np.uint8)
     srgb_path = tmp_path / "srgb.png"
     gama_path = tmp_path / "gama.png"
@@ -130,9 +140,10 @@ def test_png_srgb_gama_and_unmappable_metadata_have_deterministic_mapping(tmp_pa
     assert px.io.read_header(unknown_path).color.mappable is False
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize("suffix", (".png", ".jpg", ".tiff"))
 def test_write_image_uint8_returns_none_and_external_reader_opens_output(tmp_path: Path, suffix: str) -> None:
-    """v1-io acceptance 13, 14, and 15: uint8 raster writes use extension format and return None."""
+    """Writing a uint8 raster image returns None and produces a file readable by an independent image library."""
     import cupy as cp
 
     values = np.array([[[10, 20, 30], [40, 50, 60]]], dtype=np.uint8)
@@ -147,9 +158,11 @@ def test_write_image_uint8_returns_none_and_external_reader_opens_output(tmp_pat
         assert image.mode == "RGB"
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("suffix", (".png", ".tiff"))
 def test_write_image_preserves_uint16_gray_depth_round_trip(tmp_path: Path, suffix: str) -> None:
-    """v1-io acceptance 12, 14, and 15: uint16 PNG/TIFF writes preserve native depth."""
+    """PNG and TIFF writing preserve uint16 grayscale codes through a file round trip."""
     import cupy as cp
 
     values = np.array([[[0], [1], [32768], [65535]]], dtype=np.uint16)
@@ -169,8 +182,10 @@ def test_write_image_preserves_uint16_gray_depth_round_trip(tmp_path: Path, suff
     )
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_write_image_validates_named_quality_and_writes_no_raster_color_chunks(tmp_path: Path) -> None:
-    """v1-io acceptance 13 and 16: quality is named and non-EXR writes add no color metadata chunks."""
+    """Raster writing accepts a named quality option and omits unsupported color metadata chunks."""
     import cupy as cp
 
     frame = px.io.from_array(cp.zeros((1, 1, 3), dtype=cp.uint8), colorspace="sRGB", gamma="sRGB", channels="RGB")
@@ -186,8 +201,10 @@ def test_write_image_validates_named_quality_and_writes_no_raster_color_chunks(t
     assert b"sRGB" not in payload and b"cICP" not in payload and b"gAMA" not in payload
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_read_image_errors_distinguish_missing_extension_and_decode_failure(tmp_path: Path) -> None:
-    """v1-io acceptance 2: boundary failures use their specified exception types and actionable context."""
+    """Image reading distinguishes missing files, unsupported extensions, and decode failures with actionable errors."""
     missing = tmp_path / "missing.png"
     unsupported = tmp_path / "image.gif"
     corrupt = tmp_path / "corrupt.png"
@@ -202,6 +219,8 @@ def test_read_image_errors_distinguish_missing_extension_and_decode_failure(tmp_
         px.io.read_image(corrupt)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "args"),
     (
@@ -211,7 +230,7 @@ def test_read_image_errors_distinguish_missing_extension_and_decode_failure(tmp_
     ),
 )
 def test_image_path_boundaries_translate_invalid_path_types_actionably(name: str, args: tuple[object, ...]) -> None:
-    """REQ-API-012: image path APIs translate pathlib type failures and retain their cause."""
+    """Image path APIs explain invalid path types while retaining the original pathlib error as their cause."""
     with pytest.raises(ValueError, match=r"^why=.*; what=.*; how=.*") as error:
         getattr(px.io, name)(*args)
 
@@ -220,8 +239,9 @@ def test_image_path_boundaries_translate_invalid_path_types_actionably(name: str
     assert isinstance(error.value.__cause__, TypeError)
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_read_header_reports_jpeg_tiff_and_float_tiff_without_decoding_pixels(tmp_path: Path) -> None:
-    """v1-io acceptance 17 and 18: pure header parsers expose raster dimensions, channels, and storage dtype."""
+    """Header inspection reports JPEG and TIFF dimensions, channels, and storage dtype without decoding pixels."""
     jpeg = tmp_path / "sample.jpg"
     tiff = tmp_path / "sample.tiff"
     float_tiff = tmp_path / "float.tiff"

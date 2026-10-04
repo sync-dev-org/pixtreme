@@ -1,4 +1,4 @@
-"""Generate the manual visual-acceptance sheet for the v1-lut-extensions 1D CUDA path."""
+"""Generate a comparison sheet for visual inspection of the 1D LUT CUDA path."""
 
 from __future__ import annotations
 

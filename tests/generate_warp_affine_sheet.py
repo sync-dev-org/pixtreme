@@ -1,4 +1,4 @@
-"""Generate the manual visual-acceptance sheet for v1-warp-affine."""
+"""Generate a comparison sheet for visual inspection of warp affine."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ _SOURCE_HEIGHT = 220
 _PANEL_WIDTH = 180
 _PANEL_HEIGHT = 110
 _LABEL_HEIGHT = 40
-_INTERPOLATIONS = (
+_INTERPOLATIONS: tuple[px.core.Interpolation, ...] = (
     "nearest",
     "bilinear",
     "bicubic",
@@ -117,7 +117,12 @@ def _display(frame: px.core.Frame) -> px.core.Frame:
 def _panel(frame: px.core.Frame, label: str) -> px.core.Frame:
     minimum = float(cp.min(frame.data).get())
     maximum = float(cp.max(frame.data).get())
-    image = px.transform.resize(_display(frame), width=_PANEL_WIDTH, height=_PANEL_HEIGHT, interpolation="bilinear")
+    image = px.transform.resize(
+        px.values.cast_dtype(_display(frame), dtype="float32"),
+        width=_PANEL_WIDTH,
+        height=_PANEL_HEIGHT,
+        interpolation="bilinear",
+    )
     label_data = cp.full((_LABEL_HEIGHT, _PANEL_WIDTH, 3), np.uint8(4), dtype=cp.uint8)
     bar = px.io.from_array(label_data, colorspace="sRGB", gamma="sRGB", channels="RGB")
     bar = px.values.cast_dtype(bar, dtype="float32")
@@ -138,9 +143,9 @@ def _warp(
     frame: px.core.Frame,
     matrix: np.ndarray,
     *,
-    interpolation: str | None = None,
+    interpolation: px.core.Interpolation | None = None,
     inverse: bool = False,
-    border: str = "constant",
+    border: px.core.Border = "constant",
     border_value: float | None = None,
 ) -> px.core.Frame:
     return px.transform.warp_affine(

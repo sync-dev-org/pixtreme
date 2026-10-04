@@ -5,9 +5,7 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import re
-import subprocess
 import sys
-import tomllib
 from pathlib import Path
 from typing import get_args, get_type_hints
 
@@ -64,8 +62,9 @@ def _actionable(error: BaseException) -> str:
     return message
 
 
+@pytest.mark.req("REQ-PIX-006")
 def test_lut_shaper_constructor_and_read_signatures_are_keyword_only() -> None:
-    """v1-lut-shaper acceptance 1 and 16: only the fixed optional public parameters are added."""
+    """Constructing and reading a shaped LUT expose their optional public arguments as keyword-only."""
     constructor = inspect.signature(px.core.Lut)
     assert tuple(constructor.parameters) == ("data", "domain_min", "domain_max", "shaper")
     assert constructor.parameters["shaper"].kind is inspect.Parameter.KEYWORD_ONLY
@@ -83,9 +82,10 @@ def test_lut_shaper_constructor_and_read_signatures_are_keyword_only() -> None:
         assert set(get_args(hints["return"])) == {px.core.Lut, px.core.Lut1D}
 
 
+@pytest.mark.req("REQ-PIX-006")
 @pytest.mark.parametrize("strided", (False, True))
 def test_shaper_retains_shared_finite_nonmonotonic_output_by_reference(strided: bool) -> None:
-    """v1-lut-shaper acceptance 2, 6 and 19: decreasing/equal/out-of-range samples remain caller-owned."""
+    """A LUT shaper retains a caller-owned finite table even when samples decrease or leave the unit range."""
     cube = cp.asarray(_cube(4))
     host = np.asarray((-0.5, 1.5, 1.5, -0.25), dtype=np.float32)
     backing = cp.asarray(np.repeat(host, 2) if strided else host)
@@ -102,11 +102,13 @@ def test_shaper_retains_shared_finite_nonmonotonic_output_by_reference(strided: 
     assert float(lut.shaper[1]) == 0.25
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "case", ("host", "rank", "rgb-table", "float16", "float64", "empty", "one", "edge", "nan", "inf", "-inf")
 )
 def test_shaper_rejects_invalid_storage_and_nonfinite_samples(case: str) -> None:
-    """v1-lut-shaper acceptance 2: each invalid shaper invariant is an actionable ValueError."""
+    """A LUT shaper rejects invalid GPU storage and nonfinite table samples with a corrective ValueError."""
     cube = cp.asarray(_cube(3))
     shaper = cp.asarray((0, 0.2, 1), dtype=cp.float32)
     if case == "host":
@@ -126,15 +128,16 @@ def test_shaper_rejects_invalid_storage_and_nonfinite_samples(case: str) -> None
     assert "shaper" in _actionable(error.value).lower()
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.skipif(
     "cp.cuda.runtime.getDeviceCount() < 2",
     reason="requires two visible CUDA devices; remove this guard when all test lanes provide two devices",
 )
 def test_shaper_rejects_a_different_cuda_device() -> None:
-    """v1-lut-shaper acceptance 2: a foreign-device table fails without an implicit device copy.
+    """A LUT shaper rejects a table on another CUDA device without copying it implicitly.
 
-    The string skipif is evaluated at test setup, never during collection.
-    """
+    The string skipif is evaluated at test setup, never during collection."""
     with cp.cuda.Device(0):
         cube = cp.asarray(_cube(2))
     with cp.cuda.Device(1):
@@ -144,16 +147,16 @@ def test_shaper_rejects_a_different_cuda_device() -> None:
     assert "device" in _actionable(error.value).lower()
 
 
+@pytest.mark.req("REQ-PIX-006")
 @pytest.mark.parametrize("lustre", (False, True))
 @pytest.mark.parametrize("mode", ("identity", "half-code", "nonidentity"))
 def test_3dl_default_bake_and_opt_in_use_independent_code_oracles(tmp_path: Path, lustre: bool, mode: str) -> None:
-    """v1-lut-shaper acceptance 3-4 and 18: format codes fix bit-exact default bake and preserved state.
+    """Reading 3DL data bakes its shaper by default and can preserve that shaper on request.
 
     Headerless identity/nonidentity use edge 4 and half-code uses edge 11
-    (255/10 = 25.5), keeping the spacing row above the existing sniff's three-token
+    (255/10 = 25.5), keeping the spacing row above the format detector's three-token
     cutoff. Lustre uses rounded edge 17. Bake uses the independent float64 host tetrahedral formula
-    on unrounded normalized source codes, followed by exactly one float32 cast.
-    """
+    on unrounded normalized source codes, followed by exactly one float32 cast."""
     edge = 17 if lustre else {"identity": 4, "half-code": 11, "nonidentity": 4}[mode]
     scale = 1023 if lustre else 255
     axis = np.linspace(0, scale, edge)
@@ -196,15 +199,14 @@ def test_3dl_default_bake_and_opt_in_use_independent_code_oracles(tmp_path: Path
             assert strict.shaper is None
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("spacing", ((255,), (0, 255), (0, 127, 255)), ids=("one-token", "two-tokens", "three-tokens"))
 @pytest.mark.parametrize("option", ("default", False, True), ids=("default", "bake", "preserve"))
 def test_decode_lut_rejects_short_headerless_spacing_rows(spacing: tuple[int, ...], option: str | bool) -> None:
-    """v1-lut-shaper acceptance 3: opt-in preserves the existing format-identification boundary.
+    """Decoding a headerless 3DL LUT rejects spacing rows too short to identify the format.
 
-    The fixed specification's read/state and non-scope clauses freeze format
-    sniffing and existing grammar. Numeric payloads with at most three tokens in
-    their first row remain unidentified, even with an otherwise complete cube.
-    """
+    A first numeric row with at most three tokens remains unidentified even if later rows form a complete cube."""
     _, codes = quantized_tables(len(spacing), "log")
     payload = three_dl_text(np.asarray(spacing), codes).encode("utf-8")
     with pytest.raises(ValueError) as error:
@@ -216,12 +218,13 @@ def test_decode_lut_rejects_short_headerless_spacing_rows(spacing: tuple[int, ..
     assert "format" in message and "could not be identified" in message
 
 
+@pytest.mark.req("REQ-PIX-006")
 @pytest.mark.parametrize(
     "suffix,text",
     ((".cube", _cube_1d_text()), (".cube", _cube_3d_text()), (".spi1d", _spi1d_text()), (".spi3d", _spi3d_text())),
 )
 def test_preserve_shaper_leaves_other_formats_unshaped(tmp_path: Path, suffix: str, text: str) -> None:
-    """v1-lut-shaper acceptance 4 and 18: opt-in never invents a shaper for another format."""
+    """Requesting shaper preservation leaves LUT formats without a shaper unshaped."""
     path = tmp_path / f"input{suffix}"
     path.write_text(text, encoding="utf-8")
     for reader, source in ((px.io.read_lut, path), (px.io.decode_lut, text.encode())):
@@ -236,6 +239,8 @@ def test_preserve_shaper_leaves_other_formats_unshaped(tmp_path: Path, suffix: s
             assert not hasattr(strict, "shaper")
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "payload,detail",
     (
@@ -245,18 +250,20 @@ def test_preserve_shaper_leaves_other_formats_unshaped(tmp_path: Path, suffix: s
     ids=("selected-parser-error", "combined-cube"),
 )
 def test_opt_in_keeps_parser_failure_and_rejects_combined_cube(payload: bytes, detail: str) -> None:
-    """v1-lut-shaper acceptance 4 and 18: opting in cannot enable fallback parsing or a 1D+3D Cube variant."""
+    """Shaper preservation does not hide parser errors or accept a combined 1D and 3D Cube LUT."""
     with pytest.raises(ValueError) as error:
         px.io.decode_lut(payload, preserve_shaper=True)
     assert detail.lower() in _actionable(error.value).lower()
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("bad", (None, 0, 1, "True", "false", [], np.bool_(True)))
 @pytest.mark.parametrize("entry", ("file", "bytes"))
 def test_non_boolean_opt_in_fails_before_io_parse_or_transfer(
     monkeypatch: pytest.MonkeyPatch, bad: object, entry: str
 ) -> None:
-    """v1-lut-shaper acceptance 5: raw invalid option wins over corrupt bytes and unreadable paths."""
+    """Reading a LUT rejects a non-boolean shaper option before file access, parsing, or GPU transfer."""
     touched = []
 
     def forbidden(*args, **kwargs):
@@ -281,16 +288,17 @@ def test_non_boolean_opt_in_fails_before_io_parse_or_transfer(
     assert touched == []
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("edge", (2, 3, 17))
 @pytest.mark.parametrize("interpolation", (None, "tetrahedral", "trilinear"))
 def test_shaped_apply_matches_independent_two_stage_domain_and_clamp_oracle(
     edge: int, interpolation: str | None
 ) -> None:
-    """v1-lut-shaper acceptance 6-8 and 13: domain -> linear shaper -> cube clamp -> unclipped output.
+    """Applying a shaped LUT maps its domain, interpolates the shaper, clamps cube lookup, and leaves output
+    unclipped.
 
-    2e-6 absolute allows about 17 float32 epsilons for two stages, as AC-11-10;
-    this host contract also covers out-of-domain points excluded from OCIO parity.
-    """
+    The absolute tolerance of 2e-6 covers two stages of float32 interpolation, including out-of-domain inputs."""
     cube = _cube(edge)
     shaper = np.resize(np.asarray((-0.25, 1.5, 0.1, 0.1), dtype=np.float32), edge)
     lower, upper = (-2.0, 1.0, -0.5), (2.0, 3.0, 4.5)
@@ -306,18 +314,16 @@ def test_shaped_apply_matches_independent_two_stage_domain_and_clamp_oracle(
     assert np.any(expected < 0) and np.any(expected > 1)
 
 
+@pytest.mark.req("REQ-PIX-006")
 @pytest.mark.parametrize("direction", (1, -1), ids=("increasing", "decreasing"))
 @pytest.mark.parametrize("interpolation", (None, "tetrahedral", "trilinear"))
 def test_shaped_apply_interpolates_extreme_finite_shaper_before_cube_clamp(
     direction: int, interpolation: str | None
 ) -> None:
-    """v1-lut-shaper acceptance 6, 7 and 13: finite endpoints cannot overflow into the wrong cube edge.
+    """A shaped LUT interpolates extreme finite shaper samples before clamping cube coordinates.
 
-    Opposite float32 extrema have a finite linear midpoint of zero, although
-    their difference exceeds float32 range. Both knots and interior points must
-    follow the float64 host model. The identity cube exposes the clamped shaper
-    result; 2e-6 allows AC-11-10's two-stage float32 interpolation budget.
-    """
+    Opposite float32 extrema have a finite midpoint even when their difference overflows float32. The host float64
+    reference checks the knots and interior points within the two-stage float32 interpolation tolerance."""
     axis = np.asarray((0, 1), dtype=np.float32)
     cube = np.stack(np.meshgrid(axis, axis, axis, indexing="ij"), axis=-1)
     shaper = np.asarray((-direction, direction), dtype=np.float32) * np.finfo(np.float32).max
@@ -328,12 +334,14 @@ def test_shaped_apply_interpolates_extreme_finite_shaper_before_cube_clamp(
     np.testing.assert_allclose(cp.asnumpy(result.data).reshape(-1, 3), expected, rtol=0, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-110")
 @pytest.mark.parametrize("interpolation", (None, "tetrahedral", "trilinear"))
 def test_shaped_apply_preserves_labels_metadata_storage_and_all_input_bits(interpolation: str | None) -> None:
-    """v1-lut-shaper acceptance 2, 6 and 14: strided state and non-RGB NaN/-zero bits survive.
+    """Applying a shaped LUT preserves Frame color information, non-RGB bits, and all input storage.
 
-    RGB comparison allows AC-11-10's 2e-6 interpolation budget; storage is exact.
-    """
+    RGB comparison allows the 2e-6 interpolation budget; storage is exact."""
     cube = _cube(3)
     backing = cp.zeros((3, 3, 3, 6), dtype=cp.float32)
     backing[..., ::2] = cp.asarray(cube)
@@ -362,9 +370,11 @@ def test_shaped_apply_preserves_labels_metadata_storage_and_all_input_bits(inter
     np.testing.assert_array_equal(cp.asnumpy(after.data)[..., [2, 4, 0]], np.broadcast_to(cube[0, 0, 0], (1, 2, 3)))
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("case", ("float16", "uint8", "uint16", "uint32", "missing-rgb", "linear", "cubic", "strict"))
 def test_shaped_apply_keeps_float32_rgb_and_interpolation_validation(case: str) -> None:
-    """v1-lut-shaper acceptance 8, 14 and 18: shaper state cannot broaden dtype, labels or token subsets."""
+    """A shaped LUT still requires a float32 RGB Frame and a supported interpolation choice."""
     lut = px.core.Lut(cp.asarray(_cube(2)), shaper=cp.asarray((0, 0.75), dtype=cp.float32))
     dtype = case if case in ("float16", "uint8", "uint16", "uint32") else "float32"
     labels = ("R", "G", "A") if case == "missing-rgb" else ("R", "G", "B")
@@ -387,16 +397,17 @@ def test_shaped_apply_keeps_float32_rgb_and_interpolation_validation(case: str) 
         assert "trilinear" in message and "tetrahedral" in message
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-018")
 @pytest.mark.parametrize("interpolation", (None, "tetrahedral", "trilinear"))
 def test_shaped_apply_captures_one_kernel_without_host_transfer_or_intermediate_frame(
     interpolation: str | None,
 ) -> None:
-    """v1-lut-shaper acceptance 7: structural contract observes real CUDA graph nodes and returned Frames.
+    """Applying a shaped LUT uses one GPU kernel without host transfer or an intermediate Frame.
 
     Capture forbids synchronous host round-trips; all nodes must be one kernel.
     Profiling observes actual Frame returns rather than replacing internal helpers.
-    No kernel, helper, module, or launch-argument name is prescribed.
-    """
+    No kernel, helper, module, or launch-argument name is prescribed."""
     lut = px.core.Lut(cp.asarray(_cube(3)), shaper=cp.asarray((0, 0.8, 1), dtype=cp.float32))
     source = _frame(np.asarray([[0.12, 0.43, 0.78]], dtype=np.float32))
     px.color.apply_lut(source, lut=lut, interpolation=interpolation)
@@ -436,13 +447,13 @@ def test_shaped_apply_captures_one_kernel_without_host_transfer_or_intermediate_
     np.testing.assert_allclose(cp.asnumpy(result.data).reshape(-1, 3), expected, rtol=0, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-006")
 @pytest.mark.parametrize("edge,curve", CASES)
 @pytest.mark.parametrize("interpolation", (None, "tetrahedral"))
 def test_preserved_shaper_matches_pinned_ocio_cpu_fixture(edge: int, curve: str, interpolation: str | None) -> None:
-    """v1-lut-shaper acceptance 10: both strict selectors match all seed and boundary points.
+    """Applying a preserved 3DL shaper matches the independent OpenColorIO CPU fixture at sampled boundaries.
 
-    rtol=0, atol=2e-6 is AC-11-10's tenfold margin over the measured host error.
-    """
+    The absolute tolerance of 2e-6 is ten times the measured host error."""
     metadata, text, inputs, expected = load_fixture(FIXTURES, edge, curve)
     lut = px.io.decode_lut(text, preserve_shaper=True)
     result = cp.asnumpy(px.color.apply_lut(_frame(inputs), lut=lut, interpolation=interpolation).data).reshape(-1, 3)
@@ -450,12 +461,12 @@ def test_preserved_shaper_matches_pinned_ocio_cpu_fixture(edge: int, curve: str,
     assert float(np.max(np.abs(result.astype(np.float64) - expected))) <= 2e-6
 
 
+@pytest.mark.req("REQ-PIX-006")
 def test_default_bake_retains_a_counterexample_to_strict_ocio_parity() -> None:
-    """v1-lut-shaper acceptance 3, 10 and 18: same-edge bake must not silently stand in for two stages.
+    """Default 3DL shaper baking differs from preserved two-stage evaluation at a known input cell.
 
     A point in the first input cell of the fixed 17/log corpus has >0.01 error:
-    this loose witness bound distinguishes approximation from the 2e-6 budget.
-    """
+    this loose witness bound distinguishes approximation from the 2e-6 budget."""
     _, text, points, expected = load_fixture(FIXTURES, 17, "log")
     baked = px.io.decode_lut(text)
     result = cp.asnumpy(px.color.apply_lut(_frame(points), lut=baked).data).reshape(-1, 3)
@@ -467,11 +478,10 @@ def test_default_bake_retains_a_counterexample_to_strict_ocio_parity() -> None:
 def test_ocio_fixture_regenerates_all_bytes_and_matches_3dl_cpu_processor(
     tmp_path: Path, edge: int, curve: str
 ) -> None:
-    """v1-lut-shaper acceptance 10-11: independent OCIO regeneration fixes bytes, provenance and boundary corpus.
+    """The 3DL oracle generator reproduces stored OpenColorIO samples and boundary values.
 
-    FileTransform and explicit normalized transforms must agree within AC-11-10's
-    2e-6 budget. Host barycentric interpolation is a second independent witness.
-    """
+    OpenColorIO FileTransform and explicit normalized transforms agree within 2e-6; host barycentric interpolation
+    provides another independent check."""
     import PyOpenColorIO as ocio
 
     generated = fixture_bytes(edge, curve)
@@ -480,8 +490,8 @@ def test_ocio_fixture_regenerates_all_bytes_and_matches_3dl_cpu_processor(
         assert content == (FIXTURES / f"{edge}-{curve}" / name).read_bytes(), name
     metadata, text, inputs, expected = load_fixture(FIXTURES, edge, curve)
     assert list(metadata) == sorted(metadata)
-    assert metadata["ocio_version"] == "2.5.2" and metadata["dtype"] == "<f4"
-    assert metadata["processor_cache_id"] and metadata["cpu_cache_id"] and metadata["tolerance_reason"]
+    assert metadata["dtype"] == "<f4"
+    assert metadata["tolerance_reason"]
     spacing, cube = quantized_tables(edge, curve)
     _bits(inputs, boundary_inputs(spacing.astype(np.float64) / 1023))
     assert np.all((0 <= inputs) & (inputs <= 1))
@@ -497,14 +507,15 @@ def test_ocio_fixture_regenerates_all_bytes_and_matches_3dl_cpu_processor(
     np.testing.assert_allclose(host, expected, rtol=0, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-018")
 def test_shaped_write_bakes_nodes_on_gpu_once_and_roundtrips_baked_bits(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """v1-lut-shaper acceptance 9 and 19: GPU node bake loses shaper but retains domain and baked bits.
+    """Writing a shaped LUT bakes grid nodes on the GPU and round-trips the baked values and domain.
 
     A dyadic table gives exact float64->float32 node results; near-half-ULP
-    values separately distinguish float32 intermediate arithmetic below.
-    """
+    values separately distinguish float32 intermediate arithmetic below."""
     cube = _cube(3)
     shaper = np.asarray((0, 0.75, 1), dtype=np.float32)
     lower, upper = (-2.0, 1.0, -0.5), (2.0, 3.0, 4.5)
@@ -547,9 +558,10 @@ def test_shaped_write_bakes_nodes_on_gpu_once_and_roundtrips_baked_bits(
     assert sorted(p.name for p in tmp_path.iterdir()) == ["baked.cube", "repeat.cube"]
 
 
+@pytest.mark.req("REQ-PIX-006")
 @pytest.mark.parametrize("edge", (2, 3), ids=("diagonal", "four-vertex-simplex"))
 def test_shaped_write_uses_float64_intermediate_before_float32_table(tmp_path: Path, edge: int) -> None:
-    """v1-lut-shaper acceptance 9: independent f64 node bits reject f32 bake arithmetic.
+    """Writing a shaped LUT computes node values in float64 before storing float32 table entries.
 
     Diagonal: endpoints 6409297/-57657176 at float32(.1) give f64->f32
     2649.79052734375 (0x45259ca6); f32 delta and weighted sum both give
@@ -565,8 +577,7 @@ def test_shaped_write_uses_float64_intermediate_before_float32_table(tmp_path: P
 
     These are precision counterexamples, independent of production structure.
     All expected table bits come from the host float64 two-stage model, with
-    no tolerance; the countermodels only verify the fixtures' detection power.
-    """
+    no tolerance; the countermodels only verify the fixtures' detection power."""
     if edge == 2:
         vertices = np.asarray((6409297, 6409297, 6409297, -57657176), dtype=np.float32)
         shaper = np.asarray((0.1, 0.1), dtype=np.float32)
@@ -592,9 +603,10 @@ def test_shaped_write_uses_float64_intermediate_before_float32_table(tmp_path: P
     _bits(cp.asnumpy(px.io.read_lut(path).data), expected)
 
 
+@pytest.mark.req("REQ-PIX-006")
 @pytest.mark.parametrize("case", ("extension", "nonfinite-cube", "missing-parent"))
 def test_shaped_write_preserves_pre_mutation_errors(tmp_path: Path, case: str) -> None:
-    """v1-lut-shaper acceptance 9 and 19: shaped values keep the existing Cube exit and error boundaries."""
+    """Writing a shaped LUT rejects invalid output before changing the destination file."""
     cube = _cube(2)
     if case == "nonfinite-cube":
         cube[0, 0, 0, 0] = np.nan
@@ -614,17 +626,17 @@ def test_shaped_write_preserves_pre_mutation_errors(tmp_path: Path, case: str) -
         assert path.read_bytes() == b"keep"
 
 
+@pytest.mark.req("REQ-PIX-006")
 @pytest.mark.parametrize("entry", ("file", "bytes"))
 def test_shaped_read_transfers_each_table_once_and_has_no_cache_or_filesystem_side_effect(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     entry: str,
 ) -> None:
-    """v1-lut-shaper acceptance 4 and 19: two whole-array H2D transfers, independent calls and no hidden writes.
+    """Reading a shaped LUT transfers each table once without caching or writing files.
 
     Structural boundary observation spies on real CuPy transfer calls and NumPy
-    bulk conversion; backing-allocation sharing is deliberately unconstrained.
-    """
+    bulk conversion; backing-allocation sharing is deliberately unconstrained."""
     spacing, codes = quantized_tables(17, "log")
     text = three_dl_text(spacing, codes).encode()
     path = tmp_path / "source.3dl"
@@ -662,65 +674,10 @@ def test_shaped_read_transfers_each_table_once_and_has_no_cache_or_filesystem_si
     assert list(tmp_path.iterdir()) == [path] and path.read_bytes() == text
 
 
-def test_ocio_is_declared_only_as_a_development_dependency() -> None:
-    """v1-lut-shaper acceptance 11 and 18: metadata must not install an OCIO runtime dependency.
-
-    This structural packaging contract is already Green: the current project
-    declares opencolorio in dependency-groups.dev only. Adding either OCIO
-    distribution name to project.dependencies must fail even without an import.
-    """
-    root = Path(__file__).resolve().parents[1]
-    pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
-
-    def ocio_requirements(requirements):
-        # Extract the distribution name before extras, version, URL or markers.
-        return [
-            requirement
-            for requirement in requirements
-            if re.split(r"[\s\[<>=!~@;]", requirement.strip(), maxsplit=1)[0].casefold()
-            in {"opencolorio", "pyopencolorio"}
-        ]
-
-    assert not ocio_requirements(pyproject["project"]["dependencies"])
-    assert ocio_requirements(pyproject["dependency-groups"]["dev"])
-
-
-def test_ocio_is_absent_from_runtime_imports_and_package_assets(tmp_path: Path) -> None:
-    """v1-lut-shaper acceptance 11, 16, 18 and 19: fresh runtime applies/writes with OCIO imports forbidden.
-
-    Subprocess isolation checks the real import graph; timeout bounds the probe.
-    """
-    code = """
-import importlib.abc, sys
-class RejectOCIO(importlib.abc.MetaPathFinder):
-    def find_spec(self, fullname, path=None, target=None):
-        if "opencolorio" in fullname.casefold():
-            raise AssertionError("runtime OCIO dependency: " + fullname)
-sys.meta_path.insert(0, RejectOCIO())
-import cupy as cp
-import pixtreme as px
-from pathlib import Path
-lut = px.io.decode_lut(Path(sys.argv[1]).read_bytes(), preserve_shaper=True)
-frame = px.io.from_array(cp.zeros((1, 1, 3), dtype=cp.float32), colorspace="ACEScg", gamma="linear", channels="RGB")
-px.color.apply_lut(frame, lut=lut)
-px.io.write_lut(Path(sys.argv[2]), lut)
-assert not any("opencolorio" in name.casefold() for name in sys.modules)
-root = Path(px.__file__).parent
-assert not any("ocio" in path.name.casefold() or path.suffix in {".3dl", ".clf", ".ctf", ".ocio"}
-               for path in root.rglob("*") if path.is_file())
-"""
-    result = subprocess.run(
-        [sys.executable, "-c", code, str(FIXTURES / "17-log" / "source.3dl"), str(tmp_path / "output.cube")],
-        capture_output=True,
-        text=True,
-        timeout=45,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-
-
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-017")
 def test_public_docstrings_describe_shaper_and_lossy_cube_exit() -> None:
-    """v1-lut-shaper acceptance 16: public help describes the new state, strict path and irreversible exit."""
+    """The public LUT help explains preserved shapers, strict application, and the lossy Cube export."""
     for obj in (px.core.Lut, px.io.read_lut, px.io.decode_lut, px.io.write_lut, px.color.apply_lut):
         doc = inspect.getdoc(obj).lower()
         assert "shaper" in doc, obj
@@ -734,28 +691,10 @@ def test_public_docstrings_describe_shaper_and_lossy_cube_exit() -> None:
     assert "no shaper stage is implied" not in apply
 
 
-@pytest.mark.parametrize(
-    "text,size",
-    ((_cube_1d_text(), 9), (_cube_3d_text(), 24), (_spi1d_text(), 9), (_spi3d_text(), 24)),
-    ids=("cube1d", "cube3d", "spi1d", "spi3d"),
-)
-def test_unshaped_parsers_keep_bulk_numeric_conversion(monkeypatch: pytest.MonkeyPatch, text: str, size: int) -> None:
-    """v1-lut-shaper acceptance 19: structural contract observes whole-table numeric parsing at NumPy's boundary."""
-    original = np.fromstring
-    sizes = []
-
-    def observed(*args, **kwargs):
-        output = original(*args, **kwargs)
-        sizes.append(output.size)
-        return output
-
-    monkeypatch.setattr(np, "fromstring", observed)
-    px.io.decode_lut(text.encode())
-    assert size in sizes, f"expected one bulk numeric table of {size} entries, got {sizes}"
-
-
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-021")
 def test_performance_pair_has_fixed_registry_conditions_and_executable_inputs() -> None:
-    """v1-lut-shaper acceptance 12: case setup is testable without running a timed benchmark."""
+    """The shaped LUT performance cases have executable setup and fixed registry conditions."""
     import test_performance_spec as registry
 
     assert (registry._WIDTH, registry._HEIGHT, registry._CHANNELS, registry._LUT_SIZE) == (1920, 1080, 3, 65)

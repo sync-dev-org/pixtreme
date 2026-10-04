@@ -2,6 +2,37 @@
 
 Notable changes to pixtreme are documented in this file.
 
+## 1.7.0 - 2026-10-04
+
+pixtreme 1.7.0 adds two public capabilities. The first is the `px.io.from_p210` / `px.io.to_p210` pair, the tenth
+named-format pair, which exchanges 10-bit 4:2:2 semi-planar frames (a `uint16` Y plane followed by a `uint16`
+interleaved Cb Cr plane, with the code in the upper 10 bits of each word) as one C-contiguous device array under the
+existing 4:2:2 rules; the `io` module grows to 31 operations and the public API to 102. The second is the `DCI`
+reference-white token for the SMPTE RP 431-2 D-Cinema white, accepted by `px.color.chromatic_adaptation` and
+`px.color.white_point_simulation`. Both are additions: existing operations, signatures, defaults, and token spellings
+are unchanged, and there are no breaking changes to the public API. The EXR reader and writer are reorganized
+internally by compression, and corrupt-chunk errors now name the compression that failed. The published performance
+baseline (`docs/performance.md` and the README table) is carried over from 1.6.0 unchanged and does not yet cover the
+P210 pair.
+
+### Added
+
+- Added the `DCI` reference-white token for the SMPTE RP 431-2 D-Cinema white `(0.3140, 0.3510)`.
+  `px.color.chromatic_adaptation` and `px.color.white_point_simulation` now accept it in either white argument.
+  This adds no operation; the public API remains at 102 operations.
+- Added `px.io.from_p210` and `px.io.to_p210`, the tenth named-format pair. P210 is 10-bit 4:2:2 semi-planar
+  (a `uint16` Y plane followed by a `uint16` interleaved Cb Cr plane) exchanged as a C-contiguous 1D device array.
+  Each word carries a fixed 10 effective code bits in its upper 10 bits with no `bit_depth` argument; import ignores
+  the lower six padding bits and export writes them as zero. `range` uses the H.273 mapping for `n = 10`, export
+  rounds half away from zero and clips only to the code range `[0, 1023]`, and the even-width constraint,
+  horizontally co-sited chroma at full vertical resolution, and the `interpolation` tokens follow the existing 4:2:2
+  rules. The `io` module now exposes 31 operations and the public API 102.
+
+### Changed
+
+- EXR corrupt-chunk errors for RLE, PXR24, B44, B44A, and PIZ now name the compression whose chunk failed. The
+  exception types and the situations that raise them are unchanged.
+
 ## 1.6.0 - 2026-09-23
 
 pixtreme 1.6.0 adds two public capabilities. The first is the `px.io.from_p216` / `px.io.to_p216` pair, the ninth

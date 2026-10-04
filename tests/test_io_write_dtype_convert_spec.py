@@ -72,6 +72,8 @@ def _host_recode(values: np.ndarray, target_dtype: str) -> np.ndarray:
     return np.floor(scaled + np.float32(0.5)).astype(target_dtype)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(
     ("route", "format_name", "format_token", "suffix", "kwargs"),
     (
@@ -102,9 +104,7 @@ def test_write_boundaries_accept_every_frame_dtype_and_preserve_the_input(
     kwargs: dict[str, Any],
     dtype: type[np.generic],
 ) -> None:
-    """v1-write-dtype-convert acceptance 1-5 and 7; v1-bytes-boundary acceptance 6;
-    v1-exr-runtime-independence acceptance 44: every boundary recodes independently without mutation.
-    """
+    """File and bytes writing accept every supported Frame dtype, convert independently, and leave inputs unchanged."""
     values = _source_values(dtype)
     frame = px.io.from_array(cp.asarray(values), colorspace="ACEScg", gamma="linear", channels="RGB")
     before = frame.data.copy()
@@ -139,6 +139,8 @@ def test_write_boundaries_accept_every_frame_dtype_and_preserve_the_input(
     assert (frame.colorspace, frame.gamma, frame.channels, frame.matrix) == before_metadata
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(
     ("format_token", "suffix", "dtype", "kwargs"),
     (
@@ -161,7 +163,7 @@ def test_native_dtype_selection_does_not_call_recode_dtype(
     dtype: type[np.generic],
     kwargs: dict[str, Any],
 ) -> None:
-    """v1-write-dtype-convert acceptance 2: every native format input bypasses numeric dtype conversion."""
+    """Image writing skips numeric dtype conversion when the Frame dtype already matches the format's native dtype."""
     values = _source_values(dtype)
     frame = px.io.from_array(cp.asarray(values), colorspace="ACEScg", gamma="linear", channels="RGB")
 
@@ -177,8 +179,10 @@ def test_native_dtype_selection_does_not_call_recode_dtype(
         assert px.io.write_image(tmp_path / f"native{suffix}", frame, **kwargs) is None
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_write_image_preserves_the_unwritable_output_path_error(tmp_path: Path) -> None:
-    """v1-write-dtype-convert acceptance 5: an unwritable output path stays an actionable RuntimeError."""
+    """Image writing reports an unwritable output path with an actionable runtime error."""
     frame = px.io.from_array(
         cp.zeros((1, 1, 3), dtype=cp.uint8),
         colorspace="sRGB",

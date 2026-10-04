@@ -128,10 +128,10 @@ def _pnm_payload(magic: str, values: np.ndarray) -> bytes:
     return header + samples
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_new_format_public_signatures_are_exact() -> None:
-    """v1-io-orientation acceptance 1; v1-exr-runtime-independence acceptance 1 and 3:
-    file output exposes only the fixed selectors, including the trailing EXR dtype selector.
-    """
+    """Image file and bytes APIs expose fixed documented selectors, including the output EXR dtype option."""
     read = inspect.signature(px.io.read_image)
     decode = inspect.signature(px.io.decode_image)
     write = inspect.signature(px.io.write_image)
@@ -172,9 +172,11 @@ def test_new_format_public_signatures_are_exact() -> None:
     assert encode.parameters["lossless"].default is None
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("token", ("jpeg2000", "webp", "bmp", "pnm"))
 def test_encode_image_accepts_the_extended_closed_token_set(token: str) -> None:
-    """v1-io-formats acceptance 3 / v1-write-dtype-convert acceptance 5: format tokens stay closed."""
+    """Bytes encoding accepts the documented image format names and rejects unknown names."""
     from pixtreme._io.common import _ENCODE_FORMAT_TOKENS
 
     assert _ENCODE_FORMAT_TOKENS == ("jpeg", "png", "tiff", "jpeg2000", "webp", "bmp", "pnm")
@@ -188,6 +190,7 @@ def test_encode_image_accepts_the_extended_closed_token_set(token: str) -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     ("suffix", "format_name"),
     (
@@ -204,7 +207,7 @@ def test_encode_image_accepts_the_extended_closed_token_set(token: str) -> None:
 def test_file_extensions_are_case_insensitive_and_report_the_new_formats(
     tmp_path: Path, suffix: str, format_name: str
 ) -> None:
-    """v1-io-formats acceptance 2: all new file extensions select the intended format case-insensitively."""
+    """Image reading recognizes supported filename extensions regardless of letter case."""
     channels = "Y" if suffix.lower() == ".pgm" else "RGB"
     frame = _frame(np.uint8, channels)
     path = tmp_path / f"round-trip{suffix}"
@@ -213,6 +216,7 @@ def test_file_extensions_are_case_insensitive_and_report_the_new_formats(
     assert px.io.read_header(path).format == format_name
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     ("suffix", "payload", "format_name", "width", "height", "channels", "dtype"),
     (
@@ -235,7 +239,7 @@ def test_read_header_parses_independent_minimal_new_format_headers(
     channels: tuple[str, ...],
     dtype: str,
 ) -> None:
-    """v1-io-formats acceptance 16-17: independent headers expose dimensions, labels, and storage dtype."""
+    """Header inspection reports dimensions, channel labels, and storage dtype for supported image formats."""
     path = tmp_path / f"minimal{suffix}"
     path.write_bytes(payload)
 
@@ -246,8 +250,10 @@ def test_read_header_parses_independent_minimal_new_format_headers(
     assert header.color.raw == {}
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_read_header_rejects_bmp_pixel_offset_beyond_the_declared_payload(tmp_path: Path) -> None:
-    """v1-io-formats acceptance 17: BMP payload offsets stay within declared and available bytes."""
+    """BMP header inspection rejects pixel offsets outside the declared or available payload."""
     payload = bytearray(_minimal_bmp(1, 1, 24)[:54])
     struct.pack_into("<I", payload, 2, len(payload))
     struct.pack_into("<I", payload, 10, 1000)
@@ -261,8 +267,10 @@ def test_read_header_rejects_bmp_pixel_offset_beyond_the_declared_payload(tmp_pa
     assert "pixel_offset=1000" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_read_header_stops_before_ascii_pnm_raster_while_decode_rejects_corruption(tmp_path: Path) -> None:
-    """v1-io-formats acceptance 16-17: header probing skips ASCII samples that decode must validate."""
+    """PNM header inspection stops before raster samples, while decoding validates corrupt sample data."""
     payload = b"P2\n1 1\n255\nnot-a-decimal-sample\n"
     path = tmp_path / "corrupt-raster.pgm"
     path.write_bytes(payload)
@@ -275,6 +283,8 @@ def test_read_header_stops_before_ascii_pnm_raster_while_decode_rejects_corrupti
         px.io.decode_image(payload)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("payload", "observed"),
     (
@@ -286,19 +296,21 @@ def test_read_header_stops_before_ascii_pnm_raster_while_decode_rejects_corrupti
     ),
 )
 def test_decode_image_rejects_truncated_or_invalid_new_format_headers(payload: bytes, observed: str) -> None:
-    """v1-io-formats acceptance 4 and 17: recognized corrupt payloads retain actionable parse context."""
+    """Bytes decoding reports a recognized image format with a truncated or invalid header as corrupt input."""
     with pytest.raises(ValueError, match=_ACTIONABLE) as error:
         px.io.decode_image(payload)
     assert observed.lower() in str(error.value).lower()
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("dtype", (np.uint8, np.uint16))
 @pytest.mark.parametrize("channels", ("Y", "RGB", "RGBA"))
 @pytest.mark.parametrize("suffix", (".jp2", ".j2k"))
 def test_jpeg2000_lossless_file_round_trip_preserves_every_supported_layout(
     tmp_path: Path, dtype: type[np.generic], channels: str, suffix: str
 ) -> None:
-    """v1-io-formats acceptance 7-8 and 13: JP2/J2K preserve all uint depth and channel combinations."""
+    """Lossless JPEG 2000 file round trips preserve every supported integer depth and channel layout."""
     frame = _frame(dtype, channels)
     path = tmp_path / f"lossless{suffix}"
 
@@ -312,6 +324,7 @@ def test_jpeg2000_lossless_file_round_trip_preserves_every_supported_layout(
         assert path.read_bytes().startswith(b"\xff\x4f\xff\x51")
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     ("format_token", "suffix", "channels"),
     (("webp", ".webp", "RGB"), ("bmp", ".bmp", "Y"), ("bmp", ".bmp", "RGB")),
@@ -319,7 +332,7 @@ def test_jpeg2000_lossless_file_round_trip_preserves_every_supported_layout(
 def test_webp_and_bmp_supported_layouts_round_trip_at_file_and_bytes_boundaries(
     tmp_path: Path, format_token: str, suffix: str, channels: str
 ) -> None:
-    """v1-io-formats acceptance 5, 9, and 15: WebP/BMP file and bytes boundaries agree."""
+    """WebP and BMP file and bytes round trips agree for every supported channel layout."""
     frame = _frame(np.uint8, channels)
     kwargs = {"lossless": True} if format_token == "webp" else {}
     path = tmp_path / f"round-trip{suffix}"
@@ -333,12 +346,14 @@ def test_webp_and_bmp_supported_layouts_round_trip_at_file_and_bytes_boundaries(
     _assert_frame_equal(from_file, frame)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("dtype", (np.uint8, np.uint16))
 @pytest.mark.parametrize(("magic", "channels"), (("P2", "Y"), ("P3", "RGB"), ("P5", "Y"), ("P6", "RGB")))
 def test_pnm_ascii_and_binary_decode_preserve_samples_and_normalize(
     dtype: type[np.generic], magic: str, channels: str
 ) -> None:
-    """v1-io-formats acceptance 4, 7, and 10: P2/P3/P5/P6 parse comments, depth, and samples exactly."""
+    """ASCII and binary PNM decoding reads comments, sample depth, and pixel codes before normalizing them."""
     source = _frame(dtype, channels, height=2, width=4)
     values = px.io.to_array(
         source,
@@ -357,12 +372,14 @@ def test_pnm_ascii_and_binary_decode_preserve_samples_and_normalize(
     )
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("dtype", (np.uint8, np.uint16))
 @pytest.mark.parametrize(("channels", "magic", "suffix"), (("Y", b"P5", ".pgm"), ("RGB", b"P6", ".ppm")))
 def test_pnm_encode_is_bit_exact_big_endian_and_extension_checked(
     tmp_path: Path, dtype: type[np.generic], channels: str, magic: bytes, suffix: str
 ) -> None:
-    """v1-io-formats acceptance 10: P5/P6 preserve bits and uint16 samples use network byte order."""
+    """PNM writing preserves P5 and P6 codes, uses big-endian uint16 samples, and validates the filename extension."""
     frame = _frame(dtype, channels)
     path = tmp_path / f"round-trip{suffix}"
 
@@ -389,6 +406,8 @@ def test_pnm_encode_is_bit_exact_big_endian_and_extension_checked(
         px.io.write_image(tmp_path / f"wrong{wrong_suffix}", frame)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("format_token", "dtype", "channels"),
     (
@@ -401,15 +420,14 @@ def test_pnm_encode_is_bit_exact_big_endian_and_extension_checked(
 def test_new_formats_reject_unsupported_channel_layouts_before_codec(
     format_token: str, dtype: type[np.generic], channels: str
 ) -> None:
-    """v1-write-dtype-convert acceptance 5; v1-io-formats acceptance 11.
-
-    Dtype conversion does not expand the closed channel-layout table.
-    """
+    """Image writing rejects unsupported channel layouts before encoding, regardless of Frame dtype."""
     frame = _frame(dtype, channels)
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.encode_image(frame, format=format_token)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("format_token", "kwargs"),
     (
@@ -427,16 +445,14 @@ def test_new_formats_reject_unsupported_channel_layouts_before_codec(
 def test_new_encode_parameters_are_typed_format_specific_and_non_conflicting(
     format_token: str, kwargs: dict[str, object]
 ) -> None:
-    """v1-write-dtype-convert acceptance 5; v1-io-formats acceptance 12-14.
-
-    Quality/lossless and legacy options retain fail-fast validation.
-    """
+    """Image encoding validates quality, lossless mode, and compression options by type and format compatibility."""
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.encode_image(_frame(np.uint8, "RGB"), format=format_token, **kwargs)  # type: ignore[arg-type]
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_webp_quality_controls_payload_and_independent_mse() -> None:
-    """v1-io-formats acceptance 12: quality 1/50/100 changes WebP payloads and improves independent MSE."""
+    """Increasing WebP quality changes encoded bytes and improves reconstruction error against the source image."""
     generator = np.random.default_rng(20260806)
     values = generator.integers(0, 256, size=(64, 64, 3), dtype=np.uint8)
     frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels="RGB")
@@ -449,9 +465,10 @@ def test_webp_quality_controls_payload_and_independent_mse() -> None:
     assert mse[2] <= mse[0]
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize("format_token", ("jpeg2000", "webp"))
 def test_lossless_true_is_exact_and_false_or_none_is_lossy(format_token: str) -> None:
-    """v1-io-formats acceptance 13: explicit lossless is exact while default/False selects lossy coding."""
+    """JPEG 2000 and WebP encoding preserve exact pixels with lossless mode and use lossy coding otherwise."""
     generator = np.random.default_rng(20260807)
     values = generator.integers(0, 256, size=(64, 64, 3), dtype=np.uint8)
     frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels="RGB")
@@ -465,8 +482,10 @@ def test_lossless_true_is_exact_and_false_or_none_is_lossy(format_token: str) ->
     assert bool(cp.any(explicit_lossy.data != frame.data).get())
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_new_format_metadata_defaults_overrides_and_channel_selection() -> None:
-    """v1-io-formats acceptance 6 and 18: defaults, claims, and label-driven selection match existing raster I/O."""
+    """BMP bytes decoding applies default and per-call color claims while selecting channels by label."""
     frame = _frame(np.uint8, "RGB")
     payload = px.io.encode_image(frame, format="bmp")
 
@@ -478,8 +497,9 @@ def test_new_format_metadata_defaults_overrides_and_channel_selection() -> None:
     cp.testing.assert_array_equal(selected.data, frame.data[..., [2, 0]])
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_new_header_parsers_remain_codec_lazy_and_gpu_free(tmp_path: Path) -> None:
-    """v1-io-formats acceptance 16 and 19: pure header inspection avoids codecs and CUDA allocation."""
+    """JPEG 2000, WebP, BMP, and PNM header inspection reads metadata without codecs or GPU allocation."""
     paths = []
     for name, payload in (
         ("header.jp2", _minimal_jp2(3, 2, 3, 8)),

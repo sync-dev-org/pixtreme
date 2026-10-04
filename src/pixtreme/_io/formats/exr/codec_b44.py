@@ -2,23 +2,31 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import re
+from bisect import bisect_right
+from collections.abc import Iterator, Sequence
+from dataclasses import dataclass, field, replace
 from functools import lru_cache
-from typing import cast
+from typing import cast, overload
 
 import cupy as cp
 import numpy as np
 
+from pixtreme._io.formats.exr.codec_common import (
+    _chunk_channel_geometry,
+    _codec_error,
+    _ExrByteSpan,
+    _ExrChunkDescriptor,
+    _raw_channel_rows,
+)
 from pixtreme._io.formats.exr.container import (
     _EXR_DTYPE_INFO,
     _EXR_MAX_GRID_X,
     _EXR_THREADS_PER_BLOCK,
-    _ExrB44ReadChunks,
     _ExrChannel,
+    _ExrChunk,
     _ExrContainer,
     _gpu_error,
-    _Phase3B44Blocks,
-    _Phase3Block,
 )
 from pixtreme._io.formats.exr.packing import (
     _chunk_launch_ranges,
@@ -33,7 +41,7 @@ from pixtreme._io.formats.exr.packing import (
 
 
 def _b44_block_boundary_matches(
-    block: _Phase3Block,
+    block: _B44Block,
     *,
     channel_index: int,
     channel_name: str,
@@ -80,7 +88,7 @@ def _prepare_exr_b44_read_chunks(container: _ExrContainer) -> _ExrB44ReadChunks:
     for chunk_index in np.flatnonzero(compressed):
         index = int(chunk_index)
         chunk = chunks[index]
-        descriptor = chunk.phase3
+        descriptor = chunk.b44
         if descriptor is None or descriptor.codec not in ("b44", "b44a"):
             raise _gpu_error(
                 why="the B44 read batch received a chunk without its validated B44/B44A descriptor",
@@ -164,7 +172,7 @@ def _prepare_exr_b44_read_chunks(container: _ExrContainer) -> _ExrB44ReadChunks:
                     how="keep the section block range within the descriptor block table",
                 )
             block_rows = (chunk.row_count + 3) // 4
-            if isinstance(descriptor.blocks, _Phase3B44Blocks):
+            if isinstance(descriptor.blocks, _B44Blocks):
                 half_sections = tuple(item for item in descriptor.channel_sections if item.block_count)
                 boundaries_valid = (
                     descriptor.blocks.payload is container.data
@@ -1240,3 +1248,362 @@ def _read_exr_b44_custom_cpu(
         )
     host_selected = _select_exr_host_pixels(container, selected, materialized, output_dtype=output_dtype)
     return cp.asarray(host_selected)
+
+
+@dataclass(frozen=True)
+class _B44ChannelSection:
+    channel_index: int
+    channel_name: str
+    pixel_type: int
+    bytes_per_sample: int
+    perceptually_linear: bool
+    payload_span: _ExrByteSpan
+    expected_materialized_size: int
+    block_start: int
+    block_count: int
+
+
+@dataclass(frozen=True)
+class _B44Block:
+    channel_index: int
+    channel_name: str
+    block_row: int
+    block_column: int
+    payload_span: _ExrByteSpan
+    stored_size: int
+    output_row_start: int
+    output_row_count: int
+
+
+@dataclass(frozen=True)
+class _B44Blocks:
+    payload: bytes = field(repr=False, compare=False)
+    codec: str
+    block_sections: tuple[_B44ChannelSection, ...]
+    block_starts: tuple[int, ...]
+    block_columns: int
+    row_start: int
+    row_count: int
+
+    def __len__(self) -> int:
+        return sum(section.block_count for section in self.block_sections)
+
+    def __iter__(self) -> Iterator[_B44Block]:
+        for section in self.block_sections:
+            payload_start = section.payload_span.start
+            for local_block in range(section.block_count):
+                stored_size = 14 if self.codec == "b44" or self.payload[payload_start + 2] < 0x34 else 3
+                yield self._block(section, local_block, payload_start, stored_size)
+                payload_start += stored_size
+
+    @overload
+    def __getitem__(self, index: int) -> _B44Block: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> tuple[_B44Block, ...]: ...
+
+    def __getitem__(self, index: int | slice) -> _B44Block | tuple[_B44Block, ...]:
+        if isinstance(index, slice):
+            return tuple(self[block_index] for block_index in range(*index.indices(len(self))))
+        resolved = index if index >= 0 else len(self) + index
+        if not 0 <= resolved < len(self):
+            raise IndexError(index)
+        section_index = bisect_right(self.block_starts, resolved) - 1
+        section = self.block_sections[section_index]
+        within_section = resolved - section.block_start
+        if self.codec == "b44":
+            payload_start = section.payload_span.start + within_section * 14
+            stored_size = 14
+        else:
+            payload_start = section.payload_span.start
+            for _ in range(within_section):
+                payload_start += 3 if self.payload[payload_start + 2] >= 0x34 else 14
+            stored_size = 3 if self.payload[payload_start + 2] >= 0x34 else 14
+        return self._block(section, within_section, payload_start, stored_size)
+
+    def _block(
+        self,
+        section: _B44ChannelSection,
+        within_section: int,
+        payload_start: int,
+        stored_size: int,
+    ) -> _B44Block:
+        block_row, block_column = divmod(within_section, self.block_columns)
+        return _B44Block(
+            channel_index=section.channel_index,
+            channel_name=section.channel_name,
+            block_row=block_row,
+            block_column=block_column,
+            payload_span=_ExrByteSpan(payload_start, payload_start + stored_size),
+            stored_size=stored_size,
+            output_row_start=self.row_start + block_row * 4,
+            output_row_count=min(4, self.row_count - block_row * 4),
+        )
+
+
+@dataclass(frozen=True)
+class _ExrB44ReadChunks:
+    host_staging: np.ndarray = field(repr=False)
+    stage_offsets: np.ndarray
+    stage_sizes: np.ndarray
+    raw_offsets: np.ndarray
+    raw_sizes: np.ndarray
+    compressed: np.ndarray
+    raw_section_descriptors: np.ndarray
+    block_section_descriptors: np.ndarray
+    block_output_descriptors: np.ndarray
+    block_perceptually_linear: np.ndarray
+    b44a: bool
+
+
+@lru_cache(maxsize=32)
+def _b44a_section_pattern(block_count: int) -> re.Pattern[bytes]:
+    count = str(block_count).encode("ascii")
+    return re.compile(rb"(?s:(?:..[\x34-\xff]|..[\x00-\x33].{11})){" + count + rb"}")
+
+
+def _validated_b44a_section_end(
+    data: bytes,
+    *,
+    cursor: int,
+    payload_end: int,
+    block_count: int,
+    block_columns: int,
+    chunk_y: int,
+    channel_name: str,
+) -> int:
+    match = _b44a_section_pattern(block_count).match(data, cursor, payload_end)
+    if match is not None:
+        return match.end()
+    block_cursor = cursor
+    for local_block in range(block_count):
+        block_row, block_column = divmod(local_block, block_columns)
+        if block_cursor + 3 > payload_end:
+            raise _codec_error(
+                why="the B44A HALF block is truncated before its three-byte head",
+                what=(
+                    f"chunk_y={chunk_y}, channel={channel_name!r}, block=({block_row},{block_column}), "
+                    f"remaining={payload_end - block_cursor}"
+                ),
+                how="provide the base and marker bytes for every 4-by-4 HALF block",
+            )
+        stored_size = 3 if data[block_cursor + 2] >= 0x34 else 14
+        block_end = block_cursor + stored_size
+        if block_end > payload_end:
+            form = "flat" if stored_size == 3 else "dense"
+            raise _codec_error(
+                why=f"the B44A {form} HALF block is truncated",
+                what=(
+                    f"chunk_y={chunk_y}, channel={channel_name!r}, block=({block_row},{block_column}), "
+                    f"required={stored_size}, remaining={payload_end - block_cursor}"
+                ),
+                how=f"provide all {stored_size} bytes for the declared B44A block form",
+            )
+        block_cursor = block_end
+    raise AssertionError("B44A block grammar regex rejected a completely scanned section")
+
+
+def _parse_b44_sections(
+    codec: str,
+    data: bytes,
+    channels: Sequence[_ExrChannel],
+    *,
+    width: int,
+    payload_start: int,
+    payload_end: int,
+    chunk_y: int,
+    row_start: int,
+    row_count: int,
+) -> tuple[tuple[_B44ChannelSection, ...], _B44Blocks]:
+    cursor = payload_start
+    block_columns = (width + 3) // 4
+    total_block_count = 0
+    sections: list[_B44ChannelSection] = []
+    materialized_block_count = 0
+    for channel_index, channel in enumerate(channels):
+        channel_width, channel_rows = _chunk_channel_geometry(
+            channel,
+            width=width,
+            chunk_y=chunk_y,
+            row_count=row_count,
+        )
+        block_columns = (channel_width + 3) // 4
+        block_rows = (channel_rows + 3) // 4
+        blocks_per_half_channel = block_rows * block_columns
+        if channel.pixel_type == 1:
+            total_block_count += blocks_per_half_channel
+        section_start = cursor
+        block_start = materialized_block_count
+        block_count = 0
+        materialized_size = channel_width * channel_rows * channel.bytes_per_sample
+        if channel.pixel_type != 1:
+            cursor += materialized_size
+            if cursor > payload_end:
+                raise _codec_error(
+                    why=f"the {codec.upper()} raw channel section is truncated",
+                    what=(
+                        f"chunk_y={chunk_y}, channel={channel.name!r}, section={section_start}:{cursor}, "
+                        f"payload_end={payload_end}"
+                    ),
+                    how="provide every FLOAT or UINT plane byte declared by the channel geometry",
+                )
+        elif codec == "b44":
+            required_size = blocks_per_half_channel * 14
+            remaining_size = payload_end - cursor
+            if remaining_size < required_size:
+                local_block = max(0, remaining_size // 14)
+                block_row, block_column = divmod(local_block, block_columns)
+                block_cursor = cursor + local_block * 14
+                if payload_end - block_cursor < 3:
+                    raise _codec_error(
+                        why="the B44 HALF block is truncated before its three-byte head",
+                        what=(
+                            f"chunk_y={chunk_y}, channel={channel.name!r}, block=({block_row},{block_column}), "
+                            f"remaining={payload_end - block_cursor}"
+                        ),
+                        how="provide the base and marker bytes for every 4-by-4 HALF block",
+                    )
+                raise _codec_error(
+                    why="the B44 dense HALF block is truncated",
+                    what=(
+                        f"chunk_y={chunk_y}, channel={channel.name!r}, block=({block_row},{block_column}), "
+                        f"required=14, remaining={payload_end - block_cursor}"
+                    ),
+                    how="provide all 14 bytes for the declared B44 block form",
+                )
+            block_bytes = np.frombuffer(data, dtype=np.uint8, count=required_size, offset=cursor).reshape(-1, 14)
+            invalid_markers = np.flatnonzero(block_bytes[:, 2] >= np.uint8(0x34))
+            if invalid_markers.size:
+                local_block = int(invalid_markers[0])
+                block_row, block_column = divmod(local_block, block_columns)
+                marker = int(block_bytes[local_block, 2])
+                raise _codec_error(
+                    why="the B44 dense block head contains an invalid shift or flat marker",
+                    what=(
+                        f"chunk_y={chunk_y}, channel={channel.name!r}, "
+                        f"block=({block_row},{block_column}), byte2=0x{marker:02x}"
+                    ),
+                    how="encode B44 as a 14-byte dense block with byte[2] below 0x34",
+                )
+            cursor += required_size
+            block_count = blocks_per_half_channel
+            materialized_block_count += block_count
+        else:
+            cursor = _validated_b44a_section_end(
+                data,
+                cursor=cursor,
+                payload_end=payload_end,
+                block_count=blocks_per_half_channel,
+                block_columns=block_columns,
+                chunk_y=chunk_y,
+                channel_name=channel.name,
+            )
+            block_count = blocks_per_half_channel
+            materialized_block_count += block_count
+        sections.append(
+            _B44ChannelSection(
+                channel_index=channel_index,
+                channel_name=channel.name,
+                pixel_type=channel.pixel_type,
+                bytes_per_sample=channel.bytes_per_sample,
+                perceptually_linear=channel.perceptually_linear,
+                payload_span=_ExrByteSpan(section_start, cursor),
+                expected_materialized_size=materialized_size,
+                block_start=block_start,
+                block_count=block_count,
+            )
+        )
+    if cursor != payload_end:
+        raise _codec_error(
+            why=f"the {codec.upper()} channel sections do not consume the chunk payload exactly",
+            what=f"chunk_y={chunk_y}, consumed_end={cursor}, payload_end={payload_end}",
+            how="make the file-channel-order sections cover the compressed payload once with no trailing bytes",
+        )
+    if materialized_block_count != total_block_count:
+        raise AssertionError("B44 block metadata count diverged from the validated channel geometry")
+    section_tuple = tuple(sections)
+    block_sections = tuple(section for section in section_tuple if section.block_count)
+    return section_tuple, _B44Blocks(
+        payload=data,
+        codec=codec,
+        block_sections=block_sections,
+        block_starts=tuple(section.block_start for section in block_sections),
+        block_columns=block_columns,
+        row_start=row_start,
+        row_count=row_count,
+    )
+
+
+@dataclass(frozen=True)
+class _B44ChunkDescriptor(_ExrChunkDescriptor):
+    channel_sections: tuple[_B44ChannelSection, ...]
+    blocks: tuple[_B44Block, ...] | _B44Blocks
+
+
+def _parse_b44_chunk_descriptor(
+    codec: str,
+    data: bytes,
+    channels: Sequence[_ExrChannel],
+    *,
+    width: int,
+    lines_per_chunk: int,
+    chunk_y: int,
+    row_start: int,
+    row_count: int,
+    payload_start: int,
+    payload_end: int,
+    expected_raw_size: int,
+    raw_stored: bool,
+) -> _B44ChunkDescriptor:
+    section_offsets: list[int] = []
+    section_cursor = 0
+    for channel in channels:
+        channel_width, sampled_rows = _chunk_channel_geometry(
+            channel, width=width, chunk_y=chunk_y, row_count=row_count
+        )
+        section_offsets.append(section_cursor)
+        section_cursor += channel_width * channel.bytes_per_sample * sampled_rows
+    raw_rows = _raw_channel_rows(channels, width=width, chunk_y=chunk_y, row_start=row_start, row_count=row_count)
+    channel_rows = []
+    for row in raw_rows:
+        channel = channels[row.channel_index]
+        channel_row = sum(candidate_y % channel.y_sampling == 0 for candidate_y in range(chunk_y, row.file_y))
+        materialized_start = section_offsets[row.channel_index] + channel_row * row.raw_span.size
+        channel_rows.append(
+            replace(row, materialized_span=_ExrByteSpan(materialized_start, materialized_start + row.raw_span.size))
+        )
+    channel_sections: tuple[_B44ChannelSection, ...] = ()
+    blocks: tuple[_B44Block, ...] | _B44Blocks = ()
+    if not raw_stored:
+        channel_sections, blocks = _parse_b44_sections(
+            codec,
+            data,
+            channels,
+            width=width,
+            payload_start=payload_start,
+            payload_end=payload_end,
+            chunk_y=chunk_y,
+            row_start=row_start,
+            row_count=row_count,
+        )
+    return _B44ChunkDescriptor(
+        codec=codec,
+        lines_per_chunk=lines_per_chunk,
+        chunk_y=chunk_y,
+        row_start=row_start,
+        row_count=row_count,
+        payload_span=_ExrByteSpan(payload_start, payload_end),
+        stored_size=payload_end - payload_start,
+        expected_raw_size=expected_raw_size,
+        expected_materialized_size=expected_raw_size,
+        raw_stored=raw_stored,
+        channel_rows=tuple(channel_rows),
+        channel_sections=channel_sections,
+        blocks=blocks,
+    )
+
+
+def _b44_gpu_eligible(channels: Sequence[_ExrChannel], chunks: Sequence[_ExrChunk]) -> bool:
+    return all(
+        channel.pixel_type in (0, 1, 2) and channel.x_sampling == channel.y_sampling == 1 for channel in channels
+    ) and all(chunk.b44 is not None for chunk in chunks)

@@ -46,14 +46,14 @@ dev = [
     "pytest>=8.3.5",
     "ruff>=0.15.22",
     "mypy>=1.0.0",
-    # DLPack interop E2E (v1-frame-core acceptance 12). Not a runtime dependency.
+    # DLPack interop E2E oracle. Not a runtime dependency.
     "torch>=2.8",
-    "opencolorio>=2.3",
-    "pillow>=12.3.0",
+    "opencolorio==2.5.2",
+    "pillow==12.3.0",
     # EXR dev oracle: fixture generation and independent decode only. Not a runtime dependency.
-    "openexr>=3.4",
-    # Font fixture generation (v1-draw-text-user-font): static instancing / collection build only. Not a runtime dependency.
-    "fonttools>=4.60",
+    "openexr==3.4.13",
+    # Font fixture generation for user-font tests: static instancing / collection build only. Not a runtime dependency.
+    "fonttools==4.63.0",
     "mkdocs-material>=9.7.7",
     "mkdocstrings[python]>=1.0.6",
     "colour-science==0.4.7",
@@ -69,6 +69,7 @@ python_functions = ["test_*"]
 addopts = ["--strict-markers", "-m", "not performance"]
 markers = [
     "performance: opt-in performance/timing tests (excluded by default)",
+    "req(id): parent requirement ID in .nf/docs/requirements.md",
 ]
 
 [tool.uv]
@@ -100,7 +101,27 @@ ignore_missing_imports = true
 warn_unused_configs = true
 files = [
     "src/pixtreme",
+    "tools",
+    "tests",
 ]
+# Check development generators and runners; behavior tests are exercised by pytest.
+exclude = '''^tests/(?!generate_|run_)[^/]+\.py$'''
+
+[[tool.mypy.overrides]]
+module = [
+    "lut_shaper_oracle",
+    "p216_oracle",
+    "exr_dwa_performance",
+    "openexr_dev_oracle",
+    "test_from_format_spec",
+    "test_to_format_spec",
+    "exr_visual_comparison",
+    "exr_rle_performance",
+    "exr_pxr24_performance",
+    "exr_b44_performance",
+    "exr_piz_performance",
+]
+follow_imports = "silent"
 
 [tool.hatch.version]
 source = "vcs"

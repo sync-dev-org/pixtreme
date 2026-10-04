@@ -275,9 +275,12 @@ def _pack_v210_row(y: list[int], cb: list[int], cr: list[int], *, width: int) ->
     return words
 
 
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("ndi_shape", (False, True))
 def test_from_uyvy422_accepts_flat_and_ndi_shapes_with_the_same_pixel_layout(ndi_shape: bool) -> None:
-    """v1-format-boundary acceptance 24, 28, and 32: UYVY shape forms decode U0 Y0 V0 Y1 with half-up nearest ties."""
+    """Flat and image-shaped UYVY buffers decode the same interleaved chroma and luma pixels with half-up nearest
+    ties.
+    """
     height, width = 2, 4
     packed = np.asarray(
         [
@@ -315,8 +318,9 @@ def test_from_uyvy422_accepts_flat_and_ndi_shapes_with_the_same_pixel_layout(ndi
     )
 
 
+@pytest.mark.req("REQ-PIX-009")
 def test_from_v210_decodes_words_and_ignores_the_zero_filled_128_byte_row_padding() -> None:
-    """v1-format-boundary acceptance 1, 5, 27, 29, and 33: v210 words and row alignment match a hand-built fixture."""
+    """v210 input decodes packed words and ignores zero-filled padding to each 128-byte row boundary."""
     width, height = 7, 1
     y = [100, 101, 102, 103, 104, 105, 106]
     cb = [200, 201, 202, 203]
@@ -352,6 +356,7 @@ def test_from_v210_decodes_words_and_ignores_the_zero_filled_128_byte_row_paddin
     )
 
 
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize(
     ("name", "bit_depth", "dtype", "container_shift"),
     (("from_nv12", 8, np.uint8, 0), ("from_p010", 10, np.uint16, 6)),
@@ -362,7 +367,7 @@ def test_semiplanar_420_formats_decode_y_then_interleaved_cbcr(
     dtype: type[np.generic],
     container_shift: int,
 ) -> None:
-    """v1-format-boundary acceptance 1, 5, 27, 30, and 33: NV12/P010 share Y + interleaved UV layout, with P010 MSB alignment."""
+    """NV12 and P010 decode a luma plane followed by interleaved Cb and Cr samples, with P010 codes in high bits."""
     height, width = 4, 4
     y = np.arange(height * width, dtype=np.uint16).reshape(height, width) + 64
     cb = np.asarray([[128, 256], [512, 768]], dtype=np.uint16)
@@ -400,6 +405,8 @@ def test_semiplanar_420_formats_decode_y_then_interleaved_cbcr(
     )
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize(
     ("name", "bit_depth", "height", "width", "plane_count", "subsample_x", "subsample_y"),
     (
@@ -422,7 +429,9 @@ def test_planar_bit_depths_use_lower_aligned_codes_and_plane_order(
     subsample_x: int,
     subsample_y: int,
 ) -> None:
-    """v1-format-boundary acceptance 3, 5, 12, 15, 27, 32, and 33: planar bit depths, lower alignment, plane order, and alpha scale are fixed."""
+    """Planar YUV formats decode each supported bit depth from low-aligned codes in the specified plane order and
+    alpha scale.
+    """
     dtype = np.uint8 if bit_depth == 8 else np.uint16
     maximum = (1 << bit_depth) - 1
     y = np.arange(height * width, dtype=np.uint16).reshape(height, width) + maximum // 5
@@ -467,8 +476,11 @@ def test_planar_bit_depths_use_lower_aligned_codes_and_plane_order(
     assert result.channels == (("Y", "Cb", "Cr", "A") if plane_count == 4 else ("Y", "Cb", "Cr"))
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-103")
 def test_from_yuv422p_replaces_the_old_name_and_preserves_ten_bit_range_headroom() -> None:
-    """v1-format-boundary acceptance 4, 12, 16, and 37: renamed 10-bit planar decoding keeps below/above-legal code positions unclipped."""
+    """Ten-bit planar 4:2:2 decoding preserves code values below and above legal range without clipping."""
     y = np.asarray([0, 1023], dtype=np.uint16)
     cb = np.asarray([64], dtype=np.uint16)
     cr = np.asarray([960], dtype=np.uint16)
@@ -497,6 +509,7 @@ def test_from_yuv422p_replaces_the_old_name_and_preserves_ten_bit_range_headroom
     assert not hasattr(px, "from_yuv422p10le")
 
 
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize(
     ("name", "bit_depth", "dtype", "shift", "semiplanar"),
     (
@@ -517,8 +530,8 @@ def test_from_420_carrier_filter_and_siting_match_the_independent_coordinate_ora
     siting: str,
     interpolation: str,
 ) -> None:
-    """v1-chroma-siting-h273 acceptance 2, 4, and 6; v1-format-boundary acceptance 18, 20-22, 24-26, and 35:
-    every 420 carrier/filter/siting combination follows the independent H.273 coordinates.
+    """Every 4:2:0 carrier, interpolation, and chroma siting combination follows the independent H.273 sampling
+    coordinates.
     """
     height, width = 6, 8
     maximum = (1 << bit_depth) - 1
@@ -561,9 +574,10 @@ def test_from_420_carrier_filter_and_siting_match_the_independent_coordinate_ora
     )
 
 
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("interpolation", INTERPOLATIONS)
 def test_from_yuv422p_uses_the_same_horizontal_filter_family_without_vertical_filtering(interpolation: str) -> None:
-    """v1-format-boundary acceptance 19, 21, 22, 24-26, and 35: 422 is horizontally co-sited and vertically full."""
+    """Planar 4:2:2 decoding applies its selected horizontal interpolation without filtering vertically."""
     height, width = 2, 6
     y = np.arange(height * width, dtype=np.uint8).reshape(height, width) + 32
     cb = np.asarray([[16, 96, 240], [240, 96, 16]], dtype=np.uint8)
@@ -598,6 +612,7 @@ def test_from_yuv422p_uses_the_same_horizontal_filter_family_without_vertical_fi
     )
 
 
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize(
     ("name", "bit_depth", "dtype", "shift"),
     (("from_nv12", 8, np.uint8, 0), ("from_p010", 10, np.uint16, 6)),
@@ -608,7 +623,7 @@ def test_semiplanar_formats_share_center_sited_lanczos_mapping(
     dtype: type[np.generic],
     shift: int,
 ) -> None:
-    """v1-format-boundary acceptance 18, 21, 22, 26, and 35: NV12/P010 use the same siting/filter coordinates as planar 420."""
+    """NV12 and P010 use the same center-sited Lanczos sampling coordinates as planar 4:2:0."""
     height, width = 6, 8
     maximum = (1 << bit_depth) - 1
     y = np.arange(height * width, dtype=np.uint16).reshape(height, width) * 3 & maximum
@@ -645,10 +660,9 @@ def test_semiplanar_formats_share_center_sited_lanczos_mapping(
     )
 
 
+@pytest.mark.req("REQ-PIX-009")
 def test_siting_tokens_have_numerically_distinct_impulse_centroids() -> None:
-    """v1-chroma-siting-h273 acceptance 2 and 7; v1-format-boundary acceptance 18 and 37:
-    an interior chroma impulse distinguishes all six H.273 frame positions by centroid.
-    """
+    """The six H.273 chroma siting choices produce distinct impulse centroids in 4:2:0 decoding."""
     height = width = 12
     y = np.zeros((height, width), dtype=np.uint8)
     cb = np.zeros((height // 2, width // 2), dtype=np.uint8)
@@ -676,6 +690,8 @@ def test_siting_tokens_have_numerically_distinct_impulse_centroids() -> None:
     assert len(set(centroids.values())) == 6
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize(
     ("name", "source", "dtype", "kwargs", "channels"),
     (
@@ -726,7 +742,7 @@ def test_all_from_formats_return_fixed_contiguous_fp32_placeholder_frames(
     kwargs: dict[str, int],
     channels: tuple[str, ...],
 ) -> None:
-    """v1-format-boundary acceptance 1 and 32: all eight entries return fixed-metadata contiguous fp32 Frames."""
+    """Every supported YUV input returns a contiguous float32 Frame with the documented placeholder color metadata."""
     result = getattr(px.io, name)(_device(source, dtype=dtype), **kwargs)
 
     assert isinstance(result, px.core.Frame)
@@ -736,9 +752,11 @@ def test_all_from_formats_return_fixed_contiguous_fp32_placeholder_frames(
     assert (result.colorspace, result.gamma, result.channels) == ("Rec.709", "Rec.709", channels)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize("name", [case[0] for case in FROM_FORMAT_CASES])
 def test_from_format_signatures_expose_keyword_only_metadata_overrides(name: str) -> None:
-    """v1-from-format-metadata acceptance 1: all eight signatures expose optional keyword-only metadata claims."""
+    """Every YUV input function exposes optional keyword-only color metadata overrides."""
     parameters = inspect.signature(getattr(px.io, name)).parameters
 
     for axis, annotation in (("colorspace", "Colorspace | None"), ("gamma", "Gamma | None")):
@@ -748,6 +766,8 @@ def test_from_format_signatures_expose_keyword_only_metadata_overrides(name: str
         assert parameter.default is None
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize(
     ("colorspace", "gamma", "expected"),
     (
@@ -771,7 +791,7 @@ def test_from_format_metadata_overrides_resolve_independently_over_placeholders(
     gamma: str | None,
     expected: tuple[str, str],
 ) -> None:
-    """v1-from-format-metadata acceptance 1-2: None preserves each placeholder and explicit claims win per axis."""
+    """Each explicit color metadata override replaces only its corresponding placeholder in a decoded YUV Frame."""
     result = getattr(px.io, name)(
         _device(source, dtype=dtype),
         **kwargs,
@@ -782,6 +802,9 @@ def test_from_format_metadata_overrides_resolve_independently_over_placeholders(
     assert (result.colorspace, result.gamma) == expected
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("axis", "accepted"),
     (("colorspace", COLORSPACES), ("gamma", GAMMAS), ("matrix", MATRICES)),
@@ -799,13 +822,8 @@ def test_from_format_metadata_tokens_match_frame_assignment_domains(
     axis: str,
     accepted: tuple[str, ...],
 ) -> None:
-    """v1-io-icc acceptance 1 and 3; v1-from-format-metadata acceptance 3;
-    v1-color-semantics acceptance 5 and 27;
-    v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 17; v1-blackmagic-tokens acceptance 34;
-    v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 77; v1-panasonic-tokens acceptance 99-100;
-    v1-vendor-a-tokens acceptance 141 and 160; v1-vendor-b-tokens acceptance 167 and 187.
-
-    Format metadata uses the Frame token domains and rejects values outside them.
+    """YUV input metadata accepts the same names as Frame metadata assignment and rejects names outside those
+    domains.
     """
     function = getattr(px.io, name)
     device_source = _device(source, dtype=dtype)
@@ -820,6 +838,8 @@ def test_from_format_metadata_tokens_match_frame_assignment_domains(
     assert repr(accepted) in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize(
     ("name", "source", "dtype", "kwargs"),
     FROM_FORMAT_CASES,
@@ -831,7 +851,7 @@ def test_from_format_metadata_overrides_do_not_change_pixels(
     dtype: type[np.generic],
     kwargs: dict[str, int],
 ) -> None:
-    """v1-from-format-metadata acceptance 4: metadata claims leave decoded pixels bit-identical."""
+    """Changing YUV input metadata claims leaves the decoded pixel values bit identical."""
     import cupy as cp
 
     device_source = _device(source, dtype=dtype)
@@ -848,6 +868,8 @@ def test_from_format_metadata_overrides_do_not_change_pixels(
     )
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-009")
 @pytest.mark.parametrize(
     ("name", "source", "dtype", "kwargs"),
     FROM_FORMAT_CASES,
@@ -859,7 +881,7 @@ def test_from_format_frames_still_allow_post_construction_metadata_correction(
     dtype: type[np.generic],
     kwargs: dict[str, int],
 ) -> None:
-    """v1-from-format-metadata acceptance 5: validated attribute assignment remains a pixel-neutral correction path."""
+    """A decoded YUV Frame permits validated color metadata corrections without changing pixel values."""
     import cupy as cp
 
     result = getattr(px.io, name)(_device(source, dtype=dtype), **kwargs)
@@ -879,6 +901,8 @@ def test_from_format_frames_still_allow_post_construction_metadata_correction(
     )
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "source", "dtype", "kwargs"),
     (
@@ -898,18 +922,18 @@ def test_all_from_formats_reject_unknown_range_tokens_actionably(
     dtype: type[np.generic],
     kwargs: dict[str, int],
 ) -> None:
-    """v1-format-boundary acceptance 11; v1-token-vocabulary acceptance 7: unknown range tokens fail fast."""
+    """Every YUV input rejects an unknown range name and lists accepted range choices."""
     with pytest.raises(ValueError) as error:
         getattr(px.io, name)(_device(source, dtype=dtype), range="studio", **kwargs)
     _actionable(error)
     assert "('legal', 'full')" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("name", ("from_yuv420p", "from_nv12", "from_p010"))
 def test_420_formats_reject_unknown_siting_and_interpolation_tokens_actionably(name: str) -> None:
-    """v1-chroma-siting-h273 acceptance 9; v1-format-boundary acceptance 11, 18, and 21:
-    420 token axes enumerate accepted recovery values.
-    """
+    """YUV 4:2:0 input rejects unknown siting and interpolation names and lists accepted choices."""
     dtype = np.uint16 if name == "from_p010" else np.uint8
     source = _device(np.zeros(6), dtype=dtype)
 
@@ -925,6 +949,9 @@ def test_420_formats_reject_unknown_siting_and_interpolation_tokens_actionably(n
     assert repr(INTERPOLATIONS) in str(interpolation_error.value)
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "valid_depths", "invalid_depth"),
     (
@@ -938,9 +965,7 @@ def test_420_formats_reject_unknown_siting_and_interpolation_tokens_actionably(n
 def test_planar_formats_reject_bit_depths_outside_their_closed_domains(
     name: str, valid_depths: tuple[int, ...], invalid_depth: int
 ) -> None:
-    """v1-format-boundary acceptance 3 and 11; v1-p216-wire-format acceptance 19:
-    planar bit_depth stays closed; adding P216 must not enable planar 16-bit input.
-    """
+    """Planar YUV input rejects bit depths outside each format's supported set, including 16-bit planar input."""
     source = _device(np.zeros(4 if invalid_depth == 16 else 6), dtype=np.uint16 if invalid_depth == 16 else np.uint8)
     kwargs = {"width": 2, "height": 2} if name == "from_yuv420p" else {"width": 2, "height": 1}
 
@@ -950,6 +975,8 @@ def test_planar_formats_reject_bit_depths_outside_their_closed_domains(
     assert repr(valid_depths) in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "source", "dtype", "kwargs"),
     (
@@ -969,7 +996,7 @@ def test_from_formats_reject_non_cupy_wrong_dtype_size_and_noncontiguous_buffers
     dtype: type[np.generic],
     kwargs: dict[str, int],
 ) -> None:
-    """v1-format-boundary acceptance 5, 27-30, and 37: buffer type, dtype, exact layout size, and contiguity fail fast."""
+    """YUV input rejects buffers with the wrong device, dtype, size, shape, or memory contiguity before decoding."""
     import cupy as cp
 
     function: Callable[..., object] = getattr(px.io, name)
@@ -995,6 +1022,8 @@ def test_from_formats_reject_non_cupy_wrong_dtype_size_and_noncontiguous_buffers
     _actionable(contiguous_error)
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "source", "kwargs", "bad_width", "bad_height"),
     (
@@ -1012,7 +1041,7 @@ def test_subsampled_even_dimension_constraints_fail_fast(
     bad_width: int,
     bad_height: int,
 ) -> None:
-    """v1-format-boundary acceptance 10 and 37: 420 requires even width/height and 422 requires even width."""
+    """Subsampled YUV input requires even width and height for 4:2:0 and even width for 4:2:2."""
     dtype = np.uint16 if name == "from_p010" else np.uint8
     valid = _device(source, dtype=dtype)
     with pytest.raises(ValueError) as width_error:
@@ -1023,8 +1052,10 @@ def test_subsampled_even_dimension_constraints_fail_fast(
     _actionable(height_error)
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-017")
 def test_v210_accepts_odd_width_but_requires_the_aligned_row_word_count() -> None:
-    """v1-format-boundary acceptance 10, 29, and 37: v210 has no even-width restriction and validates 128-byte row storage."""
+    """v210 input accepts odd widths when the buffer contains the full aligned word count for every row."""
     source = _device(np.zeros(32), dtype=np.uint32)
     result = px.io.from_v210(source, width=1, height=1, interpolation="nearest")
     assert result.shape == (1, 1, 3)
@@ -1035,10 +1066,12 @@ def test_v210_accepts_odd_width_but_requires_the_aligned_row_word_count() -> Non
     assert "32" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-018")
 def test_from_format_kernel_entries_are_declared_and_each_public_call_launches_once(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-format-boundary acceptance 25: factories bind declared entries and public paths launch one fused pass."""
+    """Each public YUV input calls its declared GPU kernel once to decode a buffer."""
     import pixtreme._io.wire.uyvy422 as subsampled_module
     import pixtreme._io.wire.yuv444p as planar_module
 

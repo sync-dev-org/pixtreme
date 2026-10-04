@@ -41,8 +41,10 @@ def _host(frame: px.core.Frame) -> np.ndarray:
     ).get()
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 def test_recode_dtype_is_public_with_the_exact_dtype_signature() -> None:
-    """v1-recode-dtype acceptance 1 and 11: the public operation has one required keyword-only dtype claim."""
+    """The public pixel dtype conversion accepts one required keyword-only target dtype."""
     operation = getattr(px.values, "recode_dtype")
     signature = inspect.signature(operation)
 
@@ -53,19 +55,24 @@ def test_recode_dtype_is_public_with_the_exact_dtype_signature() -> None:
     assert signature.parameters["dtype"].default is inspect.Parameter.empty
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("invalid", ("fp32", "float64", "int32", "uint64", None, 1, True, ("float32",)))
 def test_recode_dtype_rejects_values_outside_the_five_token_closed_set(invalid: object) -> None:
-    """v1-exr-runtime-independence acceptance 9; v1-token-vocabulary acceptance 7: dtype stays a five-token family."""
+    """Pixel dtype conversion rejects names outside its five supported dtypes with actionable guidance."""
     with pytest.raises(ValueError, match=r"float32.*float16.*uint8.*uint16.*uint32"):
         getattr(px.values, "recode_dtype")(_frame([0.0, 0.5, 1.0], dtype="float32"), dtype=invalid)
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 def test_recode_dtype_rejects_non_frames() -> None:
-    """v1-recode-dtype acceptance 1: the operation requires a Frame input."""
+    """Pixel dtype conversion requires a Frame and rejects other input types."""
     with pytest.raises(ValueError, match="Frame"):
         getattr(px.values, "recode_dtype")(object(), dtype="float32")
 
 
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(
     ("source_dtype", "target_dtype", "maximum", "codes"),
     (
@@ -83,7 +90,7 @@ def test_uint_to_float_maps_the_complete_container_code_range(
     maximum: int,
     codes: list[int],
 ) -> None:
-    """v1-exr-runtime-independence acceptance 9: uint codes divide by their full container maximum."""
+    """Integer-to-float conversion maps the complete container code range by its full-scale maximum."""
     source_codes = np.asarray(codes, dtype=source_dtype)
     expected = (source_codes.astype(np.float32) * np.float32(1.0 / maximum)).astype(target_dtype)
 
@@ -93,9 +100,10 @@ def test_uint_to_float_maps_the_complete_container_code_range(
     np.testing.assert_array_equal(_host(result).reshape(-1), expected)
 
 
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(("source_dtype", "bit_depth"), (("uint8", 8), ("uint16", 16)))
 def test_uint_to_float32_is_bit_identical_to_dequantize_values(source_dtype: str, bit_depth: int) -> None:
-    """v1-recode-dtype acceptance 2: the everyday uint-to-fp32 lane equals full-container dequantization."""
+    """Converting integer pixels to float32 matches full-container dequantization bit for bit."""
     maximum = (1 << bit_depth) - 1
     codes = np.linspace(0, maximum, num=257, dtype=np.uint16).astype(source_dtype)
     source = _frame(codes, dtype=source_dtype, channels=[f"code-{index}" for index in range(codes.size)])
@@ -106,12 +114,13 @@ def test_uint_to_float32_is_bit_identical_to_dequantize_values(source_dtype: str
     np.testing.assert_array_equal(_host(result), _host(expected))
 
 
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(("target_dtype", "bit_depth"), (("uint8", 8), ("uint16", 16)))
 def test_float32_to_uint_clips_scales_and_rounds_half_away_from_zero(
     target_dtype: str,
     bit_depth: int,
 ) -> None:
-    """v1-recode-dtype acceptance 3: float conversion uses full scale and upward half ties after clipping."""
+    """Float32-to-integer conversion clips to the container range and rounds scaled half ties away from zero."""
     maximum = (1 << bit_depth) - 1
     values = np.asarray(
         [-1.0, 0.0, 0.5 / maximum, 1.5 / maximum, 0.5, (maximum - 0.5) / maximum, 1.0, 2.0],
@@ -125,9 +134,10 @@ def test_float32_to_uint_clips_scales_and_rounds_half_away_from_zero(
     np.testing.assert_array_equal(_host(result).reshape(-1), expected)
 
 
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(("target_dtype", "bit_depth"), (("uint8", 8), ("uint16", 16)))
 def test_float32_to_uint_is_bit_identical_to_quantize_values(target_dtype: str, bit_depth: int) -> None:
-    """v1-recode-dtype acceptance 3: the everyday fp32-to-uint lane equals full-container quantization."""
+    """Converting float32 pixels to integers matches full-container quantization bit for bit."""
     values = np.linspace(-0.25, 1.25, num=1025, dtype=np.float32)
     source = _frame(values, dtype="float32", channels=[f"value-{index}" for index in range(values.size)])
 
@@ -137,8 +147,9 @@ def test_float32_to_uint_is_bit_identical_to_quantize_values(target_dtype: str, 
     np.testing.assert_array_equal(_host(result), _host(expected))
 
 
+@pytest.mark.req("REQ-PIX-008")
 def test_float32_to_uint32_clips_scales_and_rounds_half_away_from_zero() -> None:
-    """v1-exr-runtime-independence acceptance 9: float to uint32 uses the 4294967295 full-scale grid."""
+    """Float32-to-uint32 conversion clips and rounds on the 4294967295-code full-scale grid."""
     maximum = 4294967295
     values = np.asarray([-1.0, 0.0, 0.25, 0.5, 0.75, 1.0, 2.0], dtype=np.float32)
     expected = np.floor(np.clip(values.astype(np.float64), 0.0, 1.0) * maximum + 0.5).astype(np.uint32)
@@ -149,6 +160,7 @@ def test_float32_to_uint32_clips_scales_and_rounds_half_away_from_zero() -> None
     np.testing.assert_array_equal(_host(result).reshape(-1), expected)
 
 
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(
     ("source_dtype", "target_dtype", "codes"),
     (
@@ -161,7 +173,7 @@ def test_float32_to_uint32_clips_scales_and_rounds_half_away_from_zero() -> None
 def test_uint32_integer_pairs_match_exact_full_scale_host_arithmetic(
     source_dtype: str, target_dtype: str, codes: list[int]
 ) -> None:
-    """v1-exr-runtime-independence acceptance 9: integer recodes use exact full-scale half-up arithmetic."""
+    """Conversions between uint32 and other integer dtypes match exact full-scale host arithmetic."""
     source = np.asarray(codes, dtype=source_dtype)
     source_maximum = int(np.iinfo(source_dtype).max)
     target_maximum = int(np.iinfo(target_dtype).max)
@@ -175,11 +187,12 @@ def test_uint32_integer_pairs_match_exact_full_scale_host_arithmetic(
     np.testing.assert_array_equal(_host(result).reshape(-1), expected)
 
 
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(
     ("target_dtype", "expected"), (("uint8", [0, 0, 128, 255, 255]), ("uint16", [0, 0, 32768, 65535, 65535]))
 )
 def test_float16_to_uint_preserves_normalized_meaning(target_dtype: str, expected: list[int]) -> None:
-    """v1-recode-dtype acceptance 3: float16 values use the same normalized clip-and-scale meaning."""
+    """Float16-to-integer conversion preserves normalized value through clipping and full-scale quantization."""
     source = _frame([-1.0, 0.0, 0.5, 1.0, 2.0], dtype="float16")
 
     result = getattr(px.values, "recode_dtype")(source, dtype=target_dtype)
@@ -187,10 +200,12 @@ def test_float16_to_uint_preserves_normalized_meaning(target_dtype: str, expecte
     np.testing.assert_array_equal(_host(result).reshape(-1), np.asarray(expected, dtype=target_dtype))
 
 
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("source_dtype", ("float32", "float16"))
 @pytest.mark.parametrize("target_dtype", ("float32", "float16"))
 def test_float_to_float_is_bit_identical_to_literal_cast(source_dtype: str, target_dtype: str) -> None:
-    """v1-recode-dtype acceptance 4: float pairs apply literal casting with no scale or clipping."""
+    """Float-to-float dtype conversion matches literal casting without scaling or clipping scene values."""
     source = _frame([-2.0, -0.0, 0.1, 1.0, 7.75], dtype=source_dtype)
 
     result = getattr(px.values, "recode_dtype")(source, dtype=target_dtype)
@@ -199,8 +214,9 @@ def test_float_to_float_is_bit_identical_to_literal_cast(source_dtype: str, targ
     np.testing.assert_array_equal(_host(result), _host(expected))
 
 
+@pytest.mark.req("REQ-PIX-008")
 def test_uint8_to_uint16_is_exactly_code_times_257_and_round_trips() -> None:
-    """v1-recode-dtype acceptance 5: all uint8 codes widen exactly and survive the two-way recode."""
+    """Every uint8 code widens to its value times 257 and survives a uint16-to-uint8 round trip."""
     codes = np.arange(256, dtype=np.uint8)
     source = _frame(codes, dtype="uint8", channels=[f"code-{index}" for index in range(codes.size)])
 
@@ -211,8 +227,9 @@ def test_uint8_to_uint16_is_exactly_code_times_257_and_round_trips() -> None:
     np.testing.assert_array_equal(_host(restored), _host(source))
 
 
+@pytest.mark.req("REQ-PIX-008")
 def test_uint16_to_uint8_uses_divide_by_257_equivalent_rounding() -> None:
-    """v1-recode-dtype acceptance 5: narrowing follows normalized rescale with half-away rounding."""
+    """Narrowing uint16 codes to uint8 follows normalized scaling with half-away rounding."""
     codes = np.asarray([0, 1, 128, 129, 257, 385, 386, 65406, 65407, 65535], dtype=np.uint16)
     expected = np.asarray([0, 0, 0, 1, 1, 1, 2, 254, 255, 255], dtype=np.uint8)
 
@@ -221,15 +238,16 @@ def test_uint16_to_uint8_uses_divide_by_257_equivalent_rounding() -> None:
     np.testing.assert_array_equal(_host(result).reshape(-1), expected)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("source_dtype", DTYPES)
 @pytest.mark.parametrize("target_dtype", DTYPES)
 def test_every_dtype_pair_returns_private_storage_and_preserves_metadata(
     source_dtype: str,
     target_dtype: str,
 ) -> None:
-    """v1-recode-dtype acceptance 6; v1-exr-runtime-independence acceptance 9.
-
-    All 25 pairs allocate private storage and preserve metadata and input.
+    """Every supported dtype conversion returns private storage, preserves color metadata, and leaves the input
+    unchanged.
     """
     values = [0, 1, 2] if source_dtype.startswith("uint") else [-0.25, 0.5, 1.25]
     source = _frame(

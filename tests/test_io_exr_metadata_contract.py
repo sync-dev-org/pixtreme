@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
 from generate_io_fixtures import write_exr
 from numpy.typing import NDArray
 
@@ -22,8 +23,11 @@ _ACES_CHROMATICITIES = (
 )
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 def test_exr_metadata_priority_default_channels_explicit_order_and_header_are_preserved(tmp_path: Path) -> None:
-    """v1-exr-runtime-independence acceptance 5: runtime independence preserves EXR metadata and channel order."""
+    """EXR reads preserve file color metadata, default channel selection, explicit channel order, and header
+    information."""
     channels: dict[str, NDArray[np.float16]] = {
         "R": np.full((2, 3), 1.0, dtype=np.float16),
         "G": np.full((2, 3), 2.0, dtype=np.float16),

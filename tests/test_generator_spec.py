@@ -9,6 +9,7 @@ from typing import Any
 
 import numpy as np
 import pytest
+from transfer_capture import capture_array_transfers
 
 import pixtreme as px
 import pixtreme._generate.patterns as generate_module
@@ -47,8 +48,9 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError]) -> None:
     assert "; how=" in message
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_generator_host_array_conversion_failure_is_actionable() -> None:
-    """REQ-API-012: generator host-array conversion reports the rejected value and a concrete recovery."""
+    """For image generation, generator host-array conversion reports the rejected value and a concrete recovery."""
     value = ((1.0,), (1.0, 2.0))
     with pytest.raises(ValueError) as error:
         generate_module._host_array(value)
@@ -258,8 +260,9 @@ def _narrow_normalized(code: np.ndarray) -> np.ndarray:
     return (code.astype(np.float32) - np.float32(64.0)) / np.float32(876.0)
 
 
+@pytest.mark.req("REQ-PIX-013")
 def test_generator_public_signatures_are_keyword_only_and_minimal() -> None:
-    """v1-derivative-filters acceptance 17: generators stay in the expanded 68-point public surface."""
+    """Public image generators expose only their documented keyword arguments."""
     expected = {
         "ramp": (
             ("width", inspect.Parameter.empty),
@@ -311,15 +314,19 @@ def test_generator_public_signatures_are_keyword_only_and_minimal() -> None:
     assert len(px.generate.__all__) == 7
 
 
+@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("name", GENERATOR_NAMES)
 @pytest.mark.parametrize("axis,value", (("width", 0), ("height", -1), ("width", 1.5), ("height", True)))
 def test_generator_dimensions_are_positive_non_bool_integers(name: str, axis: str, value: object) -> None:
-    """v1-generator acceptance 2: width and height reject non-positive and non-integer values with recovery."""
+    """For image generation, width and height reject non-positive and non-integer values with recovery."""
     with pytest.raises(ValueError) as error:
         getattr(px.generate, name)(**(_base_kwargs(name) | {axis: value}))
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "axis", "token", "accepted"),
     (
@@ -335,13 +342,15 @@ def test_generator_dimensions_are_positive_non_bool_integers(name: str, axis: st
 def test_generator_tokens_fail_fast_and_list_the_vocabulary(
     name: str, axis: str, token: str, accepted: tuple[str, ...]
 ) -> None:
-    """v1-generator acceptance 3-8; v1-token-vocabulary acceptance 7: every named axis remains closed."""
+    """Image generators reject unknown named options and list their accepted values."""
     with pytest.raises(ValueError) as error:
         getattr(px.generate, name)(**(_base_kwargs(name) | {axis: token}))
     _assert_actionable(error)
     assert all(candidate in str(error.value) for candidate in accepted)
 
 
+@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "overrides"),
     (
@@ -358,12 +367,14 @@ def test_generator_tokens_fail_fast_and_list_the_vocabulary(
 def test_generator_color_inputs_validate_shape_count_finiteness_and_matching(
     name: str, overrides: dict[str, object]
 ) -> None:
-    """v1-generator acceptance 9-10 and 13: color sequences are finite, length 1/3/4, and structurally aligned."""
+    """For image generation, color sequences are finite, length 1/3/4, and structurally aligned."""
     with pytest.raises(ValueError) as error:
         getattr(px.generate, name)(**(_base_kwargs(name) | overrides))
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("name", "overrides"),
     (
@@ -382,12 +393,15 @@ def test_generator_color_inputs_validate_shape_count_finiteness_and_matching(
 def test_generator_geometry_rejects_nonfinite_nonpositive_or_undefined_values(
     name: str, overrides: dict[str, object]
 ) -> None:
-    """v1-generator acceptance 11-14: geometry is finite, positive where dimensional, and ramp direction is defined."""
+    """For image generation, geometry is finite, positive where dimensional, and ramp direction is defined."""
     with pytest.raises(ValueError) as error:
         getattr(px.generate, name)(**(_base_kwargs(name) | overrides))
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize(
     ("colors", "channels"),
     (((-2.0,), ("Y",)), ((-2.0, 0.5, 3.0), ("R", "G", "B")), ((-2.0, 0.5, 3.0, 4.0), ("R", "G", "B", "A"))),
@@ -395,7 +409,7 @@ def test_generator_geometry_rejects_nonfinite_nonpositive_or_undefined_values(
 def test_numeric_generators_allocate_private_fp32_hwc_and_derive_channels(
     colors: tuple[float, ...], channels: tuple[str, ...]
 ) -> None:
-    """v1-generator acceptance 15-17 and 27: numeric generators return private contiguous fp32 Frames with scene values."""
+    """For image generation, numeric generators return private contiguous fp32 Frames with scene values."""
     ramp = px.generate.ramp(
         width=4,
         height=3,
@@ -440,9 +454,10 @@ def test_numeric_generators_allocate_private_fp32_hwc_and_derive_channels(
     assert len({frame.data.data.ptr for frame in (ramp, grid, checker)}) == 3
 
 
+@pytest.mark.req("REQ-PIX-013")
 @pytest.mark.parametrize("kind", KINDS)
 def test_ramp_matches_independent_fp32_pixel_center_oracle(kind: str) -> None:
-    """v1-generator acceptance 20-22 and 27: linear/radial ramps use pixel centers, saturation, and direct-space fp32 mix."""
+    """For image generation, linear/radial ramps use pixel centers, saturation, and direct-space fp32 mix."""
     kwargs = {
         "width": 8,
         "height": 6,
@@ -459,9 +474,10 @@ def test_ramp_matches_independent_fp32_pixel_center_oracle(kind: str) -> None:
     np.testing.assert_allclose(_host(result), expected, rtol=2e-6, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-013")
 @pytest.mark.parametrize("aa", AAS)
 def test_grid_matches_independent_periodic_coverage_oracle_without_double_composite(aa: str) -> None:
-    """v1-generator acceptance 20, 23, and 25-27: grid coverage is periodic, symmetric, unioned, and AA-selectable."""
+    """For image generation, grid coverage is periodic, symmetric, unioned, and AA-selectable."""
     kwargs = {
         "width": 9,
         "height": 7,
@@ -491,9 +507,10 @@ def test_grid_matches_independent_periodic_coverage_oracle_without_double_compos
         )
 
 
+@pytest.mark.req("REQ-PIX-013")
 @pytest.mark.parametrize("aa", AAS)
 def test_checkerboard_matches_independent_periodic_coverage_oracle(aa: str) -> None:
-    """v1-generator acceptance 20 and 24-27: checker cells start with color one at the origin and honor all AA modes."""
+    """For image generation, checker cells start with color one at the origin and honor all AA modes."""
     kwargs = {
         "width": 9,
         "height": 7,
@@ -515,9 +532,10 @@ def test_checkerboard_matches_independent_periodic_coverage_oracle(aa: str) -> N
     np.testing.assert_allclose(_host(result), expected, rtol=2e-6, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-013")
 @pytest.mark.parametrize("name", ("grid", "checkerboard"))
 def test_periodic_generators_are_bit_identical_after_one_cell_offset(name: str) -> None:
-    """v1-generator acceptance 19 and 26: adding a full cell period to offset preserves bit-identical output."""
+    """For image generation, adding a full cell period to offset preserves bit-identical output."""
     kwargs = _base_kwargs(name) | {"cell": (3.25, 2.5), "offset": (-0.375, 0.625)}
     shifted = kwargs | {"offset": (kwargs["offset"][0] + 3.25, kwargs["offset"][1] + 2.5)}
     first = getattr(px.generate, name)(**kwargs)
@@ -525,6 +543,8 @@ def test_periodic_generators_are_bit_identical_after_one_cell_offset(name: str) 
     np.testing.assert_array_equal(_host(first), _host(second))
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-013")
 @pytest.mark.parametrize(
     ("standard", "colorspace", "gamma"),
     (
@@ -540,7 +560,7 @@ def test_periodic_generators_are_bit_identical_after_one_cell_offset(name: str) 
 def test_color_bar_standards_determine_metadata_dtype_and_deterministic_storage(
     standard: str, colorspace: str, gamma: str
 ) -> None:
-    """v1-generator acceptance 15 and 18-19, 28, and 32: standard/output determine metadata, dtype, and exact repeatability."""
+    """For image generation, standard/output determine metadata, dtype, and exact repeatability."""
     normalized = px.generate.color_bars(width=32, height=18, standard=standard)
     repeated = px.generate.color_bars(width=32, height=18, standard=standard)
     code = px.generate.color_bars(width=32, height=18, standard=standard, output="code")
@@ -562,8 +582,9 @@ def test_color_bar_standards_determine_metadata_dtype_and_deterministic_storage(
     np.testing.assert_array_equal(_host(normalized), _host(repeated))
 
 
+@pytest.mark.req("REQ-PIX-013")
 def test_std_b28_and_rp219_match_normative_code_geometry_and_normalization() -> None:
-    """v1-generator acceptance 29-35: STD-B28/RP219 share the normative four-pattern geometry, codes, PLUGE, and ramp."""
+    """STD-B28 and RP219 color bars follow their defined geometry, code values, PLUGE, and ramp normalization."""
     arib = px.generate.color_bars(width=1920, height=1080, standard="ARIB-STD-B28", output="code")
     rp219 = px.generate.color_bars(width=1920, height=1080, standard="SMPTE-RP219", output="code")
     code = _host(arib)
@@ -610,6 +631,7 @@ def test_std_b28_and_rp219_match_normative_code_geometry_and_normalization() -> 
     assert normalized[810, 1131, 0] < 0.0
 
 
+@pytest.mark.req("REQ-PIX-013")
 @pytest.mark.parametrize(
     ("standard", "main_high", "grey", "bottom_left", "bottom_right"),
     (
@@ -643,7 +665,7 @@ def test_bt2111_variants_match_named_widths_levels_staircase_ramp_and_bottom_ref
     bottom_left: tuple[tuple[int, int, int], ...],
     bottom_right: tuple[tuple[int, int, int], ...],
 ) -> None:
-    """v1-generator acceptance 30 and 32-35: BT.2111 variants follow the normative 2K regions and code tables."""
+    """BT.2111 color bars follow the defined two kilopixel regions, levels, staircase, and bottom references."""
     code = _host(px.generate.color_bars(width=1920, height=1080, standard=standard, output="code"))
     low = 0 if standard == "BT.2111-PQ-full" else 64
     top_high = 1023 if standard == "BT.2111-PQ-full" else 940
@@ -718,8 +740,9 @@ def test_bt2111_variants_match_named_widths_levels_staircase_ramp_and_bottom_ref
     np.testing.assert_array_equal(normalized, expected_normalized)
 
 
+@pytest.mark.req("REQ-PIX-013")
 def test_full_field_bar_variants_keep_white_at_100_and_change_only_coloured_maximum() -> None:
-    """v1-generator acceptance 28 and 30: BT.471 full-field variants use eight bars and 100/0/100/0 vs 100/0/75/0 codes."""
+    """BT.471 full field variants keep white at 100 percent and change only the colored bar maximum."""
     full = _host(px.generate.color_bars(width=80, height=3, standard="full-100", output="code"))
     seventy_five = _host(px.generate.color_bars(width=80, height=3, standard="full-75", output="code"))
     expected_full = (
@@ -746,9 +769,10 @@ def test_full_field_bar_variants_keep_white_at_100_and_change_only_coloured_maxi
     assert _runs(seventy_five[0]) == [(value, 10) for value in expected_seventy_five]
 
 
+@pytest.mark.req("REQ-PIX-013")
 @pytest.mark.parametrize("standard", STANDARDS)
 def test_color_bars_scale_boundaries_to_tiny_frames_without_gaps_or_minimum_size_errors(standard: str) -> None:
-    """v1-generator acceptance 33 and 36: proportional rounded boundaries fill arbitrary and one-pixel frames."""
+    """For image generation, proportional rounded boundaries fill arbitrary and one-pixel frames."""
     tiny = px.generate.color_bars(width=1, height=1, standard=standard, output="code")
     scaled = px.generate.color_bars(width=19, height=13, standard=standard, output="code")
     assert tiny.shape == (1, 1, 3)
@@ -757,8 +781,11 @@ def test_color_bars_scale_boundaries_to_tiny_frames_without_gaps_or_minimum_size
     assert np.all(_host(scaled) <= 1023)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("REQ-PIX-017")
 def test_generator_docstrings_state_llm_readable_geometry_metadata_and_output_contracts() -> None:
-    """v1-generator acceptance 38: public docstrings expose coordinates, values, metadata, normalization, and code output."""
+    """For image generation, public docstrings expose coordinates, values, metadata, normalization, and code output."""
     combined = "\n".join(inspect.getdoc(getattr(px.generate, name)) or "" for name in GENERATOR_NAMES)
     for required in (
         "(x, y)",
@@ -780,12 +807,16 @@ def test_generator_docstrings_state_llm_readable_geometry_metadata_and_output_co
         assert required in combined
 
 
-def test_generators_use_rawkernel_per_pixel_evaluation() -> None:
-    """v1-generator acceptance 1 and 35: structural contract fixes CUDA RawKernel generation without host image synthesis."""
-    import pixtreme._generate.patterns as generate_module
+@pytest.mark.req("REQ-PIX-018")
+def test_generators_keep_pixels_on_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Image generators produce pixels without transferring them between CPU and GPU.
 
-    source = inspect.getsource(generate_module._generate_geometry) + inspect.getsource(generate_module.color_bars)
-    assert "cp.RawKernel" in inspect.getsource(generate_module._geometry_kernel)
-    assert "cp.RawKernel" in inspect.getsource(generate_module._color_bars_kernel)
-    assert "ElementwiseKernel" not in source
-    assert "cp.asnumpy" not in source
+    Pixel data transfers are counted; short control-data transfers independent of image size are excluded.
+    """
+    transfers = capture_array_transfers(monkeypatch)
+
+    results = [getattr(px.generate, name)(**_base_kwargs(name)) for name in GENERATOR_NAMES]
+
+    assert [frame.shape for frame in results] == [(6, 8, 3)] * len(GENERATOR_NAMES)
+    assert len(transfers.pixel_host_to_device) == 0
+    assert len(transfers.pixel_device_to_host) == 0

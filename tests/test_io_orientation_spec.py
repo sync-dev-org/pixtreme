@@ -59,10 +59,12 @@ def _assert_same_frame(actual: px.core.Frame, expected: px.core.Frame) -> None:
     cp.testing.assert_array_equal(actual.data, expected.data)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_orientation_public_signatures_and_exact_bool_validation_are_fixed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """v1-io-orientation acceptance 1: both decode boundaries add the same fail-fast exact-bool keyword."""
+    """Image decoding exposes the documented orientation option and rejects values other than built-in booleans."""
     read_signature = inspect.signature(px.io.read_image)
     decode_signature = inspect.signature(px.io.decode_image)
 
@@ -88,12 +90,13 @@ def test_orientation_public_signatures_and_exact_bool_validation_are_fixed(
             px.io.decode_image(payload, apply_exif_orientation=invalid)  # type: ignore[arg-type]
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize("format_name", _TARGET_FORMATS)
 @pytest.mark.parametrize("orientation", range(1, 9))
 def test_target_formats_apply_the_normative_orientation_at_file_bytes_and_header_boundaries(
     tmp_path: Path, format_name: str, orientation: int
 ) -> None:
-    """v1-io-orientation acceptance 2-5 and 9: hand-defined mappings govern every target boundary."""
+    """JPEG, PNG, TIFF, and WebP decoding and header inspection apply the specified orientation mapping."""
     payload = encode_oriented_raster(format_name, orientation)
     path = tmp_path / f"orientation-{orientation}{_SUFFIXES[format_name]}"
     path.write_bytes(payload)
@@ -124,9 +127,10 @@ def test_target_formats_apply_the_normative_orientation_at_file_bytes_and_header
     assert (header.width, header.height, header.orientation) == (expected_width, expected_height, orientation)
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize("format_name", _TARGET_FORMATS)
 def test_orientation_preserves_channel_selection_and_file_bytes_equivalence(tmp_path: Path, format_name: str) -> None:
-    """v1-io-orientation acceptance 4 and 9: selection labels and samples survive orientation unchanged."""
+    """Applying orientation preserves selected channel labels and yields equal samples from file and bytes input."""
     payload = encode_oriented_raster(format_name, 6)
     path = tmp_path / f"selected{_SUFFIXES[format_name]}"
     path.write_bytes(payload)
@@ -142,8 +146,9 @@ def test_orientation_preserves_channel_selection_and_file_bytes_equivalence(tmp_
     np.testing.assert_array_equal(_frame_values(oriented_bytes), _oriented(_frame_values(stored), 6))
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_lossless_webp_exif_is_decoded_at_file_and_bytes_boundaries(tmp_path: Path) -> None:
-    """v1-io-orientation acceptance 2-5: VP8L plus EXIF follows the same mapping as lossy WebP."""
+    """Lossless WebP files and bytes apply EXIF orientation with the same mapping as lossy WebP."""
     payload = encode_lossless_oriented_webp(6)
     path = tmp_path / "lossless-oriented.webp"
     path.write_bytes(payload)
@@ -159,11 +164,14 @@ def test_lossless_webp_exif_is_decoded_at_file_and_bytes_boundaries(tmp_path: Pa
     assert (header.width, header.height, header.orientation) == (18, 24, 6)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_webp_payload_read_failure_after_header_parse_is_actionable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """v1-io-icc acceptance 20; v1-io-orientation acceptance 2 and REQ-API-012: a WebP file read failure after the header is parsed
-    surfaces as the public three-part RuntimeError with the original OSError chained as its cause."""
+    """A WebP payload read failure reports the input, reason, and recovery path while retaining the original I/O
+    cause.
+    """
     path = tmp_path / "oriented.webp"
     path.write_bytes(encode_oriented_raster("WEBP", 6))
     read_calls: list[Path] = []
@@ -185,8 +193,9 @@ def test_webp_payload_read_failure_after_header_parse_is_actionable(
     assert read_calls == [path]
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_image_header_orientation_defaults_to_one_for_direct_construction(tmp_path: Path) -> None:
-    """v1-io-orientation acceptance 5: the frozen public model gives direct construction a default of one."""
+    """Directly constructed image headers use orientation one when no orientation is supplied."""
     path = tmp_path / "plain.png"
     path.write_bytes(encode_plain_raster("PNG"))
     values = px.io.read_header(path).model_dump()
@@ -198,8 +207,9 @@ def test_image_header_orientation_defaults_to_one_for_direct_construction(tmp_pa
     assert set(px.io.ImageHeader.model_fields) == {"format", "width", "height", "parts", "color", "orientation"}
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_oriented_headers_for_all_target_formats_are_codec_lazy_and_gpu_free(tmp_path: Path) -> None:
-    """v1-io-orientation acceptance 5 and 6: orientation-aware header probing remains CPU-only."""
+    """Orientation-aware header inspection reads JPEG, PNG, TIFF, and WebP without codecs or GPU work."""
     paths: list[Path] = []
     for format_name in _TARGET_FORMATS:
         path = tmp_path / f"oriented{_SUFFIXES[format_name]}"
@@ -238,6 +248,7 @@ _INVALID_EXIF = (
 )
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     ("case", "metadata"), _INVALID_EXIF, ids=lambda value: value if isinstance(value, str) else None
 )
@@ -245,7 +256,7 @@ _INVALID_EXIF = (
 def test_invalid_orientation_metadata_warns_and_falls_back_at_every_boundary(
     tmp_path: Path, case: str, metadata: bytes, boundary: str
 ) -> None:
-    """v1-io-orientation acceptance 3 and 7: invalid optional metadata warns and becomes identity everywhere."""
+    """Invalid optional image orientation metadata warns and falls back to identity for files, bytes, and headers."""
     payload = png_with_exif(metadata)
     path = tmp_path / f"invalid-{case}.png"
     path.write_bytes(payload)
@@ -261,9 +272,10 @@ def test_invalid_orientation_metadata_warns_and_falls_back_at_every_boundary(
             np.testing.assert_array_equal(_frame_values(frame), orientation_pattern())
 
 
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize("format_name", _TARGET_FORMATS)
 def test_missing_orientation_is_silent_identity_for_every_target_format(tmp_path: Path, format_name: str) -> None:
-    """v1-io-orientation acceptance 3, 5, and 7: an absent tag is silent and resolves to one."""
+    """An image without an orientation tag silently uses identity orientation at every input boundary."""
     payload = encode_plain_raster(format_name)
     path = tmp_path / f"plain{_SUFFIXES[format_name]}"
     path.write_bytes(payload)
@@ -279,8 +291,9 @@ def test_missing_orientation_is_silent_identity_for_every_target_format(tmp_path
     assert [item for item in caught if "EXIF orientation" in str(item.message)] == []
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_secondary_ifd_orientation_does_not_apply_to_the_primary_image(tmp_path: Path) -> None:
-    """v1-io-orientation acceptance 6: thumbnail and secondary-IFD orientation cannot affect the primary image."""
+    """Orientation in a TIFF thumbnail or secondary image directory does not rotate the primary image."""
     metadata = exif_payload((), secondary_entries=((274, 3, 1, 6),))
     payload = png_with_exif(metadata)
     path = tmp_path / "secondary.png"
@@ -296,8 +309,9 @@ def test_secondary_ifd_orientation_does_not_apply_to_the_primary_image(tmp_path:
     assert [item for item in caught if "EXIF orientation" in str(item.message)] == []
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_non_target_file_and_bytes_formats_ignore_the_orientation_switch(tmp_path: Path) -> None:
-    """v1-io-orientation acceptance 8 and 9: non-target formats accept the switch without changing results."""
+    """Image formats without orientation support accept the orientation switch without changing decoded results."""
     values = np.arange(4 * 8 * 3, dtype=np.uint8).reshape(4, 8, 3)
     frame = px.io.from_array(cp.asarray(values), colorspace="sRGB", gamma="sRGB", channels="RGB")
     file_cases = (

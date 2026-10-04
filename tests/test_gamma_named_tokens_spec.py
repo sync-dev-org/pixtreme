@@ -83,13 +83,10 @@ def _frame(values: tuple[float, ...], *, gamma: str = "linear", channels: str = 
     )
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_gamma_literal_retains_named_numeric_tokens_in_the_sony_extended_vocabulary() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-gamma-named-tokens acceptance 1;
-    v1-sony-tokens acceptance 1; v1-arri-tokens acceptance 16;
-    v1-blackmagic-tokens acceptance 33; v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 76-77;
-    v1-panasonic-tokens acceptance 99-100; v1-standard-tokens acceptance 117;
-    v1-vendor-a-tokens acceptance 140; v1-vendor-b-tokens acceptance 166; v1-io-icc acceptance 1.
-    """
+    """The public gamma Literal contains named numeric transfers alongside the supported camera transfers."""
     assert get_args(px.core.Gamma) == _GAMMA_TOKENS
     assert len(get_args(px.core.Gamma)) == 36
 
@@ -126,15 +123,14 @@ def test_gamma_literal_retains_named_numeric_tokens_in_the_sony_extended_vocabul
         px.core.VectorBlurShutter,
     )
     assert len(aliases) == 30
-    assert sum(len(get_args(alias)) for alias in aliases) == 199
+    assert sum(len(get_args(alias)) for alias in aliases) == 200
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_public_static_and_metadata_surfaces_expose_only_named_gamma_tokens() -> None:
-    """v1-gamma-named-tokens acceptance 2; v1-sony-tokens acceptance 2;
-    v1-blackmagic-tokens acceptance 34; v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 77;
-    v1-panasonic-tokens acceptance 100; v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167:
-    static surfaces expose canonical names.
-    """
+    """Public annotations and Frame metadata expose named gamma tokens rather than numeric aliases."""
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMA_TOKENS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMA_TOKENS
 
@@ -150,8 +146,9 @@ def test_public_static_and_metadata_surfaces_expose_only_named_gamma_tokens() ->
         assert repr(legacy) not in message
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_named_gamma_tokens_accept_case_and_all_separator_variants() -> None:
-    """v1-gamma-named-tokens acceptance 3; v1-sony-tokens acceptance 3: gamma variants normalize family-locally."""
+    """Named gamma tokens accept case and separator variants within the gamma family."""
     from pixtreme._core.validation import _normalized_closed_token
 
     for _legacy, canonical in _RENAMES:
@@ -159,8 +156,9 @@ def test_named_gamma_tokens_accept_case_and_all_separator_variants() -> None:
             assert _normalized_closed_token(variant, axis="gamma", accepted=_GAMMA_TOKENS) == canonical
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_numeric_gamma_aliases_and_separator_variants_are_permanent_inputs() -> None:
-    """v1-gamma-named-tokens acceptance 4: all numeric alias variants normalize through public boundaries."""
+    """Numeric gamma aliases and their separator variants remain valid inputs to public color operations."""
     from pixtreme._core.validation import _normalized_closed_token
 
     linear = _frame((-0.25, 0.0, 0.18, 1.25))
@@ -175,11 +173,10 @@ def test_numeric_gamma_aliases_and_separator_variants_are_permanent_inputs() -> 
             assert decoded.gamma == "linear"
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_numeric_alias_keys_are_collision_free_subset_local_and_order_independent() -> None:
-    """v1-gamma-named-tokens acceptance 5; v1-sony-tokens acceptance 3;
-    v1-blackmagic-tokens acceptance 35; v1-panasonic-tokens acceptance 101;
-    v1-vendor-a-tokens acceptance 142: keys stay collision-free and local.
-    """
+    """Numeric gamma aliases normalize without collisions, cross-family matches, or dependence on registration
+    order."""
     from pixtreme._core.validation import _normalized_closed_token
 
     canonical_keys = tuple(map(_token_key, _GAMMA_TOKENS))
@@ -197,14 +194,13 @@ def test_numeric_alias_keys_are_collision_free_subset_local_and_order_independen
             _normalized_closed_token(legacy, axis="colorspace", accepted=get_args(px.core.Colorspace))
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("rejected", ["unknown", 24, None])
 def test_invalid_gamma_fails_before_gpu_with_raw_input_and_canonical_recovery(
     rejected: object, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """v1-gamma-named-tokens acceptance 6; v1-panasonic-tokens acceptance 111;
-    v1-vendor-a-tokens acceptance 160:
-    invalid gamma fails before GPU with ordered raw actionable details.
-    """
+    """Invalid gamma input fails before GPU work and reports the supplied value and accepted names in order."""
     import pixtreme._color.semantics as semantics
 
     source = _frame((0.18,))
@@ -223,8 +219,10 @@ def test_invalid_gamma_fails_before_gpu_with_raw_input_and_canonical_recovery(
         assert repr(legacy) not in message
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_named_and_numeric_alias_transfers_are_bit_identical_and_preserve_observables() -> None:
-    """v1-gamma-named-tokens acceptance 7: each rename pair preserves transfer bits and non-token observables."""
+    """Named and numeric gamma aliases yield identical transfer pixels and preserve other Frame properties."""
     values = (-1.25, -0.25, -1.0e-6, 0.0, 1.0e-6, 0.18, 1.0, 1.5)
     rgb = np.repeat(np.asarray(values, dtype=np.float32)[:, None], 3, axis=1)
     alpha = np.arange(len(values), dtype=np.float32)[:, None]
@@ -262,8 +260,10 @@ def test_named_and_numeric_alias_transfers_are_bit_identical_and_preserve_observ
     assert source.matrix == "native"
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_bt1886_and_gamma_24_are_bit_identical_but_keep_distinct_token_identity() -> None:
-    """v1-gamma-named-tokens acceptance 8: ideal-black BT.1886 equals Gamma-2.4 numerically, not semantically."""
+    """BT.1886 and Gamma-2.4 produce identical ideal-black pixels while retaining distinct gamma names."""
     values = (-1.25, -0.25, -1.0e-6, 0.0, 1.0e-6, 0.18, 1.0, 1.5)
     linear = _frame(values)
     bt_encoded = px.color.linear_to_gamma(linear, gamma="BT.1886")

@@ -181,15 +181,17 @@ def _canny_reference(
     border: str,
     border_value: float,
 ) -> np.ndarray:
-    """Independent host pipeline derived only from v1-canny acceptance 5-12."""
+    """Independent host reference for Canny smoothing, gradients, suppression, and hysteresis."""
     dx, dy = _sobel_reference(source, border=border, border_value=border_value)
     magnitude = np.hypot(dx, dy).astype(np.float32)
     nms = _nms_reference(magnitude, dx, dy, border=border, border_value=border_value)
     return _hysteresis_reference(nms, threshold_low=threshold_low, threshold_high=threshold_high)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_canny_public_signature_and_single_canonical_path_are_exact() -> None:
-    """v1-canny acceptance 1 and 14: required thresholds exist only on px.filter.canny."""
+    """Developers call Canny edge detection through its single public filter path with required thresholds."""
     import cupy as cp
 
     signature = inspect.signature(px.filter.canny)
@@ -210,9 +212,10 @@ def test_canny_public_signature_and_single_canonical_path_are_exact() -> None:
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("border", BORDERS)
 def test_canny_matches_independent_pipeline_oracle_for_every_border(border: str) -> None:
-    """v1-canny acceptance 2, 4-6, and 9-11: every border and channel matches the host pipeline."""
+    """For Canny edge detection, every border and channel matches the host pipeline."""
     rng = np.random.default_rng(20260803)
     values = rng.uniform(-0.75, 1.75, size=(7, 8, 3)).astype(np.float32)
     border_value = -0.6
@@ -239,12 +242,13 @@ def test_canny_matches_independent_pipeline_oracle_for_every_border(border: str)
     assert set(np.unique(actual)).issubset({0.0, 1.0})
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize(
     "angle_degrees",
     (0.0, 22.0, 22.5, 23.0, 67.0, 67.5, 68.0, 112.0, 112.5, 113.0, 157.0, 157.5, 158.0),
 )
 def test_canny_four_sector_boundaries_match_the_half_open_host_oracle(angle_degrees: float) -> None:
-    """v1-canny acceptance 7: sector centers and every half-open boundary follow atan2 modulo 180 degrees."""
+    """For Canny edge detection, sector centers and every half-open boundary follow atan2 modulo 180 degrees."""
     coordinates_y, coordinates_x = np.indices((19, 19), dtype=np.float32)
     coordinates_x -= np.float32(9.0)
     coordinates_y -= np.float32(9.0)
@@ -266,8 +270,9 @@ def test_canny_four_sector_boundaries_match_the_half_open_host_oracle(angle_degr
     np.testing.assert_array_equal(actual, expected)
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_canny_asymmetric_nms_tie_break_keeps_only_the_negative_side_of_a_plateau() -> None:
-    """v1-canny acceptance 8: current > negative and current >= positive retains one plateau side."""
+    """For Canny edge detection, current > negative and current >= positive retains one plateau side."""
     values = np.zeros((5, 7, 1), dtype=np.float32)
     values[:, 3:, 0] = np.float32(1.0)
 
@@ -280,8 +285,9 @@ def test_canny_asymmetric_nms_tie_break_keeps_only_the_negative_side_of_a_platea
     np.testing.assert_array_equal(actual, expected)
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_canny_hysteresis_fully_converges_along_a_long_weak_path_and_stays_per_channel() -> None:
-    """v1-canny acceptance 4 and 10-12: long 8-connected paths converge while isolated channel edges do not."""
+    """Canny hysteresis connects weak edges to strong edges along an entire eight connected path within each channel."""
     values = np.zeros((70, 8, 2), dtype=np.float32)
     values[:, 4:, :] = np.float32(0.3)
     values[0, 4:, 0] = np.float32(1.0)
@@ -307,9 +313,10 @@ def test_canny_hysteresis_fully_converges_along_a_long_weak_path_and_stays_per_c
     assert not np.any(first[..., 1])
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("border", BORDERS)
 def test_canny_one_pixel_extent_matches_the_oracle_without_virtual_hysteresis_neighbors(border: str) -> None:
-    """v1-canny acceptance 9 and 11: one-pixel axes use border for filters but not hysteresis connectivity."""
+    """For Canny edge detection, one-pixel axes use border for filters but not hysteresis connectivity."""
     values = np.asarray([[[-0.5], [0.25], [1.5], [0.1], [0.8]]], dtype=np.float32)
     border_value = 1.7
     expected = _canny_reference(
@@ -328,8 +335,9 @@ def test_canny_one_pixel_extent_matches_the_oracle_without_virtual_hysteresis_ne
     np.testing.assert_array_equal(actual, expected)
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_canny_equal_threshold_is_a_valid_single_threshold_with_no_weak_set() -> None:
-    """v1-canny acceptance 3 and 10: equal low/high thresholds are accepted without swapping."""
+    """For Canny edge detection, equal low/high thresholds are accepted without swapping."""
     values = np.asarray(
         [[[0.0], [0.0], [1.0], [1.0]], [[0.0], [0.5], [1.0], [1.5]], [[-0.5], [0.0], [1.0], [2.0]]],
         dtype=np.float32,
@@ -349,8 +357,9 @@ def test_canny_equal_threshold_is_a_valid_single_threshold_with_no_weak_set() ->
     np.testing.assert_array_equal(actual, expected)
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_canny_accepts_zero_thresholds_with_the_specified_inclusive_classification() -> None:
-    """v1-canny acceptance 3 and 10: zero is valid and x >= threshold_high remains inclusive."""
+    """For Canny edge detection, zero is valid and x >= threshold_high remains inclusive."""
     values = np.zeros((2, 3, 1), dtype=np.float32)
     expected = _canny_reference(
         values,
@@ -368,10 +377,12 @@ def test_canny_accepts_zero_thresholds_with_the_specified_inclusive_classificati
     np.testing.assert_array_equal(actual, np.ones_like(values))
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("name", ("threshold_low", "threshold_high"))
 @pytest.mark.parametrize("value", (True, "1", 1 + 0j, float("nan"), float("inf"), float("-inf"), -0.01))
 def test_canny_rejects_invalid_threshold_values_actionably(name: str, value: object) -> None:
-    """v1-canny acceptance 3 and 13: thresholds reject bool, non-real, non-finite, and negative values."""
+    """For Canny edge detection, thresholds reject bool, non-real, non-finite, and negative values."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32))
     kwargs: dict[str, object] = {"threshold_low": 0.5, "threshold_high": 1.0}
     kwargs[name] = value
@@ -383,8 +394,10 @@ def test_canny_rejects_invalid_threshold_values_actionably(name: str, value: obj
     assert name in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_canny_rejects_reversed_thresholds_instead_of_swapping() -> None:
-    """v1-canny acceptance 3 and 13: threshold_low above threshold_high fails fast."""
+    """For Canny edge detection, threshold_low above threshold_high fails fast."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32))
 
     with pytest.raises(ValueError) as error:
@@ -395,6 +408,8 @@ def test_canny_rejects_reversed_thresholds_instead_of_swapping() -> None:
     assert "threshold_high" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("border", "border_value"),
     (
@@ -410,7 +425,7 @@ def test_canny_rejects_reversed_thresholds_instead_of_swapping() -> None:
     ),
 )
 def test_canny_rejects_invalid_border_combinations_actionably(border: object, border_value: object) -> None:
-    """v1-canny acceptance 9 and 13: border and border_value use the shared fail-fast contract."""
+    """Canny edge detection accepts four border modes and requires a finite border value only for constant mode."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32))
 
     with pytest.raises(ValueError) as error:
@@ -425,6 +440,8 @@ def test_canny_rejects_invalid_border_combinations_actionably(border: object, bo
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "guidance"),
     ((np.float16, "cast_dtype"), (np.uint8, "recode_dtype"), (np.uint16, "dequantize")),
@@ -432,7 +449,7 @@ def test_canny_rejects_invalid_border_combinations_actionably(border: object, bo
 def test_canny_rejects_non_float32_frames_with_conversion_guidance(
     dtype: np.dtype[Any] | type[np.generic], guidance: str
 ) -> None:
-    """v1-canny acceptance 4 and 13: non-fp32 Frames name a value-aware conversion path."""
+    """For Canny edge detection, non-fp32 Frames name a value-aware conversion path."""
     source = _frame(np.zeros((2, 2, 1), dtype=dtype), dtype=dtype)
 
     with pytest.raises(ValueError) as error:
@@ -442,8 +459,10 @@ def test_canny_rejects_non_float32_frames_with_conversion_guidance(
     assert guidance in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-011")
 def test_canny_returns_private_contiguous_binary_storage_and_preserves_metadata_and_input() -> None:
-    """v1-canny acceptance 2 and 4; v1-red-tokens acceptance 68: renamed ARRI metadata is fixed."""
+    """Canny edge detection returns a separate contiguous binary Frame and preserves input color metadata."""
     values = np.linspace(-0.5, 1.5, 6 * 7 * 4, dtype=np.float32).reshape(6, 7, 4)
     source = _frame(
         values,
@@ -478,8 +497,12 @@ def test_canny_returns_private_contiguous_binary_storage_and_preserves_metadata_
     )
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_canny_docstring_is_a_self_contained_operational_contract() -> None:
-    """v1-canny acceptance 14: the public docstring names every user-visible pipeline contract."""
+    """Developers can find Canny thresholds, gradients, edge selection, hysteresis, borders, and input conversion
+    in the public docstring.
+    """
     docstring = inspect.getdoc(px.filter.canny) or ""
     for required in (
         "threshold_low",

@@ -95,8 +95,10 @@ def _sharpen_reference(source: np.ndarray, *, amount: float, border: str, border
     return (source.astype(np.float64) - amount * laplacian.astype(np.float64)).astype(np.float32)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_sharpen_public_signature_and_single_canonical_path_are_exact() -> None:
-    """v1-sharpen acceptance 1 and 9: amount is required keyword-only on the sole public path."""
+    """Developers call sharpening through its single public path with a required keyword only amount."""
     import cupy as cp
 
     signature = inspect.signature(px.filter.sharpen)
@@ -116,10 +118,11 @@ def test_sharpen_public_signature_and_single_canonical_path_are_exact() -> None:
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("border", BORDERS)
 @pytest.mark.parametrize("amount", (1.25, -0.5))
 def test_sharpen_matches_independent_laplacian_oracle_for_every_border(border: str, amount: float) -> None:
-    """v1-sharpen acceptance 2, 3, 6, and 8: every channel and border follows the fixed formula."""
+    """For sharpening, every channel and border follows the fixed formula."""
     values = np.asarray(
         [
             [[-0.25, 0.1], [0.25, 0.4], [0.75, 1.2], [1.25, -0.1]],
@@ -150,8 +153,9 @@ def test_sharpen_matches_independent_laplacian_oracle_for_every_border(border: s
     )
 
 
+@pytest.mark.req("REQ-PIX-011")
 def test_sharpen_one_pixel_extent_and_constant_scene_border_values_match_the_oracle() -> None:
-    """v1-sharpen acceptance 3 and 8: one-pixel axes and unbounded constant values retain border semantics."""
+    """For sharpening, one-pixel axes and unbounded constant values retain border semantics."""
     values = np.asarray([[[-0.5], [0.25], [1.5]]], dtype=np.float32)
     source = _frame(values, channels=("signal",))
 
@@ -168,9 +172,10 @@ def test_sharpen_one_pixel_extent_and_constant_scene_border_values_match_the_ora
         )
 
 
+@pytest.mark.req("REQ-PIX-011")
 @pytest.mark.parametrize("amount", (0.0, -0.0))
 def test_sharpen_zero_amount_is_a_validated_private_bit_exact_identity(amount: float) -> None:
-    """v1-sharpen acceptance 4 and 5: signed zero copies every fp32 bit into private storage."""
+    """For sharpening, signed zero copies every fp32 bit into private storage."""
     values = np.asarray([[[-0.0], [0.25], [-1.5]], [[2.0], [1.0], [0.0]]], dtype=np.float32)
     source = _frame(values, channels=("signal",))
 
@@ -185,12 +190,14 @@ def test_sharpen_zero_amount_is_a_validated_private_bit_exact_identity(amount: f
     assert result.data.flags.c_contiguous
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("border", "border_value"),
     (("unknown", None), ("constant", None), ("constant", float("nan")), ("mirror", 0.0)),
 )
 def test_sharpen_zero_amount_does_not_skip_border_validation(border: str, border_value: object) -> None:
-    """v1-sharpen acceptance 4 and 8: the identity path still validates border and border_value."""
+    """For sharpening, the identity path still validates border and border_value."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=("signal",))
 
     with pytest.raises(ValueError) as error:
@@ -199,9 +206,11 @@ def test_sharpen_zero_amount_does_not_skip_border_validation(border: str, border
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("amount", (True, "1", 1 + 0j, float("nan"), float("inf"), float("-inf")))
 def test_sharpen_rejects_invalid_amount_actionably(amount: object) -> None:
-    """v1-sharpen acceptance 2: bool, non-real, and non-finite amount values fail fast."""
+    """For sharpening, bool, non-real, and non-finite amount values fail fast."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=("signal",))
 
     with pytest.raises(ValueError) as error:
@@ -211,8 +220,11 @@ def test_sharpen_rejects_invalid_amount_actionably(amount: object) -> None:
     assert "amount" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-103")
 def test_sharpen_preserves_halo_excursions_shape_contiguity_and_input_storage() -> None:
-    """v1-sharpen acceptance 5: halos remain unclipped in a new C-contiguous fp32 allocation."""
+    """For sharpening, halos remain unclipped in a new C-contiguous fp32 allocation."""
     values = np.zeros((5, 5, 1), dtype=np.float32)
     values[2, 2, 0] = 1.5
     source = _frame(values, channels=("signal",))
@@ -239,8 +251,10 @@ def test_sharpen_preserves_halo_excursions_shape_contiguity_and_input_storage() 
     )
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-011")
 def test_sharpen_is_channel_label_independent_and_preserves_all_metadata() -> None:
-    """v1-sharpen acceptance 6; v1-red-tokens acceptance 68: labels do not affect renamed ARRI metadata."""
+    """Sharpening treats channel names as labels and preserves all Frame metadata."""
     values = np.linspace(-0.5, 1.5, 48, dtype=np.float32).reshape(3, 4, 4)
     source = _frame(
         values,
@@ -276,6 +290,8 @@ def test_sharpen_is_channel_label_independent_and_preserves_all_metadata() -> No
     )
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "guidance"),
     (
@@ -288,7 +304,7 @@ def test_sharpen_rejects_non_fp32_frames_with_conversion_guidance(
     dtype: np.dtype[Any] | type[np.generic],
     guidance: tuple[str, ...],
 ) -> None:
-    """v1-sharpen acceptance 7: every accepted non-fp32 storage dtype gets an actionable cast path."""
+    """For sharpening, every accepted non-fp32 storage dtype gets an actionable cast path."""
     source = _frame(np.zeros((2, 2, 1)), dtype=dtype, channels=("signal",))
 
     with pytest.raises(ValueError) as error:
@@ -300,6 +316,8 @@ def test_sharpen_rejects_non_fp32_frames_with_conversion_guidance(
     assert all(name in message for name in guidance)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("border", "border_value"),
     (
@@ -312,7 +330,7 @@ def test_sharpen_rejects_non_fp32_frames_with_conversion_guidance(
     ),
 )
 def test_sharpen_uses_the_shared_border_error_contract(border: str, border_value: object) -> None:
-    """v1-sharpen acceptance 8: the four border tokens and conditional value follow the shared contract."""
+    """Sharpening accepts four border modes and requires a finite border value only for constant mode."""
     source = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=("signal",))
 
     with pytest.raises(ValueError) as error:
@@ -321,8 +339,12 @@ def test_sharpen_uses_the_shared_border_error_contract(border: str, border_value
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("REQ-PIX-017")
 def test_sharpen_docstring_is_a_self_contained_contract() -> None:
-    """v1-sharpen acceptance 9: the public docstring exposes the complete operational contract."""
+    """Developers can find the sharpening formula, borders, float32 input, unclamped values, and output ownership
+    in the public docstring.
+    """
     docstring = inspect.getdoc(px.filter.sharpen)
     assert docstring is not None
     for required in (

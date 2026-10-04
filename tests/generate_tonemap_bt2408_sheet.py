@@ -1,4 +1,4 @@
-"""Generate the manual visual-acceptance sheet for v1-tonemap-bt2408 acceptance 16."""
+"""Generate a manual visual sheet for BT.2408 direct mapping."""
 
 from __future__ import annotations
 

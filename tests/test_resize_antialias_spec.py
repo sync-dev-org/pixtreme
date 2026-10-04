@@ -142,8 +142,9 @@ def _full_support_mask(input_extent: int, output_extent: int, lobes: int) -> np.
     return mask
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_interpolation_vocabulary_and_resize_variants_are_canonical() -> None:
-    """v1-resize-antialias acceptance 1: the three canonical tokens and runtime variants select resize AA."""
+    """Resizing exposes three antialiased Lanczos variants alongside its point-sampled interpolation choices."""
     expected = (
         *EXISTING_RESIZE_TOKENS[:-1],
         *AA_TOKENS,
@@ -170,6 +171,7 @@ def test_interpolation_vocabulary_and_resize_variants_are_canonical() -> None:
             )
 
 
+@pytest.mark.req("REQ-PIX-010")
 @pytest.mark.parametrize(("token", "lobes"), tuple(zip(AA_TOKENS, (2, 3, 4), strict=True)))
 @pytest.mark.parametrize(("width", "height"), ((4, 3), (4, 11), (13, 3)))
 def test_antialiased_lanczos_matches_exact_support_numpy_oracle(
@@ -178,7 +180,7 @@ def test_antialiased_lanczos_matches_exact_support_numpy_oracle(
     width: int,
     height: int,
 ) -> None:
-    """v1-resize-antialias acceptance 2, 3, and 5: pure and mixed reductions match an independent oracle."""
+    """Antialiased Lanczos resizing matches an independent exact-support result for pure and mixed-axis reductions."""
     rng = np.random.default_rng(3811)
     values = rng.uniform(-4.0, 8.0, size=(7, 9, 3)).astype(np.float32)
     expected = _resize_aa_reference(values, width=width, height=height, lobes=lobes)
@@ -190,9 +192,10 @@ def test_antialiased_lanczos_matches_exact_support_numpy_oracle(
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=3e-5)
 
 
+@pytest.mark.req("REQ-PIX-010")
 @pytest.mark.parametrize("token", AA_TOKENS)
 def test_antialiased_lanczos_normalizes_before_replicate_mapping(token: str) -> None:
-    """v1-resize-antialias acceptance 3: exact support includes edge taps before replicate mapping."""
+    """Antialiased Lanczos includes every edge tap in normalization before replicate border mapping."""
     lobes = int(token.removeprefix("lanczos").removesuffix("-aa"))
     edge_impulse = np.zeros((5, 7, 1), dtype=np.float32)
     edge_impulse[:, 0, 0] = 3.0
@@ -206,6 +209,7 @@ def test_antialiased_lanczos_normalizes_before_replicate_mapping(token: str) -> 
     np.testing.assert_allclose(constant_result, expected_constant, rtol=0.0, atol=2e-6)
 
 
+@pytest.mark.req("REQ-PIX-010")
 @pytest.mark.parametrize(("aa_token", "point_token"), tuple(AA_TO_POINT.items()))
 @pytest.mark.parametrize(("width", "height"), ((7, 5), (13, 11), (7, 11), (13, 5)))
 def test_nonshrinking_antialiased_lanczos_is_bit_identical_to_point_sampled(
@@ -214,7 +218,7 @@ def test_nonshrinking_antialiased_lanczos_is_bit_identical_to_point_sampled(
     width: int,
     height: int,
 ) -> None:
-    """v1-resize-antialias acceptance 4: same-size and enlargement reuse point-sampled Lanczos bits."""
+    """At the same size or larger, antialiased Lanczos returns the exact point-sampled Lanczos pixels."""
     values = np.random.default_rng(384).uniform(-4.0, 8.0, size=(5, 7, 2)).astype(np.float32)
     source = _frame(values)
     antialiased = _host(px.transform.resize(source, width=width, height=height, interpolation=aa_token))
@@ -222,13 +226,13 @@ def test_nonshrinking_antialiased_lanczos_is_bit_identical_to_point_sampled(
     np.testing.assert_array_equal(antialiased, point_sampled)
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_existing_resize_output_bits_remain_frozen_characterization() -> None:
-    """characterization: freeze issue #38's pre-change existing-token output on CUDA device 0.
+    """characterization: Existing resize tokens retain recorded output bits across shrinking, enlargement,
+    and unchanged sizes.
 
-    v1-resize-antialias acceptance 6: the hashes cover reduction, enlargement,
-    same-size, and both mixed-axis directions. Correctness remains owned by the
-    existing independent resize oracles; remove these hashes only when the
-    bit-invariance requirement is deliberately superseded.
+    The recorded CUDA device 0 bits describe current behavior; independent resize oracles establish
+    correctness. Remove these hashes only if the bit-invariance contract changes.
     """
     values = np.random.default_rng(3807).uniform(-4.0, 8.0, size=(7, 9, 3)).astype(np.float32)
     source = _frame(values, channels=("left", "middle", "right"))
@@ -242,12 +246,13 @@ def test_existing_resize_output_bits_remain_frozen_characterization() -> None:
         assert digest.hexdigest() == _BASELINE_DIGESTS[token]
 
 
+@pytest.mark.req("REQ-PIX-010")
 @pytest.mark.parametrize(
     ("width", "height", "explicit"),
     ((4, 3, "area"), (4, 11, "area"), (13, 3, "area"), (9, 7, "lanczos4"), (13, 11, "lanczos4")),
 )
 def test_resize_auto_default_remains_bit_identical(width: int, height: int, explicit: str) -> None:
-    """v1-resize-antialias acceptance 6: auto remains area for any reduction and lanczos4 otherwise."""
+    """Automatic resizing remains bit-identical to area for shrinkage and lanczos4 otherwise."""
     values = np.random.default_rng(386).uniform(-1.0, 2.0, size=(7, 9, 2)).astype(np.float32)
     source = _frame(values)
     automatic = _host(px.transform.resize(source, width=width, height=height))
@@ -255,12 +260,11 @@ def test_resize_auto_default_remains_bit_identical(width: int, height: int, expl
     np.testing.assert_array_equal(automatic, selected)
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_lanczos3_aa_matches_pillow_on_the_fixed_full_support_corpus() -> None:
-    """v1-resize-antialias acceptance 7: Pillow 12.3.0 agrees on the fixed full-support interior corpus."""
-    import PIL
+    """Antialiased Lanczos3 matches Pillow in full-support interior pixels and the independent edge oracle elsewhere."""
     from PIL import Image
 
-    assert PIL.__version__ == "12.3.0"
     dimensions = ((97, 83, 31, 29, 575), (53, 47, 19, 17, 143))
     seeds = (38, 3807, 7, 1234, 65537)
     worst = 0.0
@@ -301,9 +305,13 @@ def test_lanczos3_aa_matches_pillow_on_the_fixed_full_support_corpus() -> None:
     assert worst <= 2e-5, f"production-path Pillow interior max absolute error was {worst:.9g}"
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("token", AA_TOKENS)
 def test_antialiased_lanczos_preserves_frame_and_unclamped_channel_contract(token: str) -> None:
-    """v1-resize-antialias acceptance 8: AA is float32, per-channel, unclamped, private, and metadata-stable."""
+    """Antialiased Lanczos keeps each channel and Frame metadata, retains out-of-range values, and returns separate float32 pixels."""
     values = np.asarray(
         [
             [[-4.0, 8.0], [3.0, -2.0], [7.0, 1.0], [-1.0, 6.0], [5.0, -3.0]],
@@ -396,12 +404,13 @@ def _non_resize_calls(token: str) -> tuple[tuple[str, Callable[[], object]], ...
     return tuple(calls)
 
 
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "token",
     ("lanczos2-aa", "LANCZOS2_AA", "lanczos3-aa", "Lanczos.3 AA", "lanczos4-aa", "LANCZOS4AA"),
 )
 def test_non_resize_interpolation_subsets_reject_antialiased_lanczos_before_pixel_work(token: str) -> None:
-    """v1-resize-antialias acceptance 9: all non-resize Interpolation subsets stay closed against AA variants."""
+    """Operations outside resizing reject antialiased Lanczos tokens with an error that lists only their own accepted tokens."""
     for name, call in _non_resize_calls(token):
         with pytest.raises(ValueError) as error:
             call()
@@ -411,8 +420,10 @@ def test_non_resize_interpolation_subsets_reject_antialiased_lanczos_before_pixe
         assert all(candidate not in how for candidate in AA_TOKENS), name
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_resize_fail_fast_boundaries_include_the_expanded_canonical_subset() -> None:
-    """v1-resize-antialias acceptance 9: resize preserves input errors and advertises its expanded subset."""
+    """Resizing lists antialiased Lanczos options for unknown tokens and explains invalid tokens, inputs, and sizes."""
     import cupy as cp
 
     source = _frame(np.zeros((3, 4, 1), dtype=np.float32))
@@ -442,8 +453,10 @@ def test_resize_fail_fast_boundaries_include_the_expanded_canonical_subset() -> 
     _assert_actionable(size_error)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_resize_antialias_docstring_is_self_contained_and_llm_readable() -> None:
-    """v1-resize-antialias acceptance 10: resize docstring states selection, widening, edge, and oracle limits."""
+    """Developers can find antialias selection, filter support, edge behavior, and comparison limits in the resize docstring."""
     docstring = inspect.getdoc(px.transform.resize)
     assert docstring is not None
     for required in (
@@ -457,7 +470,7 @@ def test_resize_antialias_docstring_is_self_contained_and_llm_readable() -> None
         "area",
         "lanczos4",
         "does not clamp",
-        "Pillow 12.3.0",
+        "Pillow",
         "full-support interior",
     ):
         assert required in docstring

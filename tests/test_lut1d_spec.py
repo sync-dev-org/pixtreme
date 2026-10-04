@@ -45,7 +45,7 @@ def _host_apply_lut1d(
     domain_min: tuple[float, float, float],
     domain_max: tuple[float, float, float],
 ) -> np.ndarray:
-    """Independent scalar host oracle derived from v1-lut-extensions acceptance 6 and 28."""
+    """The host reference interpolates each RGB curve independently over its declared domain."""
     output = np.empty_like(values)
     size = table.shape[0]
     for row in range(values.shape[0]):
@@ -64,8 +64,9 @@ def _host_apply_lut1d(
     return output
 
 
+@pytest.mark.req("REQ-PIX-006")
 def test_lut1d_is_public_frozen_slotted_and_reference_preserving() -> None:
-    """v1-lut-extensions acceptance 1 and 3: Lut1D is a frozen slotted public GPU value type."""
+    """A 1D LUT is a frozen public GPU value that retains its input table by reference."""
     data = cp.asarray(
         ((-1.0, 2.0, 0.0), (0.5, -3.0, 4.0), (2.0, 1.0, -2.0)),
         dtype=cp.float32,
@@ -83,6 +84,8 @@ def test_lut1d_is_public_frozen_slotted_and_reference_preserving() -> None:
         lut.domain_min = (-1.0, -1.0, -1.0)  # type: ignore[misc]
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "case",
     (
@@ -99,7 +102,7 @@ def test_lut1d_is_public_frozen_slotted_and_reference_preserving() -> None:
     ),
 )
 def test_lut1d_rejects_every_construction_invariant_actionably(case: str) -> None:
-    """v1-lut-extensions acceptance 2: invalid Lut1D data and domains fail with three-part ValueError."""
+    """A 1D LUT rejects invalid table shape, type, and domain with a corrective ValueError."""
     data: object = cp.zeros((2, 3), dtype=cp.float32)
     kwargs: dict[str, object] = {}
     if case == "not-cupy":
@@ -129,8 +132,10 @@ def test_lut1d_rejects_every_construction_invariant_actionably(case: str) -> Non
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-017")
 def test_lut1d_normalizes_domain_float_conversion_failures_actionably() -> None:
-    """v1-lut-extensions acceptance 2: domain conversion failures stay three-part ValueError values."""
+    """A 1D LUT reports invalid domain values as corrective ValueErrors."""
     data = cp.zeros((2, 3), dtype=cp.float32)
 
     with pytest.raises(ValueError) as error:
@@ -139,8 +144,9 @@ def test_lut1d_normalizes_domain_float_conversion_failures_actionably() -> None:
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-006")
 def test_lut1d_and_apply_lut_public_signatures_are_exact() -> None:
-    """v1-lut-extensions acceptance 4: Lut1D and apply_lut expose the specified public grammar and union."""
+    """The public LUT interface accepts either 1D or 3D LUTs through its documented call shape."""
     constructor = inspect.signature(px.core.Lut1D)
     assert tuple(constructor.parameters) == ("data", "domain_min", "domain_max")
     assert constructor.parameters["domain_min"].default == (0.0, 0.0, 0.0)
@@ -155,9 +161,10 @@ def test_lut1d_and_apply_lut_public_signatures_are_exact() -> None:
     assert hints["return"] is px.core.Frame
 
 
+@pytest.mark.req("REQ-PIX-006")
 @pytest.mark.parametrize("interpolation", (None, "linear"))
 def test_apply_lut1d_matches_an_independent_asymmetric_host_oracle(interpolation: str | None) -> None:
-    """v1-lut-extensions acceptance 5-6 and 28: 1D linear lookup matches an independent host oracle."""
+    """Applying a 1D LUT interpolates independent RGB curves to match an asymmetric host reference."""
     table = np.asarray(
         (
             (-1.0, 4.0, -2.0),
@@ -184,8 +191,9 @@ def test_apply_lut1d_matches_an_independent_asymmetric_host_oracle(interpolation
     assert float(cp.max(result.data).get()) > 1.0
 
 
+@pytest.mark.req("REQ-PIX-006")
 def test_apply_lut1d_preserves_wide_finite_domain_affine_mapping() -> None:
-    """v1-lut-extensions acceptance 6: finite domains wider than float32 retain their affine mapping."""
+    """A 1D LUT preserves affine interpolation across finite domains wider than float32 can span directly."""
     table = np.asarray(((0.0, 2.0, -1.0), (1.0, -2.0, 3.0)), dtype=np.float32)
     values = np.zeros((1, 3), dtype=np.float32)
     domain_min = (-1e300, -1e300, -1e300)
@@ -199,8 +207,10 @@ def test_apply_lut1d_preserves_wide_finite_domain_affine_mapping() -> None:
     np.testing.assert_allclose(cp.asnumpy(result.data), expected, rtol=0.0, atol=1e-7)
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-017")
 def test_apply_lut_resolves_type_specific_defaults_and_rejects_mismatched_tokens() -> None:
-    """v1-lut-extensions acceptance 5: None resolves per LUT type and cross-type interpolation tokens fail."""
+    """LUT application chooses interpolation defaults by LUT type and rejects a mode intended for another type."""
     scalar_vertices = np.asarray(
         (
             ((0.0, 4.0), (2.0, 32.0)),
@@ -234,8 +244,11 @@ def test_apply_lut_resolves_type_specific_defaults_and_rejects_mismatched_tokens
         assert all(expected in str(error.value) for expected in expected_tokens)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-110")
 def test_apply_lut1d_preserves_metadata_non_rgb_bits_storage_and_inputs() -> None:
-    """v1-lut-extensions acceptance 7 and 28: 1D lookup preserves metadata, non-RGB bits, and both inputs."""
+    """Applying a 1D LUT preserves Frame color information, auxiliary channel bits, and both inputs."""
     values = np.asarray(
         ((0.0, 0.25, 0.5, 0.0, 0.75), (0.0, 0.9, 0.1, 0.0, 0.4)),
         dtype=np.float32,
@@ -274,9 +287,11 @@ def test_apply_lut1d_preserves_metadata_non_rgb_bits_storage_and_inputs() -> Non
     cp.testing.assert_array_equal(lut.data, lut_before)
 
 
+@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("case", ("dtype", "channels"))
 def test_apply_lut1d_enforces_the_shared_frame_contract(case: str) -> None:
-    """v1-lut-extensions acceptance 7: Lut1D shares float32 and complete RGB-label validation with Lut."""
+    """Applying a 1D LUT requires a float32 Frame with complete RGB labels, like 3D LUT application."""
     if case == "dtype":
         source = _frame(np.zeros(3, dtype=np.float16))
     else:

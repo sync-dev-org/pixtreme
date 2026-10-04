@@ -194,13 +194,17 @@ def _codes(bit_depth: int, channels: int) -> np.ndarray:
     return np.resize(values, (2, 3, channels))
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("bit_depth", (8, 10, 12, 16))
 @pytest.mark.parametrize("byte_order", (">", "<"), ids=("big", "little"))
 @pytest.mark.parametrize("channels", (3, 4), ids=("rgb", "rgba"))
 def test_dpx_read_decodes_both_endians_depths_and_descriptors(
     tmp_path: Path, bit_depth: int, byte_order: str, channels: int
 ) -> None:
-    """v1-dpx acceptance 1, 3, and 13: independent filled fixtures decode on the exact quantization grid."""
+    """DPX reading decodes supported byte orders, bit depths, and channel descriptors on the expected quantization
+    grid.
+    """
     codes = _codes(bit_depth, channels)
     path = tmp_path / "fixture.DPX"
     path.write_bytes(_dpx_fixture(codes, bit_depth=bit_depth, byte_order=byte_order, eol_padding=4))
@@ -223,9 +227,11 @@ def test_dpx_read_decodes_both_endians_depths_and_descriptors(
     )
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("bit_depth", (8, 10, 12, 16))
 def test_dpx_read_unchanged_returns_native_integer_codes_and_selects_labels(tmp_path: Path, bit_depth: int) -> None:
-    """v1-dpx acceptance 2 and 3: unchanged and duplicate label selection share the GPU unpack path."""
+    """Unchanged DPX reading preserves native integer codes and selects requested channel labels in order."""
     codes = _codes(bit_depth, 4)
     path = tmp_path / "unchanged.dpx"
     path.write_bytes(_dpx_fixture(codes, bit_depth=bit_depth, byte_order="<"))
@@ -242,8 +248,9 @@ def test_dpx_read_unchanged_returns_native_integer_codes_and_selects_labels(tmp_
     )
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_dpx_read_resets_partial_ten_bit_groups_at_each_scanline(tmp_path: Path) -> None:
-    """v1-dpx acceptance 1 and 13: RGBA rows with a partial final word never bleed into the next scanline."""
+    """DPX decoding resets partially filled ten-bit groups at every scanline boundary."""
     codes = np.array([[[1, 2, 3, 4]], [[1020, 1021, 1022, 1023]]], dtype=np.uint16)
     path = tmp_path / "partial-word.dpx"
     path.write_bytes(_dpx_fixture(codes, bit_depth=10, byte_order="<"))
@@ -258,10 +265,11 @@ def test_dpx_read_resets_partial_ten_bit_groups_at_each_scanline(tmp_path: Path)
     )
 
 
+@pytest.mark.req("REQ-PIX-018")
 def test_dpx_read_transfers_only_flat_packed_uint8_bytes_before_gpu_unpack(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """v1-dpx acceptance 2: H2D sees one packed byte buffer and no host decoded integer or float image."""
+    """DPX reading transfers packed bytes once to the GPU before unpacking pixels there."""
     codes = _codes(10, 4)
     path = tmp_path / "transfer.dpx"
     path.write_bytes(_dpx_fixture(codes, bit_depth=10, byte_order="<", eol_padding=4))
@@ -285,6 +293,8 @@ def test_dpx_read_transfers_only_flat_packed_uint8_bytes_before_gpu_unpack(
     )
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     ("transfer", "bit_depth", "gamma", "mappable"),
     (
@@ -308,7 +318,7 @@ def test_dpx_read_transfers_only_flat_packed_uint8_bytes_before_gpu_unpack(
 def test_dpx_transfer_mapping_and_depth_fallback(
     tmp_path: Path, transfer: int, bit_depth: int, gamma: str, mappable: bool
 ) -> None:
-    """v1-dpx acceptance 4: transfer codes map explicitly and unknown values use depth defaults with warning."""
+    """DPX transfer codes map to color metadata, and unknown codes warn before using depth-based defaults."""
     path = tmp_path / "transfer.dpx"
     path.write_bytes(_dpx_fixture(_codes(bit_depth, 3), bit_depth=bit_depth, transfer=transfer))
 
@@ -322,6 +332,8 @@ def test_dpx_transfer_mapping_and_depth_fallback(
     assert bool(observed) is (not mappable)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("overrides", "needle"),
     (
@@ -339,7 +351,7 @@ def test_dpx_transfer_mapping_and_depth_fallback(
 def test_dpx_read_rejects_every_out_of_scope_header_before_decode(
     tmp_path: Path, overrides: dict[str, int], needle: str
 ) -> None:
-    """v1-dpx acceptance 1: unsupported structural variants are actionable closed sets."""
+    """DPX reading rejects unsupported header variants before pixel decoding and explains the cause."""
     bit_depth = overrides.get("bit_depth", 10)
     options = {"bit_depth": bit_depth, **overrides}
     fixture = _dpx_fixture(_codes(bit_depth if bit_depth in (8, 10, 12, 16) else 8, 3), **options)
@@ -352,8 +364,10 @@ def test_dpx_read_rejects_every_out_of_scope_header_before_decode(
     assert needle.lower() in str(error.value).lower()
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_dpx_read_rejects_encryption_before_h2d(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-dpx acceptance 1 and 13: encrypted storage is rejected actionably before any host-to-device copy."""
+    """DPX reading rejects encrypted storage before transferring image data to the GPU."""
     path = tmp_path / "encrypted.dpx"
     path.write_bytes(_dpx_fixture(_codes(10, 3), bit_depth=10, encryption_key=0x12345678))
 
@@ -368,6 +382,8 @@ def test_dpx_read_rejects_encryption_before_h2d(tmp_path: Path, monkeypatch: pyt
     assert "encrypt" in str(error.value).lower()
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("overrides", "needle"),
     (
@@ -383,7 +399,7 @@ def test_dpx_read_rejects_inconsistent_file_structure_before_h2d(
     overrides: dict[str, int],
     needle: str,
 ) -> None:
-    """v1-dpx acceptance 1 and 13: file/header/element extents are consistent before packed-byte H2D."""
+    """DPX reading rejects inconsistent file, header, and image element sizes before GPU transfer."""
     path = tmp_path / "inconsistent.dpx"
     path.write_bytes(_dpx_fixture(_codes(10, 3), bit_depth=10, **overrides))
 
@@ -398,8 +414,10 @@ def test_dpx_read_rejects_inconsistent_file_structure_before_h2d(
     assert needle in str(error.value).lower()
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_dpx_read_rejects_truncated_payload_actionably(tmp_path: Path) -> None:
-    """v1-dpx acceptance 1 and 13: declared scanline extent cannot exceed the file boundary."""
+    """DPX reading rejects a payload shorter than its declared scanline extent with an actionable error."""
     path = tmp_path / "truncated.dpx"
     path.write_bytes(_dpx_fixture(_codes(10, 3), bit_depth=10)[:-1])
 
@@ -409,12 +427,14 @@ def test_dpx_read_rejects_truncated_payload_actionably(tmp_path: Path) -> None:
     assert "truncat" in str(error.value).lower()
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("bit_depth", (8, 10, 12, 16))
 @pytest.mark.parametrize("channels", (3, 4), ids=("rgb", "rgba"))
 def test_dpx_write_emits_big_endian_filled_bytes_and_round_trips_on_grid(
     tmp_path: Path, bit_depth: int, channels: int
 ) -> None:
-    """v1-dpx acceptance 6, 7, and 13: exact SDPX bytes and read-after-write follow an independent oracle."""
+    """DPX writing emits big-endian filled words that match an independent encoder and round-trip on the code grid."""
     values = np.resize(np.array((-0.1, 0.0, 0.1, 0.5, 0.9, 1.0, 1.1), dtype=np.float32), (2, 3, channels))
     labels = tuple("RGBA"[:channels])
     frame = px.io.from_array(cp.asarray(values[..., ::-1]), colorspace="Rec.709", gamma="Cineon", channels=labels[::-1])
@@ -449,9 +469,11 @@ def test_dpx_write_emits_big_endian_filled_bytes_and_round_trips_on_grid(
     )
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("dtype", (np.uint8, np.uint16, np.uint32, np.float16, np.float32))
 def test_dpx_write_accepts_every_storage_dtype_via_float32_recode(tmp_path: Path, dtype: type[np.generic]) -> None:
-    """v1-exr-runtime-independence acceptance 9: all five storage dtypes use full-scale recode semantics."""
+    """DPX writing accepts every supported Frame dtype through a full-scale conversion to float32."""
     if np.issubdtype(dtype, np.integer):
         maximum = np.iinfo(dtype).max
         values = np.array((0, maximum // 2, maximum), dtype=dtype)
@@ -476,8 +498,10 @@ def test_dpx_write_accepts_every_storage_dtype_via_float32_recode(tmp_path: Path
     cp.testing.assert_array_equal(frame.data, before)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 def test_dpx_write_float32_native_bypasses_recode_dtype(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-dpx acceptance 6: native float32 reaches the quantization kernel without numeric recoding."""
+    """DPX writing passes a float32 Frame directly to quantization without an intermediate dtype recode."""
     frame = px.io.from_array(cp.ones((1, 1, 3), dtype=cp.float32), colorspace="Rec.709", gamma="linear", channels="RGB")
 
     def fail_recode(*args: object, **kwargs: object) -> px.core.Frame:
@@ -488,6 +512,8 @@ def test_dpx_write_float32_native_bypasses_recode_dtype(tmp_path: Path, monkeypa
     assert px.io.write_image(tmp_path / "native.dpx", frame) is None
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-007")
 @pytest.mark.parametrize(
     ("gamma", "transfer"),
     (
@@ -527,12 +553,7 @@ def test_dpx_write_float32_native_bypasses_recode_dtype(tmp_path: Path, monkeypa
     ),
 )
 def test_dpx_write_maps_frame_gamma_to_transfer_characteristic(tmp_path: Path, gamma: str, transfer: int) -> None:
-    """v1-dpx acceptance 8; v1-sony-tokens acceptance 12; v1-arri-tokens acceptance 27;
-    v1-red-tokens acceptance 70; v1-canon-tokens acceptance 91; v1-panasonic-tokens acceptance 110;
-    v1-standard-tokens acceptance 133; v1-vendor-a-tokens acceptance 159; v1-vendor-b-tokens acceptance 186.
-
-    The header records the closed gamma mapping, including the vendor B camera-log transfers as logarithmic code 3.
-    """
+    """DPX writing records the specified transfer characteristic for each supported Frame gamma name."""
     frame = px.io.from_array(cp.ones((1, 1, 3), dtype=cp.float32), colorspace="Rec.709", gamma=gamma, channels="RGB")
     path = tmp_path / "transfer.dpx"
 
@@ -542,9 +563,12 @@ def test_dpx_write_maps_frame_gamma_to_transfer_characteristic(tmp_path: Path, g
     assert fields["transfer"] == transfer
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("bit_depth", (0, 9, 32))
 def test_dpx_write_rejects_unknown_bit_depths(tmp_path: Path, bit_depth: int) -> None:
-    """v1-dpx acceptance 6 and 8: bit_depth is an actionable closed set."""
+    """DPX writing rejects unsupported bit depths and lists accepted values."""
     frame = px.io.from_array(cp.ones((1, 1, 3), dtype=cp.float32), colorspace="Rec.709", gamma="linear", channels="RGB")
     path = tmp_path / "invalid.dpx"
 
@@ -555,19 +579,23 @@ def test_dpx_write_rejects_unknown_bit_depths(tmp_path: Path, bit_depth: int) ->
     assert not path.exists()
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(("shape", "channels"), (((1, 1, 2), "RG"), ((1, 1, 3), ("R", "R", "B"))))
 def test_dpx_write_rejects_non_rgb_rgba_or_duplicate_layouts(
     tmp_path: Path, shape: tuple[int, int, int], channels: str | tuple[str, ...]
 ) -> None:
-    """v1-dpx acceptance 6 and 8: writer layout is unique RGB or RGBA only."""
+    """DPX writing accepts unique RGB or RGBA channels and rejects other or duplicated layouts."""
     frame = px.io.from_array(cp.ones(shape, dtype=cp.float32), colorspace="Rec.709", gamma="linear", channels=channels)
 
     with pytest.raises(ValueError, match=_ACTIONABLE):
         px.io.write_image(tmp_path / "invalid.dpx", frame)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_bit_depth_is_rejected_for_non_dpx_writes(tmp_path: Path) -> None:
-    """v1-dpx acceptance 8: explicit bit_depth never silently disappears on another container."""
+    """Image writing rejects a DPX bit-depth option for every other image format."""
     frame = px.io.from_array(cp.ones((1, 1, 3), dtype=cp.uint8), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     with pytest.raises(ValueError, match=_ACTIONABLE) as error:
@@ -576,8 +604,9 @@ def test_bit_depth_is_rejected_for_non_dpx_writes(tmp_path: Path) -> None:
     assert "bit_depth" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_dpx_read_header_is_gpu_free_and_preserves_the_public_model(tmp_path: Path) -> None:
-    """v1-io-orientation acceptance 8 and 10: DPX stays GPU-free and reports effective orientation one."""
+    """DPX header inspection reports effective orientation one without initializing the GPU."""
     path = tmp_path / "header.dpx"
     path.write_bytes(_dpx_fixture(_codes(12, 4), bit_depth=12, byte_order="<", transfer=2))
     script = """
@@ -606,8 +635,10 @@ assert "OpenEXR" not in sys.modules
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 def test_dpx_remains_outside_bytes_boundaries(tmp_path: Path) -> None:
-    """v1-dpx acceptance 10: DPX stays file-only and accepts no bytes format token."""
+    """DPX is available through image files and is rejected as a bytes format token."""
     payload = _dpx_fixture(_codes(10, 3), bit_depth=10)
     frame = px.io.from_array(cp.ones((1, 1, 3), dtype=cp.float32), colorspace="Rec.709", gamma="linear", channels="RGB")
 

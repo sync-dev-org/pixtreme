@@ -1,4 +1,4 @@
-"""Generate the manual visual sheet for v1-tonemap-aces20-analytic acceptance 22."""
+"""Generate a manual visual sheet for ACES 2.0 output transformation."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import pixtreme as px
 _WIDTH = 320
 _HEIGHT = 180
 _LABEL_HEIGHT = 42
-_SUPPLIED_COMBINATIONS = (
+_SUPPLIED_COMBINATIONS: tuple[tuple[px.core.Tonemap, px.core.Colorspace, px.core.Gamma], ...] = (
     ("ACES-1.3", "Rec.709", "BT.1886"),
     ("ACES-1.3", "sRGB", "sRGB"),
     ("ACES-2.0", "Rec.709", "BT.1886"),
@@ -81,7 +81,12 @@ def _source() -> px.core.Frame:
     return px.io.from_array(data, colorspace="ACES2065-1", gamma="linear", channels="RGB")
 
 
-def _render(source: px.core.Frame, tonemap: str, output_colorspace: str, output_gamma: str) -> px.core.Frame:
+def _render(
+    source: px.core.Frame,
+    tonemap: px.core.Tonemap,
+    output_colorspace: px.core.Colorspace,
+    output_gamma: px.core.Gamma,
+) -> px.core.Frame:
     return px.color.rgb_to_rgb(
         source,
         output_colorspace=output_colorspace,
@@ -155,7 +160,9 @@ def _overview_rows(source: px.core.Frame) -> tuple[px.core.Frame, px.core.Frame]
     )
 
 
-def _diagnostic_row(source: px.core.Frame, output_colorspace: str, output_gamma: str) -> px.core.Frame:
+def _diagnostic_row(
+    source: px.core.Frame, output_colorspace: px.core.Colorspace, output_gamma: px.core.Gamma
+) -> px.core.Frame:
     analytic = _render(source, "ACES-2.0", output_colorspace, output_gamma)
     diagnostic = _hue_cusp_gamut_highlight_diagnostic(analytic)
     exit_label = f"{output_colorspace} {output_gamma}"

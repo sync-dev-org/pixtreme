@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal, TypeAlias, TypeVar, cast, get_args
 
 ChromaticAdaptation: TypeAlias = Literal["Bradford", "CAT02", "CAT16", "von-Kries"]
-ReferenceWhite: TypeAlias = Literal["D65", "D93", "D50", "ACES"]
+ReferenceWhite: TypeAlias = Literal["D65", "D93", "D50", "ACES", "DCI"]
 Colorspace: TypeAlias = Literal[
     "sRGB",
     "Rec.709",

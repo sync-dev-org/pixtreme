@@ -1283,13 +1283,13 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "colour-science", specifier = "==0.4.7" },
-    { name = "fonttools", specifier = ">=4.60" },
+    { name = "fonttools", specifier = "==4.63.0" },
     { name = "mkdocs-material", specifier = ">=9.7.7" },
     { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.6" },
     { name = "mypy", specifier = ">=1.0.0" },
-    { name = "opencolorio", specifier = ">=2.3" },
-    { name = "openexr", specifier = ">=3.4" },
-    { name = "pillow", specifier = ">=12.3.0" },
+    { name = "opencolorio", specifier = "==2.5.2" },
+    { name = "openexr", specifier = "==3.4.13" },
+    { name = "pillow", specifier = "==12.3.0" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "ruff", specifier = ">=0.15.22" },
     { name = "torch", specifier = ">=2.8", index = "https://download.pytorch.org/whl/cu129" },

@@ -1,4 +1,4 @@
-"""Generate deterministic visual evidence for v1-panasonic-tokens acceptance 115."""
+"""Generate deterministic Panasonic transfer-curve and gamut comparison sheets."""
 
 from __future__ import annotations
 
@@ -104,7 +104,7 @@ def _markers(
 
 def _axes(
     draw: ImageDraw.ImageDraw,
-    font: ImageFont.ImageFont,
+    font: ImageFont.ImageFont | ImageFont.FreeTypeFont,
     *,
     box: tuple[int, int, int, int],
     title: str,

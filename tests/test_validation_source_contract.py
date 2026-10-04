@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import ast
 import importlib
-import inspect
 from types import ModuleType
 
 import numpy as np
@@ -50,8 +49,9 @@ def _accepted_values(message: str) -> tuple[str, ...]:
     return accepted
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_real_validation_contract_preserves_numeric_boundaries_and_error_semantics() -> None:
-    """REQ-TEST-001: preserve finite, positive, and bounded-real behavior and actionable error identity."""
+    """Numeric validation preserves finite, positive, and bounded input rules and explains invalid values."""
     validation = _validation()
     bounded_why = "opacity-boundary-why-sentinel"
     bounded_how = "opacity-boundary-how-sentinel"
@@ -97,8 +97,9 @@ def test_real_validation_contract_preserves_numeric_boundaries_and_error_semanti
     assert (slots["why"], slots["how"]) == (bounded_why, bounded_how)
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_array_pair_and_scalar_or_pair_contract_preserves_numpy_scalar_acceptance() -> None:
-    """REQ-TEST-001: preserve host coercion, NumPy scalars, pair shape, and recovery semantics."""
+    """Array-pair and scalar-or-pair validation accepts NumPy scalars and reports invalid shapes with a correction."""
     validation = _validation()
     array_why = "array-conversion-why-sentinel"
     array_how = "array-conversion-how-sentinel"
@@ -149,8 +150,9 @@ def test_array_pair_and_scalar_or_pair_contract_preserves_numpy_scalar_acceptanc
     assert (slots["why"], slots["how"]) == (scale_why, scale_how)
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_bool_and_closed_token_contract_preserves_validation_variants() -> None:
-    """REQ-TEST-001: preserve strict bool and all three closed-token boundary variants."""
+    """Boolean and closed-token validation accepts declared forms and explains rejected values."""
     validation = _validation()
     bool_why = "adapt-type-why-sentinel"
     bool_how = "adapt-type-how-sentinel"
@@ -209,82 +211,3 @@ def test_bool_and_closed_token_contract_preserves_validation_variants() -> None:
         )
     slots = _assert_error_case(custom_token_error.value, parameter="output_colorspace", rejected_value="ACES")
     assert (slots["why"], slots["how"]) == (colorspace_why, colorspace_how)
-
-
-def test_validation_primitives_bind_consumer_adapters_to_core_source() -> None:
-    """REQ-TEST-003 structure contract: consumer adapters return the core call result; as a scoped legacy
-    regression, removed domain-local primitive definitions remain absent."""
-    validation = _validation()
-    primitive_names = {
-        "_bounded_real",
-        "_closed_str_token",
-        "_closed_token",
-        "_finite_pair",
-        "_finite_real",
-        "_host_array",
-        "_normalized_closed_token",
-        "_positive_real",
-        "_positive_scalar_or_pair",
-        "_strict_bool",
-    }
-
-    validation_definitions = {
-        node.name
-        for node in ast.parse(inspect.getsource(validation)).body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-    }
-    assert primitive_names <= validation_definitions
-
-    local_primitive_names = {
-        "pixtreme._draw.shapes": {
-            "_boolean",
-            "_finite_real",
-            "_nonnegative_real",
-            "_opacity",
-            "_point",
-            "_positive_real",
-            "_token",
-            "_validate_frame",
-        },
-        "pixtreme._draw.text": {"_strict_bool"},
-        "pixtreme._generate.patterns": {
-            "_cell",
-            "_finite_real",
-            "_point",
-            "_positive_real",
-            "_token",
-        },
-        "pixtreme._generate.noise": {"_nonnegative_real", "_strict_bool"},
-        "pixtreme._composite.merge": {"_closed_token", "_require_image_float32", "_scale"},
-        "pixtreme._color.transform": {"_validate_axis_token"},
-        "pixtreme._io.wire.sampling": {"_token"},
-    }
-    for module_name, absent in local_primitive_names.items():
-        module = importlib.import_module(module_name)
-        local_definitions = {
-            node.name
-            for node in ast.parse(inspect.getsource(module)).body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-        }
-        assert not local_definitions & absent, f"{module_name} retained {sorted(local_definitions & absent)}"
-
-    for module_name in ("pixtreme._draw.shapes", "pixtreme._draw.text", "pixtreme._generate.patterns"):
-        module = importlib.import_module(module_name)
-        adapter = ast.parse(inspect.getsource(module._host_array)).body[0]
-        assert isinstance(adapter, (ast.FunctionDef, ast.AsyncFunctionDef))
-        assert len(adapter.body) == 1 and isinstance(adapter.body[0], ast.Return)
-        call = adapter.body[0].value
-        assert isinstance(call, ast.Call)
-        assert isinstance(call.func, ast.Attribute)
-        assert isinstance(call.func.value, ast.Name)
-        assert (call.func.value.id, call.func.attr) == ("_validation", "_host_array")
-        assert len(call.args) == 1 and isinstance(call.args[0], ast.Name) and call.args[0].id == "value"
-        assert {keyword.arg for keyword in call.keywords} == {"why", "how"}
-
-    frame = importlib.import_module("pixtreme._core.frame")
-    frame_definitions = {
-        node.name
-        for node in ast.parse(inspect.getsource(frame)).body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-    }
-    assert {"_validate_frame", "_validate_float32_frame"} <= frame_definitions

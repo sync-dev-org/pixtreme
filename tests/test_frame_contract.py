@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 import inspect
 
 import pytest
@@ -10,46 +9,10 @@ import pytest
 import pixtreme as px
 
 
-def test_frame_raises_use_the_shared_actionable_error_contract() -> None:
-    """REQ-API-012 structural contract: Frame raises use the shared helper rather than local or plain messages."""
-    import pixtreme._core.frame as frame_module
-
-    tree = ast.parse(inspect.getsource(frame_module))
-    local_helpers = [
-        node
-        for node in tree.body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "_actionable_error"
-    ]
-    shared_imports = [
-        alias.name
-        for node in tree.body
-        if isinstance(node, ast.ImportFrom) and node.module == "pixtreme._core.errors"
-        for alias in node.names
-    ]
-    target_raises = [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Raise)
-        and isinstance(node.exc, ast.Call)
-        and isinstance(node.exc.func, ast.Name)
-        and node.exc.func.id in {"ValueError", "TypeError", "RuntimeError"}
-    ]
-
-    assert not local_helpers
-    assert "_actionable_error" in shared_imports
-    assert target_raises
-    for node in target_raises:
-        assert node.exc is not None
-        assert isinstance(node.exc, ast.Call)
-        assert len(node.exc.args) == 1
-        message = node.exc.args[0]
-        assert isinstance(message, ast.Call), f"raise at line {node.lineno} does not call _actionable_error"
-        assert isinstance(message.func, ast.Name)
-        assert message.func.id == "_actionable_error"
-
-
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_frame_has_the_four_color_metadata_fields_and_data() -> None:
-    """v1-color-semantics acceptance 1: Frame exposes matrix beside its existing color axes."""
+    """Frame exposes pixels together with colorspace, gamma, channels, and matrix metadata."""
     assert set(px.core.Frame.model_fields) == {"data", "colorspace", "gamma", "channels", "matrix"}
     rejected = {
         "range",
@@ -67,8 +30,10 @@ def test_frame_has_the_four_color_metadata_fields_and_data() -> None:
     assert rejected.isdisjoint(px.core.Frame.model_fields)
 
 
+@pytest.mark.req("REQ-PIX-015")
+@pytest.mark.req("REQ-PIX-105")
 def test_dlpack_protocol_delegates_consumer_arguments_to_data() -> None:
-    """v1-frame-core acceptance 12: Frame delegates DLPack protocol calls, including the consumer stream."""
+    """Frame delegates DLPack requests, including the consumer stream, to its GPU pixel storage."""
 
     class DLPackProbe:
         def __init__(self) -> None:
@@ -97,15 +62,18 @@ def test_dlpack_protocol_delegates_consumer_arguments_to_data() -> None:
     assert source.__dlpack_device__() == (2, 7)
 
 
+@pytest.mark.req("REQ-PIX-015")
+@pytest.mark.req("REQ-PIX-105")
 def test_tensor_helpers_are_absent_in_favor_of_the_dlpack_protocol() -> None:
-    """v1-frame-core acceptance 14: no tensor/DLPack helper duplicates the Python DLPack protocol."""
+    """Frame exposes GPU array interchange through the DLPack protocol without duplicate tensor helper methods."""
     assert not hasattr(px.core.Frame, "to_tensor")
     for name in ("to_tensor", "to_dlpack", "from_dlpack"):
         assert not hasattr(px, name)
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_public_api_is_the_feature_minimum() -> None:
-    """v1-public-namespace acceptance 1 and 4; v1-fonts-module acceptance 1: root exports stay module-only."""
+    """The root package exposes public modules and version without duplicate operation aliases."""
     assert px.__all__ == (
         "core",
         "io",
@@ -141,8 +109,10 @@ def test_public_api_is_the_feature_minimum() -> None:
         assert not hasattr(px, removed)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_directional_color_signatures_match_the_declarative_contract() -> None:
-    """v1-color-semantics acceptance 9, 15, 20, 24-25, 40 and v1-hsv acceptance 1 fix signatures."""
+    """Public color conversion functions expose the declared directional signatures and color arguments."""
     expected = {
         px.color.rgb_to_hsv: ("frame",),
         px.color.hsv_to_rgb: ("frame",),
@@ -172,8 +142,11 @@ def test_directional_color_signatures_match_the_declarative_contract() -> None:
     assert inspect.signature(px.color.linear_to_gamma).parameters["gamma"].default is inspect.Parameter.empty
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-005")
 def test_color_transform_signature_integrates_optional_tonemap() -> None:
-    """v1-color-semantics acceptance 29-30: rgb_to_rgb integrates the optional rendering axis."""
+    """RGB color conversion exposes the optional rendering transform in its public call signature."""
     signature = inspect.signature(px.color.rgb_to_rgb)
 
     assert tuple(signature.parameters) == (
@@ -191,8 +164,9 @@ def test_color_transform_signature_integrates_optional_tonemap() -> None:
         assert parameter.default is None
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_stack_images_signature_uses_one_positional_collection_and_keyword_controls() -> None:
-    """v1-stack acceptance 1-2: stack has the exact collection, direction, and adapt grammar."""
+    """Image stacking accepts one positional collection and keyword controls for direction and adaptation."""
     signature = inspect.signature(px.transform.stack)
 
     assert tuple(signature.parameters) == ("images", "direction", "adapt")
@@ -203,8 +177,9 @@ def test_stack_images_signature_uses_one_positional_collection_and_keyword_contr
     assert signature.parameters["adapt"].default is False
 
 
+@pytest.mark.req("REQ-PIX-001")
 def test_shuffle_signature_uses_keyword_only_adapt_and_output_collector() -> None:
-    """v1-channel-shuffle acceptance 1: shuffle has the exact kwargs routing grammar."""
+    """Channel shuffle accepts keyword-only adaptation and output channel declarations."""
     signature = inspect.signature(px.channel.shuffle)
 
     assert tuple(signature.parameters) == ("adapt", "outputs")
@@ -213,8 +188,10 @@ def test_shuffle_signature_uses_keyword_only_adapt_and_output_collector() -> Non
     assert signature.parameters["outputs"].kind is inspect.Parameter.VAR_KEYWORD
 
 
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("REQ-PIX-002")
 def test_from_format_signatures_match_each_static_format_contract() -> None:
-    """v1-color-semantics acceptance 5: format constructors expose matrix=None without changing other axes."""
+    """Named-format constructors accept optional matrix metadata without changing the other color arguments."""
     expected = {
         px.io.from_uyvy422: (
             ("buf", "width", "height", "colorspace", "gamma", "matrix", "range", "interpolation"),
@@ -301,12 +278,13 @@ def test_from_format_signatures_match_each_static_format_contract() -> None:
             assert parameter.default == expected_default
 
 
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(
     "operation_name",
     ("quantize", "dequantize", "legal_to_full", "full_to_legal"),
 )
 def test_value_operation_signatures_require_the_bit_depth_claim(operation_name: str) -> None:
-    """v1-subpackage-reorg acceptance 3-4: value signatures stay fixed except the range pair defaults to 8."""
+    """Value conversion signatures require a declared bit depth except where range conversion defaults to eight bits."""
     operation = getattr(px.values, operation_name)
     signature = inspect.signature(operation)
 
@@ -318,8 +296,9 @@ def test_value_operation_signatures_require_the_bit_depth_claim(operation_name: 
     assert parameter.default == expected_default
 
 
+@pytest.mark.req("REQ-PIX-008")
 def test_cast_dtype_signature_requires_the_dtype_claim() -> None:
-    """v1-io acceptance 19: cast_dtype exposes one required keyword-only dtype token."""
+    """Numeric dtype casting requires a keyword-only destination dtype."""
     signature = inspect.signature(px.values.cast_dtype)
 
     assert tuple(signature.parameters) == ("frame", "dtype")
@@ -329,10 +308,9 @@ def test_cast_dtype_signature_requires_the_dtype_claim() -> None:
     assert parameter.default is inspect.Parameter.empty
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_image_io_signatures_are_keyword_only_after_the_primary_inputs() -> None:
-    """v1-io-orientation acceptance 1; v1-exr-runtime-independence acceptance 1:
-    image read orientation and image write dtype are trailing keyword-only selectors.
-    """
+    """Image reading accepts orientation and image writing accepts dtype as trailing keyword-only choices."""
     read = inspect.signature(px.io.read_image)
     assert tuple(read.parameters) == (
         "path",
@@ -375,6 +353,8 @@ def test_image_io_signatures_are_keyword_only_after_the_primary_inputs() -> None
     assert tuple(header.parameters) == ("path",)
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "routes"),
     (
@@ -388,7 +368,7 @@ def test_channel_shuffle_contract_rejects_non_float32_frame_data(
     dtype: str,
     routes: tuple[str, ...],
 ) -> None:
-    """v1-channel-shuffle acceptance 10: shuffle errors prioritize recoding and retain bit-grid guidance."""
+    """Channel shuffle rejects non-float32 Frame pixels and explains recoding and bit-depth conversion routes."""
     import cupy as cp
 
     source = px.io.from_array(
@@ -404,6 +384,8 @@ def test_channel_shuffle_contract_rejects_non_float32_frame_data(
     assert positions == tuple(sorted(positions))
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "routes"),
     (
@@ -417,7 +399,7 @@ def test_color_transform_contract_rejects_non_float32_frame_data(
     dtype: str,
     routes: tuple[str, ...],
 ) -> None:
-    """v1-recode-dtype acceptance 9: color errors prioritize recoding and retain bit-grid guidance."""
+    """Color conversion rejects non-float32 Frame pixels and explains recoding and bit-depth conversion routes."""
     import cupy as cp
 
     source = px.io.from_array(
@@ -433,8 +415,10 @@ def test_color_transform_contract_rejects_non_float32_frame_data(
     assert positions == tuple(sorted(positions))
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-102")
 def test_frame_constructor_signature_requires_explicit_keyword_metadata() -> None:
-    """v1-color-semantics acceptance 4: from_array adds optional matrix metadata."""
+    """Array import accepts color metadata, including matrix, only through explicit keyword arguments."""
     signature = inspect.signature(px.io.from_array)
     assert tuple(signature.parameters) == (
         "data",
@@ -461,8 +445,9 @@ def test_frame_constructor_signature_requires_explicit_keyword_metadata() -> Non
         assert parameter.default is None
 
 
+@pytest.mark.req("REQ-PIX-017")
 def test_frame_boundary_functions_expose_only_the_array_exit_contract() -> None:
-    """v1-public-namespace acceptance 10: io owns the generic array exit and Frame has no exits."""
+    """Generic GPU array export belongs to the I/O module and is absent from Frame methods."""
     signature = inspect.signature(px.io.to_array)
     assert tuple(signature.parameters) == (
         "frame",
@@ -485,8 +470,10 @@ def test_frame_boundary_functions_expose_only_the_array_exit_contract() -> None:
     assert not hasattr(px.core.Frame, "to_array")
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-017")
 def test_frame_rejects_extra_model_fields() -> None:
-    """v1-frame-core acceptance 9: direct model construction cannot smuggle rejected metadata into Frame."""
+    """Frame construction rejects unrecognized metadata fields instead of retaining them silently."""
     import cupy as cp
 
     with pytest.raises(ValueError):

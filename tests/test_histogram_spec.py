@@ -43,7 +43,7 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError], *required: str) 
 
 
 def _bin_indices(values: np.ndarray, *, domain: tuple[float, float], bins: int) -> np.ndarray:
-    """Host binning derived directly from v1-histogram acceptance 9."""
+    """Calculate histogram bin indices on the host from the declared domain."""
     lo, hi = domain
     clamped = np.clip(values.astype(np.float64), lo, hi)
     scaled = (clamped - lo) / (hi - lo) * bins
@@ -51,7 +51,7 @@ def _bin_indices(values: np.ndarray, *, domain: tuple[float, float], bins: int) 
 
 
 def _equalize_reference(values: np.ndarray, *, domain: tuple[float, float], bins: int) -> np.ndarray:
-    """Host direct empirical CDF derived from v1-histogram acceptance 9-11."""
+    """Calculate the empirical per channel histogram CDF on the host."""
     indices = _bin_indices(values, domain=domain, bins=bins)
     height, width, channel_count = values.shape
     output = np.empty(values.shape, dtype=np.float64)
@@ -71,7 +71,7 @@ def _mirror_index(index: int, extent: int) -> int:
 
 
 def _waterfill_reference(counts: np.ndarray, *, cap: float) -> np.ndarray:
-    """Solve v1-histogram acceptance 13 analytically by ordered saturation thresholds."""
+    """Distribute clipped histogram counts under the declared cap."""
     raw = counts.astype(np.float64)
     target = float(np.sum(raw))
     clipped = np.minimum(raw, cap)
@@ -109,7 +109,7 @@ def _clahe_reference(
     domain: tuple[float, float],
     bins: int,
 ) -> np.ndarray:
-    """Independent host pipeline derived only from v1-histogram acceptance 9 and 12-16."""
+    """Independent host reference for tiled histogram equalization."""
     height, width, channel_count = values.shape
     tile_height = (height + tiles_y - 1) // tiles_y
     tile_width = (width + tiles_x - 1) // tiles_x
@@ -156,8 +156,9 @@ def _clahe_reference(
     return output.astype(np.float32)
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_histogram_operations_have_exact_signatures_and_single_canonical_paths() -> None:
-    """v1-public-namespace acceptance 7: two exact APIs exist only once under px.color."""
+    """The two histogram color correction operations have one public path each with their documented signatures."""
     expected = {
         "equalize_histogram": (("frame", "domain", "bins"), ((0.0, 1.0), 1024)),
         "clahe": (
@@ -179,8 +180,9 @@ def test_histogram_operations_have_exact_signatures_and_single_canonical_paths()
         assert not hasattr(px.core.Frame, name)
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_equalize_histogram_matches_direct_per_channel_cdf_at_domain_and_bin_boundaries() -> None:
-    """v1-histogram acceptance 9-11 and 18: clamp, boundary bins, empty bins, and direct CDF match NumPy."""
+    """For histogram color correction, clamp, boundary bins, empty bins, and direct CDF match NumPy."""
     values = np.asarray(
         [
             [[-0.5, 0.24], [0.0, 0.24], [0.249999, 0.24], [0.25, 0.24], [0.5, 0.24]],
@@ -201,6 +203,7 @@ def test_equalize_histogram_matches_direct_per_channel_cdf_at_domain_and_bin_bou
     np.testing.assert_array_equal(actual[..., 1], 1.0)
 
 
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize(
     ("shape", "tiles_y", "tiles_x", "bins", "clip_limit"),
     (((5, 7, 3), 2, 3, 8, 2.0), ((1, 7, 2), 1, 3, 16, 1.75)),
@@ -212,7 +215,7 @@ def test_clahe_matches_independent_mirror_waterfill_and_tile_center_oracle(
     bins: int,
     clip_limit: float,
 ) -> None:
-    """v1-histogram acceptance 9 and 12-18: the full deterministic CLAHE pipeline matches a host oracle."""
+    """For histogram color correction, the full deterministic CLAHE pipeline matches a host oracle."""
     values = np.random.default_rng(20260803).uniform(-0.4, 1.4, size=shape).astype(np.float32)
     expected = _clahe_reference(
         values,
@@ -240,8 +243,9 @@ def test_clahe_matches_independent_mirror_waterfill_and_tile_center_oracle(
     assert np.max(actual) <= 1.0
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_clahe_clip_limit_one_is_the_exact_uniform_histogram_mapping() -> None:
-    """v1-histogram acceptance 13-15: clip_limit=1 gives g[i]=N/B and one-over-B CDF increments."""
+    """For histogram color correction, clip_limit=1 gives g[i]=N/B and one-over-B CDF increments."""
     values = np.asarray(
         [[[0.0], [0.1], [0.3], [0.55], [0.8]], [[1.0], [1.2], [-0.2], [0.45], [0.7]]],
         dtype=np.float32,
@@ -258,8 +262,9 @@ def test_clahe_clip_limit_one_is_the_exact_uniform_histogram_mapping() -> None:
     assert source.shape == actual.shape
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_clahe_waterfill_saturates_the_cap_without_scan_order_remainder() -> None:
-    """v1-histogram acceptance 13-15: one tile has the unique cap-respecting fractional histogram."""
+    """For histogram color correction, one tile has the unique cap-respecting fractional histogram."""
     values = np.asarray([[[0.0], [0.0], [0.0], [0.0]], [[0.0], [0.0], [0.3], [0.6]]], dtype=np.float32)
     expected_lut = np.asarray((0.375, 0.625, 0.875, 1.0), dtype=np.float32)
     indices = _bin_indices(values, domain=(0.0, 1.0), bins=4)
@@ -278,9 +283,11 @@ def test_clahe_waterfill_saturates_the_cap_without_scan_order_remainder() -> Non
     np.testing.assert_array_equal(actual, expected_lut[indices])
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize("name", ("equalize_histogram", "clahe"))
 def test_histogram_operations_preserve_metadata_shape_storage_and_input(name: str) -> None:
-    """v1-histogram acceptance 3; v1-red-tokens acceptance 68: both operations retain ARRI metadata."""
+    """Histogram color correction preserves Frame dimensions and color metadata and returns separate storage."""
     values = np.random.default_rng(4903).uniform(-0.2, 1.2, size=(8, 9, 4)).astype(np.float32)
     source = _frame(
         values,
@@ -312,9 +319,11 @@ def test_histogram_operations_preserve_metadata_shape_storage_and_input(name: st
     )
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize("name", ("equalize_histogram", "clahe"))
 def test_histogram_operations_reject_non_frames_and_non_float32_with_conversion_guidance(name: str) -> None:
-    """v1-histogram acceptance 4: Frame and fp32 checks are actionable and precede processing."""
+    """Histogram color correction requires float32 Frames and explains how to convert invalid input."""
     import cupy as cp
 
     function = getattr(px.color, name)
@@ -333,6 +342,8 @@ def test_histogram_operations_reject_non_frames_and_non_float32_with_conversion_
         _assert_actionable(dtype_error, "float32", *paths)
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize("name", ("equalize_histogram", "clahe"))
 @pytest.mark.parametrize(
     "domain",
@@ -349,15 +360,16 @@ def test_histogram_operations_reject_non_frames_and_non_float32_with_conversion_
     ),
 )
 def test_histogram_operations_reject_invalid_domains(name: str, domain: object) -> None:
-    """v1-histogram acceptance 5: domain rejects structural, type, endpoint-finiteness, and ordering violations."""
+    """Histogram color correction rejects malformed, nonfinite, or reversed input domains with guidance."""
     kwargs = {"tiles_y": 1, "tiles_x": 1} if name == "clahe" else {}
     with pytest.raises(ValueError) as error:
         getattr(px.color, name)(_frame(np.zeros((2, 3, 1))), domain=domain, **kwargs)
     _assert_actionable(error, "domain", "(minimum, maximum)")
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_equalize_histogram_accepts_large_opposing_domain_with_finite_float64_width() -> None:
-    """v1-histogram acceptance 5 and 9: an fp64-finite opposing-sign domain preserves the declared bin formula."""
+    """For histogram color correction, an fp64-finite opposing-sign domain preserves the declared bin formula."""
     values = np.asarray([[[-1e38], [1e38]]], dtype=np.float32)
 
     actual = px.io.to_array(
@@ -367,9 +379,11 @@ def test_equalize_histogram_accepts_large_opposing_domain_with_finite_float64_wi
     np.testing.assert_array_equal(actual, np.asarray([[[0.5], [1.0]]], dtype=np.float32))
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize("name", ("equalize_histogram", "clahe"))
 def test_histogram_operations_reject_domain_with_nonfinite_float64_width(name: str) -> None:
-    """v1-histogram acceptance 5 and 9: a domain whose fp64 width overflows is rejected before binning."""
+    """For histogram color correction, a domain whose fp64 width overflows is rejected before binning."""
     kwargs = {"tiles_y": 1, "tiles_x": 1} if name == "clahe" else {}
 
     with pytest.raises(ValueError) as error:
@@ -378,13 +392,15 @@ def test_histogram_operations_reject_domain_with_nonfinite_float64_width(name: s
     _assert_actionable(error, "domain", "maximum - minimum", "finite")
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize("name", ("equalize_histogram", "clahe"))
 @pytest.mark.parametrize("domain", ((-(10**400), 1.0), (0.0, 10**400)))
 def test_histogram_operations_reject_domain_elements_that_cannot_convert_to_float64(
     name: str,
     domain: tuple[int | float, int | float],
 ) -> None:
-    """v1-histogram acceptance 5: domain elements must convert to finite fp64 without leaking OverflowError."""
+    """For histogram color correction, domain elements must convert to finite fp64 without leaking OverflowError."""
     kwargs = {"tiles_y": 1, "tiles_x": 1} if name == "clahe" else {}
 
     with pytest.raises(ValueError) as error:
@@ -393,41 +409,50 @@ def test_histogram_operations_reject_domain_elements_that_cannot_convert_to_floa
     _assert_actionable(error, "domain", "float64", "finite")
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize("name", ("equalize_histogram", "clahe"))
 @pytest.mark.parametrize("bins", (True, np.int64(8), 2.0, 1, 65537))
 def test_histogram_operations_reject_invalid_bin_counts(name: str, bins: object) -> None:
-    """v1-histogram acceptance 6: bins is a built-in int in the inclusive 2..65536 range."""
+    """Histogram color correction accepts built-in integer bin counts from 2 through 65536 and rejects others."""
     kwargs = {"tiles_y": 1, "tiles_x": 1} if name == "clahe" else {}
     with pytest.raises(ValueError) as error:
         getattr(px.color, name)(_frame(np.zeros((2, 3, 1))), bins=bins, **kwargs)
     _assert_actionable(error, "bins", "2", "65536")
 
 
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize("name", ("equalize_histogram", "clahe"))
 @pytest.mark.parametrize("bins", (2, 65536))
 def test_histogram_operations_accept_both_bin_count_boundaries(name: str, bins: int) -> None:
-    """v1-histogram acceptance 6 and 17: both bin bounds work even when bins exceeds tile pixels."""
+    """For histogram color correction, both bin bounds work even when bins exceeds tile pixels."""
     kwargs = {"tiles_y": 1, "tiles_x": 1} if name == "clahe" else {}
     result = getattr(px.color, name)(_frame(np.asarray([[[0.0]], [[1.0]]], dtype=np.float32)), bins=bins, **kwargs)
     assert result.shape == (2, 1, 1)
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize("clip_limit", (True, "2", np.nan, np.inf, -1.0, 0.999999))
 def test_clahe_rejects_invalid_clip_limits(clip_limit: object) -> None:
-    """v1-histogram acceptance 7: clip_limit is a finite non-bool real at least one."""
+    """For histogram color correction, clip_limit is a finite non-bool real at least one."""
     with pytest.raises(ValueError) as error:
         px.color.clahe(_frame(np.zeros((2, 3, 1))), clip_limit=clip_limit, tiles_y=1, tiles_x=1)
     _assert_actionable(error, "clip_limit", "1.0")
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-020")
 def test_clahe_rejects_clip_limit_that_cannot_convert_to_float64() -> None:
-    """v1-histogram acceptance 7: clip_limit conversion overflow becomes an actionable ValueError."""
+    """For histogram color correction, clip_limit conversion overflow becomes an actionable ValueError."""
     with pytest.raises(ValueError) as error:
         px.color.clahe(_frame(np.zeros((2, 3, 1))), clip_limit=10**400, tiles_y=1, tiles_x=1)
 
     _assert_actionable(error, "clip_limit", "float64", "finite")
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-020")
 @pytest.mark.parametrize(
     ("argument", "value", "dimension"),
     (
@@ -448,21 +473,24 @@ def test_clahe_rejects_invalid_tile_counts_with_axis_specific_guidance(
     value: object,
     dimension: str,
 ) -> None:
-    """v1-histogram acceptance 8: each tile axis is a bounded positive built-in int with axis-specific errors."""
+    """For histogram color correction, each tile axis is a bounded positive built-in int with axis-specific errors."""
     kwargs = {"tiles_y": 1, "tiles_x": 1, argument: value}
     with pytest.raises(ValueError) as error:
         px.color.clahe(_frame(np.zeros((2, 3, 1))), **kwargs)
     _assert_actionable(error, argument, "built-in int", dimension)
 
 
+@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("REQ-PIX-020")
 def test_clahe_rejects_legacy_tiles_tuple_keyword() -> None:
-    """v1-histogram acceptance 2 and 8: the legacy tiles tuple is absent from the canonical API."""
+    """CLAHE rejects a tiles tuple because its public signature accepts separate tile counts for each axis."""
     with pytest.raises(TypeError, match="unexpected keyword argument 'tiles'"):
         px.color.clahe(_frame(np.zeros((2, 3, 1))), tiles=(1, 1))
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_clahe_default_tile_counts_match_explicit_eight_by_eight_bitwise() -> None:
-    """v1-histogram acceptance 2 and 18: default tile counts are exactly the explicit 8-by-8 behavior."""
+    """For histogram color correction, default tile counts are exactly the explicit 8-by-8 behavior."""
     values = np.random.default_rng(818).uniform(-0.2, 1.2, size=(9, 10, 2)).astype(np.float32)
     source = _frame(values)
 
@@ -476,8 +504,9 @@ def test_clahe_default_tile_counts_match_explicit_eight_by_eight_bitwise() -> No
     np.testing.assert_array_equal(implicit, explicit)
 
 
+@pytest.mark.req("REQ-PIX-020")
 def test_clahe_is_bitwise_deterministic_for_repeated_calls() -> None:
-    """v1-histogram acceptance 18: count, water-fill, CDF, and interpolation are repeatable."""
+    """For histogram color correction, count, water-fill, CDF, and interpolation are repeatable."""
     values = np.random.default_rng(1818).uniform(-0.5, 1.5, size=(11, 13, 3)).astype(np.float32)
     source = _frame(values)
     kwargs = {"clip_limit": 1.7, "tiles_y": 4, "tiles_x": 5, "domain": (-0.25, 1.25), "bins": 31}

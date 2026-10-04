@@ -1,4 +1,4 @@
-"""Generate deterministic visual comparisons for v1-red-tokens acceptance 74."""
+"""Generate deterministic RED transfer-curve and gamut comparison sheets."""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def _cineon_encode(values: np.ndarray) -> np.ndarray:
     return sign * encoded
 
 
-def _public_curve(linear: np.ndarray, gamma: str) -> tuple[np.ndarray, np.ndarray]:
+def _public_curve(linear: np.ndarray, gamma: px.core.Gamma) -> tuple[np.ndarray, np.ndarray]:
     rgb = np.repeat(linear.astype(np.float32)[:, None], 3, axis=1)[None, :, :]
     source = px.io.from_array(cp.asarray(rgb), colorspace="ACEScg", gamma="linear", channels="RGB")
     encoded = px.color.linear_to_gamma(source, gamma=gamma)
@@ -123,7 +123,7 @@ def _markers(
 
 def _axes(
     draw: ImageDraw.ImageDraw,
-    font: ImageFont.ImageFont,
+    font: ImageFont.ImageFont | ImageFont.FreeTypeFont,
     *,
     box: tuple[int, int, int, int],
     title: str,
@@ -237,10 +237,10 @@ def _transfer_sheet() -> Image.Image:
             for x, gpu, oracle in zip(film_anchor_x, film_anchor_gpu, film_anchor_oracle, strict=True)
         ),
     )
-    for index, (name, x, gpu, oracle) in enumerate(anchor_rows):
+    for index, (name, value_x, gpu, oracle) in enumerate(anchor_rows):
         draw.text(
             (anchor_box[0] + 8, anchor_box[1] + 28 + index * 17),
-            f"{name:<14} x={float(x):>9.6f}  GPU={float(gpu):>12.9f}  oracle={float(oracle):>12.9f}",
+            f"{name:<14} x={float(value_x):>9.6f}  GPU={float(gpu):>12.9f}  oracle={float(oracle):>12.9f}",
             fill=_TEXT,
             font=font,
         )
@@ -311,7 +311,7 @@ def _source_colors(width: int) -> np.ndarray:
     )
 
 
-def _gamut_strip(colorspace: str, width: int, height: int) -> np.ndarray:
+def _gamut_strip(colorspace: px.core.Colorspace, width: int, height: int) -> np.ndarray:
     source_rgb = _source_colors(width)
     source = px.io.from_array(cp.asarray(source_rgb[None, :, :]), colorspace=colorspace, gamma="linear", channels="RGB")
     converted = px.color.rgb_to_rgb(source, output_colorspace="Rec.709", output_gamma="linear")
@@ -322,7 +322,14 @@ def _gamut_strip(colorspace: str, width: int, height: int) -> np.ndarray:
 
 
 def _gamut_sheet() -> Image.Image:
-    names = ("REDWideGamutRGB", "DRAGONcolor", "DRAGONcolor2", "REDcolor2", "REDcolor3", "REDcolor4")
+    names: tuple[px.core.Colorspace, ...] = (
+        "REDWideGamutRGB",
+        "DRAGONcolor",
+        "DRAGONcolor2",
+        "REDcolor2",
+        "REDcolor3",
+        "REDcolor4",
+    )
     strip_width = _WIDTH - _LEFT - _RIGHT
     strip_height = 100
     image = Image.new("RGB", (_WIDTH, 780), _BACKGROUND)

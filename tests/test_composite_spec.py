@@ -9,6 +9,7 @@ from typing import Any
 
 import numpy as np
 import pytest
+from transfer_capture import capture_array_transfers
 
 import pixtreme as px
 
@@ -279,8 +280,10 @@ def _composite_reference(
     return output
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-012")
 def test_composite_public_signature_metadata_and_private_storage() -> None:
-    """v1-derivative-filters acceptance 17: merge stays in the expanded 68-point surface."""
+    """Image compositing exposes a public merge operation that returns a separate Frame with its color metadata."""
     signature = inspect.signature(px.composite.merge)
     assert tuple(signature.parameters) == (
         "background",
@@ -336,6 +339,8 @@ def test_composite_public_signature_metadata_and_private_storage() -> None:
     assert result.data.data.ptr != foreground.data.data.ptr
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("background_factory", "foreground_factory"),
     (
@@ -347,10 +352,7 @@ def test_composite_rejects_non_frame_inputs_actionably(
     background_factory: Callable[[], object],
     foreground_factory: Callable[[], object],
 ) -> None:
-    """v1-composite acceptance 1: both positional image inputs are Frame-only boundaries.
-
-    Inputs are built lazily inside the test so that GPU-less collection never initializes CUDA (I-60).
-    """
+    """For image compositing, both positional image inputs are Frame-only boundaries."""
     background = background_factory()
     foreground = foreground_factory()
     with pytest.raises(ValueError) as error:
@@ -359,9 +361,12 @@ def test_composite_rejects_non_frame_inputs_actionably(
     assert "Frame" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("dtype", (np.float16, np.uint8, np.uint16))
 def test_composite_rejects_non_float32_images_for_both_adapt_modes(dtype: Any) -> None:
-    """v1-composite acceptance 3 and 6: dtype is never an implicit or adapt-enabled conversion."""
+    """For image compositing, dtype is never an implicit or adapt-enabled conversion."""
     background = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=("matte",))
     foreground = _frame(np.zeros((2, 2, 1), dtype=dtype), channels=("matte",))
 
@@ -373,8 +378,11 @@ def test_composite_rejects_non_float32_images_for_both_adapt_modes(dtype: Any) -
         assert "float32" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 def test_composite_label_mapping_is_order_independent_and_default_mismatches_name_both_values() -> None:
-    """v1-composite acceptance 4-5: labels map colors while metadata mismatches fail with both values."""
+    """For image compositing, labels map colors while metadata mismatches fail with both values."""
     background = _frame(
         np.asarray([[[0.1, 0.2, 0.3]]], dtype=np.float32),
         channels=("B", "G", "R"),
@@ -422,8 +430,10 @@ def test_composite_label_mapping_is_order_independent_and_default_mismatches_nam
         assert all(value in str(error.value) for value in required)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-012")
 def test_composite_adapt_matches_public_channel_and_color_transform_composition() -> None:
-    """v1-composite acceptance 6: adapt follows YCbCr-to-RGB then color-transform public semantics."""
+    """For image compositing, adapt follows YCbCr-to-RGB then color-transform public semantics."""
     background_values = np.asarray([[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]], dtype=np.float32)
     foreground_values = np.asarray([[[0.4, 0.3, 0.7, 0.25], [0.8, 0.1, 0.2, 0.75]]], dtype=np.float32)
     background = _frame(background_values, colorspace="ACEScg", gamma="linear")
@@ -449,8 +459,11 @@ def test_composite_adapt_matches_public_channel_and_color_transform_composition(
     np.testing.assert_allclose(_host(result), expected, rtol=4e-5, atol=4e-5)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 def test_composite_adapt_missing_ycbcr_matrix_cause_is_actionable() -> None:
-    """REQ-API-012 / v1-composite acceptance 6: missing YCbCr provenance is actionable at its raise site."""
+    """For image compositing, missing YCbCr provenance is actionable at its raise site."""
     values = np.zeros((1, 1, 3), dtype=np.float32)
     background = _frame(values, channels=("Y", "Cb", "Cr"), colorspace="ACEScg")
     foreground = _frame(values, channels=("R", "G", "B"), colorspace="ACEScg")
@@ -465,8 +478,10 @@ def test_composite_adapt_missing_ycbcr_matrix_cause_is_actionable() -> None:
     assert "; how=" in message
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-012")
 def test_composite_adapt_unassociates_and_reassociates_premultiplied_color() -> None:
-    """v1-composite acceptance 6 and 14: premultiplied adapt transforms straight color, then restores association."""
+    """For image compositing, premultiplied adapt transforms straight color, then restores association."""
     background = _frame(np.zeros((1, 2, 3), dtype=np.float32), colorspace="ACEScg", gamma="linear")
     straight_values = np.asarray([[[0.4, 0.3, 0.7, 0.25], [0.8, 0.1, 0.2, 0.75]]], dtype=np.float32)
     premultiplied_values = straight_values.copy()
@@ -502,6 +517,9 @@ def test_composite_adapt_unassociates_and_reassociates_premultiplied_color() -> 
     np.testing.assert_allclose(_host(premultiplied_result), _host(straight_result), rtol=4e-5, atol=4e-5)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("foreground_channels", "background_channels"),
     (
@@ -514,7 +532,7 @@ def test_composite_adapt_rejects_channel_pairs_without_a_deterministic_conversio
     foreground_channels: tuple[str, ...],
     background_channels: tuple[str, ...],
 ) -> None:
-    """v1-composite acceptance 6: adapt does not invent channels or promote arbitrary mattes."""
+    """For image compositing, adapt does not invent channels or promote arbitrary mattes."""
     background = _frame(
         np.zeros((1, 1, len(background_channels)), dtype=np.float32),
         channels=background_channels,
@@ -530,6 +548,8 @@ def test_composite_adapt_rejects_channel_pairs_without_a_deterministic_conversio
     assert "channels" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("kwargs", "axis"),
     (
@@ -551,7 +571,7 @@ def test_composite_adapt_rejects_channel_pairs_without_a_deterministic_conversio
     ),
 )
 def test_composite_control_axes_fail_fast_actionably(kwargs: dict[str, object], axis: str) -> None:
-    """v1-composite acceptance 7-9, 12-13, and 15; v1-token-vocabulary acceptance 7: axes stay closed."""
+    """Image compositing rejects unknown control tokens and lists the accepted names."""
     frame = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=("matte",))
 
     with pytest.raises(ValueError) as error:
@@ -560,8 +580,10 @@ def test_composite_control_axes_fail_fast_actionably(kwargs: dict[str, object], 
     assert axis in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 def test_composite_non_frame_guidance_names_the_public_merge_path_for_both_inputs() -> None:
-    """REQ-API-012: both merge Frame validators guide callers to the public composite path."""
+    """For image compositing, both merge Frame validators guide callers to the public composite path."""
     frame = _frame(np.zeros((1, 1, 1), dtype=np.float32), channels=("matte",))
 
     for background, foreground in ((None, None), (frame, None)):
@@ -571,8 +593,10 @@ def test_composite_non_frame_guidance_names_the_public_merge_path_for_both_input
         assert "px.composite.merge" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 def test_composite_opacity_float_overflow_is_translated_actionably() -> None:
-    """REQ-API-012: finite-Real conversion overflow becomes the opacity boundary's actionable ValueError."""
+    """For image compositing, finite-Real conversion overflow becomes the opacity boundary's actionable ValueError."""
     frame = _frame(np.zeros((1, 1, 1), dtype=np.float32), channels=("matte",))
 
     with pytest.raises(ValueError) as error:
@@ -583,8 +607,9 @@ def test_composite_opacity_float_overflow_is_translated_actionably() -> None:
     assert isinstance(error.value.__cause__, OverflowError)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_composite_nearest_inverse_mapping_uses_center_anchor_scale_rotation_and_position() -> None:
-    """v1-composite acceptance 7-8: nearest placement follows the specified inverse transform at pixel centers."""
+    """For image compositing, nearest placement follows the specified inverse transform at pixel centers."""
     background_values = np.zeros((5, 6, 1), dtype=np.float32)
     foreground_values = np.arange(1, 13, dtype=np.float32).reshape(3, 4, 1)
     background = _frame(background_values, channels=("matte",))
@@ -608,9 +633,10 @@ def test_composite_nearest_inverse_mapping_uses_center_anchor_scale_rotation_and
     np.testing.assert_array_equal(_host(result), expected)
 
 
+@pytest.mark.req("REQ-PIX-012")
 @pytest.mark.parametrize("interpolation", INTERPOLATIONS)
 def test_composite_interpolation_matches_independent_transparent_edge_oracle(interpolation: str) -> None:
-    """v1-composite acceptance 9-10: all eight kernels use transparent zero edges without cutoff renormalization."""
+    """For image compositing, all eight kernels use transparent zero edges without cutoff renormalization."""
     background_values = np.linspace(-0.2, 0.3, 5 * 6 * 2, dtype=np.float32).reshape(5, 6, 2)
     foreground_values = np.asarray(
         [
@@ -642,8 +668,11 @@ def test_composite_interpolation_matches_independent_transparent_edge_oracle(int
     np.testing.assert_allclose(_host(result), expected, rtol=8e-5, atol=8e-5)
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-103")
 def test_composite_mask_is_untransformed_unclamped_and_opacity_zero_is_bit_exact() -> None:
-    """v1-composite acceptance 11-12: mask multiplies source alpha in background coordinates without clamp."""
+    """For image compositing, mask multiplies source alpha in background coordinates without clamp."""
     background_values = np.asarray(
         [[[0.2, 0.4], [0.6, 0.8]], [[1.0, 0.5], [-0.2, 0.25]]],
         dtype=np.float32,
@@ -682,6 +711,8 @@ def test_composite_mask_is_untransformed_unclamped_and_opacity_zero_is_bit_exact
     assert identity.data.data.ptr != background.data.data.ptr
 
 
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "mask_factory",
     (
@@ -692,10 +723,7 @@ def test_composite_mask_is_untransformed_unclamped_and_opacity_zero_is_bit_exact
     ),
 )
 def test_composite_mask_structure_and_dtype_fail_fast(mask_factory: Callable[[], object]) -> None:
-    """v1-composite acceptance 3 and 11: mask is a same-geometry, one-channel float32 Frame.
-
-    Masks are built lazily inside the test so that GPU-less collection never initializes CUDA (I-60).
-    """
+    """For image compositing, mask is a same-geometry, one-channel float32 Frame."""
     mask = mask_factory()
     background = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=("matte",))
     foreground = _frame(np.zeros((2, 2, 1), dtype=np.float32), channels=("matte",))
@@ -706,8 +734,9 @@ def test_composite_mask_structure_and_dtype_fail_fast(mask_factory: Callable[[],
     assert "mask" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_composite_straight_and_premultiplied_inputs_are_equivalent_after_transform() -> None:
-    """v1-composite acceptance 13-14: equivalent alpha encodings converge after associated interpolation."""
+    """For image compositing, equivalent alpha encodings converge after associated interpolation."""
     background_straight = np.asarray(
         [
             [[0.2, 0.4, 0.6, 0.25], [0.8, 0.3, 0.1, 0.75], [0.1, 0.9, 0.5, 0.5]],
@@ -756,8 +785,9 @@ def test_composite_straight_and_premultiplied_inputs_are_equivalent_after_transf
     np.testing.assert_allclose(premultiplied_as_straight, _host(straight_result), rtol=5e-5, atol=5e-5)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_composite_without_foreground_alpha_samples_implicit_coverage() -> None:
-    """v1-composite acceptance 10 and 14: an A-less foreground has interpolated one-inside, zero-outside coverage."""
+    """For image compositing, an A-less foreground has interpolated one-inside, zero-outside coverage."""
     background_values = np.zeros((3, 4, 1), dtype=np.float32)
     foreground_values = np.ones((2, 2, 1), dtype=np.float32)
     background = _frame(background_values, channels=("matte",))
@@ -777,9 +807,12 @@ def test_composite_without_foreground_alpha_samples_implicit_coverage() -> None:
     assert np.any((_host(result) > 0.0) & (_host(result) < 1.0))
 
 
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("blend", BLENDS)
 def test_composite_blends_and_source_over_match_independent_fp32_equations(blend: str) -> None:
-    """v1-composite acceptance 15-17: all ten W3C-derived blends feed the specified unclamped source-over equations."""
+    """For image compositing, all ten W3C-derived blends feed the specified unclamped source-over equations."""
     background_values = np.asarray([[[-0.3, 1.4, 0.65]]], dtype=np.float32)
     foreground_values = np.asarray([[[1.7, -0.2, 0.4]]], dtype=np.float32)
     mask_values = np.asarray([[[1.25]]], dtype=np.float32)
@@ -811,8 +844,9 @@ def test_composite_blends_and_source_over_match_independent_fp32_equations(blend
     np.testing.assert_allclose(_host(result), expected, rtol=3e-6, atol=3e-6)
 
 
+@pytest.mark.req("REQ-PIX-012")
 def test_composite_premultiplied_alpha_zero_defines_unassociated_color_as_zero() -> None:
-    """v1-composite acceptance 13 and 17: zero alpha never exposes arbitrary premultiplied stored color."""
+    """For image compositing, zero alpha never exposes arbitrary premultiplied stored color."""
     background = _frame(
         np.asarray([[[9.0, -4.0, 0.0]]], dtype=np.float32),
         channels=("R", "G", "A"),
@@ -827,8 +861,13 @@ def test_composite_premultiplied_alpha_zero_defines_unassociated_color_as_zero()
     np.testing.assert_array_equal(_host(result), np.asarray([[[-7.0, 12.0, 1.0]]], dtype=np.float32))
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("REQ-PIX-017")
 def test_composite_docstring_is_self_contained_for_geometry_alpha_adapt_and_ownership() -> None:
-    """v1-composite acceptance 1-17: the public docstring carries the non-obvious call contract."""
+    """Developers can find compositing geometry, alpha, color adaptation, and ownership rules in the public
+    docstring.
+    """
     docstring = inspect.getdoc(px.composite.merge) or ""
     for required in (
         "background",
@@ -850,11 +889,18 @@ def test_composite_docstring_is_self_contained_for_geometry_alpha_adapt_and_owne
         assert required in docstring
 
 
-def test_composite_implementation_uses_a_gpu_raw_kernel() -> None:
-    """v1-composite acceptance 1 and 20: structural contract keeps per-pixel transform and blend on the GPU."""
-    import pixtreme._composite.merge as composite_module
+@pytest.mark.req("REQ-PIX-018")
+def test_composite_merge_keeps_pixels_on_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Image compositing blends pixels without transferring them between CPU and GPU.
 
-    source = inspect.getsource(composite_module)
-    factory: Callable[[], object] = composite_module._composite_kernel
-    assert "cp.RawKernel" in inspect.getsource(factory)
-    assert "pixtreme_composite_images" in source
+    Pixel data transfers are counted; short control-data transfers independent of image size are excluded.
+    """
+    background = _frame(np.full((4, 5, 3), 0.25, dtype=np.float32))
+    foreground = _frame(np.full((4, 5, 3), 0.75, dtype=np.float32))
+    transfers = capture_array_transfers(monkeypatch)
+
+    result = px.composite.merge(background, foreground)
+
+    assert result.shape == (4, 5, 3)
+    assert len(transfers.pixel_host_to_device) == 0
+    assert len(transfers.pixel_device_to_host) == 0

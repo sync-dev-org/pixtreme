@@ -1,4 +1,4 @@
-"""Generate the manual visual-acceptance sheet for v1-morphology."""
+"""Generate a comparison sheet for visual inspection of morphology."""
 
 from __future__ import annotations
 

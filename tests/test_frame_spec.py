@@ -23,15 +23,19 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError]) -> None:
     assert "; how=" in message
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("value", ("", "rgb", 42, ["R", ""]))
 def test_channel_validation_errors_are_actionable(value: object) -> None:
-    """REQ-API-012: every compact/sequence channel rejection carries why, what, and recovery guidance."""
+    """Invalid compact or sequence channel labels produce errors that explain the value and a correction."""
     with pytest.raises(ValueError) as error:
         px.core.channels(value)  # type: ignore[arg-type]
 
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "metadata",
     (
@@ -41,15 +45,17 @@ def test_channel_validation_errors_are_actionable(value: object) -> None:
     ),
 )
 def test_frame_metadata_token_errors_are_actionable(metadata: dict[str, str | None]) -> None:
-    """REQ-API-012: metadata token rejection identifies the axis, received token, and accepted recovery values."""
+    """Frame rejects unknown color metadata tokens and reports the field, received token, and accepted values."""
     with pytest.raises(ValueError) as error:
         px.io.from_array(_sample_data(), channels="RGB", **metadata)  # type: ignore[arg-type]
 
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-017")
 def test_frame_data_validation_errors_are_actionable() -> None:
-    """REQ-API-012: Frame data type, rank, dtype, and channel-count rejections use the fixed-order three-element contract."""
+    """Frame rejects invalid pixel type, rank, dtype, or channel count with cause, value, and recovery in order."""
     import cupy as cp
 
     class ValidationProbe:
@@ -78,6 +84,8 @@ def test_frame_data_validation_errors_are_actionable() -> None:
     _assert_actionable(channels_data_error)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "shape",
     ((0, 2, 3), (2, 0, 3), (2, 2, 0)),
@@ -86,7 +94,7 @@ def test_frame_data_validation_errors_are_actionable() -> None:
 def test_frame_rejects_empty_hwc_dimensions_at_construction_and_assignment(
     shape: tuple[int, int, int],
 ) -> None:
-    """REQ-ARCH-002: Frame construction and data assignment require H, W, and C to each be at least 1."""
+    """Frame rejects zero height, width, or channel count during construction and pixel assignment."""
     import cupy as cp
 
     labels = tuple(f"channel-{index}" for index in range(shape[2]))
@@ -111,8 +119,10 @@ def test_frame_rejects_empty_hwc_dimensions_at_construction_and_assignment(
     assert frame.data is original
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-015")
 def test_from_array_constructs_from_hwc_cupy_and_checks_channel_count_and_rank() -> None:
-    """v1-boundary-api acceptance 1 and 3: from_array accepts structurally consistent HWC CuPy data."""
+    """Array import accepts HWC CuPy pixels when rank and channel count agree with the declared Frame metadata."""
     import cupy as cp
 
     data = _sample_data()
@@ -129,8 +139,10 @@ def test_from_array_constructs_from_hwc_cupy_and_checks_channel_count_and_rank()
         px.io.from_array(cp.zeros((1, 2, 3, 4), dtype=cp.float32), colorspace="sRGB", gamma="sRGB", channels="RGBA")
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-015")
 def test_from_array_makes_non_contiguous_input_c_contiguous() -> None:
-    """v1-boundary-api acceptance 4: from_array copies non-contiguous input under copy=None."""
+    """Array import with copy=None makes noncontiguous GPU pixels contiguous before storing them in Frame."""
     import cupy as cp
 
     source = cp.arange(4 * 6 * 3, dtype=cp.float32).reshape(4, 6, 3)[:, ::2, :]
@@ -149,8 +161,10 @@ def test_from_array_makes_non_contiguous_input_c_contiguous() -> None:
     )
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-102")
 def test_frame_accepts_only_the_specified_storage_dtypes() -> None:
-    """v1-exr-runtime-independence acceptance 7: Frame storage accepts all five public storage dtypes."""
+    """Frame accepts the five declared pixel storage dtypes and rejects any other dtype."""
     import cupy as cp
 
     for dtype in (cp.float32, cp.float16, cp.uint8, cp.uint16, cp.uint32):
@@ -162,6 +176,7 @@ def test_frame_accepts_only_the_specified_storage_dtypes() -> None:
             px.io.from_array(cp.zeros((1, 2, 3), dtype=dtype), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
+@pytest.mark.req("REQ-PIX-002")
 @pytest.mark.parametrize(
     "colorspace",
     (
@@ -195,9 +210,7 @@ def test_frame_accepts_only_the_specified_storage_dtypes() -> None:
     ),
 )
 def test_frame_accepts_each_colorspace_token(colorspace: str) -> None:
-    """v1-frame-core acceptance 7; v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 17;
-    v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 77; v1-panasonic-tokens acceptance 99-100;
-    v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167.
+    """Frame accepts every declared colorspace token in canonical form.
 
     Every colorspace token is accepted canonically.
     """
@@ -205,6 +218,7 @@ def test_frame_accepts_each_colorspace_token(colorspace: str) -> None:
     assert result.colorspace == colorspace
 
 
+@pytest.mark.req("REQ-PIX-002")
 @pytest.mark.parametrize(
     "gamma",
     (
@@ -244,9 +258,7 @@ def test_frame_accepts_each_colorspace_token(colorspace: str) -> None:
     ),
 )
 def test_frame_accepts_each_gamma_token(gamma: str) -> None:
-    """v1-color-semantics acceptance 27; v1-sony-tokens acceptance 1-2; v1-arri-tokens acceptance 17;
-    v1-red-tokens acceptance 54-55; v1-canon-tokens acceptance 77; v1-panasonic-tokens acceptance 99-100;
-    v1-vendor-a-tokens acceptance 141; v1-vendor-b-tokens acceptance 167.
+    """Frame accepts every declared gamma token in canonical form.
 
     Frame accepts every gamma token.
     """
@@ -255,8 +267,10 @@ def test_frame_accepts_each_gamma_token(gamma: str) -> None:
     assert result.channels == ("red", "green", "blue")
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-017")
 def test_frame_rejects_unknown_metadata_tokens() -> None:
-    """v1-frame-core acceptance 7; v1-token-vocabulary acceptance 7: unknown metadata tokens fail fast."""
+    """Frame rejects color metadata tokens outside the declared vocabulary before changing the image."""
     data = _sample_data()
 
     with pytest.raises(ValueError, match="colorspace"):
@@ -265,8 +279,9 @@ def test_frame_rejects_unknown_metadata_tokens() -> None:
         px.io.from_array(data, colorspace="sRGB", gamma="unknown", channels="RGB")
 
 
+@pytest.mark.req("REQ-PIX-002")
 def test_metadata_assignment_revalidates_transactionally_without_touching_data() -> None:
-    """v1-frame-core acceptance 8; v1-token-vocabulary acceptance 3,6: assignment canonicalizes or preserves state."""
+    """Frame metadata assignment normalizes valid tokens and preserves prior metadata and pixels when validation fails."""
     result = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="sRGB", channels="RGB")
     data_pointer = result.data.data.ptr
 
@@ -291,8 +306,9 @@ def test_metadata_assignment_revalidates_transactionally_without_touching_data()
     assert result.data.data.ptr == data_pointer
 
 
+@pytest.mark.req("REQ-PIX-002")
 def test_frame_data_assignment_checks_channel_count_transactionally() -> None:
-    """v1-channel-transform acceptance 14: data assignment preserves state when its channel count is invalid."""
+    """Frame pixel assignment preserves the prior pixels when the new channel count conflicts with metadata."""
     import cupy as cp
 
     source = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="linear", channels="RGB")
@@ -311,8 +327,9 @@ def test_frame_data_assignment_checks_channel_count_transactionally() -> None:
     assert source.shape == (2, 2, 3)
 
 
+@pytest.mark.req("REQ-PIX-002")
 def test_channels_normalizes_compact_and_sequence_inputs() -> None:
-    """v1-frame-core acceptance 10: channels uses greedy known-label parsing and permits unknown sequence labels."""
+    """Frame parses compact known channel labels greedily and accepts explicit sequences with arbitrary labels."""
     assert px.core.channels("YCbCrA") == ("Y", "Cb", "Cr", "A")
     assert px.core.channels("RGBA") == ("R", "G", "B", "A")
     assert px.core.channels(["R", "temperature", "Z"]) == ("R", "temperature", "Z")
@@ -324,8 +341,10 @@ def test_channels_normalizes_compact_and_sequence_inputs() -> None:
         px.core.channels(["R", ""])
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-015")
 def test_all_channel_entry_points_accept_the_same_input_forms() -> None:
-    """v1-boundary-api acceptance 1 and 11: constructor, assignment, and exit share channel normalization."""
+    """Frame construction, channel assignment, and array export accept the same channel declaration forms."""
     result = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="sRGB", channels="RGB")
     assert result.channels == px.core.channels("RGB")
 
@@ -335,8 +354,9 @@ def test_all_channel_entry_points_accept_the_same_input_forms() -> None:
     assert output.shape == result.shape
 
 
+@pytest.mark.req("REQ-PIX-002")
 def test_channels_read_as_tuple_and_repr_uses_compact_form_only_for_known_labels() -> None:
-    """v1-frame-core acceptance 11: channels are tuples and repr compacts only entirely known labels."""
+    """Frame returns channel labels as a tuple and abbreviates them in repr only when every label is known."""
     known = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="sRGB", channels="RGB")
     unknown = px.io.from_array(
         _sample_data(channel_count=2),
@@ -350,8 +370,10 @@ def test_channels_read_as_tuple_and_repr_uses_compact_form_only_for_known_labels
     assert "channels=('depth', 'mask')" in repr(unknown)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-102")
 def test_frame_exposes_read_only_geometry_and_dtype_without_operator_forwarding() -> None:
-    """v1-frame-core acceptance 15: read-only geometry/dtype properties do not make Frame array-like."""
+    """Frame exposes read-only geometry and dtype while avoiding implicit array operators."""
     source = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
     assert source.width == 3

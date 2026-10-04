@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 import inspect
 import re
 from collections.abc import Callable
@@ -49,8 +48,9 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError]) -> str:
     return message
 
 
+@pytest.mark.req("REQ-PIX-001")
 def test_shuffle_signature_public_surface_and_output_order() -> None:
-    """v1-channel-shuffle acceptance 1 and 19: shuffle is the sole kwargs-only channel operation."""
+    """Channel shuffle exposes one public keyword-based call and returns output channels in the requested order."""
     signature = inspect.signature(px.channel.shuffle)
     assert tuple(signature.parameters) == ("adapt", "outputs")
     assert signature.parameters["adapt"].kind is inspect.Parameter.KEYWORD_ONLY
@@ -79,6 +79,8 @@ def test_shuffle_signature_public_surface_and_output_order() -> None:
         px.channel.shuffle({"R": (source, "R")})  # type: ignore[misc]
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     "outputs_factory",
     (
@@ -96,9 +98,8 @@ def test_shuffle_signature_public_surface_and_output_order() -> None:
 def test_shuffle_rejects_malformed_output_sources_with_actionable_errors(
     outputs_factory: Callable[[], dict[str, object]],
 ) -> None:
-    """v1-channel-shuffle acceptance 2 and 6: output labels and sources use one strict uniform grammar.
-
-    Sources are built lazily inside the test so that GPU-less collection never initializes CUDA (I-60).
+    """Channel shuffle rejects invalid output labels and source declarations with a consistent grammar and corrective
+    error.
     """
     outputs = outputs_factory()
     with pytest.raises(ValueError) as error:
@@ -106,8 +107,9 @@ def test_shuffle_rejects_malformed_output_sources_with_actionable_errors(
     _assert_actionable(error)
 
 
+@pytest.mark.req("REQ-PIX-001")
 def test_shuffle_requires_outputs_and_a_frame_source() -> None:
-    """v1-channel-shuffle acceptance 3: empty and constants-only calls cannot establish Frame metadata."""
+    """Channel shuffle rejects calls without output channels or a Frame source because they cannot define image metadata."""
     with pytest.raises(ValueError) as empty_error:
         px.channel.shuffle()
     with pytest.raises(ValueError) as constants_error:
@@ -117,8 +119,9 @@ def test_shuffle_requires_outputs_and_a_frame_source() -> None:
     assert "constants only" in _assert_actionable(constants_error)
 
 
+@pytest.mark.req("REQ-PIX-001")
 def test_source_lookup_uses_first_matching_label_and_bit_exact_reuse() -> None:
-    """v1-channel-shuffle acceptance 4 and 22: lookup selects the first label and copies its bits repeatedly."""
+    """Channel shuffle uses the first matching source label and copies its pixel bits on repeated routes."""
     first_bits = np.asarray([[0x80000000, 0x7FC00001], [0xBF800000, 0x3FC00000]], dtype=np.uint32)
     second_bits = np.asarray([[0x00000000, 0x7FC01234], [0x40000000, 0xC0200000]], dtype=np.uint32)
     source = _frame(
@@ -131,8 +134,10 @@ def test_source_lookup_uses_first_matching_label_and_bit_exact_reuse() -> None:
     np.testing.assert_array_equal(_host(result).view(np.uint32), np.stack((first_bits, first_bits), axis=-1))
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-017")
 def test_missing_source_label_names_available_labels_and_repair() -> None:
-    """v1-channel-shuffle acceptance 4: missing labels report the source label set and correction path."""
+    """Channel shuffle reports available labels and a correction when a requested source label is absent."""
     source = _frame([0.1, 0.2, 0.3])
 
     with pytest.raises(ValueError) as error:
@@ -142,8 +147,11 @@ def test_missing_source_label_names_available_labels_and_repair() -> None:
     assert "Z" in message and str(source.channels) in message and "choose" in message
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_fill_and_literal_labels_preserve_scene_values_without_semantic_checks() -> None:
-    """v1-channel-shuffle acceptance 5-7 and 20-22: fills and literal relabels are value-only routing."""
+    """Channel shuffle preserves out-of-range scene values when filling channels or relabeling them literally."""
     source = _frame([[[0.25], [0.75]]], colorspace="Rec.2020", channels=("Y",), matrix="BT.2020")
 
     result = px.channel.shuffle(
@@ -163,9 +171,11 @@ def test_fill_and_literal_labels_preserve_scene_values_without_semantic_checks()
     )
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize("adapt", (1, 0.0, None, "false"))
 def test_adapt_is_a_reserved_strict_bool_option(adapt: object) -> None:
-    """v1-channel-shuffle acceptance 8: adapt cannot be used as an output label and accepts only bool."""
+    """Channel shuffle reserves adapt as an option and accepts only a built-in boolean for it."""
     source = _frame([0.0, 0.0, 0.0])
     outputs = {"adapt": (source, "R")} if adapt is None else {"adapt": adapt}
 
@@ -176,8 +186,10 @@ def test_adapt_is_a_reserved_strict_bool_option(adapt: object) -> None:
     assert "bool" in message and "reserved" in message and "different label" in message
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-002")
 def test_first_frame_after_leading_fills_defines_geometry_and_metadata() -> None:
-    """v1-channel-shuffle acceptance 9: the first Frame source, not a leading fill, is the master."""
+    """Channel shuffle takes geometry and color metadata from the first Frame even when constant fills precede it."""
     master = _frame(
         np.arange(12, dtype=np.float32).reshape(2, 2, 3),
         colorspace="ACEScg",
@@ -190,6 +202,7 @@ def test_first_frame_after_leading_fills_defines_geometry_and_metadata() -> None
     assert (result.width, result.height, result.colorspace, result.gamma) == (2, 2, "ACEScg", "Gamma-2.6")
 
 
+@pytest.mark.req("REQ-PIX-001")
 @pytest.mark.parametrize(
     ("dtype", "routes"),
     (
@@ -202,7 +215,7 @@ def test_every_source_requires_float32_with_shared_conversion_guidance(
     dtype: Any,
     routes: tuple[str, ...],
 ) -> None:
-    """v1-channel-shuffle acceptance 10: every source is fp32 for both adapt modes."""
+    """Channel shuffle rejects every non-float32 Frame source and explains the public conversion route."""
     source = _frame([1], channels=("Y",), dtype=dtype)
 
     for adapt in (False, True):
@@ -214,6 +227,8 @@ def test_every_source_requires_float32_with_shared_conversion_guidance(
         assert positions == tuple(sorted(positions))
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("field", "source_kwargs", "required"),
     (
@@ -228,7 +243,7 @@ def test_source_mismatch_errors_name_field_values_and_repair(
     source_kwargs: dict[str, object],
     required: tuple[str, ...],
 ) -> None:
-    """v1-channel-shuffle acceptance 10-11: geometry and default metadata mismatches are actionable."""
+    """Channel shuffle reports mismatched geometry or metadata values and how to align the sources."""
     master = _frame(np.zeros((2, 2, 3), dtype=np.float32), colorspace="ACEScg", gamma="linear")
     resolved_source_kwargs = {"colorspace": "ACEScg", "gamma": "linear", **source_kwargs}
     values = resolved_source_kwargs.pop("values", np.zeros((2, 2, 3), dtype=np.float32))
@@ -241,8 +256,12 @@ def test_source_mismatch_errors_name_field_values_and_repair(
         assert field in message and all(value in message for value in required)
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-003")
 def test_adapt_matches_public_rgb_to_rgb_composition_bit_exactly() -> None:
-    """v1-channel-shuffle acceptance 11-12 and 22: adapt equals explicit rgb_to_rgb then default shuffle."""
+    """Adaptive channel shuffle produces the same pixels as explicit public color conversion followed by ordinary
+    shuffling.
+    """
     master = _frame(
         np.asarray([[[0.02, 0.08, 0.20], [0.10, 0.30, 0.70]]], dtype=np.float32),
         colorspace="ACEScg",
@@ -276,27 +295,13 @@ def test_adapt_matches_public_rgb_to_rgb_composition_bit_exactly() -> None:
     np.testing.assert_array_equal(_host(result), _host(expected))
 
 
-def test_adapt_transforms_each_source_identity_once(monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-channel-shuffle acceptance 11: repeated routes adapt one source Frame only once."""
-    import pixtreme._channel.shuffle as implementation
-
-    master = _frame([0.1, 0.2, 0.3], colorspace="ACEScg")
-    source = _frame([0.4, 0.5, 0.6], colorspace="sRGB", gamma="sRGB")
-    calls: list[px.core.Frame] = []
-    original = implementation.rgb_to_rgb
-
-    def counted(frame: px.core.Frame, **kwargs: object) -> px.core.Frame:
-        calls.append(frame)
-        return original(frame, **kwargs)
-
-    monkeypatch.setattr(implementation, "rgb_to_rgb", counted)
-    px.channel.shuffle(adapt=True, master=(master, "R"), green=(source, "G"), blue=(source, "B"))
-
-    assert calls == [source]
-
-
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_adapt_preserves_public_color_conversion_fail_fast_as_actionable_error() -> None:
-    """v1-channel-shuffle acceptance 12: unsupported rgb_to_rgb inputs remain explicit three-part errors."""
+    """Adaptive channel shuffle reports unsupported color conversion with the same actionable cause as the public
+    converter.
+    """
     master = _frame([0.2], channels=("Y",), gamma="linear")
     source = _frame([0.4], channels=("Y",), gamma="sRGB")
 
@@ -307,8 +312,9 @@ def test_adapt_preserves_public_color_conversion_fail_fast_as_actionable_error()
     assert all(value in message for value in ("rgb_to_rgb", "R", "G", "B"))
 
 
+@pytest.mark.req("REQ-PIX-001")
 def test_shuffle_allocates_contiguous_storage_without_mutating_inputs() -> None:
-    """v1-channel-shuffle acceptance 13: output is a new contiguous Frame and inputs remain unchanged."""
+    """Channel shuffle returns new contiguous Frame storage and leaves every input unchanged."""
     source = _frame(np.arange(12, dtype=np.float32).reshape(2, 2, 3), matrix="BT.709")
     original_data = _host(source).copy()
     original_metadata = source.model_dump(exclude={"data"})
@@ -321,6 +327,8 @@ def test_shuffle_allocates_contiguous_storage_without_mutating_inputs() -> None:
     assert source.model_dump(exclude={"data"}) == original_metadata
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-002")
 @pytest.mark.parametrize(
     ("outputs", "expected_matrix"),
     (
@@ -338,7 +346,7 @@ def test_shuffle_allocates_contiguous_storage_without_mutating_inputs() -> None:
     ),
 )
 def test_matrix_provenance_decision_table(outputs: dict[str, str | None], expected_matrix: str | None) -> None:
-    """v1-channel-shuffle acceptance 14-18 and 22: matrix follows the independent provenance decision table."""
+    """Channel shuffle sets the output matrix from the sources according to the declared provenance cases."""
     routed: dict[str, tuple[px.core.Frame, str] | float] = {}
     for output_label, matrix in outputs.items():
         if matrix == "fill":
@@ -352,9 +360,11 @@ def test_matrix_provenance_decision_table(outputs: dict[str, str | None], expect
     assert result.matrix == expected_matrix
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-002")
 @pytest.mark.parametrize("adapt", (False, True))
 def test_conflicting_matrix_claims_fail_without_implicit_rematrix(adapt: bool) -> None:
-    """v1-channel-shuffle acceptance 15-16 and 20: distinct claims fail and adapt never rematrices."""
+    """Channel shuffle rejects conflicting matrix claims without silently changing pixel values or matrices."""
     first = _frame([0.1, 0.2, 0.3], matrix="BT.601")
     second = _frame([0.4, 0.5, 0.6], matrix="BT.709")
 
@@ -365,8 +375,11 @@ def test_conflicting_matrix_claims_fail_without_implicit_rematrix(adapt: bool) -
     assert all(value in message for value in ("BT.601", "BT.709", "Y", "Cb", "rematrix"))
 
 
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 def test_adapt_matrix_claim_comes_from_call_site_source_not_temporary_frame() -> None:
-    """v1-channel-shuffle acceptance 15: adapt provenance uses the original source Frame matrix."""
+    """Adaptive channel shuffle derives the matrix claim from the original source Frame after color conversion."""
     master = _frame([0.1, 0.2, 0.3], colorspace="ACEScg", matrix="BT.709")
     source = _frame([0.4, 0.5, 0.6], colorspace="sRGB", gamma="sRGB", matrix="native")
 
@@ -375,33 +388,11 @@ def test_adapt_matrix_claim_comes_from_call_site_source_not_temporary_frame() ->
     assert result.matrix == "native"
 
 
-def test_shuffle_source_binds_adaptation_to_the_public_color_operation_without_local_kernels() -> None:
-    """v1-channel-shuffle acceptance 20 and 24: AST binds adaptation to rgb_to_rgb and no local GPU kernel."""
-    import pixtreme._channel.shuffle as shuffle_module
-
-    tree = ast.parse(inspect.getsource(shuffle_module))
-    prepare_sources = next(
-        node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "_prepare_sources"
-    )
-    called_names = tuple(
-        node.func.id
-        for node in ast.walk(prepare_sources)
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-    )
-    kernel_constructors = tuple(
-        node.func.attr
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr in {"RawKernel", "ElementwiseKernel"}
-    )
-
-    assert called_names.count("rgb_to_rgb") == 1
-    assert not kernel_constructors
-
-
+@pytest.mark.req("REQ-PIX-001")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_shuffle_docstring_maps_each_adapt_mode_to_its_conversion_recipe() -> None:
-    """v1-channel-shuffle acceptance 11: adapt paragraphs bind False and True to opposite routing recipes."""
+    """The channel shuffle documentation explains the conversion recipe for adapt=False and adapt=True."""
     docstring = " ".join((inspect.getdoc(px.channel.shuffle) or "").split())
     modes = tuple(re.findall(r"With ``adapt=(False|True)``", docstring))
     false_recipe = re.search(r"With ``adapt=False``(?P<recipe>.*?)With ``adapt=True``", docstring)

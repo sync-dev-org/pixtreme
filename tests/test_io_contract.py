@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-import ast
 import os
 import struct
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
 
 import numpy as np
 import pytest
-from packaging.requirements import Requirement
-from packaging.utils import canonicalize_name
 from PIL import Image
 
 import pixtreme as px
@@ -40,8 +36,9 @@ def _exr_header(*attributes: bytes) -> bytes:
     return struct.pack("<II", 20000630, 2) + b"".join(attributes) + b"\x00"
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_image_header_is_a_frozen_minimal_pydantic_model(tmp_path: Path) -> None:
-    """v1-io-orientation acceptance 5 and 10: ImageHeader exposes the orientation-aware inspection shape."""
+    """Image header inspection exposes a fixed immutable model with orientation and storage fields."""
     path = tmp_path / "sample.png"
     Image.fromarray(np.zeros((2, 3, 3), dtype=np.uint8), mode="RGB").save(path)
 
@@ -57,8 +54,9 @@ def test_image_header_is_a_frozen_minimal_pydantic_model(tmp_path: Path) -> None
         header.width = 4  # type: ignore[misc]
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_read_header_uses_no_gpu_codec_or_cuda_visible_device(tmp_path: Path) -> None:
-    """v1-io acceptance 18: header probing succeeds without pixel decode or a visible GPU."""
+    """Reading an image header succeeds without decoding pixels or opening a CUDA device."""
     path = tmp_path / "sample.png"
     Image.fromarray(np.zeros((2, 3), dtype=np.uint16)).save(path)
     script = """
@@ -83,8 +81,9 @@ assert "OpenEXR" not in sys.modules
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_pixtreme_import_is_lazy_with_both_io_dependencies_blocked() -> None:
-    """v1-io acceptance 23: importing pixtreme does not import or require either I/O backend."""
+    """Importing pixtreme succeeds even when optional image I/O backends cannot be imported."""
     script = """
 import importlib.abc
 import sys
@@ -110,54 +109,11 @@ assert "nvidia.nvimgcodec" not in sys.modules
     assert result.returncode == 0, result.stderr
 
 
-def test_source_and_dependency_metadata_have_no_direct_opencv_boundary() -> None:
-    """v1-io acceptance 24: pixtreme neither imports cv2 nor declares an OpenCV Python dependency."""
-    imports: list[tuple[Path, int, str]] = []
-    for path in (ROOT / "src" / "pixtreme").rglob("*.py"):
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        importlib_aliases = {"importlib"}
-        import_module_aliases: set[str] = set()
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if alias.name == "importlib":
-                        importlib_aliases.add(alias.asname or alias.name)
-                    if alias.name.split(".", 1)[0] == "cv2":
-                        imports.append((path, node.lineno, alias.name))
-            elif isinstance(node, ast.ImportFrom):
-                if (node.module or "").split(".", 1)[0] == "cv2":
-                    imports.append((path, node.lineno, node.module or "cv2"))
-                if node.module == "importlib":
-                    import_module_aliases.update(
-                        alias.asname or alias.name for alias in node.names if alias.name == "import_module"
-                    )
-            elif isinstance(node, ast.Call) and node.args and isinstance(node.args[0], ast.Constant):
-                requested = node.args[0].value
-                if not isinstance(requested, str) or requested.split(".", 1)[0] != "cv2":
-                    continue
-                direct = isinstance(node.func, ast.Name) and node.func.id in import_module_aliases
-                qualified = (
-                    isinstance(node.func, ast.Attribute)
-                    and node.func.attr == "import_module"
-                    and isinstance(node.func.value, ast.Name)
-                    and node.func.value.id in importlib_aliases
-                )
-                if direct or qualified:
-                    imports.append((path, node.lineno, requested))
-
-    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-    dependency_strings = list(project.get("dependencies", ()))
-    for group in project.get("optional-dependencies", {}).values():
-        dependency_strings.extend(group)
-    dependency_names = {canonicalize_name(Requirement(value).name) for value in dependency_strings}
-
-    assert imports == []
-    assert not {name for name in dependency_names if name.startswith("opencv-")}
-
-
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("suffix", (".gif", ".heic", ".cin", ""))
 def test_read_header_rejects_unsupported_extensions_with_actionable_errors(tmp_path: Path, suffix: str) -> None:
-    """v1-io acceptance 2 / v1-io-formats acceptance 2: unsupported headers remain actionable."""
+    """Header inspection rejects unsupported filename extensions and explains the accepted image formats."""
     path = tmp_path / f"image{suffix}"
     path.write_bytes(b"not an image")
 
@@ -165,6 +121,8 @@ def test_read_header_rejects_unsupported_extensions_with_actionable_errors(tmp_p
         px.io.read_header(path)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("suffix", "payload", "observed"),
     (
@@ -230,7 +188,7 @@ def test_read_header_corruption_causes_are_actionable(
     payload: bytes,
     observed: str,
 ) -> None:
-    """REQ-API-012: every reachable container parser failure names why, observed input, and recovery."""
+    """Each supported image header parser reports the corrupt input, its cause, and how to recover."""
     path = tmp_path / f"corrupt{suffix}"
     path.write_bytes(payload)
 

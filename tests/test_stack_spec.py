@@ -41,8 +41,10 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError]) -> None:
     assert message.index("why=") < message.index("what=") < message.index("how=")
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-010")
 def test_stack_images_public_signature_empty_input_and_single_input_copy() -> None:
-    """v1-warp-affine acceptance 17: stack stays beside resize and warp_affine in transform."""
+    """Developers stack Frames through the public transform operation; empty input fails and one input yields a separate copy."""
     signature = inspect.signature(px.transform.stack)
     assert tuple(signature.parameters) == ("images", "direction", "adapt")
     assert signature.parameters["images"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
@@ -70,6 +72,7 @@ def test_stack_images_public_signature_empty_input_and_single_input_copy() -> No
         np.testing.assert_array_equal(_host(result), _host(source))
 
 
+@pytest.mark.req("REQ-PIX-010")
 @pytest.mark.parametrize(
     ("direction", "first_values", "second_values", "expected_shape"),
     (
@@ -93,7 +96,7 @@ def test_stack_images_places_exact_copies_in_enumeration_order(
     second_values: list[list[list[float]]],
     expected_shape: tuple[int, int, int],
 ) -> None:
-    """v1-stack acceptance 2: vertical and horizontal stacking map input pixels exactly in order."""
+    """Vertical and horizontal stacking place exact input pixels in their given order."""
     axis = 0 if direction == "vertical" else 1
     first = _frame(first_values, channels=("Y",))
     second = _frame(second_values, channels=("Y",))
@@ -105,9 +108,10 @@ def test_stack_images_places_exact_copies_in_enumeration_order(
     np.testing.assert_array_equal(_host(result), expected)
 
 
+@pytest.mark.req("REQ-PIX-010")
 @pytest.mark.parametrize("dtype", (np.float32, np.float16, np.uint8, np.uint16, np.uint32))
 def test_default_stack_accepts_every_frame_storage_dtype_without_numeric_conversion(dtype: Any) -> None:
-    """REQ-ARCH-005 and v1-stack acceptance 2: default stacking bit-copies every Frame storage dtype."""
+    """Default stacking copies pixels exactly for every Frame storage dtype without converting numeric values."""
     first = _frame([[[1], [2]]], channels=("Y",), dtype=dtype)
     second = _frame([[[3], [4]]], channels=("Y",), dtype=dtype)
 
@@ -117,9 +121,9 @@ def test_default_stack_accepts_every_frame_storage_dtype_without_numeric_convers
     np.testing.assert_array_equal(_host(result), np.asarray([[[1], [2]], [[3], [4]]], dtype=dtype))
 
 
+@pytest.mark.req("REQ-PIX-010")
 def test_default_stack_preserves_uint32_identities_above_float32_exact_range() -> None:
-    """REQ-ARCH-005: uint32 stacking is bit-preserving for identities above 2^24 that
-    float32 cannot represent; a lossy uint32 -> float32 -> uint32 path fails here."""
+    """Default stacking preserves uint32 pixel identities above the exact float32 integer range."""
     above_exact = np.uint32(16_777_217)  # 2^24 + 1: rounds to 16_777_216 through float32
     top = np.uint32(4_294_967_295)  # 0xffffffff: uint32 maximum
     first = _frame([[[above_exact], [top]]], channels=("Y",), dtype=np.uint32)
@@ -132,9 +136,11 @@ def test_default_stack_preserves_uint32_identities_above_float32_exact_range() -
     np.testing.assert_array_equal(_host(result), expected)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize("direction", ("diagonal", "row", "vertical\t", ""))
 def test_stack_direction_is_closed_vocabulary(direction: str) -> None:
-    """v1-stack acceptance 2; v1-token-vocabulary acceptance 7: direction accepts only its two-token family."""
+    """Stacking accepts only vertical and horizontal directions and lists them for an unknown direction."""
     source = _frame([[[0.0]]], channels=("Y",))
 
     with pytest.raises(ValueError) as error:
@@ -146,6 +152,9 @@ def test_stack_direction_is_closed_vocabulary(direction: str) -> None:
     assert "horizontal" in message
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("direction", "field", "first_value", "second_value"),
     (
@@ -163,7 +172,7 @@ def test_default_stack_rejects_every_incompatible_axis_with_both_values(
     first_value: object,
     second_value: object,
 ) -> None:
-    """v1-stack acceptance 3: default stacking reports each incompatible axis and the conflicting values."""
+    """Default stacking rejects incompatible geometry, channels, color metadata, or dtype and reports both conflicting values."""
     first_shape = (2, 2, 3)
     second_shape = (2, 2, 3)
     first_kwargs: dict[str, object] = {}
@@ -197,6 +206,7 @@ def test_default_stack_rejects_every_incompatible_axis_with_both_values(
     assert str(second_value) in message
 
 
+@pytest.mark.req("REQ-PIX-010")
 @pytest.mark.parametrize(
     ("direction", "master_shape", "source_shape", "resized_shape", "expected_shape"),
     (
@@ -211,7 +221,9 @@ def test_adapt_resizes_the_orthogonal_axis_to_first_with_half_up_aspect_rounding
     resized_shape: tuple[int, int, int],
     expected_shape: tuple[int, int, int],
 ) -> None:
-    """v1-stack acceptance 4: adapt uses the first geometry and half-up aspect-preserving rounding."""
+    """Adaptive stacking matches the first Frame on the axis perpendicular to the join and rounds
+    the joining axis half up to preserve aspect ratio.
+    """
     axis = 0 if direction == "vertical" else 1
     master = _frame(np.arange(math.prod(master_shape)).reshape(master_shape), channels=("Y",))
     source = _frame(np.arange(math.prod(source_shape)).reshape(source_shape) + 10.0, channels=("Y",))
@@ -230,8 +242,11 @@ def test_adapt_resizes_the_orthogonal_axis_to_first_with_half_up_aspect_rounding
     np.testing.assert_array_equal(_host(result), expected)
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-010")
 def test_adapt_matches_channel_color_channel_then_default_resize_composition() -> None:
-    """v1-stack acceptance 4 and 6: channel/color adaptation precedes geometry and inherits first metadata."""
+    """Adaptive stacking converts channels and color before resizing and uses the first Frame's metadata in the result."""
     master = _frame(
         np.asarray(
             [
@@ -270,6 +285,8 @@ def test_adapt_matches_channel_color_channel_then_default_resize_composition() -
     np.testing.assert_array_equal(_host(result), expected)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-010")
 @pytest.mark.parametrize(
     (
         "master_channels",
@@ -292,7 +309,7 @@ def test_adapt_matches_public_channel_color_channel_composition_bit_exactly(
     master_gamma: str,
     source_gamma: str,
 ) -> None:
-    """v1-stack acceptance 4: RGB/YCbCr adaptation follows the deterministic public-op composition."""
+    """Adaptive stacking matches the public RGB and YCbCr conversion sequence bit for bit, including alpha."""
     master = _frame(
         np.zeros((1, 2, len(master_channels)), dtype=np.float32),
         channels=master_channels,
@@ -331,8 +348,10 @@ def test_adapt_matches_public_channel_color_channel_composition_bit_exactly(
         )
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-010")
 def test_adapt_reorders_an_equal_arbitrary_channel_set_without_changing_values() -> None:
-    """v1-stack acceptance 4: equal channel-label sets follow the first ordering without color conversion."""
+    """Adaptive stacking reorders an equal set of arbitrary channel labels to match the first Frame without changing values."""
     master = _frame(np.zeros((1, 2, 3), dtype=np.float32), channels=("matte", "Z", "A"))
     source = _frame(
         np.asarray([[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]], dtype=np.float32),
@@ -345,6 +364,8 @@ def test_adapt_reorders_an_equal_arbitrary_channel_set_without_changing_values()
     np.testing.assert_array_equal(_host(result)[master.height :], _host(expected_source))
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 @pytest.mark.parametrize(
     ("master_channels", "source_channels"),
     (
@@ -358,7 +379,7 @@ def test_adapt_rejects_channel_pairs_without_a_deterministic_conversion(
     master_channels: tuple[str, ...],
     source_channels: tuple[str, ...],
 ) -> None:
-    """v1-stack acceptance 5: adapt rejects unknown, unequal-count, matte-promotion, and alpha-mismatch pairs."""
+    """Adaptive stacking rejects channel pairs without a defined conversion and reports both channel sets."""
     master = _frame(np.zeros((1, 1, len(master_channels)), dtype=np.float32), channels=master_channels)
     source = _frame(np.zeros((1, 1, len(source_channels)), dtype=np.float32), channels=source_channels)
 
@@ -372,8 +393,11 @@ def test_adapt_rejects_channel_pairs_without_a_deterministic_conversion(
     assert repr(source_channels) in message
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_adapt_preserves_dtype_and_color_conversion_fail_fast_boundaries() -> None:
-    """REQ-API-012 / v1-stack acceptance 5: adaptation failures are actionable through their causes."""
+    """Adaptive stacking explains unsupported dtype and color conversions and preserves the underlying error cause."""
     rgb = np.zeros((1, 2, 3), dtype=np.float32)
     with pytest.raises(ValueError, match="dtype.*float32.*float16"):
         px.transform.stack([_frame(rgb), _frame(rgb, dtype=np.float16)], adapt=True)
@@ -418,7 +442,9 @@ def test_adapt_preserves_dtype_and_color_conversion_fail_fast_boundaries() -> No
     assert "channels" in str(error.value) and "gamma" in str(error.value)
 
 
+@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("REQ-PIX-017")
 def test_stack_images_rejects_non_frame_members() -> None:
-    """v1-stack acceptance 1: every collection member must be a Frame."""
+    """Stacking rejects any collection member that is not a Frame."""
     with pytest.raises(ValueError, match="Frame"):
         px.transform.stack([object()])

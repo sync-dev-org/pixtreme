@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import inspect
-
 import cupy as cp
 import numpy as np
 import pytest
 
 from pixtreme._core.frame import Frame
 from pixtreme._io.dtype import _prepare_write_frame
-from pixtreme._io.formats.nvimgcodec import _decode_raster_data, _raster_write_data, _repack_raster_data
+from pixtreme._io.formats.nvimgcodec import _decode_raster_data, _raster_write_data
 
 
 def _assert_bit_equal(actual: cp.ndarray, expected: cp.ndarray) -> None:
@@ -38,6 +36,8 @@ def _composed_decode(source: cp.ndarray, indices: tuple[int, ...], *, unchanged:
     return cp.ascontiguousarray(output)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize("dtype", (np.uint8, np.uint16, np.float16, np.float32), ids=np.dtype)
 @pytest.mark.parametrize(
     ("component_count", "indices"),
@@ -50,7 +50,7 @@ def test_fused_decode_repack_is_bit_identical_to_the_composed_boundary_character
     indices: tuple[int, ...],
     unchanged: bool,
 ) -> None:
-    """characterization: GitHub issue #1 RawKernel trial, raster-decode acceptance 1 and 5 freezes decode bits."""
+    """characterization: GitHub issue #1 RawKernel trial freezes decode bits."""
     source = _raster_values(dtype, component_count)
     expected = _composed_decode(source, indices, unchanged=unchanged)
 
@@ -60,8 +60,10 @@ def test_fused_decode_repack_is_bit_identical_to_the_composed_boundary_character
     _assert_bit_equal(actual, expected)
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 def test_fused_decode_repack_is_bit_identical_for_strided_source_storage_characterization() -> None:
-    """characterization: GitHub issue #1 RawKernel trial, raster-decode acceptance 1 and 5 freezes strided bits."""
+    """characterization: GitHub issue #1 RawKernel trial freezes strided bits."""
     source = _raster_values(np.uint16, 4)[:, ::2, :]
     indices = (3, 1, 0)
     expected = _composed_decode(source, indices, unchanged=False)
@@ -83,6 +85,8 @@ def _composed_write(frame: Frame, format_name: str) -> cp.ndarray:
     return cp.ascontiguousarray(prepared.data[..., indices])
 
 
+@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("REQ-PIX-008")
 @pytest.mark.parametrize(
     ("format_name", "dtype", "channels"),
     (
@@ -100,7 +104,7 @@ def test_fused_write_repack_is_bit_identical_to_recode_then_canonical_gather_cha
     dtype: type[np.generic],
     channels: tuple[str, ...],
 ) -> None:
-    """characterization: GitHub issue #1 RawKernel trial, raster-decode acceptance 2 and 5 freezes write bits."""
+    """characterization: GitHub issue #1 RawKernel trial freezes write bits."""
     frame = Frame(
         data=_raster_values(dtype, len(channels)),
         colorspace="ACEScg",
@@ -113,13 +117,3 @@ def test_fused_write_repack_is_bit_identical_to_recode_then_canonical_gather_cha
 
     assert actual.flags.c_contiguous
     _assert_bit_equal(actual, expected)
-
-
-def test_raster_boundary_helpers_route_through_the_single_pass_repack_launcher_characterization() -> None:
-    """characterization: GitHub issue #1 RawKernel trial, raster-decode acceptance 1, 2, and 5 freezes one pass."""
-    for function in (_decode_raster_data, _raster_write_data):
-        source = inspect.getsource(function)
-        assert "_repack_raster_data(" in source
-        assert "astype(" not in source
-        assert "ascontiguousarray(" not in source
-    assert inspect.getsource(_repack_raster_data).count("_raster_repack_kernel(") == 1

@@ -1,4 +1,4 @@
-"""Generate the manual visual-acceptance sheet for v1-unsharp-mask."""
+"""Generate a comparison sheet for visual inspection of unsharp mask."""
 
 from __future__ import annotations
 

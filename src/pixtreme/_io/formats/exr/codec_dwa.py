@@ -6,6 +6,7 @@ import heapq
 import struct
 import zlib
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 from typing import cast
@@ -14,37 +15,23 @@ import cupy as cp
 import numpy as np
 
 from pixtreme._core.errors import _actionable_error
+from pixtreme._io.formats.exr.codec_common import _CanonicalHuffmanCode, _chunk_channel_geometry
 from pixtreme._io.formats.exr.codec_zip import (
     _decode_deflate_chunks,
 )
 from pixtreme._io.formats.exr.container import (
-    _DWA_HUFFMAN_LOOKAHEAD_SIZE,
-    _DWA_HUFFMAN_SEGMENT_TOKEN_COUNT,
-    _DWA_JPEG_CHROMA,
-    _DWA_JPEG_LUMINANCE,
-    _DWA_MAX_HUFFMAN_CODE_LENGTH,
-    _DWA_MAX_HUFFMAN_SYMBOL,
-    _DWA_STATIC_HUFFMAN,
     _EXR_DTYPE_INFO,
     _EXR_LINES_PER_CHUNK,
     _EXR_MAX_GRID_Y,
+    _EXR_MAX_INTEGER,
     _EXR_THREADS_PER_BLOCK,
-    _classify_default_dwa_channels,
-    _classify_dwa_channels,
-    _dwa_suffix,
-    _DwaByteSpan,
-    _DwaChannelLayout,
-    _DwaChunkDescriptor,
-    _DwaDeflateStreams,
-    _DwaHuffmanTable,
-    _DwaLeader,
-    _DwaWriteStreams,
+    _checked_product,
     _ExrChannel,
     _ExrChunk,
     _ExrContainer,
     _ExrGpuError,
     _gpu_error,
-    _parse_dwa_huffman_table,
+    _parser_error,
 )
 from pixtreme._io.formats.exr.packing import (
     _adler_kernel,
@@ -3478,3 +3465,965 @@ def _read_exr_dwa_gpu(
         ),
     )
     return cast(cp.ndarray, output)
+
+
+_DWA_LEADER_SIZE = 11 * 8
+
+_DWA_HUFFMAN_HEADER_SIZE = 5 * 4
+
+_DWA_MAX_HUFFMAN_SYMBOL = 1 << 16
+
+_DWA_MAX_HUFFMAN_CODE_LENGTH = 58
+
+_DWA_HUFFMAN_LOOKAHEAD_BITS = 10
+
+_DWA_HUFFMAN_LOOKAHEAD_SIZE = 1 << _DWA_HUFFMAN_LOOKAHEAD_BITS
+
+_DWA_HUFFMAN_SEGMENT_TOKEN_COUNT = 256
+
+_DWA_STATIC_HUFFMAN = 0
+
+_DWA_DEFLATE = 1
+
+_DWA_SCHEME_NAMES = {0: "unknown", 1: "lossy_dct", 2: "rle"}
+
+_DWA_JPEG_LUMINANCE = np.asarray(
+    (
+        16,
+        11,
+        10,
+        16,
+        24,
+        40,
+        51,
+        61,
+        12,
+        12,
+        14,
+        19,
+        26,
+        58,
+        60,
+        55,
+        14,
+        13,
+        16,
+        24,
+        40,
+        57,
+        69,
+        56,
+        14,
+        17,
+        22,
+        29,
+        51,
+        87,
+        80,
+        62,
+        18,
+        22,
+        37,
+        56,
+        68,
+        109,
+        103,
+        77,
+        24,
+        35,
+        55,
+        64,
+        81,
+        104,
+        113,
+        92,
+        49,
+        64,
+        78,
+        87,
+        103,
+        121,
+        120,
+        101,
+        72,
+        92,
+        95,
+        98,
+        112,
+        100,
+        103,
+        99,
+    ),
+    dtype=np.float32,
+)
+
+_DWA_JPEG_CHROMA = np.asarray(
+    (
+        17,
+        18,
+        24,
+        47,
+        99,
+        99,
+        99,
+        99,
+        18,
+        21,
+        26,
+        66,
+        99,
+        99,
+        99,
+        99,
+        24,
+        26,
+        56,
+        99,
+        99,
+        99,
+        99,
+        99,
+        47,
+        66,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+        99,
+    ),
+    dtype=np.float32,
+)
+
+
+@dataclass(frozen=True)
+class _DwaByteSpan:
+    start: int
+    end: int
+
+    @property
+    def size(self) -> int:
+        return self.end - self.start
+
+
+@dataclass(frozen=True)
+class _DwaChannelRule:
+    suffix: str
+    scheme: str
+    pixel_type: int
+    csc_index: int | None
+    case_insensitive: bool
+
+
+@dataclass(frozen=True)
+class _DwaChannelDescriptor:
+    name: str
+    suffix: str
+    layer_prefix: str
+    scheme: str
+    csc_index: int | None
+    csc_group: int | None
+
+
+@dataclass(frozen=True)
+class _DwaCscGroup:
+    channel_names: tuple[str, str, str]
+
+
+@dataclass(frozen=True)
+class _DwaChannelLayout:
+    channels: tuple[_DwaChannelDescriptor, ...]
+    csc_groups: tuple[_DwaCscGroup, ...]
+
+
+@dataclass(frozen=True)
+class _DwaHuffmanTable:
+    minimum_symbol: int
+    maximum_symbol: int
+    table_byte_count: int
+    data_bit_count: int
+    code_lengths: tuple[int, ...]
+    codes: tuple[_CanonicalHuffmanCode, ...]
+    table_span: _DwaByteSpan
+    data_span: _DwaByteSpan
+
+
+@dataclass(frozen=True)
+class _DwaLeader:
+    version: int
+    unknown_uncompressed_size: int
+    unknown_compressed_size: int
+    ac_compressed_size: int
+    dc_compressed_size: int
+    rle_compressed_size: int
+    rle_uncompressed_size: int
+    rle_raw_size: int
+    ac_element_count: int
+    dc_element_count: int
+    ac_compression: int
+
+
+@dataclass(frozen=True)
+class _DwaChunkGeometry:
+    lines_per_chunk: int
+    row_count: int
+    block_columns: int
+    block_rows: int
+    padded_width: int
+    padded_height: int
+    mirror_right: int
+    mirror_bottom: int
+
+
+@dataclass(frozen=True)
+class _DwaChunkDescriptor:
+    geometry: _DwaChunkGeometry
+    leader: _DwaLeader | None
+    channel_rules: tuple[_DwaChannelRule, ...]
+    channel_layout: _DwaChannelLayout | None
+    unknown_span: _DwaByteSpan
+    ac_span: _DwaByteSpan
+    dc_span: _DwaByteSpan
+    rle_span: _DwaByteSpan
+    huffman: _DwaHuffmanTable | None
+
+
+@dataclass(frozen=True)
+class _DwaWriteStreams:
+    unknown: cp.ndarray = field(repr=False)
+    unknown_sizes: tuple[int, ...]
+    ac_symbols: cp.ndarray = field(repr=False)
+    ac_chunk_ids: cp.ndarray = field(repr=False)
+    dc: cp.ndarray = field(repr=False)
+    dc_sizes: tuple[int, ...]
+    rle: cp.ndarray = field(repr=False)
+    rle_sizes: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class _DwaDeflateStreams:
+    payload: cp.ndarray = field(repr=False)
+    unknown_offsets: tuple[int, ...]
+    unknown_sizes: tuple[int, ...]
+    dc_offsets: tuple[int, ...]
+    dc_sizes: tuple[int, ...]
+    rle_offsets: tuple[int, ...]
+    rle_sizes: tuple[int, ...]
+
+
+def _dwa_suffix(name: str) -> tuple[str, str]:
+    separator = name.rfind(".")
+    if separator < 0:
+        return "", name
+    return name[:separator], name[separator + 1 :]
+
+
+def _dwa_rule_matches(rule: _DwaChannelRule, channel: _ExrChannel) -> bool:
+    _, suffix = _dwa_suffix(channel.name)
+    if rule.pixel_type != channel.pixel_type:
+        return False
+    if rule.case_insensitive:
+        return rule.suffix.casefold() == suffix.casefold()
+    return rule.suffix == suffix
+
+
+def _classify_dwa_channels(
+    channels: Sequence[_ExrChannel],
+    rules: Sequence[_DwaChannelRule],
+) -> _DwaChannelLayout:
+    provisional: list[tuple[_ExrChannel, str, str, str, int | None]] = []
+    for channel in channels:
+        prefix, suffix = _dwa_suffix(channel.name)
+        matching = tuple(index for index, rule in enumerate(rules) if _dwa_rule_matches(rule, channel))
+        if len(matching) > 1:
+            raise _parser_error(
+                why="the DWA channel rules assign one file channel more than once",
+                what=f"channel={channel.name!r}, matching_rules={matching!r}",
+                how="store at most one matching suffix and pixel-type rule for each channel",
+            )
+        if matching:
+            rule = rules[matching[0]]
+            scheme = rule.scheme
+            csc_index = rule.csc_index
+        else:
+            scheme = "unknown"
+            csc_index = None
+        provisional.append((channel, prefix, suffix, scheme, csc_index))
+
+    candidates: dict[tuple[str, int, int], dict[int, str]] = {}
+    for channel, prefix, _, scheme, csc_index in provisional:
+        if scheme != "lossy_dct" or csc_index is None:
+            continue
+        key = (prefix, channel.x_sampling, channel.y_sampling)
+        slots = candidates.setdefault(key, {})
+        if csc_index in slots:
+            raise _parser_error(
+                why="the DWA channel rules assign duplicate RGB components within one layer and sampling group",
+                what=f"layer={prefix!r}, csc_index={csc_index}, channels={(slots[csc_index], channel.name)!r}",
+                how="provide at most one R, G, and B component per layer and sampling pattern",
+            )
+        slots[csc_index] = channel.name
+
+    csc_groups: list[_DwaCscGroup] = []
+    group_by_channel: dict[str, int] = {}
+    for slots in candidates.values():
+        if set(slots) != {0, 1, 2}:
+            continue
+        group_index = len(csc_groups)
+        names = (slots[0], slots[1], slots[2])
+        csc_groups.append(_DwaCscGroup(channel_names=names))
+        group_by_channel.update((name, group_index) for name in names)
+
+    descriptors = tuple(
+        _DwaChannelDescriptor(
+            name=channel.name,
+            suffix=suffix,
+            layer_prefix=prefix,
+            scheme=scheme,
+            csc_index=csc_index,
+            csc_group=group_by_channel.get(channel.name),
+        )
+        for channel, prefix, suffix, scheme, csc_index in provisional
+    )
+    return _DwaChannelLayout(channels=descriptors, csc_groups=tuple(csc_groups))
+
+
+def _classify_default_dwa_channels(channels: Sequence[_ExrChannel]) -> _DwaChannelLayout:
+    rules = tuple(
+        _DwaChannelRule(
+            suffix=suffix,
+            scheme="lossy_dct",
+            pixel_type=pixel_type,
+            csc_index={"R": 0, "G": 1, "B": 2}.get(suffix),
+            case_insensitive=False,
+        )
+        for suffix in ("R", "G", "B", "Y", "BY", "RY")
+        for pixel_type in (1, 2)
+    ) + tuple(
+        _DwaChannelRule(
+            suffix="A",
+            scheme="rle",
+            pixel_type=pixel_type,
+            csc_index=None,
+            case_insensitive=False,
+        )
+        for pixel_type in (0, 1, 2)
+    )
+    return _classify_dwa_channels(channels, rules)
+
+
+def _read_dwa_bits(data: bytes, bit_offset: int, width: int) -> tuple[int, int]:
+    if bit_offset + width > len(data) * 8:
+        raise _parser_error(
+            why="the DWA Huffman code-length table is truncated within a packed field",
+            what=f"bit_offset={bit_offset}, requested_bits={width}, table_bytes={len(data)}",
+            how="provide the complete six-bit length or eight-bit long-run payload",
+        )
+    end = bit_offset + width
+    byte_start = bit_offset // 8
+    byte_end = (end + 7) // 8
+    packed = int.from_bytes(data[byte_start:byte_end], "big")
+    value = (packed >> (byte_end * 8 - end)) & ((1 << width) - 1)
+    return value, end
+
+
+def _canonical_dwa_codes(minimum_symbol: int, lengths: Sequence[int]) -> tuple[_CanonicalHuffmanCode, ...]:
+    length_array = np.asarray(lengths, dtype=np.uint8)
+    observed_offsets = np.flatnonzero(length_array)
+    if not observed_offsets.size:
+        raise _parser_error(
+            why="the DWA Huffman code-length assignment contains no decodable symbol",
+            what=f"minimum_symbol={minimum_symbol}, symbol_count={len(lengths)}",
+            how="assign a code length between 1 and 58 to at least one symbol",
+        )
+    observed_lengths = length_array[observed_offsets].astype(np.int64, copy=False)
+    counts = np.bincount(observed_lengths, minlength=_DWA_MAX_HUFFMAN_CODE_LENGTH + 1)
+    maximum_length = int(observed_lengths.max())
+    capacity = 1 << maximum_length
+    occupancy = sum(int(counts[length]) << (maximum_length - length) for length in range(1, maximum_length + 1))
+    if occupancy > capacity:
+        raise _parser_error(
+            why="the DWA Huffman code-length assignment is oversubscribed",
+            what=f"occupancy={occupancy}, capacity={capacity}, maximum_length={maximum_length}",
+            how="reduce the number of short codes so the prefix-code capacity is not exceeded",
+        )
+
+    next_code = np.zeros(_DWA_MAX_HUFFMAN_CODE_LENGTH + 1, dtype=np.uint64)
+    code = 0
+    for length in range(_DWA_MAX_HUFFMAN_CODE_LENGTH, 0, -1):
+        next_code[length] = code
+        code = (code + int(counts[length])) >> 1
+
+    codes: list[_CanonicalHuffmanCode] = []
+    intervals: list[tuple[int, int, int]] = []
+    for assigned_length_value in np.flatnonzero(counts[1:]) + 1:
+        assigned_length = int(assigned_length_value)
+        offsets = observed_offsets[observed_lengths == assigned_length]
+        assigned_codes = next_code[assigned_length] + np.arange(offsets.size, dtype=np.uint64)
+        if int(assigned_codes[-1]) >= 1 << assigned_length:
+            raise _parser_error(
+                why="the DWA canonical Huffman assignment exceeds its declared code length",
+                what=(
+                    f"symbol={minimum_symbol + int(offsets[-1])}, code={int(assigned_codes[-1])}, "
+                    f"length={assigned_length}"
+                ),
+                how="provide a valid prefix-free code-length assignment",
+            )
+        for offset_value, assigned_value in zip(offsets, assigned_codes, strict=True):
+            offset = int(offset_value)
+            assigned = int(assigned_value)
+            symbol = minimum_symbol + offset
+            interval_start = assigned << (_DWA_MAX_HUFFMAN_CODE_LENGTH - assigned_length)
+            interval_end = (assigned + 1) << (_DWA_MAX_HUFFMAN_CODE_LENGTH - assigned_length)
+            intervals.append((interval_start, interval_end, symbol))
+            codes.append(_CanonicalHuffmanCode(symbol=symbol, length=assigned_length, code=assigned))
+
+    intervals.sort()
+    for previous, current in zip(intervals, intervals[1:], strict=False):
+        if previous[1] > current[0]:
+            raise _parser_error(
+                why="the DWA canonical Huffman code-length assignment contains overlapping prefixes",
+                what=f"symbols={(previous[2], current[2])!r}, intervals={(previous[:2], current[:2])!r}",
+                how="provide a prefix-free canonical code-length assignment",
+            )
+    return tuple(codes)
+
+
+def _parse_dwa_huffman_table(
+    payload: bytes,
+    *,
+    base_offset: int = 0,
+    expand: bool = True,
+) -> _DwaHuffmanTable:
+    if len(payload) < _DWA_HUFFMAN_HEADER_SIZE:
+        raise _parser_error(
+            why="the DWA Huffman stream is truncated before its 20-byte header",
+            what=f"received={len(payload)}, required={_DWA_HUFFMAN_HEADER_SIZE}",
+            how="provide the complete five-word canonical Huffman header",
+        )
+    minimum_symbol, maximum_symbol, table_byte_count, data_bit_count, reserved = struct.unpack_from("<IIIII", payload)
+    if minimum_symbol > maximum_symbol or maximum_symbol > _DWA_MAX_HUFFMAN_SYMBOL:
+        raise _parser_error(
+            why="the DWA Huffman symbol range is invalid",
+            what=f"minimum={minimum_symbol}, maximum={maximum_symbol}, allowed_max={_DWA_MAX_HUFFMAN_SYMBOL}",
+            how="encode an ordered range within the 16-bit alphabet and its repeat pseudo-symbol",
+        )
+    if reserved != 0:
+        raise _parser_error(
+            why="the DWA Huffman reserved header field is nonzero",
+            what=f"reserved={reserved}",
+            how="write zero in the reserved Huffman header word",
+        )
+    data_byte_count = (data_bit_count + 7) // 8
+    expected_size = _DWA_HUFFMAN_HEADER_SIZE + table_byte_count + data_byte_count
+    if len(payload) < expected_size:
+        raise _parser_error(
+            why="the DWA Huffman table or encoded data is truncated relative to its declared byte and bit counts",
+            what=f"received={len(payload)}, declared={expected_size}, table_bytes={table_byte_count}, data_bits={data_bit_count}",
+            how="provide every declared code-length and encoded-data byte",
+        )
+    if len(payload) != expected_size:
+        raise _parser_error(
+            why="the DWA Huffman stream contains bytes outside its declared table and encoded data",
+            what=f"received={len(payload)}, declared={expected_size}",
+            how="make the table byte count and data bit count cover the complete AC substream",
+        )
+
+    table_start = _DWA_HUFFMAN_HEADER_SIZE
+    table_end = table_start + table_byte_count
+    data_padding_bits = data_byte_count * 8 - data_bit_count
+    if data_padding_bits and payload[expected_size - 1] & ((1 << data_padding_bits) - 1):
+        raise _parser_error(
+            why="the DWA Huffman encoded data has nonzero padding bits beyond its declared data bit count",
+            what=f"data_bits={data_bit_count}, padding_bits={data_padding_bits}, final_byte=0x{payload[expected_size - 1]:02x}",
+            how="zero the unused low bits of the final encoded-data byte",
+        )
+    if not expand:
+        return _DwaHuffmanTable(
+            minimum_symbol=minimum_symbol,
+            maximum_symbol=maximum_symbol,
+            table_byte_count=table_byte_count,
+            data_bit_count=data_bit_count,
+            code_lengths=(),
+            codes=(),
+            table_span=_DwaByteSpan(base_offset + table_start, base_offset + table_end),
+            data_span=_DwaByteSpan(base_offset + table_end, base_offset + expected_size),
+        )
+
+    packed_table = payload[table_start:table_end]
+    symbol_count = maximum_symbol - minimum_symbol + 1
+    lengths: list[int] = []
+    bit_offset = 0
+    while len(lengths) < symbol_count:
+        token, bit_offset = _read_dwa_bits(packed_table, bit_offset, 6)
+        if token <= _DWA_MAX_HUFFMAN_CODE_LENGTH:
+            lengths.append(token)
+            continue
+        if token == 63:
+            extra, bit_offset = _read_dwa_bits(packed_table, bit_offset, 8)
+            run = extra + 6
+        else:
+            run = token - 59 + 2
+        if len(lengths) + run > symbol_count:
+            raise _parser_error(
+                why="the DWA Huffman table-run extends beyond the declared symbol range",
+                what=f"decoded={len(lengths)}, run={run}, symbols={symbol_count}, token={token}",
+                how="shorten the zero-length run to end within the min/max symbol range",
+            )
+        lengths.extend((0,) * run)
+
+    consumed_bytes = (bit_offset + 7) // 8
+    if consumed_bytes != table_byte_count:
+        raise _parser_error(
+            why="the DWA Huffman table byte count does not match the decoded code-length fields",
+            what=f"declared={table_byte_count}, consumed={consumed_bytes}, consumed_bits={bit_offset}",
+            how="set the table byte count to the exact packed code-length size",
+        )
+    padding_bits = consumed_bytes * 8 - bit_offset
+    if padding_bits and packed_table[-1] & ((1 << padding_bits) - 1):
+        raise _parser_error(
+            why="the DWA Huffman code-length table has nonzero padding bits",
+            what=f"padding_bits={padding_bits}, final_byte=0x{packed_table[-1]:02x}",
+            how="zero the unused low bits of the final table byte",
+        )
+
+    codes = _canonical_dwa_codes(minimum_symbol, lengths)
+    return _DwaHuffmanTable(
+        minimum_symbol=minimum_symbol,
+        maximum_symbol=maximum_symbol,
+        table_byte_count=table_byte_count,
+        data_bit_count=data_bit_count,
+        code_lengths=tuple(lengths),
+        codes=codes,
+        table_span=_DwaByteSpan(base_offset + table_start, base_offset + table_end),
+        data_span=_DwaByteSpan(base_offset + table_end, base_offset + expected_size),
+    )
+
+
+def _parse_dwa_channel_rules(
+    payload: bytes,
+    offset: int,
+    *,
+    chunk_y: int,
+    payload_offset: int,
+) -> tuple[tuple[_DwaChannelRule, ...], int]:
+    if offset + 2 > len(payload):
+        raise _parser_error(
+            why="the DWA v2 channel-rule section is truncated before its byte count",
+            what=f"chunk_y={chunk_y}, offset={payload_offset + offset}, remaining={len(payload) - offset}",
+            how="provide the little-endian two-byte channel-rule section size",
+        )
+    section_size = struct.unpack_from("<H", payload, offset)[0]
+    if section_size < 2:
+        raise _parser_error(
+            why="the DWA v2 channel-rule section size excludes its own two-byte count",
+            what=f"chunk_y={chunk_y}, section_size={section_size}",
+            how="declare a channel-rule size of at least two bytes including the size field",
+        )
+    section_end = offset + section_size
+    if section_end > len(payload):
+        raise _parser_error(
+            why="the DWA v2 channel-rule section is truncated relative to its declared size",
+            what=f"chunk_y={chunk_y}, section={payload_offset + offset}:{payload_offset + section_end}, payload_end={payload_offset + len(payload)}",
+            how="provide every declared channel-rule record byte",
+        )
+
+    cursor = offset + 2
+    rules: list[_DwaChannelRule] = []
+    while cursor < section_end:
+        terminator = payload.find(b"\x00", cursor, section_end)
+        if terminator < 0:
+            raise _parser_error(
+                why="the DWA channel-rule suffix is truncated before its null terminator",
+                what=f"chunk_y={chunk_y}, rule_offset={payload_offset + cursor}, section_end={payload_offset + section_end}",
+                how="terminate every channel suffix within the declared rule section",
+            )
+        suffix_bytes = payload[cursor:terminator]
+        if not suffix_bytes or len(suffix_bytes) > 128:
+            raise _parser_error(
+                why="the DWA channel-rule suffix length is outside the supported 1-to-128-byte range",
+                what=f"chunk_y={chunk_y}, suffix_length={len(suffix_bytes)}",
+                how="store a nonempty channel suffix no longer than 128 bytes",
+            )
+        try:
+            suffix = suffix_bytes.decode("utf-8")
+        except UnicodeDecodeError as error:
+            raise _parser_error(
+                why="the DWA channel-rule suffix is not valid UTF-8",
+                what=f"chunk_y={chunk_y}, suffix_bytes={suffix_bytes!r}",
+                how="encode channel-rule suffixes using valid UTF-8",
+            ) from error
+        cursor = terminator + 1
+        if cursor + 2 > section_end:
+            raise _parser_error(
+                why="the DWA channel-rule record is truncated before its classification and pixel-type bytes",
+                what=f"chunk_y={chunk_y}, suffix={suffix!r}, remaining={section_end - cursor}",
+                how="append both packed classification and pixel-type bytes to every suffix",
+            )
+        packed, pixel_type = payload[cursor], payload[cursor + 1]
+        cursor += 2
+        csc_value = packed >> 4
+        scheme_value = (packed >> 2) & 3
+        if packed & 0x02 or csc_value > 3 or scheme_value not in _DWA_SCHEME_NAMES or pixel_type not in _EXR_DTYPE_INFO:
+            raise _parser_error(
+                why="the DWA channel-rule record contains an invalid or reserved classification value",
+                what=(
+                    f"chunk_y={chunk_y}, suffix={suffix!r}, packed=0x{packed:02x}, "
+                    f"csc={csc_value}, scheme={scheme_value}, pixel_type={pixel_type}"
+                ),
+                how="use CSC values 0-to-3, schemes UNKNOWN/LOSSY_DCT/RLE, a zero reserved bit, and UINT/HALF/FLOAT",
+            )
+        rules.append(
+            _DwaChannelRule(
+                suffix=suffix,
+                scheme=_DWA_SCHEME_NAMES[scheme_value],
+                pixel_type=pixel_type,
+                csc_index=csc_value - 1 if csc_value else None,
+                case_insensitive=bool(packed & 1),
+            )
+        )
+    return tuple(rules), section_end
+
+
+def _dwa_geometry(*, width: int, row_count: int, lines_per_chunk: int) -> _DwaChunkGeometry:
+    block_columns = (width + 7) // 8
+    block_rows = (row_count + 7) // 8
+    padded_width = block_columns * 8
+    padded_height = block_rows * 8
+    return _DwaChunkGeometry(
+        lines_per_chunk=lines_per_chunk,
+        row_count=row_count,
+        block_columns=block_columns,
+        block_rows=block_rows,
+        padded_width=padded_width,
+        padded_height=padded_height,
+        mirror_right=padded_width - width,
+        mirror_bottom=padded_height - row_count,
+    )
+
+
+def _zero_dwa_spans(offset: int) -> tuple[_DwaByteSpan, _DwaByteSpan, _DwaByteSpan, _DwaByteSpan]:
+    span = _DwaByteSpan(offset, offset)
+    return span, span, span, span
+
+
+def _validate_dwa_declared_layout(
+    leader: _DwaLeader,
+    layout: _DwaChannelLayout,
+    channels: Sequence[_ExrChannel],
+    geometry: _DwaChunkGeometry,
+    *,
+    chunk_y: int,
+) -> None:
+    descriptors = {descriptor.name: descriptor for descriptor in layout.channels}
+    width = geometry.padded_width - geometry.mirror_right
+    required_sizes = {"unknown": 0, "rle": 0}
+    lossy_block_count = 0
+    for channel in channels:
+        descriptor = descriptors[channel.name]
+        channel_width, channel_rows = _chunk_channel_geometry(
+            channel,
+            width=width,
+            chunk_y=chunk_y,
+            row_count=geometry.row_count,
+        )
+        if descriptor.scheme == "lossy_dct":
+            lossy_block_count += ((channel_width + 7) // 8) * ((channel_rows + 7) // 8)
+            continue
+        if descriptor.scheme in required_sizes:
+            channel_size = _checked_product(
+                channel_width,
+                channel_rows,
+                channel.bytes_per_sample,
+                context=f"DWA {descriptor.scheme} channel {channel.name!r}",
+            )
+            required_sizes[descriptor.scheme] += channel_size
+
+    lossless_declarations = (
+        (
+            "UNKNOWN",
+            required_sizes["unknown"],
+            leader.unknown_compressed_size,
+            leader.unknown_uncompressed_size,
+            0,
+        ),
+        (
+            "RLE",
+            required_sizes["rle"],
+            leader.rle_compressed_size,
+            leader.rle_raw_size,
+            leader.rle_uncompressed_size,
+        ),
+    )
+    for name, required, compressed_size, raw_size, intermediate_size in lossless_declarations:
+        if required:
+            if compressed_size == 0 or raw_size < required:
+                raise _parser_error(
+                    why=f"the DWA {name} declarations cannot hold the channels assigned to that route",
+                    what=(
+                        f"chunk_y={chunk_y}, required_raw={required}, declared_raw={raw_size}, "
+                        f"compressed_size={compressed_size}"
+                    ),
+                    how=f"derive the DWA {name} sizes from the classified channels and chunk row geometry",
+                )
+        elif compressed_size or raw_size or intermediate_size:
+            raise _parser_error(
+                why=f"the DWA {name} declarations are nonzero even though no channel uses that route",
+                what=(
+                    f"chunk_y={chunk_y}, compressed_size={compressed_size}, raw_size={raw_size}, "
+                    f"intermediate_size={intermediate_size}"
+                ),
+                how=f"zero every DWA {name} declaration when the channel rules assign no {name} channel",
+            )
+
+    block_count = lossy_block_count
+    if block_count:
+        maximum_ac_count = _checked_product(block_count, 63, context=f"DWA AC count for chunk y={chunk_y}")
+        if not block_count <= leader.ac_element_count <= maximum_ac_count:
+            raise _parser_error(
+                why="the DWA AC element count is incompatible with the lossy channel block ownership",
+                what=(
+                    f"chunk_y={chunk_y}, declared={leader.ac_element_count}, "
+                    f"allowed={block_count}:{maximum_ac_count}, lossy_blocks={lossy_block_count}"
+                ),
+                how="declare between one EOB and 63 AC symbols for every lossy 8x8 channel block",
+            )
+        if leader.dc_element_count != block_count:
+            raise _parser_error(
+                why="the DWA DC element count is incompatible with the lossy channel block ownership",
+                what=(
+                    f"chunk_y={chunk_y}, declared={leader.dc_element_count}, expected={block_count}, "
+                    f"lossy_blocks={lossy_block_count}"
+                ),
+                how="declare exactly one DC element for every lossy 8x8 channel block",
+            )
+    elif any(
+        (
+            leader.ac_compressed_size,
+            leader.dc_compressed_size,
+            leader.ac_element_count,
+            leader.dc_element_count,
+        )
+    ):
+        raise _parser_error(
+            why="the DWA AC or DC declarations are nonzero even though no channel uses lossy DCT",
+            what=(
+                f"chunk_y={chunk_y}, ac_size={leader.ac_compressed_size}, dc_size={leader.dc_compressed_size}, "
+                f"ac_count={leader.ac_element_count}, dc_count={leader.dc_element_count}"
+            ),
+            how="zero AC and DC sizes and counts when the channel rules assign no lossy DCT channel",
+        )
+
+
+def _parse_dwa_chunk_payload(
+    payload: bytes,
+    *,
+    payload_offset: int,
+    chunk_y: int,
+    expected_size: int,
+    geometry: _DwaChunkGeometry,
+    channels: Sequence[_ExrChannel],
+) -> _DwaChunkDescriptor:
+    if len(payload) < _DWA_LEADER_SIZE:
+        raise _parser_error(
+            why="the compressed DWA chunk is truncated before its 88-byte leader",
+            what=f"chunk_y={chunk_y}, received={len(payload)}, required={_DWA_LEADER_SIZE}",
+            how="provide all eleven little-endian uint64 leader fields",
+        )
+    values = struct.unpack_from("<11Q", payload)
+    leader = _DwaLeader(*values)
+    if any(value > _EXR_MAX_INTEGER for value in values[1:10]):
+        raise _parser_error(
+            why="the DWA leader size or element count exceeds signed 64-bit control-plane bounds",
+            what=f"chunk_y={chunk_y}, leader={values!r}",
+            how="store sizes and counts representable by the decoder descriptor",
+        )
+    if leader.version > 2:
+        raise _parser_error(
+            why="the DWA chunk leader declares an unknown format version",
+            what=f"chunk_y={chunk_y}, version={leader.version}",
+            how="encode a supported DWA chunk version from 0 through 2",
+        )
+    if leader.ac_compression not in (_DWA_STATIC_HUFFMAN, _DWA_DEFLATE):
+        raise _parser_error(
+            why="the DWA chunk leader declares an unknown AC compression scheme",
+            what=f"chunk_y={chunk_y}, ac_compression={leader.ac_compression}",
+            how="use STATIC_HUFFMAN (0) or DEFLATE (1)",
+        )
+
+    offset = _DWA_LEADER_SIZE
+    channel_rules: tuple[_DwaChannelRule, ...] = ()
+    channel_layout: _DwaChannelLayout | None = None
+    if leader.version >= 2:
+        channel_rules, offset = _parse_dwa_channel_rules(
+            payload,
+            offset,
+            chunk_y=chunk_y,
+            payload_offset=payload_offset,
+        )
+        channel_layout = _classify_dwa_channels(channels, channel_rules)
+
+    size_pairs = (
+        ("UNKNOWN", leader.unknown_compressed_size, leader.unknown_uncompressed_size),
+        ("AC", leader.ac_compressed_size, leader.ac_element_count),
+        ("DC", leader.dc_compressed_size, leader.dc_element_count),
+    )
+    for name, compressed_size, declared_output in size_pairs:
+        if (compressed_size == 0) != (declared_output == 0):
+            raise _parser_error(
+                why=f"the DWA {name} compressed size and declared output count disagree about an empty stream",
+                what=(f"chunk_y={chunk_y}, compressed_size={compressed_size}, declared_output={declared_output}"),
+                how=f"set both DWA {name} declarations to zero or provide a nonempty payload and output count",
+            )
+    rle_values = (leader.rle_compressed_size, leader.rle_uncompressed_size, leader.rle_raw_size)
+    if any(rle_values) and not all(rle_values):
+        raise _parser_error(
+            why="the DWA RLE compressed, encoded, and raw size declarations disagree about an empty stream",
+            what=f"chunk_y={chunk_y}, sizes={rle_values!r}",
+            how="set all three RLE sizes to zero or provide all three nonzero sizes",
+        )
+    if channel_layout is not None:
+        _validate_dwa_declared_layout(leader, channel_layout, channels, geometry, chunk_y=chunk_y)
+    if leader.unknown_uncompressed_size + leader.rle_raw_size > expected_size:
+        raise _parser_error(
+            why="the DWA lossless channel declarations exceed the outer chunk's raw byte count",
+            what=(
+                f"chunk_y={chunk_y}, unknown={leader.unknown_uncompressed_size}, "
+                f"rle_raw={leader.rle_raw_size}, outer_raw={expected_size}"
+            ),
+            how="derive UNKNOWN and RLE raw sizes from the channels and chunk geometry",
+        )
+
+    compressed_sizes = (
+        leader.unknown_compressed_size,
+        leader.ac_compressed_size,
+        leader.dc_compressed_size,
+        leader.rle_compressed_size,
+    )
+    declared_end = offset + sum(compressed_sizes)
+    if declared_end != len(payload):
+        raise _parser_error(
+            why="the DWA substream spans do not cover the compressed chunk payload exactly",
+            what=(
+                f"chunk_y={chunk_y}, leader_and_rules={offset}, substream_sizes={compressed_sizes!r}, "
+                f"declared_end={declared_end}, payload_size={len(payload)}"
+            ),
+            how="make the UNKNOWN, AC, DC, and RLE compressed sizes match their concatenated payload bytes",
+        )
+
+    span_start = payload_offset + offset
+    spans: list[_DwaByteSpan] = []
+    for size in compressed_sizes:
+        span_end = span_start + size
+        spans.append(_DwaByteSpan(span_start, span_end))
+        span_start = span_end
+    unknown_span, ac_span, dc_span, rle_span = spans
+    huffman = None
+    if leader.ac_compressed_size and leader.ac_compression == _DWA_STATIC_HUFFMAN:
+        relative_start = ac_span.start - payload_offset
+        relative_end = ac_span.end - payload_offset
+        huffman = _parse_dwa_huffman_table(
+            payload[relative_start:relative_end],
+            base_offset=ac_span.start,
+            expand=False,
+        )
+        if huffman.data_bit_count == 0:
+            raise _parser_error(
+                why="the nonempty DWA AC stream declares zero Huffman data bits",
+                what=f"chunk_y={chunk_y}, ac_elements={leader.ac_element_count}",
+                how="provide the encoded Huffman bits needed to represent every declared AC element",
+            )
+    return _DwaChunkDescriptor(
+        geometry=geometry,
+        leader=leader,
+        channel_rules=channel_rules,
+        channel_layout=channel_layout,
+        unknown_span=unknown_span,
+        ac_span=ac_span,
+        dc_span=dc_span,
+        rle_span=rle_span,
+        huffman=huffman,
+    )
+
+
+def _parse_dwa_chunk_descriptor(
+    data: bytes,
+    channels: Sequence[_ExrChannel],
+    *,
+    width: int,
+    lines_per_chunk: int,
+    chunk_y: int,
+    row_count: int,
+    payload_start: int,
+    payload_end: int,
+    expected_size: int,
+    raw_stored: bool,
+) -> _DwaChunkDescriptor:
+    geometry = _dwa_geometry(width=width, row_count=row_count, lines_per_chunk=lines_per_chunk)
+    if raw_stored:
+        unknown_span, ac_span, dc_span, rle_span = _zero_dwa_spans(payload_start)
+        return _DwaChunkDescriptor(
+            geometry=geometry,
+            leader=None,
+            channel_rules=(),
+            channel_layout=_classify_default_dwa_channels(channels),
+            unknown_span=unknown_span,
+            ac_span=ac_span,
+            dc_span=dc_span,
+            rle_span=rle_span,
+            huffman=None,
+        )
+    return _parse_dwa_chunk_payload(
+        data[payload_start:payload_end],
+        payload_offset=payload_start,
+        chunk_y=chunk_y,
+        expected_size=expected_size,
+        geometry=geometry,
+        channels=channels,
+    )
+
+
+def _dwa_gpu_eligible(channels: Sequence[_ExrChannel], chunks: Sequence[_ExrChunk]) -> bool:
+    return all(channel.x_sampling == channel.y_sampling == 1 for channel in channels) and all(
+        chunk.raw_stored
+        or (
+            chunk.dwa is not None
+            and chunk.dwa.leader is not None
+            and chunk.dwa.leader.version == 2
+            and chunk.dwa.channel_layout is not None
+            and (chunk.dwa.leader.ac_compressed_size == 0 or chunk.dwa.leader.ac_compression == _DWA_STATIC_HUFFMAN)
+        )
+        for chunk in chunks
+    )

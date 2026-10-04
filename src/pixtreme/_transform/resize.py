@@ -620,7 +620,7 @@ def resize(
     normalized before indices replicate, and only the shrinking axis widens.
     On a same-size or enlarging axis they are bit-identical to the corresponding
     point-sampled Lanczos token. The automatic ``area`` / ``lanczos4`` choice is
-    unchanged. Agreement with Pillow 12.3.0 is limited to the fixed, two-axis
+    unchanged. Agreement with Pillow is limited to the fixed, two-axis
     reduction corpus's full-support interior; Pillow uses different edge handling.
 
     Input Frame data must be float32; use ``px.values.cast_dtype`` or another

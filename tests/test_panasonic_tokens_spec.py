@@ -260,16 +260,14 @@ def _adjacent_float32(center: np.float32, radius: int) -> np.ndarray:
     return np.concatenate((below, np.asarray((center,), dtype=np.float32), above))
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_panasonic_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> None:
-    """v1-chroma-siting-h273 acceptance 10; v1-io-icc acceptance 1;
-    v1-panasonic-tokens acceptance 99-100; v1-standard-tokens acceptance 117;
-    v1-vendor-a-tokens acceptance 140-141; v1-vendor-b-tokens acceptance 166-167:
-    expose only the exact current canonical vocabulary.
-    """
+    """Panasonic color tokens appear in the canonical vocabulary and public annotations without extra aliases."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
     assert get_args(px.core.Gamma) == _GAMMAS
     assert len(_ALIASES) == 30
-    assert sum(len(get_args(alias)) for alias in _ALIASES) == 199
+    assert sum(len(get_args(alias)) for alias in _ALIASES) == 200
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMAS
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["input_colorspace"]) == _COLORSPACES
     assert _literal_strings(get_type_hints(px.color.rgb_to_rgb)["output_gamma"]) == _GAMMAS
@@ -284,12 +282,12 @@ def test_panasonic_tokens_extend_canonical_vocabulary_and_public_static_surfaces
     assert not any(token in {"V-Gamut", "V-Log"} for alias in _PERMANENT_TOKEN_ALIASES for token in alias)
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-017")
 def test_panasonic_token_keys_and_invalid_inputs_follow_the_shared_boundary(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """v1-panasonic-tokens acceptance 101 and 111; v1-vendor-a-tokens acceptance 142 and 160:
-    normalize four separators and reject raw invalid inputs.
-    """
+    """Panasonic tokens normalize within their families, and invalid values receive canonical recovery guidance."""
     from pixtreme._core.validation import _normalized_closed_token
 
     translation = str.maketrans("", "", " .-_")
@@ -327,8 +325,11 @@ def test_panasonic_token_keys_and_invalid_inputs_follow_the_shared_boundary(
         assert "Panasonic V-Log" not in message.replace(f"received gamma={value!r}", "")
 
 
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_vlog_encode_dense_grids_selected_points_and_published_anchors_match_independent_oracle() -> None:
-    """v1-panasonic-tokens acceptance 102: encode unscaled reflectance with the tangent-derived branches."""
+    """Panasonic V-Log encoding matches its published anchors and signed branches across scene values."""
     wide = np.linspace(-0.5, 64.0, 400_001, dtype=np.float64).astype(np.float32)
     fine = np.linspace(0.0, 0.02, 200_001, dtype=np.float64).astype(np.float32)
     for values in (wide, fine):
@@ -359,8 +360,9 @@ def test_vlog_encode_dense_grids_selected_points_and_published_anchors_match_ind
     assert encoded.gamma == "V-Log"
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_vlog_decode_dense_grid_cut_branches_and_anchors_match_independent_oracle() -> None:
-    """v1-panasonic-tokens acceptance 103: decode at the derived threshold with the inverse log on equality."""
+    """Panasonic V-Log decoding selects its derived cut and matches the inverse curve at anchors."""
     cut = np.float32(_ENCODED_CUT)
     anchor_codes = _vlog_encode(np.asarray((0.0, 0.18, 0.9), dtype=np.float64)).astype(np.float32)
     special = np.asarray(
@@ -392,8 +394,9 @@ def test_vlog_decode_dense_grid_cut_branches_and_anchors_match_independent_oracl
     assert decoded.gamma == "linear"
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_vlog_cut_is_c1_monotone_and_regression_mutants_are_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
-    """v1-panasonic-tokens acceptance 104: preserve C1 monotonic cuts and reject printed or inclusive mutants."""
+    """Panasonic V-Log and its first derivative remain continuous and monotone through the branch cut."""
     linear_value = _M * _LINEAR_CUT + _D
     log_value = _A * np.log10(_LINEAR_CUT + _B) + _C
     log_slope = _A / ((_LINEAR_CUT + _B) * np.log(np.float64(10.0)))
@@ -461,8 +464,12 @@ def test_vlog_cut_is_c1_monotone_and_regression_mutants_are_rejected(monkeypatch
     assert int(correct[1].view(np.uint32)) != int(inclusive_mutant[1].view(np.uint32))
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-103")
 def test_vlog_round_trips_standalone_fused_metadata_and_no_clip_contracts() -> None:
-    """v1-panasonic-tokens acceptance 105: round-trip both directions and preserve Frame contracts."""
+    """Panasonic V-Log round trips through public paths without clipping or losing Frame metadata."""
     linear_values = np.asarray((-2.0, -0.5, 0.0, 0.01, 0.18, 0.9, 1.5, 64.0), dtype=np.float32)
     linear = _frame(linear_values, auxiliary=True)
     before = linear.data.copy()
@@ -492,8 +499,9 @@ def test_vlog_round_trips_standalone_fused_metadata_and_no_clip_contracts() -> N
     assert _rgb_values(standalone_encoded)[-1, 0] > 1.0
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_v_gamut_matrix_conversions_native_row_and_printed_matrix_match_independent_oracles() -> None:
-    """v1-panasonic-tokens acceptance 106: derive V-Gamut matrices and native luma from published coordinates."""
+    """Panasonic V-Gamut matrices, conversions, and native luma row match independent calculations."""
     from pixtreme._core.colorspace import _COLORSPACE_DEFINITIONS
 
     assert _COLORSPACE_DEFINITIONS["V-Gamut"] == _V_GAMUT
@@ -517,8 +525,9 @@ def test_v_gamut_matrix_conversions_native_row_and_printed_matrix_match_independ
     assert np.any(_rgb_values(converted) < 0.0) and np.any(_rgb_values(converted) > 1.0)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_v_gamut_uses_d65_identity_and_bradford_for_aces_auxiliary_matrix() -> None:
-    """v1-panasonic-tokens acceptance 107: use D65 identity and Bradford while keeping matrices auxiliary."""
+    """Panasonic V-Gamut uses D65 identity and Bradford adaptation in color conversion."""
     from pixtreme._color.transform import _compose_matrix
 
     to_rec709 = _conversion(_V_GAMUT, _REC709)
@@ -533,9 +542,11 @@ def test_v_gamut_uses_d65_identity_and_bradford_for_aces_auxiliary_matrix() -> N
     assert (result.colorspace, result.gamma) == ("Rec.709", "Canon-Log")
 
 
+@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("REQ-PIX-003")
 @pytest.mark.parametrize("target", ("Rec.709", "ACES2065-1"))
 def test_panasonic_frames_convert_end_to_end_with_independent_transfer_and_gamut_oracle(target: str) -> None:
-    """v1-panasonic-tokens acceptance 108: fuse V-Log decode and V-Gamut conversion with auxiliary preservation."""
+    """Panasonic Frames combine V-Gamut and V-Log conversion while preserving auxiliary channels."""
     linear_rgb = np.asarray(((-0.25, 0.18, 1.5), (0.18, 1.25, -0.05)), dtype=np.float64)
     encoded_rgb = _vlog_encode(linear_rgb).astype(np.float32)
     source = _frame(encoded_rgb, colorspace="V-Gamut", gamma="V-Log", auxiliary=True)
@@ -555,8 +566,9 @@ def test_panasonic_frames_convert_end_to_end_with_independent_transfer_and_gamut
     assert np.any(_rgb_values(converted) < 0.0) and np.any(_rgb_values(converted) > 1.0)
 
 
+@pytest.mark.req("REQ-PIX-003")
 def test_existing_token_bits_remain_at_the_pre_panasonic_baseline() -> None:
-    """v1-panasonic-tokens acceptance 109: preserve representative existing transfer and gamut output bits."""
+    """Other supported color tokens retain their exact transfer and gamut pixel values."""
     # Provenance: captured from the complete pre-Panasonic commit
     # d571b866161bcfda13b339d1237faa5054770a90. Reproduce from a detached worktree at that SHA with:
     #
@@ -655,8 +667,9 @@ def test_existing_token_bits_remain_at_the_pre_panasonic_baseline() -> None:
         assert (converted.colorspace, converted.gamma) == ("Rec.709", "linear")
 
 
+@pytest.mark.req("REQ-PIX-007")
 def test_vlog_dpx_transfer_code_is_logarithmic_and_existing_mappings_remain_unchanged(tmp_path: Path) -> None:
-    """v1-panasonic-tokens acceptance 110: classify V-Log as DPX logarithmic without disturbing prior mappings."""
+    """DPX writing identifies Panasonic V-Log as logarithmic and preserves other transfer mappings."""
     from pixtreme._io.formats.dpx import _dpx_transfer_from_gamma
 
     expected = {

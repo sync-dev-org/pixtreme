@@ -77,8 +77,16 @@ _LAYOUT_FACTS = {
     "yuv422p": _LayoutFacts(vertical_subsampling=False, storage="planar"),
     "nv12": _LayoutFacts(vertical_subsampling=True, storage="semi-planar"),
     "p010": _LayoutFacts(vertical_subsampling=True, storage="semi-planar", code_shift=6),
+    "p210": _LayoutFacts(vertical_subsampling=False, storage="semi-planar", code_shift=6),
     "p216": _LayoutFacts(vertical_subsampling=False, storage="semi-planar"),
 }
+
+# Effective code bits from which the to-side range affine and half-away rounding run in
+# double precision. On a 16-bit grid the pre-quantization magnitude stays below 131072 code,
+# where three float32 1-ULP steps (multiply, add, +-0.5 tie test) amount to 0.023438 code;
+# double precision keeps the affine and the tie decision exact at that scale. 8 / 10 / 12-bit
+# grids keep the float32 helper, whose ULP at those magnitudes is at most 0.000977 code.
+_WIDE_AFFINE_MIN_BITS = 16
 
 _SUBSAMPLED_KERNEL_TEMPLATE = r"""
 typedef __INPUT_TYPE__ pixtreme_input_t;
@@ -1166,12 +1174,13 @@ def _to_subsampled_kernel_source(
     interpolation: str,
     siting: str,
 ) -> str:
-    vertical_subsampling = _LAYOUT_FACTS[layout].vertical_subsampling
+    facts = _LAYOUT_FACTS[layout]
+    vertical_subsampling = facts.vertical_subsampling
     offset = _SITING_OFFSETS[siting] if vertical_subsampling else (0.0, 0.0)
     source = (
         _TO_SUBSAMPLED_KERNEL_TEMPLATE.replace(
             "__OUTPUT_TYPE__",
-            _output_type(bit_depth, v210=layout == "v210"),
+            _output_type(bit_depth, v210=facts.storage == "v210"),
         )
         .replace("__WEIGHT_FUNCTION__", _to_weight_function(interpolation))
         .replace(
@@ -1182,7 +1191,7 @@ def _to_subsampled_kernel_source(
                 offset=offset,
             ),
         )
-        .replace("__STORE_HELPERS__", _store_helpers(wide_affine=layout == "p216"))
+        .replace("__STORE_HELPERS__", _store_helpers(wide_affine=bit_depth >= _WIDE_AFFINE_MIN_BITS))
         .replace("__STORE_BODY__", _store_body(layout))
     )
     return source

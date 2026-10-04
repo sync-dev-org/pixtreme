@@ -14,16 +14,16 @@ from pixtreme._io.formats.exr.codec_b44 import _b44_plinear_luts_gpu
 from pixtreme._io.formats.exr.codec_dwa import _encode_dwa_huffman_chunks_gpu
 from pixtreme._io.formats.exr.codec_piz import (
     _encode_piz_huffman_chunks_gpu,
+    _piz_error,
     _piz_forward_wavelet_kernel,
     _piz_inverse_wavelet_kernel,
+    _piz_uses_w14,
 )
+from pixtreme._io.formats.exr.codec_pxr24 import _EXR_PXR24_PLANE_COUNTS
 from pixtreme._io.formats.exr.container import (
-    _EXR_PXR24_PLANE_COUNTS,
     _EXR_THREADS_PER_BLOCK,
     _ExrContainer,
     _gpu_error,
-    _piz_error,
-    _piz_uses_w14,
 )
 from pixtreme._io.formats.exr.selection import (
     _exr_output_dtype,

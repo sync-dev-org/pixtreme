@@ -1,4 +1,4 @@
-"""Generate the manual visual-acceptance sheet for v1-analysis-pair."""
+"""Generate a comparison sheet for visual inspection of analysis pair."""
 
 from __future__ import annotations
 
@@ -13,7 +13,14 @@ import pixtreme as px
 _PANEL_WIDTH = 220
 _PANEL_HEIGHT = 140
 _LABEL_HEIGHT = 38
-_METHODS = ("sqdiff", "sqdiff_normed", "ccorr", "ccorr_normed", "ccoeff", "ccoeff_normed")
+_METHODS: tuple[px.core.TemplateMatchingMethod, ...] = (
+    "sqdiff",
+    "sqdiff_normed",
+    "ccorr",
+    "ccorr_normed",
+    "ccoeff",
+    "ccoeff_normed",
+)
 
 
 def _response_frame(response: cp.ndarray) -> px.core.Frame:

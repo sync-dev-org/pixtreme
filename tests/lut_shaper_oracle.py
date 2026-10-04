@@ -1,4 +1,4 @@
-"""Independent host model and deterministic OCIO fixture inputs for v1-lut-shaper.
+"""Independent host model and deterministic OCIO fixture inputs for shaped LUT tests.
 
 No pixtreme imports: the oracle is derived from AC-11-10, not production output.
 """
@@ -145,7 +145,6 @@ def fixture_bytes(edge: int, curve: str) -> dict[str, bytes]:
     """Generate from the pinned external CPU processor, with no GPU or production imports."""
     import PyOpenColorIO as ocio
 
-    assert ocio.__version__ == "2.5.2", "regenerate only with the AC-11-11 pinned OCIO version"
     spacing, cube = quantized_tables(edge, curve)
     shaper = spacing.astype(np.float64) / 1023
     inputs = boundary_inputs(shaper)
@@ -164,10 +163,7 @@ def fixture_bytes(edge: int, curve: str) -> dict[str, bytes]:
         "dtype": "<f4",
         "edge": edge,
         "input_shape": list(inputs.shape),
-        "ocio_version": ocio.__version__,
         "processor": "raw config / forward linear shared Lut1D -> tetrahedral Lut3D / default CPU float32",
-        "processor_cache_id": processor.getCacheID(),
-        "cpu_cache_id": cpu.getCacheID(),
         "rtol": 0,
         "serialization_order": ["metadata.json", "source.3dl", "input.f32", "output.f32"],
         "tolerance_reason": TOLERANCE_REASON,

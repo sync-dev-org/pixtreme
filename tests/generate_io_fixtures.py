@@ -5,12 +5,17 @@ from __future__ import annotations
 import io
 import struct
 import zlib
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
+from typing import Protocol, cast
 
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
+
+
+class _OpenEXRFile(Protocol):
+    def write(self, path: str) -> None: ...
 
 
 def orientation_pattern(*, height: int = 18, width: int = 24) -> NDArray[np.uint8]:
@@ -128,7 +133,8 @@ def write_exr(
     """Write one-part EXR, including Blender-style dotted channel names."""
     from openexr_dev_oracle import OpenEXR
 
-    OpenEXR.File(dict(header or {}), dict(channels)).write(str(path))
+    exr_file = cast(Callable[..., _OpenEXRFile], OpenEXR.File)
+    exr_file(dict(header or {}), dict(channels)).write(str(path))
 
 
 def write_multipart_exr(
@@ -138,6 +144,8 @@ def write_multipart_exr(
     """Write a true multi-part EXR with explicit part names."""
     from openexr_dev_oracle import OpenEXR
 
+    exr_file = cast(Callable[..., _OpenEXRFile], OpenEXR.File)
+    exr_part = cast(Callable[..., object], OpenEXR.Part)
     dimensions = [next(iter(channels.values())).shape for _, channels, _ in parts]
     display_height = max(shape[0] for shape in dimensions)
     display_width = max(shape[1] for shape in dimensions)
@@ -148,5 +156,5 @@ def write_multipart_exr(
     exr_parts = []
     for name, channels, header in parts:
         part_header = {**header, "displayWindow": display_window}
-        exr_parts.append(OpenEXR.Part(part_header, dict(channels), name))
-    OpenEXR.File(exr_parts).write(str(path))
+        exr_parts.append(exr_part(part_header, dict(channels), name))
+    exr_file(exr_parts).write(str(path))
