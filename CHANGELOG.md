@@ -2,6 +2,40 @@
 
 Notable changes to pixtreme are documented in this file.
 
+## 1.8.0 - 2026-10-06
+
+pixtreme 1.8.0 allows separately installed font packages to contribute subpackages beneath `pixtreme.fonts`.
+`px.io.to_v210` now writes zero to sample slots with no corresponding pixel in the last six-pixel group of a row;
+encoded bytes change for widths not divisible by six, while pixel data and `px.io.from_v210` results stay the same.
+`px.metrics.ssim` and `px.metrics.ssim_map` have about 34% lower median runtimes in the measured FHD case, and EXR
+decoding has internal speed improvements. Public operation names, arguments, accepted names, and return shapes remain
+compatible.
+The published performance report (`docs/performance.md`) and README performance table still show the earlier
+210-case baseline measured at commit `260fe6e`; the SSIM improvements below were measured separately and those
+tables have not been regenerated.
+
+### Added
+
+- `pixtreme.fonts` is now a package, allowing a separately installed font package to contribute a
+  `pixtreme/fonts/<name>/` subtree and import it as `pixtreme.fonts.<name>`. The existing
+  `px.fonts.available()` and `px.fonts.font_path(name)` operations and entry-point font discovery retain
+  their behavior.
+
+### Changed
+
+- `px.metrics.ssim` and `px.metrics.ssim_map` use a separable window calculation with compensated accumulation.
+  On an NVIDIA RTX A6000 with FHD fp32 RGB inputs and `data_range=1.0`, the medians across three targeted runs
+  fell from 2.014 to 1.328 ms and 2.025 to 1.342 ms, respectively (about 34%). Results remain within the
+  existing 4e-5 tolerance against the independent float64 oracle.
+- EXR decoding avoids repeated construction of channel rows and combines chunk replacements, improving its
+  internal read path without changing the public API.
+
+### Fixed
+
+- `px.io.to_v210` now zeros unused Y, Cb, and Cr sample slots in the last six-pixel group of rows whose widths
+  are not divisible by six. Encoded bytes for these widths differ from 1.7.0; samples that represent pixels,
+  row padding, and `px.io.from_v210` results are unchanged.
+
 ## 1.7.0 - 2026-10-04
 
 pixtreme 1.7.0 adds two public capabilities. The first is the `px.io.from_p210` / `px.io.to_p210` pair, the tenth

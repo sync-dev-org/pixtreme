@@ -1313,7 +1313,7 @@ Packed and semiplanar formats use these conventions:
 | Format | Container dtype | C-contiguous 1D layout |
 |---|---|---|
 | `uyvy422` | uint8 | U0 Y0 V0 Y1; input also accepts NDI shape `(H, W, 2)`, which can reshape to 1D as a zero-copy view |
-| `v210` | uint32 | Six pixels in four words, with three 10-bit samples from the low bits of each word; rows align to 128 bytes, or 48 pixels, with zero padding |
+| `v210` | uint32 | Six pixels in four words, with three 10-bit samples from the low bits of each word; rows align to 128 bytes, or 48 pixels; output has zero unused sample slots and row padding |
 | `NV12` | uint8 | Y plane followed by an interleaved Cb Cr plane |
 | `P010` | uint16 | Same arrangement as NV12; 10-bit codes are MSB-aligned and the lower six bits are zero |
 | `P210` | uint16 | 4:2:2 semi-planar: raster-order Y plane of `W × H` words followed by `H` chroma rows, each interleaved `Cb0 Cr0 Cb2 Cr2 …` (`W / 2` pairs); shape `(2 × W × H,)`; upper 10 bits hold code and lower six bits are ignored on input; width must be even |
@@ -1351,7 +1351,7 @@ Planar `bit_depth`, container dtype, and plane order are symmetric with the inpu
 | `yuv444p` | 10 (default) / 12 | uint16 | Y, then Cb, then Cr; each plane is H × W |
 | `yuva444p` | 12 (default) | uint16 | Y, then Cb, then Cr, then A; A is full-scale regardless of range |
 | `uyvy422` | Fixed 8 | uint8 | U0 Y0 V0 Y1; reshape to `(H, W, 2)` is a zero-copy view |
-| `v210` | Fixed 10 | uint32 | Six pixels in four words; the function zero-fills 128-byte row padding |
+| `v210` | Fixed 10 | uint32 | Six pixels in four words; the function zero-fills unused sample slots in the last group and 128-byte row padding |
 | `NV12` | Fixed 8 | uint8 | Y plane followed by an interleaved Cb Cr plane |
 | `P010` | Fixed 10 | uint16 | Same arrangement as NV12; MSB-aligned with the lower six bits zero |
 | `P210` | Fixed 10 | uint16 | 4:2:2 semi-planar: Y plane followed by `H` interleaved Cb Cr rows; shape `(2 × W × H,)`; upper 10 bits hold code and lower six bits are zero; width must be even |

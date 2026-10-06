@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from bisect import bisect_right
 from collections.abc import Iterator, Sequence
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import cast, overload
 
@@ -13,11 +13,11 @@ import cupy as cp
 import numpy as np
 
 from pixtreme._io.formats.exr.codec_common import (
+    _channel_rows,
     _chunk_channel_geometry,
     _codec_error,
     _ExrByteSpan,
     _ExrChunkDescriptor,
-    _raw_channel_rows,
 )
 from pixtreme._io.formats.exr.container import (
     _EXR_DTYPE_INFO,
@@ -1563,15 +1563,14 @@ def _parse_b44_chunk_descriptor(
         )
         section_offsets.append(section_cursor)
         section_cursor += channel_width * channel.bytes_per_sample * sampled_rows
-    raw_rows = _raw_channel_rows(channels, width=width, chunk_y=chunk_y, row_start=row_start, row_count=row_count)
-    channel_rows = []
-    for row in raw_rows:
-        channel = channels[row.channel_index]
-        channel_row = sum(candidate_y % channel.y_sampling == 0 for candidate_y in range(chunk_y, row.file_y))
-        materialized_start = section_offsets[row.channel_index] + channel_row * row.raw_span.size
-        channel_rows.append(
-            replace(row, materialized_span=_ExrByteSpan(materialized_start, materialized_start + row.raw_span.size))
-        )
+    channel_rows = _channel_rows(
+        channels,
+        width=width,
+        chunk_y=chunk_y,
+        row_start=row_start,
+        row_count=row_count,
+        materialized_channel_offsets=section_offsets,
+    )
     channel_sections: tuple[_B44ChannelSection, ...] = ()
     blocks: tuple[_B44Block, ...] | _B44Blocks = ()
     if not raw_stored:
@@ -1597,7 +1596,7 @@ def _parse_b44_chunk_descriptor(
         expected_raw_size=expected_raw_size,
         expected_materialized_size=expected_raw_size,
         raw_stored=raw_stored,
-        channel_rows=tuple(channel_rows),
+        channel_rows=channel_rows,
         channel_sections=channel_sections,
         blocks=blocks,
     )

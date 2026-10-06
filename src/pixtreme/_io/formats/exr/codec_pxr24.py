@@ -5,7 +5,7 @@ from __future__ import annotations
 import zlib
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import cast
 
@@ -13,11 +13,11 @@ import cupy as cp
 import numpy as np
 
 from pixtreme._io.formats.exr.codec_common import (
+    _channel_rows,
     _chunk_channel_geometry,
     _codec_error,
     _ExrByteSpan,
     _ExrChunkDescriptor,
-    _raw_channel_rows,
 )
 from pixtreme._io.formats.exr.codec_zip import (
     _decode_deflate_chunks,
@@ -660,16 +660,15 @@ def _parse_pxr24_chunk_descriptor(
     expected_raw_size: int,
     raw_stored: bool,
 ) -> _Pxr24ChunkDescriptor:
-    raw_rows = _raw_channel_rows(channels, width=width, chunk_y=chunk_y, row_start=row_start, row_count=row_count)
-    materialized_cursor = 0
-    channel_rows = []
-    for row in raw_rows:
-        channel_width = row.raw_span.size // row.bytes_per_sample
-        size = channel_width * _EXR_PXR24_PLANE_COUNTS[row.pixel_type]
-        channel_rows.append(
-            replace(row, materialized_span=_ExrByteSpan(materialized_cursor, materialized_cursor + size))
-        )
-        materialized_cursor += size
+    channel_rows = _channel_rows(
+        channels,
+        width=width,
+        chunk_y=chunk_y,
+        row_start=row_start,
+        row_count=row_count,
+        materialized_bytes_per_sample=tuple(_EXR_PXR24_PLANE_COUNTS[channel.pixel_type] for channel in channels),
+    )
+    materialized_size = channel_rows[-1].materialized_span.end if channel_rows else 0
     planes: tuple[_Pxr24Plane, ...] = ()
     if not raw_stored:
         planes = _parse_pxr24_planes(
@@ -680,7 +679,7 @@ def _parse_pxr24_chunk_descriptor(
             chunk_y=chunk_y,
             row_start=row_start,
             row_count=row_count,
-            expected_size=materialized_cursor,
+            expected_size=materialized_size,
         )
     return _Pxr24ChunkDescriptor(
         codec="pxr24",
@@ -691,9 +690,9 @@ def _parse_pxr24_chunk_descriptor(
         payload_span=_ExrByteSpan(payload_start, payload_end),
         stored_size=payload_end - payload_start,
         expected_raw_size=expected_raw_size,
-        expected_materialized_size=materialized_cursor,
+        expected_materialized_size=materialized_size,
         raw_stored=raw_stored,
-        channel_rows=tuple(channel_rows),
+        channel_rows=channel_rows,
         planes=planes,
     )
 

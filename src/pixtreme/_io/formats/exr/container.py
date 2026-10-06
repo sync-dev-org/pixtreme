@@ -783,105 +783,112 @@ def _parse_codec_chunk(
     *,
     width: int,
     lines_per_chunk: int,
+    expected_size: int | None = None,
+    raw_stored: bool | None = None,
+    part_index: int | None = None,
 ) -> _ExrChunk:
-    """Attach the descriptor owned by this chunk's compression codec."""
+    """Apply decoder geometry and its codec descriptor in one immutable chunk replacement."""
     compression = part.compression
+    raw_size = chunk.expected_size if expected_size is None else expected_size
+    stored_raw = chunk.raw_stored if raw_stored is None else raw_stored
+    dwa: _DwaChunkDescriptor | None = None
+    rle: _RleChunkDescriptor | None = None
+    pxr24: _Pxr24ChunkDescriptor | None = None
+    b44: _B44ChunkDescriptor | None = None
+    piz: _PizChunkDescriptor | None = None
     if compression in ("dwaa", "dwab"):
         from pixtreme._io.formats.exr.codec_dwa import _parse_dwa_chunk_descriptor
 
-        return replace(
-            chunk,
-            dwa=_parse_dwa_chunk_descriptor(
-                data,
-                part.channels,
-                width=width,
-                lines_per_chunk=lines_per_chunk,
-                chunk_y=chunk.y,
-                row_count=chunk.row_count,
-                payload_start=chunk.payload_start,
-                payload_end=chunk.payload_end,
-                expected_size=chunk.expected_size,
-                raw_stored=chunk.raw_stored,
-            ),
+        dwa = _parse_dwa_chunk_descriptor(
+            data,
+            part.channels,
+            width=width,
+            lines_per_chunk=lines_per_chunk,
+            chunk_y=chunk.y,
+            row_count=chunk.row_count,
+            payload_start=chunk.payload_start,
+            payload_end=chunk.payload_end,
+            expected_size=raw_size,
+            raw_stored=stored_raw,
         )
-    if compression == "rle":
+    elif compression == "rle":
         from pixtreme._io.formats.exr.codec_rle import _parse_rle_chunk_descriptor
 
-        return replace(
-            chunk,
-            rle=_parse_rle_chunk_descriptor(
-                data,
-                part.channels,
-                width=width,
-                lines_per_chunk=lines_per_chunk,
-                chunk_y=chunk.y,
-                row_start=chunk.row_start,
-                row_count=chunk.row_count,
-                payload_start=chunk.payload_start,
-                payload_end=chunk.payload_end,
-                expected_raw_size=chunk.expected_size,
-                raw_stored=chunk.raw_stored,
-            ),
+        rle = _parse_rle_chunk_descriptor(
+            data,
+            part.channels,
+            width=width,
+            lines_per_chunk=lines_per_chunk,
+            chunk_y=chunk.y,
+            row_start=chunk.row_start,
+            row_count=chunk.row_count,
+            payload_start=chunk.payload_start,
+            payload_end=chunk.payload_end,
+            expected_raw_size=raw_size,
+            raw_stored=stored_raw,
         )
-    if compression == "pxr24":
+    elif compression == "pxr24":
         from pixtreme._io.formats.exr.codec_pxr24 import _parse_pxr24_chunk_descriptor
 
-        return replace(
-            chunk,
-            pxr24=_parse_pxr24_chunk_descriptor(
-                data,
-                part.channels,
-                width=width,
-                lines_per_chunk=lines_per_chunk,
-                chunk_y=chunk.y,
-                row_start=chunk.row_start,
-                row_count=chunk.row_count,
-                payload_start=chunk.payload_start,
-                payload_end=chunk.payload_end,
-                expected_raw_size=chunk.expected_size,
-                raw_stored=chunk.raw_stored,
-            ),
+        pxr24 = _parse_pxr24_chunk_descriptor(
+            data,
+            part.channels,
+            width=width,
+            lines_per_chunk=lines_per_chunk,
+            chunk_y=chunk.y,
+            row_start=chunk.row_start,
+            row_count=chunk.row_count,
+            payload_start=chunk.payload_start,
+            payload_end=chunk.payload_end,
+            expected_raw_size=raw_size,
+            raw_stored=stored_raw,
         )
-    if compression in ("b44", "b44a"):
+    elif compression in ("b44", "b44a"):
         from pixtreme._io.formats.exr.codec_b44 import _parse_b44_chunk_descriptor
 
-        return replace(
-            chunk,
-            b44=_parse_b44_chunk_descriptor(
-                compression,
-                data,
-                part.channels,
-                width=width,
-                lines_per_chunk=lines_per_chunk,
-                chunk_y=chunk.y,
-                row_start=chunk.row_start,
-                row_count=chunk.row_count,
-                payload_start=chunk.payload_start,
-                payload_end=chunk.payload_end,
-                expected_raw_size=chunk.expected_size,
-                raw_stored=chunk.raw_stored,
-            ),
+        b44 = _parse_b44_chunk_descriptor(
+            compression,
+            data,
+            part.channels,
+            width=width,
+            lines_per_chunk=lines_per_chunk,
+            chunk_y=chunk.y,
+            row_start=chunk.row_start,
+            row_count=chunk.row_count,
+            payload_start=chunk.payload_start,
+            payload_end=chunk.payload_end,
+            expected_raw_size=raw_size,
+            raw_stored=stored_raw,
         )
-    if compression == "piz":
+    elif compression == "piz":
         from pixtreme._io.formats.exr.codec_piz import _piz_chunk_descriptor
 
-        return replace(
-            chunk,
-            piz=_piz_chunk_descriptor(
-                data,
-                part,
-                width=width,
-                lines_per_chunk=lines_per_chunk,
-                chunk_y=chunk.y,
-                row_start=chunk.row_start,
-                row_count=chunk.row_count,
-                payload_start=chunk.payload_start,
-                payload_end=chunk.payload_end,
-                expected_packed_size=chunk.expected_size,
-                raw_stored=chunk.raw_stored,
-            ),
+        piz = _piz_chunk_descriptor(
+            data,
+            part,
+            width=width,
+            lines_per_chunk=lines_per_chunk,
+            chunk_y=chunk.y,
+            row_start=chunk.row_start,
+            row_count=chunk.row_count,
+            payload_start=chunk.payload_start,
+            payload_end=chunk.payload_end,
+            expected_packed_size=raw_size,
+            raw_stored=stored_raw,
         )
-    return chunk
+    elif expected_size is None and raw_stored is None and part_index is None:
+        return chunk
+    return replace(
+        chunk,
+        expected_size=raw_size,
+        raw_stored=stored_raw,
+        part_index=chunk.part_index if part_index is None else part_index,
+        dwa=dwa,
+        rle=rle,
+        pxr24=pxr24,
+        b44=b44,
+        piz=piz,
+    )
 
 
 def _codec_gpu_eligible(
@@ -1488,20 +1495,16 @@ def _build_exr_decoder_view(
                 or (source_part.compression == "piz" and source_chunk.packed_size == 0)
             )
         )
-        decoder_chunk = replace(
-            source_chunk,
-            expected_size=expected_size,
-            raw_stored=raw_stored,
-            dwa=None,
-            rle=None,
-            pxr24=None,
-            b44=None,
-            piz=None,
-            part_index=0,
-        )
         chunks.append(
             _parse_codec_chunk(
-                container.data, decoder_part, decoder_chunk, width=width, lines_per_chunk=lines_per_chunk
+                container.data,
+                decoder_part,
+                source_chunk,
+                width=width,
+                lines_per_chunk=lines_per_chunk,
+                expected_size=expected_size,
+                raw_stored=raw_stored,
+                part_index=0,
             )
         )
 

@@ -299,6 +299,84 @@ def test_ssim_map_matches_direct_population_oracle_and_scalar_is_its_fp32_mean()
 @pytest.mark.req("REQ-PIX-004")
 @pytest.mark.req("REQ-PIX-014")
 @pytest.mark.req("REQ-PIX-103")
+@pytest.mark.parametrize(
+    ("mean", "deviation", "channel_count", "shape", "data_range", "boundary"),
+    (
+        (100.0, 0.5, 1, (13, 17), 1.0, False),
+        (1000.0, 5.0, 2, (15, 14), 2.5, False),
+        (-2.0, 0.1, 3, (12, 19), 0.75, False),
+        (1000.0, 5.0, 4, (14, 18), 1.0, True),
+    ),
+)
+def test_ssim_scene_values_match_float64_oracle_at_every_valid_position(
+    mean: float,
+    deviation: float,
+    channel_count: int,
+    shape: tuple[int, int],
+    data_range: float,
+    boundary: bool,
+) -> None:
+    """Image quality measurements retain the specified accuracy for distinct bright, negative, and edged scenes.
+
+    Issue #72 acceptance criteria 2 and 3 compare every valid position and the spatial mean with a host float64 oracle.
+    """
+    generator = np.random.default_rng(20261005 + channel_count)
+    values_shape = (*shape, channel_count)
+    reference_values = generator.normal(mean, deviation, size=values_shape).astype(np.float32)
+    candidate_values = (reference_values + generator.normal(0.0, deviation * 0.35, size=values_shape)).astype(
+        np.float32
+    )
+    if boundary:
+        reference_values[:, : shape[1] // 2] = np.float32(0.0)
+        candidate_values[:, : shape[1] // 2] = np.float32(0.0)
+        candidate_values[:, shape[1] // 2 :] += np.float32(0.25)
+    channels = tuple(f"c{index}" for index in range(channel_count))
+    reference = _frame(reference_values, channels=channels)
+    candidate = _frame(candidate_values, channels=channels)
+    expected_map = _ssim_reference(reference_values, candidate_values, data_range=data_range)
+
+    actual_map = px.metrics.ssim_map(reference, candidate, data_range=data_range)
+    actual_scalar = px.metrics.ssim(reference, candidate, data_range=data_range)
+    assert actual_map.shape == (shape[0] - 10, shape[1] - 10)
+    assert actual_map.shape[0] * actual_map.shape[1] % 256 != 0
+    np.testing.assert_allclose(actual_map.get(), expected_map.astype(np.float32), rtol=4e-5, atol=4e-5)
+    np.testing.assert_allclose(actual_scalar.get(), np.float32(np.mean(expected_map)), rtol=4e-5, atol=4e-5)
+
+
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.parametrize("channel_count", (1, 2, 3, 4))
+@pytest.mark.parametrize("shape", ((11, 11), (27, 43), (83, 79)))
+def test_ssim_preserves_every_window_across_image_sizes_and_channels(
+    shape: tuple[int, int], channel_count: int
+) -> None:
+    """Image quality measurements include every valid window, from a single window to larger irregular images.
+
+    Issue #72 acceptance criteria 1–3 require the same independent oracle for all channels and image edges.
+    The bright and dark regions exercise windows wholly within and spanning those regions.
+    """
+    generator = np.random.default_rng(20261006 + channel_count)
+    reference_values = generator.normal(1000.0, 5.0, (*shape, channel_count)).astype(np.float32)
+    reference_values[: shape[0] // 2, : shape[1] // 2] *= np.float32(-0.002)
+    candidate_values = (reference_values + generator.normal(0.0, 0.5, reference_values.shape)).astype(np.float32)
+    channels = tuple(f"c{index}" for index in range(channel_count))
+    reference = _frame(reference_values, channels=channels)
+    candidate = _frame(candidate_values, channels=channels)
+    expected = _ssim_reference(reference_values, candidate_values, data_range=1.0)
+
+    actual = px.metrics.ssim_map(reference, candidate)
+    assert actual.shape == (shape[0] - 10, shape[1] - 10)
+    np.testing.assert_allclose(actual.get(), expected.astype(np.float32), rtol=4e-5, atol=4e-5)
+    np.testing.assert_allclose(
+        px.metrics.ssim(reference, candidate).get(), np.float32(np.mean(expected)), rtol=4e-5, atol=4e-5
+    )
+    cp.testing.assert_array_equal(px.metrics.ssim_map(reference, reference), cp.ones(actual.shape, dtype=cp.float32))
+
+
+@pytest.mark.req("REQ-PIX-004")
+@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("REQ-PIX-103")
 @pytest.mark.parametrize("constant", (-2.5, 0.0, 1.0, 4.25))
 def test_ssim_identical_pairs_are_exact_one_without_clamp(constant: float) -> None:
     """For image quality metrics, finite identical scene values produce exact one."""

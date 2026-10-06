@@ -79,16 +79,21 @@ def _chunk_channel_geometry(
     return channel_width, channel_rows
 
 
-def _raw_channel_rows(
+def _channel_rows(
     channels: Sequence[_ExrChannel],
     *,
     width: int,
     chunk_y: int,
     row_start: int,
     row_count: int,
+    materialized_bytes_per_sample: Sequence[int] | None = None,
+    materialized_channel_offsets: Sequence[int] | None = None,
 ) -> tuple[_ExrChannelRow, ...]:
+    """Describe raw scanlines and materialized scanlines or channel planes in one pass."""
     rows: list[_ExrChannelRow] = []
     raw_cursor = 0
+    materialized_cursor = 0
+    channel_cursors = list(materialized_channel_offsets) if materialized_channel_offsets is not None else None
     for chunk_row in range(row_count):
         file_y = chunk_y + chunk_row
         for channel_index, channel in enumerate(channels):
@@ -97,6 +102,19 @@ def _raw_channel_rows(
             channel_width, _ = _chunk_channel_geometry(channel, width=width, chunk_y=chunk_y, row_count=row_count)
             raw_size = channel_width * channel.bytes_per_sample
             raw_span = _ExrByteSpan(raw_cursor, raw_cursor + raw_size)
+            materialized_span = raw_span
+            if materialized_bytes_per_sample is not None or channel_cursors is not None:
+                materialized_size = (
+                    raw_size
+                    if materialized_bytes_per_sample is None
+                    else channel_width * materialized_bytes_per_sample[channel_index]
+                )
+                materialized_start = materialized_cursor if channel_cursors is None else channel_cursors[channel_index]
+                materialized_span = _ExrByteSpan(materialized_start, materialized_start + materialized_size)
+                if channel_cursors is None:
+                    materialized_cursor = materialized_span.end
+                else:
+                    channel_cursors[channel_index] = materialized_span.end
             rows.append(
                 _ExrChannelRow(
                     channel_index=channel_index,
@@ -108,7 +126,7 @@ def _raw_channel_rows(
                     file_y=file_y,
                     output_row=row_start + chunk_row,
                     raw_span=raw_span,
-                    materialized_span=raw_span,
+                    materialized_span=materialized_span,
                 )
             )
             raw_cursor += raw_size

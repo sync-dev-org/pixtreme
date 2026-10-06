@@ -109,6 +109,7 @@ def _assert_success(completed: subprocess.CompletedProcess[str]) -> None:
 
 @pytest.mark.req("REQ-PIX-019")
 @pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("REQ-PIX-022")
 def test_fonts_public_surface_is_exact() -> None:
     """The public font module owns the font catalog and exposes only its two documented functions."""
     assert px.__all__[-2:] == ("fonts", "__version__")
@@ -124,6 +125,70 @@ def test_fonts_public_surface_is_exact() -> None:
 
     for forbidden in ("load", "catalog", "register", "unregister", "refresh"):
         assert not hasattr(px.fonts, forbidden)
+
+
+@pytest.mark.req("REQ-PIX-113")
+@pytest.mark.req("REQ-PIX-107")
+def test_font_subtree_import_does_not_register_font_without_entry_point(tmp_path: Path) -> None:
+    """An external font subtree is importable only when requested and does not join the font catalog by itself."""
+    font = tmp_path / "extension.otf"
+    font.write_bytes(b"font-placeholder")
+    subtree = tmp_path / "pixtreme" / "fonts" / "extra"
+    subtree.mkdir(parents=True)
+    (subtree / "__init__.py").write_text(
+        f"from pathlib import Path\nFONT_FILES = {{'extension': Path({str(font)!r})}}\n", encoding="utf-8"
+    )
+
+    completed = _run_isolated(
+        tmp_path,
+        code=f"""
+        from pathlib import Path
+
+        assert not hasattr(px.fonts, "extra")
+        assert "pixtreme.fonts.extra" not in sys.modules
+        assert px.fonts.available() == ("sans", "mono")
+
+        import pixtreme.fonts.extra as extra
+        assert extra.FONT_FILES == {{"extension": Path({str(font)!r})}}
+        assert px.fonts.extra is extra
+        assert px.fonts.available() == ("sans", "mono")
+        try:
+            px.fonts.font_path("extension")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("unregistered font became available")
+        """,
+    )
+    _assert_success(completed)
+
+
+@pytest.mark.req("REQ-PIX-113")
+@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("REQ-PIX-107")
+def test_font_subtree_entry_point_registers_its_font(tmp_path: Path) -> None:
+    """A font provider in an external subtree becomes usable when its entry point registers the font."""
+    font = tmp_path / "extension.otf"
+    font.write_bytes(b"font-placeholder")
+    subtree = tmp_path / "pixtreme" / "fonts" / "extra"
+    subtree.mkdir(parents=True)
+    (subtree / "__init__.py").write_text(
+        f"from pathlib import Path\nFONT_FILES = {{'extension': Path({str(font)!r})}}\n", encoding="utf-8"
+    )
+    _write_distribution(tmp_path, "example-extra", (("catalog", "pixtreme.fonts.extra:FONT_FILES"),))
+
+    completed = _run_isolated(
+        tmp_path,
+        code=f"""
+        from pathlib import Path
+
+        import pixtreme.fonts.extra as extra
+        assert extra.FONT_FILES == {{"extension": Path({str(font)!r})}}
+        assert px.fonts.available() == ("sans", "mono", "extension")
+        assert px.fonts.font_path("extension") == Path({str(font)!r})
+        """,
+    )
+    _assert_success(completed)
 
 
 @pytest.mark.req("REQ-PIX-019")

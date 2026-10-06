@@ -10,10 +10,10 @@ import cupy as cp
 import numpy as np
 
 from pixtreme._io.formats.exr.codec_common import (
+    _channel_rows,
     _codec_error,
     _ExrByteSpan,
     _ExrChunkDescriptor,
-    _raw_channel_rows,
 )
 from pixtreme._io.formats.exr.container import (
     _EXR_MAX_GRID_X,
@@ -623,9 +623,7 @@ def _parse_rle_chunk_descriptor(
         expected_raw_size=expected_raw_size,
         expected_materialized_size=expected_raw_size,
         raw_stored=raw_stored,
-        channel_rows=_raw_channel_rows(
-            channels, width=width, chunk_y=chunk_y, row_start=row_start, row_count=row_count
-        ),
+        channel_rows=_channel_rows(channels, width=width, chunk_y=chunk_y, row_start=row_start, row_count=row_count),
         packets=packets,
     )
 

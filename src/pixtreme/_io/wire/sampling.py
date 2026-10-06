@@ -1163,6 +1163,34 @@ def _store_body(layout: str) -> str:
             input, input_x + 5, output_y, width, y_offset, y_scale, maximum
         );
     }
+    const int remaining = width - input_x;
+    if (position == 1) {
+        if (remaining < 2) {
+            low = 0U;
+        }
+        if (remaining < 3) {
+            middle = 0U;
+            high = 0U;
+        }
+    } else if (position == 2) {
+        if (remaining < 3) {
+            low = 0U;
+        }
+        if (remaining < 4) {
+            middle = 0U;
+        }
+        if (remaining < 5) {
+            high = 0U;
+        }
+    } else if (position == 3) {
+        if (remaining < 5) {
+            low = 0U;
+            middle = 0U;
+        }
+        if (remaining < 6) {
+            high = 0U;
+        }
+    }
     output[index] = low | (middle << 10) | (high << 20);
 """
 

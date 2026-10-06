@@ -159,17 +159,21 @@ def _subsampled_codes(
 
 
 def _pack_v210(y: np.ndarray, cb: np.ndarray, cr: np.ndarray) -> np.ndarray:
-    """Independent v210 word layout with replicated group tails and zero row padding."""
+    """Independent v210 word layout with zero unused samples and row padding."""
     height, width = y.shape
     row_words = ((width + 47) // 48) * 32
     result = np.zeros((height, row_words), dtype=np.uint32)
     for row in range(height):
         for group_start in range(0, width, 6):
             group = group_start // 6
-            ys = [int(y[row, min(group_start + offset, width - 1)]) for offset in range(6)]
+            ys = [int(y[row, group_start + offset]) if group_start + offset < width else 0 for offset in range(6)]
             chroma_start = group_start // 2
-            cbs = [int(cb[row, min(chroma_start + offset, cb.shape[1] - 1)]) for offset in range(3)]
-            crs = [int(cr[row, min(chroma_start + offset, cr.shape[1] - 1)]) for offset in range(3)]
+            cbs = [
+                int(cb[row, chroma_start + offset]) if chroma_start + offset < cb.shape[1] else 0 for offset in range(3)
+            ]
+            crs = [
+                int(cr[row, chroma_start + offset]) if chroma_start + offset < cr.shape[1] else 0 for offset in range(3)
+            ]
             base = group * 4
             result[row, base] = cbs[0] | (ys[0] << 10) | (crs[0] << 20)
             result[row, base + 1] = ys[1] | (cbs[1] << 10) | (ys[2] << 20)
@@ -583,6 +587,106 @@ def test_v210_zero_fills_every_padding_word_it_owns() -> None:
     width, height = 7, 2
     output = px.io.to_v210(_frame(_values(height, width)), range="full", interpolation="area").get().reshape(height, 32)
     assert np.count_nonzero(output[:, 8:]) == 0
+
+
+def _v210_code_values(width: int) -> np.ndarray:
+    x = np.arange(width, dtype=np.float32)
+    return np.stack((10 + x, 100 + np.floor(x / 2), 200 + np.floor(x / 2)), axis=1)[None, :, :] / 1023
+
+
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.parametrize(
+    ("width", "last_group"),
+    (
+        (7, (103 | (16 << 10) | (203 << 20), 0, 0, 0)),
+        (8, (103 | (16 << 10) | (203 << 20), 17, 0, 0)),
+        (9, (103 | (16 << 10) | (203 << 20), 17 | (104 << 10) | (18 << 20), 204, 0)),
+        (10, (103 | (16 << 10) | (203 << 20), 17 | (104 << 10) | (18 << 20), 204 | (19 << 10), 0)),
+        (
+            11,
+            (
+                103 | (16 << 10) | (203 << 20),
+                17 | (104 << 10) | (18 << 20),
+                204 | (19 << 10) | (105 << 20),
+                20 | (205 << 10),
+            ),
+        ),
+    ),
+)
+def test_v210_last_group_zeros_only_samples_without_pixels(width: int, last_group: tuple[int, ...]) -> None:
+    """v210 output preserves each pixel sample and zeroes every unused sample in a partial six-pixel group."""
+    output = px.io.to_v210(_frame(_v210_code_values(width)), range="full", interpolation="nearest").get()
+    first_group = (
+        100 | (10 << 10) | (200 << 20),
+        11 | (101 << 10) | (12 << 20),
+        201 | (13 << 10) | (102 << 20),
+        14 | (202 << 10) | (15 << 20),
+    )
+    np.testing.assert_array_equal(output[:8], np.asarray(first_group + last_group, dtype=np.uint32))
+    assert np.count_nonzero(output[8:]) == 0
+
+
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.parametrize(
+    ("width", "legacy_last_group", "masks"),
+    (
+        (
+            8,
+            (
+                103 | (16 << 10) | (203 << 20),
+                17 | (103 << 10) | (17 << 20),
+                203 | (17 << 10) | (103 << 20),
+                17 | (203 << 10) | (17 << 20),
+            ),
+            (0x3FFFFFFF, 0x000003FF, 0, 0),
+        ),
+        (
+            10,
+            (
+                103 | (16 << 10) | (203 << 20),
+                17 | (104 << 10) | (18 << 20),
+                204 | (19 << 10) | (104 << 20),
+                19 | (204 << 10) | (19 << 20),
+            ),
+            (0x3FFFFFFF, 0x3FFFFFFF, 0x000FFFFF, 0),
+        ),
+    ),
+)
+def test_v210_partial_even_width_matches_masked_legacy_bytes_and_decodes_identically(
+    width: int, legacy_last_group: tuple[int, ...], masks: tuple[int, ...]
+) -> None:
+    """v210 output matches the transport mask on prior words, and unused samples do not affect decoded pixels."""
+    import cupy as cp
+
+    legacy = np.zeros(32, dtype=np.uint32)
+    legacy[:4] = (
+        100 | (10 << 10) | (200 << 20),
+        11 | (101 << 10) | (12 << 20),
+        201 | (13 << 10) | (102 << 20),
+        14 | (202 << 10) | (15 << 20),
+    )
+    legacy[4:8] = legacy_last_group
+    masked = legacy.copy()
+    masked[4:8] &= np.asarray(masks, dtype=np.uint32)
+    output = px.io.to_v210(_frame(_v210_code_values(width)), range="full", interpolation="nearest").get()
+    assert output.tobytes() == masked.tobytes()
+
+    before = px.io.from_v210(cp.asarray(legacy), width=width, height=1, range="full", interpolation="nearest")
+    after = px.io.from_v210(cp.asarray(output), width=width, height=1, range="full", interpolation="nearest")
+    np.testing.assert_array_equal(px.io.to_array(before).get(), px.io.to_array(after).get())
+
+
+@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.parametrize("width", (6, 12))
+def test_v210_complete_groups_keep_their_existing_byte_values(width: int) -> None:
+    """v210 output for complete six-pixel groups remains byte-for-byte equal to the established layout."""
+    values = _v210_code_values(width)
+    y, cb, cr = _subsampled_codes(
+        values, bit_depth=10, range="full", subsample_y=1, offset=(0.0, 0.0), interpolation="nearest"
+    )
+    expected = _pack_v210(y, cb, cr)
+    actual = px.io.to_v210(_frame(values), range="full", interpolation="nearest").get()
+    assert actual.tobytes() == expected.tobytes()
 
 
 @pytest.mark.req("REQ-PIX-009")

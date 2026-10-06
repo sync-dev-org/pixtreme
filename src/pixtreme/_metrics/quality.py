@@ -12,21 +12,22 @@ import numpy as np
 from pixtreme._core.errors import _actionable_error
 from pixtreme._core.frame import Frame
 from pixtreme._core.value_domain import _float32_conversion_guidance
-from pixtreme._metrics.common import _SSIM_KERNEL_SOURCE, _THREADS_PER_BLOCK, _block_count
+from pixtreme._metrics.common import _SSIM_BLOCK_ROWS, _SSIM_KERNEL_SOURCE, _SSIM_TILE_HEIGHT, _SSIM_TILE_WIDTH
 
 
 @lru_cache(maxsize=1)
-def _ssim_map_kernel() -> cp.RawKernel:
+def _ssim_kernel() -> cp.RawKernel:
     return cp.RawKernel(_SSIM_KERNEL_SOURCE, "pixtreme_ssim_map")
 
 
 @lru_cache(maxsize=1)
 def _ssim_weights() -> cp.ndarray:
     offsets = np.arange(-5, 6, dtype=np.float64)
-    yy, xx = np.meshgrid(offsets, offsets, indexing="ij")
-    weights = np.exp(-(xx * xx + yy * yy) / (2.0 * 1.5**2))
+    weights = np.exp(-(offsets * offsets) / (2.0 * 1.5**2))
     weights /= np.sum(weights, dtype=np.float64)
-    return cp.asarray(weights, dtype=cp.float32)
+    high = weights.astype(np.float32)
+    low = (weights - high.astype(np.float64)).astype(np.float32)
+    return cp.asarray(np.stack((high, low), axis=-1))
 
 
 def _validate_quality_frame(value: object, *, operation: str, argument: str) -> Frame:
@@ -176,24 +177,29 @@ def psnr(reference: Frame, candidate: Frame, *, data_range: float = 1.0) -> cp.n
 def _ssim_map_checked(reference: Frame, candidate: Frame, *, data_range: np.float32) -> cp.ndarray:
     output_height = reference.height - 10
     output_width = reference.width - 10
+    channel_count = len(reference.channels)
     output = cp.empty((output_height, output_width), dtype=cp.float32)
-    output_elements = output_height * output_width
+    kernel = _ssim_kernel()
+    weights = _ssim_weights()
     with np.errstate(over="ignore", invalid="ignore"):
         k1_range = np.float32(np.float32(0.01) * data_range)
         k2_range = np.float32(np.float32(0.03) * data_range)
         c1 = np.float32(k1_range * k1_range)
         c2 = np.float32(k2_range * k2_range)
-    _ssim_map_kernel()(
-        (_block_count(output_elements),),
-        (_THREADS_PER_BLOCK,),
+    kernel(
+        (
+            (output_width + _SSIM_TILE_WIDTH - 1) // _SSIM_TILE_WIDTH,
+            (output_height + _SSIM_TILE_HEIGHT - 1) // _SSIM_TILE_HEIGHT,
+        ),
+        (_SSIM_TILE_WIDTH, _SSIM_BLOCK_ROWS),
         (
             reference.data,
             candidate.data,
-            _ssim_weights(),
+            weights,
             output,
             np.int64(reference.width),
             np.int64(reference.height),
-            np.int64(len(reference.channels)),
+            np.int64(channel_count),
             np.float32(c1),
             np.float32(c2),
         ),
