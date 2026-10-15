@@ -549,7 +549,7 @@ def _expected_data_bits(symbols: np.ndarray, table: exr_piz._PizHuffmanTable) ->
     return total
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_piz_huffman_tree_is_frequency_weighted_and_deterministic() -> None:
     """PIZ Huffman writes assign code lengths by symbol frequency and resolve ties in stable symbol order."""
     distributions = ({0: 99, 1: 7, 2: 3, 3: 1}, {0: 1, 1: 3, 2: 7, 3: 99})
@@ -569,9 +569,9 @@ def test_piz_huffman_tree_is_frequency_weighted_and_deterministic() -> None:
     assert actual_maps[1][3] < actual_maps[1][0]
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_piz_gpu_huffman_stream_uses_frequency_weighted_lengths_repeatably() -> None:
     """GPU PIZ Huffman writes produce repeatable bytes from frequency-weighted code lengths."""
     distributions = ({0: 99, 1: 7, 2: 3, 3: 1}, {0: 1, 1: 3, 2: 7, 3: 99})
@@ -595,7 +595,7 @@ def test_piz_gpu_huffman_stream_uses_frequency_weighted_lengths_repeatably() -> 
     assert length_maps[0] != length_maps[1]
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_piz_canonical_codes_use_reverse_length_bases_and_symbol_increment() -> None:
     """PIZ Huffman writes assign canonical codes from length 58 down to 1 and then by symbol order."""
     symbols = np.asarray((0,) * 13 + (1,) * 8 + (2,) * 5 + (3,) * 3 + (4,), dtype=np.uint16)
@@ -609,7 +609,7 @@ def test_piz_canonical_codes_use_reverse_length_bases_and_symbol_increment() -> 
     assert len(set(lengths)) > 1
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("zero_gap", (1, 2, 5, 6, 261, 262, 522))
 def test_piz_length_table_serializes_every_zero_run_boundary(zero_gap: int) -> None:
     """PIZ Huffman writes encode short, medium, long, and split zero-length runs canonically."""
@@ -626,7 +626,7 @@ def test_piz_length_table_serializes_every_zero_run_boundary(zero_gap: int) -> N
     assert packed_table == _pack_lengths_oracle(expected_lengths)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     "run_count",
     (5, 12, 13),
@@ -643,9 +643,9 @@ def test_piz_repeat_choice_uses_the_strict_reference_cost(run_count: int) -> Non
     assert table.data_bit_count == _expected_data_bits(symbols, table)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_piz_huffman_gpu_encoder_splits_long_runs_and_writes_a_canonical_stream() -> None:
     """GPU PIZ Huffman writes split long runs and emit canonical fields, stream endings, and padding."""
     symbols = np.asarray((7,) * 520 + (2, 3) * 19 + (1,), dtype=np.uint16)
@@ -677,9 +677,9 @@ def test_piz_huffman_gpu_encoder_splits_long_runs_and_writes_a_canonical_stream(
     assert stream[table.table_span.start : table.table_span.end] == expected_table
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("run_count", (5, 12, 13))
 def test_piz_huffman_gpu_encoder_obeys_false_equal_and_true_repeat_costs(run_count: int) -> None:
     """GPU PIZ Huffman writes distinguish repeat choices with higher, equal, and lower encoded cost."""
@@ -692,9 +692,9 @@ def test_piz_huffman_gpu_encoder_obeys_false_equal_and_true_repeat_costs(run_cou
     np.testing.assert_array_equal(exr_piz._decode_piz_huffman_host(stream, table, expected_count=symbols.size), symbols)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize(
     ("nx", "ny", "word_stride", "word_slice", "max_value"),
     (
@@ -738,9 +738,9 @@ def test_piz_forward_wavelet_gpu_matches_the_independent_all_level_oracle(
     np.testing.assert_array_equal(device.get(), expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("fixture", ("zero", "sparse-w14", "dense-w16", "partial", "noise"))
 def test_piz_gpu_encoder_emits_deterministic_self_parseable_chunk_payloads(fixture: str) -> None:
     """GPU PIZ writes produce deterministic HALF chunks that an independent parser can decode."""
@@ -779,7 +779,7 @@ def test_piz_gpu_encoder_emits_deterministic_self_parseable_chunk_payloads(fixtu
             assert sections["data"][-1] & ((1 << (8 - table.data_bit_count % 8)) - 1) == 0
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_piz_equal_size_payload_selects_raw_bytes() -> None:
     """PIZ writes store raw bytes when the compressed payload has the same size."""
     raw = cp.asarray(np.frombuffer(b"raw!", dtype=np.uint8))
@@ -791,8 +791,8 @@ def test_piz_equal_size_payload_selects_raw_bytes() -> None:
     assert sizes == (4,)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_piz_internal_uint_low_high_primitive_is_deterministic_and_self_parseable(tmp_path: Path) -> None:
     """PIZ UINT writes produce deterministic low and high word planes that an independent parser can read."""
     from openexr_dev_oracle import OpenEXR
@@ -884,10 +884,10 @@ def _public_values(dtype: np.dtype[object], *, height: int = 33, width: int = 67
     return (np.arange(np.prod(shape), dtype=np.uint64).reshape(shape) * np.uint64(7919) % (maximum + 1)).astype(dtype)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize(
     "dtype",
     (np.dtype(np.float16), np.dtype(np.float32), np.dtype(np.uint8), np.dtype(np.uint16), np.dtype(np.uint32)),
@@ -944,9 +944,9 @@ def test_forced_piz_gpu_write_cross_decodes_in_all_lanes_with_public_adapter_bit
         )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_public_gpu_writer_is_deterministic_and_passes_all_four_piz_oracles(tmp_path: Path) -> None:
     """Public GPU PIZ writes produce repeatable FLOAT bytes that match four independent checks."""
     from openexr_dev_oracle import OpenEXR
@@ -1004,7 +1004,7 @@ def test_public_gpu_writer_is_deterministic_and_passes_all_four_piz_oracles(tmp_
         np.testing.assert_array_equal(independently_restored, expected_staged)
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_piz_write_graph_keeps_planes_wavelets_and_symbols_on_device(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1045,10 +1045,10 @@ def test_piz_write_graph_keeps_planes_wavelets_and_symbols_on_device(
     ]
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_unexpected_piz_gpu_write_failure_is_actionable_and_never_falls_back(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

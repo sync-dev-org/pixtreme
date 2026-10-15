@@ -440,8 +440,8 @@ def _encoded_sets(gamma: str) -> tuple[tuple[np.ndarray, ...], np.ndarray, np.nd
     return (grid[~np.isin(grid, excluded)],), fixture, window, anchors
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_vendor_a_tokens_extend_only_canonical_vocabulary_and_public_surfaces() -> None:
     """DJI and Fujifilm color tokens appear in the canonical vocabulary and public annotations without extra
     aliases."""
@@ -465,8 +465,8 @@ def test_vendor_a_tokens_extend_only_canonical_vocabulary_and_public_surfaces() 
     assert not any(token in new_tokens for alias in _PERMANENT_TOKEN_ALIASES for token in alias)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_vendor_a_token_keys_alias_boundaries_and_fail_fast_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     """DJI and Fujifilm token variants normalize within their families, and invalid values receive guidance."""
     from pixtreme._core.validation import _normalized_closed_token
@@ -523,7 +523,7 @@ def test_vendor_a_token_keys_alias_boundaries_and_fail_fast_errors(monkeypatch: 
         assert "DJI D-Log" not in message.replace(f"received gamma={value!r}", "")
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize(
     "gamma",
     ("D-Log", "F-Log", "F-Log2"),
@@ -561,7 +561,7 @@ def test_vendor_a_encode_matches_dense_oracle_branch_fixtures_and_anchors(gamma:
     assert encoded.gamma == gamma
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize(
     "gamma",
     ("D-Log", "F-Log", "F-Log2"),
@@ -598,7 +598,7 @@ def test_vendor_a_decode_matches_dense_oracle_branch_fixtures_and_anchors(gamma:
     assert decoded.gamma == "linear"
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize(
     "gamma",
     ("D-Log", "F-Log", "F-Log2"),
@@ -646,8 +646,8 @@ def test_vendor_a_intersection_roots_cut_windows_and_round_trips(gamma: str) -> 
         np.testing.assert_allclose(reencoded, values, rtol=5e-6, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("gamma", tuple(_CURVES))
 def test_vendor_a_standalone_and_fused_paths_preserve_frame_contracts(gamma: str) -> None:
     """DJI and Fujifilm transfers preserve Frame properties through standalone and fused color paths."""
@@ -676,7 +676,7 @@ def test_vendor_a_standalone_and_fused_paths_preserve_frame_contracts(gamma: str
     assert _rgb_values(standalone_encoded)[-1, 0] > 1.0
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("colorspace", ("D-Gamut", "F-Gamut-C"))
 def test_vendor_a_gamut_definitions_matrices_and_native_rows(colorspace: str) -> None:
     """DJI and Fujifilm gamut matrices and native luma rows match their published color coordinates."""
@@ -697,7 +697,7 @@ def test_vendor_a_gamut_definitions_matrices_and_native_rows(colorspace: str) ->
     assert np.any(_rgb_values(converted) < 0.0) and np.any(_rgb_values(converted) > 1.0)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("colorspace", ("D-Gamut", "F-Gamut-C"))
 def test_vendor_a_gamuts_use_d65_bradford_and_keep_cat02_auxiliary(colorspace: str) -> None:
     """DJI and Fujifilm gamut conversion uses D65 identity and Bradford adaptation."""
@@ -727,8 +727,8 @@ def test_vendor_a_gamuts_use_d65_bradford_and_keep_cat02_auxiliary(colorspace: s
     assert (result.colorspace, result.gamma) == ("Rec.709", "Canon-Log")
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("target", ("Rec.709", "ACES2065-1"))
 def test_vendor_a_representative_frames_compose_independent_transfer_and_gamut_oracles(target: str) -> None:
     """DJI and Fujifilm Frames compose gamut and transfer conversion without coupling their token choices."""
@@ -757,7 +757,7 @@ def test_vendor_a_representative_frames_compose_independent_transfer_and_gamut_o
         assert np.any(_rgb_values(converted) < 0.0) and np.any(_rgb_values(converted) > 1.0)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_existing_token_bits_remain_at_the_pre_vendor_a_baseline() -> None:
     """Other supported color tokens retain their exact transfer and gamut pixel values."""
     # Characterization provenance: captured from the complete pre-vendor-A commit
@@ -792,7 +792,7 @@ def test_existing_token_bits_remain_at_the_pre_vendor_a_baseline() -> None:
     assert gamut_digest.hexdigest() == "0a0afd23631799b5d64b9060a69e4b2757395957010c60f8d1326c8d02af791c"
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_vendor_a_dpx_codes_are_logarithmic_and_existing_mappings_remain_unchanged(tmp_path: Path) -> None:
     """DPX writing identifies DJI and Fujifilm transfers as logarithmic and preserves other mappings."""
     from pixtreme._io.formats.dpx import _dpx_transfer_from_gamma

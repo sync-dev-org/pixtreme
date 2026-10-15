@@ -95,8 +95,8 @@ def _sharpen_reference(source: np.ndarray, *, amount: float, border: str, border
     return (source.astype(np.float64) - amount * laplacian.astype(np.float64)).astype(np.float32)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_sharpen_public_signature_and_single_canonical_path_are_exact() -> None:
     """Developers call sharpening through its single public path with a required keyword only amount."""
     import cupy as cp
@@ -118,7 +118,7 @@ def test_sharpen_public_signature_and_single_canonical_path_are_exact() -> None:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize("border", BORDERS)
 @pytest.mark.parametrize("amount", (1.25, -0.5))
 def test_sharpen_matches_independent_laplacian_oracle_for_every_border(border: str, amount: float) -> None:
@@ -153,7 +153,7 @@ def test_sharpen_matches_independent_laplacian_oracle_for_every_border(border: s
     )
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 def test_sharpen_one_pixel_extent_and_constant_scene_border_values_match_the_oracle() -> None:
     """For sharpening, one-pixel axes and unbounded constant values retain border semantics."""
     values = np.asarray([[[-0.5], [0.25], [1.5]]], dtype=np.float32)
@@ -172,7 +172,7 @@ def test_sharpen_one_pixel_extent_and_constant_scene_border_values_match_the_ora
         )
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize("amount", (0.0, -0.0))
 def test_sharpen_zero_amount_is_a_validated_private_bit_exact_identity(amount: float) -> None:
     """For sharpening, signed zero copies every fp32 bit into private storage."""
@@ -190,8 +190,8 @@ def test_sharpen_zero_amount_is_a_validated_private_bit_exact_identity(amount: f
     assert result.data.flags.c_contiguous
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("border", "border_value"),
     (("unknown", None), ("constant", None), ("constant", float("nan")), ("mirror", 0.0)),
@@ -206,8 +206,8 @@ def test_sharpen_zero_amount_does_not_skip_border_validation(border: str, border
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("amount", (True, "1", 1 + 0j, float("nan"), float("inf"), float("-inf")))
 def test_sharpen_rejects_invalid_amount_actionably(amount: object) -> None:
     """For sharpening, bool, non-real, and non-finite amount values fail fast."""
@@ -220,9 +220,9 @@ def test_sharpen_rejects_invalid_amount_actionably(amount: object) -> None:
     assert "amount" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-103")
 def test_sharpen_preserves_halo_excursions_shape_contiguity_and_input_storage() -> None:
     """For sharpening, halos remain unclipped in a new C-contiguous fp32 allocation."""
     values = np.zeros((5, 5, 1), dtype=np.float32)
@@ -251,8 +251,8 @@ def test_sharpen_preserves_halo_excursions_shape_contiguity_and_input_storage() 
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-011")
 def test_sharpen_is_channel_label_independent_and_preserves_all_metadata() -> None:
     """Sharpening treats channel names as labels and preserves all Frame metadata."""
     values = np.linspace(-0.5, 1.5, 48, dtype=np.float32).reshape(3, 4, 4)
@@ -290,8 +290,8 @@ def test_sharpen_is_channel_label_independent_and_preserves_all_metadata() -> No
     )
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "guidance"),
     (
@@ -316,8 +316,8 @@ def test_sharpen_rejects_non_fp32_frames_with_conversion_guidance(
     assert all(name in message for name in guidance)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("border", "border_value"),
     (
@@ -339,8 +339,8 @@ def test_sharpen_uses_the_shared_border_error_contract(border: str, border_value
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_sharpen_docstring_is_a_self_contained_contract() -> None:
     """Developers can find the sharpening formula, borders, float32 input, unclamped values, and output ownership
     in the public docstring.

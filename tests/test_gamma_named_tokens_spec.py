@@ -83,8 +83,8 @@ def _frame(values: tuple[float, ...], *, gamma: str = "linear", channels: str = 
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_gamma_literal_retains_named_numeric_tokens_in_the_sony_extended_vocabulary() -> None:
     """The public gamma Literal contains named numeric transfers alongside the supported camera transfers."""
     assert get_args(px.core.Gamma) == _GAMMA_TOKENS
@@ -126,9 +126,9 @@ def test_gamma_literal_retains_named_numeric_tokens_in_the_sony_extended_vocabul
     assert sum(len(get_args(alias)) for alias in aliases) == 200
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_public_static_and_metadata_surfaces_expose_only_named_gamma_tokens() -> None:
     """Public annotations and Frame metadata expose named gamma tokens rather than numeric aliases."""
     assert _literal_strings(get_type_hints(px.color.linear_to_gamma)["gamma"]) == _GAMMA_TOKENS
@@ -146,7 +146,7 @@ def test_public_static_and_metadata_surfaces_expose_only_named_gamma_tokens() ->
         assert repr(legacy) not in message
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_named_gamma_tokens_accept_case_and_all_separator_variants() -> None:
     """Named gamma tokens accept case and separator variants within the gamma family."""
     from pixtreme._core.validation import _normalized_closed_token
@@ -156,7 +156,7 @@ def test_named_gamma_tokens_accept_case_and_all_separator_variants() -> None:
             assert _normalized_closed_token(variant, axis="gamma", accepted=_GAMMA_TOKENS) == canonical
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_numeric_gamma_aliases_and_separator_variants_are_permanent_inputs() -> None:
     """Numeric gamma aliases and their separator variants remain valid inputs to public color operations."""
     from pixtreme._core.validation import _normalized_closed_token
@@ -173,7 +173,7 @@ def test_numeric_gamma_aliases_and_separator_variants_are_permanent_inputs() -> 
             assert decoded.gamma == "linear"
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_numeric_alias_keys_are_collision_free_subset_local_and_order_independent() -> None:
     """Numeric gamma aliases normalize without collisions, cross-family matches, or dependence on registration
     order."""
@@ -194,8 +194,8 @@ def test_numeric_alias_keys_are_collision_free_subset_local_and_order_independen
             _normalized_closed_token(legacy, axis="colorspace", accepted=get_args(px.core.Colorspace))
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("rejected", ["unknown", 24, None])
 def test_invalid_gamma_fails_before_gpu_with_raw_input_and_canonical_recovery(
     rejected: object, monkeypatch: pytest.MonkeyPatch
@@ -219,8 +219,8 @@ def test_invalid_gamma_fails_before_gpu_with_raw_input_and_canonical_recovery(
         assert repr(legacy) not in message
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_named_and_numeric_alias_transfers_are_bit_identical_and_preserve_observables() -> None:
     """Named and numeric gamma aliases yield identical transfer pixels and preserve other Frame properties."""
     values = (-1.25, -0.25, -1.0e-6, 0.0, 1.0e-6, 0.18, 1.0, 1.5)
@@ -260,8 +260,8 @@ def test_named_and_numeric_alias_transfers_are_bit_identical_and_preserve_observ
     assert source.matrix == "native"
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_bt1886_and_gamma_24_are_bit_identical_but_keep_distinct_token_identity() -> None:
     """BT.1886 and Gamma-2.4 produce identical ideal-black pixels while retaining distinct gamma names."""
     values = (-1.25, -0.25, -1.0e-6, 0.0, 1.0e-6, 0.18, 1.0, 1.5)

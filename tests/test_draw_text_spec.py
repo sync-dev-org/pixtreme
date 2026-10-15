@@ -66,7 +66,7 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError]) -> None:
     assert "; how=" in message
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_draw_text_host_array_conversion_failure_is_actionable() -> None:
     """For text drawing, text host-array conversion reports the rejected value and a concrete recovery."""
     value = ((1.0,), (1.0, 2.0))
@@ -76,7 +76,7 @@ def test_draw_text_host_array_conversion_failure_is_actionable() -> None:
     assert repr(value) in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_draw_text_unsupported_freetype_bitmap_is_actionable(monkeypatch: pytest.MonkeyPatch) -> None:
     """For text drawing, unsupported FreeType bitmap layouts report the observed layout and repair contract."""
 
@@ -371,8 +371,8 @@ def _base_kwargs() -> dict[str, object]:
     }
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-017")
 def test_draw_text_public_signature_frame_entry_empty_text_and_defaults() -> None:
     """Text drawing exposes its font and layout controls through one public Frame operation, including empty text
     defaults.
@@ -453,8 +453,8 @@ def test_draw_text_public_signature_frame_entry_empty_text_and_defaults() -> Non
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("overrides", "listed_tokens"),
     (
@@ -494,8 +494,8 @@ def test_draw_text_entry_validation_is_actionable(
     assert all(token in str(error.value) for token in listed_tokens)
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("supersample", (0, 1, "true", None, (), np.bool_(True)))
 def test_draw_text_supersample_requires_a_strict_python_bool(supersample: object) -> None:
     """For text drawing, only Python True and False pass the public boundary."""
@@ -505,7 +505,7 @@ def test_draw_text_supersample_requires_a_strict_python_bool(supersample: object
     assert "supersample" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_supersample_false_is_bit_identical_before_and_after_true_mode() -> None:
     """Text drawing with supersampling off produces the same bits regardless of prior supersampled calls."""
     source_values = np.linspace(-0.4, 1.6, 96 * 192, dtype=np.float32).reshape(96, 192, 1)
@@ -538,7 +538,7 @@ def test_draw_text_supersample_false_is_bit_identical_before_and_after_true_mode
     )
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 @pytest.mark.parametrize("phase", ((0, 0), (8, 24), (31, 47), (55, 13)))
 def test_draw_text_supersample_glyph_matches_independent_4x_box_oracle(phase: tuple[int, int]) -> None:
     """Supersampled text glyphs match independent fourfold pixel averaging on the original glyph grid."""
@@ -590,7 +590,7 @@ def test_draw_text_supersample_glyph_matches_independent_4x_box_oracle(phase: tu
     np.testing.assert_array_equal(actual.coverage, expected)
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_supersample_fixed_fhd_matte_matches_oracle_and_exceeds_256_coverages() -> None:
     """For text drawing, the fixed matte matches the independent oracle and exceeds 256 values."""
     source_values = np.zeros((1080, 1920, 1), dtype=np.float32)
@@ -613,7 +613,7 @@ def test_draw_text_supersample_fixed_fhd_matte_matches_oracle_and_exceeds_256_co
     assert np.unique(actual).size > 256
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 @pytest.mark.parametrize("anchor", ANCHORS)
 def test_draw_text_supersample_keeps_all_anchor_solutions_mode_independent(anchor: str) -> None:
     """For text drawing, supersampling does not change block metrics or anchor placement."""
@@ -658,7 +658,7 @@ def test_draw_text_supersample_keeps_all_anchor_solutions_mode_independent(ancho
     np.testing.assert_array_equal(_host(anchored), _host(baseline))
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_supersample_multi_outline_matches_independent_ring_oracle() -> None:
     """For text drawing, body and cumulative outline rings share the fixed 4x rule."""
     source_values = np.full((144, 300, 3), 0.2, dtype=np.float32)
@@ -679,10 +679,10 @@ def test_draw_text_supersample_multi_outline_matches_independent_ring_oracle() -
     np.testing.assert_allclose(_host(actual), expected, rtol=4e-6, atol=4e-6)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-103")
 def test_draw_text_supersample_preserves_scene_metadata_input_and_private_storage() -> None:
     """Supersampled text drawing preserves out of range values and Frame metadata without changing the input storage."""
     labels = ("normal.x", "depth", "id", "custom")
@@ -710,8 +710,8 @@ def test_draw_text_supersample_preserves_scene_metadata_input_and_private_storag
     assert np.max(_host(result)) > 1.0
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-019")
 @pytest.mark.parametrize("blend", BLENDS)
 def test_draw_text_matches_independent_harfbuzz_freetype_and_numpy_oracle(blend: str) -> None:
     """For text drawing, single-line shaping and compositing match a host oracle."""
@@ -742,8 +742,8 @@ def test_draw_text_matches_independent_harfbuzz_freetype_and_numpy_oracle(blend:
     assert np.max(_host(result)) > 1.0
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-019")
 @pytest.mark.parametrize("anchor", ANCHORS)
 def test_draw_text_all_anchors_represent_the_same_font_metric_and_advance_point(anchor: str) -> None:
     """For text drawing, all 12 anchors use font ascender/descender and shaped line advance, not ink."""
@@ -788,7 +788,7 @@ def test_draw_text_all_anchors_represent_the_same_font_metric_and_advance_point(
     np.testing.assert_array_equal(_host(anchored), _host(baseline))
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_subpixel_clipping_outside_and_missing_glyph_behavior() -> None:
     """For text drawing, subpixel placement is continuous, clipping is safe, and .notdef draws."""
     source_values = np.arange(72 * 96, dtype=np.float32).reshape(72, 96, 1) / 1000.0
@@ -807,7 +807,7 @@ def test_draw_text_subpixel_clipping_outside_and_missing_glyph_behavior() -> Non
     assert np.any(_host(tofu) > 0.0)
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 @pytest.mark.parametrize("position", ((1e308, 40.0), (-1e308, 40.0), (12.0, 1e308), (12.0, -1e308)))
 def test_draw_text_large_finite_positions_remain_valid_outside_coordinates(position: tuple[float, float]) -> None:
     """For text drawing, large finite positions remain valid and draw only image intersections."""
@@ -818,7 +818,7 @@ def test_draw_text_large_finite_positions_remain_valid_outside_coordinates(posit
     assert actual.data.data.ptr != source.data.data.ptr
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_language_selects_cjk_locl_forms_and_weight_instances() -> None:
     """For text drawing, language selects locl glyphs and wght changes rasterized coverage."""
     source = _zeros(height=96, width=160, channels=("matte",))
@@ -859,7 +859,7 @@ def test_draw_text_language_selects_cjk_locl_forms_and_weight_instances() -> Non
     assert np.sum(_host(heavy), dtype=np.float64) > np.sum(_host(thin), dtype=np.float64)
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_multiple_outlines_match_cumulative_external_ring_oracle() -> None:
     """For text drawing, glyphs merge by max and cumulative outlines composite outer-to-inner then body."""
     source_values = np.full((128, 240, 3), 0.15, dtype=np.float32)
@@ -883,7 +883,7 @@ def test_draw_text_multiple_outlines_match_cumulative_external_ring_oracle() -> 
     assert not np.array_equal(_host(result), _host(reversed_order))
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_outer_outline_adds_nothing_inside_the_body_fill() -> None:
     """For text drawing, each cumulative outline is only the external ring beyond the inner solid union."""
     source = _zeros(height=128, width=128, channels=("matte",))
@@ -909,8 +909,8 @@ def test_draw_text_outer_outline_adds_nothing_inside_the_body_fill() -> None:
     np.testing.assert_array_equal(outer_ring_contribution[fully_covered_body], np.float32(0.0))
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_preserves_metadata_channels_and_private_fp32_output() -> None:
     """For text drawing, metadata and arbitrary labels survive, and one-channel matte uses numeric coverage."""
     labels = ("normal.x", "depth", "id", "custom")
@@ -944,9 +944,9 @@ def test_draw_text_preserves_metadata_channels_and_private_fp32_output() -> None
     assert np.any((matte_values > 0.0) & (matte_values < 1.0))
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_draw_text_bundles_font_license_and_keeps_text_dependencies_lazy() -> None:
     """Bundled text fonts and their licenses remain available while text libraries load only when used."""
     assert FONT_PATH.is_file()
@@ -983,7 +983,7 @@ def test_draw_text_bundles_font_license_and_keeps_text_dependencies_lazy() -> No
     assert "system font" not in source.lower()
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_caches_shaping_glyph_rasters_and_atlases_with_bit_identity() -> None:
     """For text drawing, private caches preserve repeated output bit identity."""
     import pixtreme._draw.text as draw_text_module
@@ -1017,7 +1017,7 @@ def test_draw_text_caches_shaping_glyph_rasters_and_atlases_with_bit_identity() 
     assert not hasattr(px.draw, "text_cache")
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_draw_text_composite_keeps_pixels_on_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
     """Text drawing composites its GPU pixels without transferring them back to the CPU.
 
@@ -1032,8 +1032,8 @@ def test_draw_text_composite_keeps_pixels_on_gpu(monkeypatch: pytest.MonkeyPatch
     assert len(transfers.pixel_device_to_host) == 0
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-017")
 def test_draw_text_docstring_states_the_llm_readable_contract() -> None:
     """Developers can find text layout, font, compositing, and output rules in the public docstring."""
     docstring = (inspect.getdoc(px.draw.text) or "").lower()

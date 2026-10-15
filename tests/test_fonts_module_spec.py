@@ -107,9 +107,9 @@ def _assert_success(completed: subprocess.CompletedProcess[str]) -> None:
     assert completed.returncode == 0, completed.stderr
 
 
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
-@pytest.mark.req("REQ-PIX-022")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
+@pytest.mark.req("SP-PIX-022")
 def test_fonts_public_surface_is_exact() -> None:
     """The public font module owns the font catalog and exposes only its two documented functions."""
     assert px.__all__[-2:] == ("fonts", "__version__")
@@ -127,8 +127,8 @@ def test_fonts_public_surface_is_exact() -> None:
         assert not hasattr(px.fonts, forbidden)
 
 
-@pytest.mark.req("REQ-PIX-113")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-113")
+@pytest.mark.req("SP-PIX-107")
 def test_font_subtree_import_does_not_register_font_without_entry_point(tmp_path: Path) -> None:
     """An external font subtree is importable only when requested and does not join the font catalog by itself."""
     font = tmp_path / "extension.otf"
@@ -163,9 +163,9 @@ def test_font_subtree_import_does_not_register_font_without_entry_point(tmp_path
     _assert_success(completed)
 
 
-@pytest.mark.req("REQ-PIX-113")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-113")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_font_subtree_entry_point_registers_its_font(tmp_path: Path) -> None:
     """A font provider in an external subtree becomes usable when its entry point registers the font."""
     font = tmp_path / "extension.otf"
@@ -191,8 +191,8 @@ def test_font_subtree_entry_point_registers_its_font(tmp_path: Path) -> None:
     _assert_success(completed)
 
 
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_bundled_catalog_is_exact_without_providers(tmp_path: Path) -> None:
     """For font discovery, a provider-free process exposes the two readable bundled font paths."""
     completed = _run_isolated(
@@ -212,9 +212,9 @@ def test_bundled_catalog_is_exact_without_providers(tmp_path: Path) -> None:
     _assert_success(completed)
 
 
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 @pytest.mark.parametrize(
     "pixtreme_import",
     ("import pixtreme as px", "import pixtreme.fonts"),
@@ -293,9 +293,9 @@ def test_import_invalid_lookup_and_bundled_lookup_do_not_load_providers(tmp_path
     _assert_success(completed)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_provider_catalog_merges_orders_and_snapshots_paths(tmp_path: Path) -> None:
     """Font discovery combines installed providers into a stable ordered snapshot of font paths."""
     first = tmp_path / "first.otf"
@@ -349,9 +349,9 @@ def test_provider_catalog_merges_orders_and_snapshots_paths(tmp_path: Path) -> N
     _assert_success(completed)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_success_snapshot_ignores_hot_install_and_uninstall_until_fresh_process(tmp_path: Path) -> None:
     """For font discovery, metadata changes affect only a fresh-process success snapshot."""
     provider_root = tmp_path / "providers"
@@ -428,9 +428,9 @@ def test_success_snapshot_ignores_hot_install_and_uninstall_until_fresh_process(
     _assert_success(fresh)
 
 
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 @pytest.mark.parametrize(
     ("module_source", "fragment", "has_cause"),
     (
@@ -493,9 +493,9 @@ def test_invalid_provider_declarations_fail_closed_and_cache(
     _assert_success(completed)
 
 
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 @pytest.mark.parametrize("kind", ("missing", "directory", "unreadable"))
 def test_invalid_provider_paths_fail_closed(tmp_path: Path, kind: str) -> None:
     """For font discovery, provider paths must be absolute readable regular files."""
@@ -532,10 +532,10 @@ def test_invalid_provider_paths_fail_closed(tmp_path: Path, kind: str) -> None:
             candidate.chmod(0o600)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_metadata_enumeration_failure_is_chained_and_cached(tmp_path: Path) -> None:
     """For font discovery, metadata enumeration failure is an actionable cached RuntimeError."""
     completed = _run_isolated(
@@ -568,9 +568,9 @@ def test_metadata_enumeration_failure_is_chained_and_cached(tmp_path: Path) -> N
     _assert_success(completed)
 
 
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_failure_snapshot_ignores_path_repair_until_fresh_process(tmp_path: Path) -> None:
     """For font discovery, path repair recovers only in a fresh process after cached failure."""
     marker = tmp_path / "loads"
@@ -626,8 +626,8 @@ def test_failure_snapshot_ignores_path_repair_until_fresh_process(tmp_path: Path
     _assert_success(fresh)
 
 
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_collisions_are_deterministic_across_discovery_order(tmp_path: Path) -> None:
     """For font discovery, all collisions fail atomically with stable diagnostics."""
     roots = (tmp_path / "z-root", tmp_path / "a-root")
@@ -670,8 +670,8 @@ def test_collisions_are_deterministic_across_discovery_order(tmp_path: Path) -> 
     assert re.fullmatch(_ACTIONABLE, messages[0])
 
 
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 @pytest.mark.parametrize("fails", (False, True), ids=("success", "failure"))
 def test_concurrent_first_discovery_has_one_atomic_result(tmp_path: Path, fails: bool) -> None:
     """For font discovery, concurrent first discovery loads once and exposes one atomic result."""
@@ -720,8 +720,8 @@ def test_concurrent_first_discovery_has_one_atomic_result(tmp_path: Path, fails:
     _assert_success(completed)
 
 
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_same_thread_reentry_poison_is_not_recoverable_by_provider(tmp_path: Path) -> None:
     """For font discovery, same-thread provider reentry fails without hanging and poisons the snapshot."""
     marker = tmp_path / "loads"
@@ -764,9 +764,9 @@ def test_same_thread_reentry_poison_is_not_recoverable_by_provider(tmp_path: Pat
     _assert_success(completed)
 
 
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_unknown_name_error_is_neutral_and_catalog_failure_takes_precedence(tmp_path: Path) -> None:
     """For font discovery, unknown names are neutral ValueErrors only for a healthy catalog."""
     font = tmp_path / "known.otf"
@@ -799,9 +799,9 @@ def test_unknown_name_error_is_neutral_and_catalog_failure_takes_precedence(tmp_
     _assert_success(completed)
 
 
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_unknown_lookup_preserves_cached_broken_catalog_runtime_error(tmp_path: Path) -> None:
     """For font discovery, a broken catalog takes precedence over unknown-name ValueError."""
     marker = tmp_path / "loads"
@@ -839,9 +839,9 @@ def test_unknown_lookup_preserves_cached_broken_catalog_runtime_error(tmp_path: 
     _assert_success(completed)
 
 
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_bundled_integrity_failure_is_distinct_from_provider_failure(tmp_path: Path) -> None:
     """For font discovery, broken bundled package data raises its own actionable RuntimeError."""
     completed = _run_isolated(
@@ -865,8 +865,8 @@ def test_bundled_integrity_failure_is_distinct_from_provider_failure(tmp_path: P
     _assert_success(completed)
 
 
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_broken_provider_does_not_change_draw_token_results(tmp_path: Path) -> None:
     """For font discovery, draw tokens stay bit-identical and independent from provider failure."""
     _write_module(tmp_path, "example_draw_failure", "raise LookupError('broken provider')")

@@ -156,10 +156,10 @@ def _build_mixed_channel_pxr24(
     return header + struct.pack("<Q", chunk_offset) + chunk, materialized
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize(
     ("pixel_type", "bits"),
     (
@@ -215,8 +215,8 @@ def test_pxr24_gpu_primitive_matches_independent_plane_and_float24_oracle(
         assert actual_bits[1, 3] == np.uint32(0x7F800100)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_pxr24_float24_rounding_carries_into_exponent_at_halfway_boundary() -> None:
     """PXR24 FLOAT24 rounding carries into the exponent at the exact halfway boundary."""
     cp = importlib.import_module("cupy")
@@ -238,9 +238,9 @@ def test_pxr24_float24_rounding_carries_into_exponent_at_halfway_boundary() -> N
     np.testing.assert_array_equal(actual_decoded, oracle_decoded)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("pixel_type", (0, 1, 2), ids=("uint", "half", "float24"))
 def test_pxr24_gpu_primitive_resets_wide_rows_without_cross_row_predictor(pixel_type: int) -> None:
     """PXR24 GPU coding resets prediction for each row and channel even across wide block boundaries."""
@@ -258,7 +258,7 @@ def test_pxr24_gpu_primitive_resets_wide_rows_without_cross_row_predictor(pixel_
     np.testing.assert_array_equal(actual_bits, _decode_rows(expected_planes, pixel_type))
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_forced_pxr24_read_bypasses_plane_decode_for_raw_stored_chunk(
     tmp_path: Path,
@@ -287,8 +287,8 @@ def test_forced_pxr24_read_bypasses_plane_decode_for_raw_stored_chunk(
     np.testing.assert_array_equal(frame.data.get().reshape(-1).view(np.uint32), bits)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("payload", "why"),
     (
@@ -317,7 +317,7 @@ def test_pxr24_descriptor_rejects_inflate_size_and_adler_mismatch(
     assert "how=" in message
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_pxr24_materializer_rejects_plane_row_channel_ownership_mismatch(tmp_path: Path) -> None:
     """PXR24 reads reject planes assigned to the wrong row or channel before writing pixels."""
     payload = zlib.compress(bytes(12))
@@ -337,8 +337,8 @@ def test_pxr24_materializer_rejects_plane_row_channel_ownership_mismatch(tmp_pat
         exr_pxr24._pxr24_channel_row_records(bad_container, prepared, bad_container.parts[0].channels[0])
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_forced_pxr24_read_materializes_selected_half_and_float_from_mixed_type_planes(
     tmp_path: Path,
@@ -381,7 +381,7 @@ def test_forced_pxr24_read_materializes_selected_half_and_float_from_mixed_type_
     np.testing.assert_array_equal(frame.data.get().view(np.uint32), expected.view(np.uint32))
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_openexr_pxr24_write_round_trips_through_both_forced_read_lanes(
     tmp_path: Path,
@@ -417,9 +417,9 @@ def test_openexr_pxr24_write_round_trips_through_both_forced_read_lanes(
     np.testing.assert_array_equal(unchanged_half.data.get().view(np.uint16), half[..., np.newaxis].view(np.uint16))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("dtype", (np.float16, np.float32))
 def test_gpu_pxr24_write_round_trips_in_openexr_with_partial_raw_chunk(
     tmp_path: Path,
@@ -463,7 +463,7 @@ def test_gpu_pxr24_write_round_trips_in_openexr_with_partial_raw_chunk(
         np.testing.assert_array_equal(decoded.view(np.uint32), expected_bits)
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_pxr24_lanes_keep_batch_and_image_level_transfer_boundaries(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -522,7 +522,7 @@ def test_pxr24_lanes_keep_batch_and_image_level_transfer_boundaries(
     assert cpu_actual.dtype == gpu_actual.dtype
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_pxr24_descriptor_preserves_mixed_channels_raw_storage_and_plane_order(tmp_path: Path) -> None:
     """PXR24 EXR parsing records mixed channel types, raw storage, partial rows, and file channel order."""
     fixture = _build_exr_chunk_fixture("pxr24")
@@ -561,8 +561,8 @@ def test_pxr24_descriptor_preserves_mixed_channels_raw_storage_and_plane_order(t
     assert {plane.channel_name for plane in descriptor.planes} == {"U", "H", "F"}
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_pxr24_oversized_payload_is_actionable_corruption(tmp_path: Path) -> None:
     """PXR24 EXR reads reject compressed chunks larger than their raw form and explain the corrupt payload."""
     expected_raw = _raw_size(_MIXED_CHANNELS, width=8, row_count=16)
@@ -573,7 +573,7 @@ def test_pxr24_oversized_payload_is_actionable_corruption(tmp_path: Path) -> Non
         px.io.read_header(path)
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_pxr24_corruption_error_names_its_compression(tmp_path: Path) -> None:
     """An invalid PXR24 chunk identifies its compression so the developer can repair the input."""
     expected_raw = _raw_size(_MIXED_CHANNELS, width=8, row_count=16)
@@ -587,8 +587,8 @@ def test_pxr24_corruption_error_names_its_compression(tmp_path: Path) -> None:
     assert not _has_numbered_step(message)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_pxr24_plane_grammar_errors_are_actionable_before_materialization(tmp_path: Path) -> None:
     """PXR24 EXR reads reject an incomplete plane stream before decoding pixels."""
     fixture = _build_exr_chunk_fixture(

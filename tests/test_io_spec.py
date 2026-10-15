@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from PIL import Image, PngImagePlugin
+from PIL import Image, JpegImagePlugin, PngImagePlugin
 
 import pixtreme as px
 
@@ -19,8 +19,8 @@ def _save_png(path: Path, values: np.ndarray, *, chunks: dict[bytes, bytes] | No
     Image.fromarray(values).save(path, pnginfo=info)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     ("name", "values", "mode", "labels"),
     (
@@ -55,8 +55,8 @@ def test_read_image_returns_normalized_contiguous_rgb_alpha_and_gray(
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_read_image_unchanged_preserves_native_16_bit_and_default_normalizes(tmp_path: Path) -> None:
     """Unchanged raster reading preserves uint16 codes, while ordinary reading normalizes by the container maximum."""
     values = np.array([[0, 1, 32768, 65535]], dtype=np.uint16)
@@ -81,8 +81,8 @@ def test_read_image_unchanged_preserves_native_16_bit_and_default_normalizes(tmp
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_read_image_channel_selection_is_label_driven_and_ordered(tmp_path: Path) -> None:
     """Raster reading selects requested channel labels in order and rejects labels absent from the image."""
     values = np.array([[[1, 2, 3, 4], [5, 6, 7, 8]]], dtype=np.uint8)
@@ -102,8 +102,8 @@ def test_read_image_channel_selection_is_label_driven_and_ordered(tmp_path: Path
         px.io.read_image(path, channels="Z")
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_png_file_metadata_and_per_call_claims_follow_the_fixed_priority(tmp_path: Path) -> None:
     """PNG reading resolves per-call color claims before mapped file metadata and then format defaults."""
     values = np.array([[[1, 2, 3]]], dtype=np.uint8)
@@ -120,8 +120,8 @@ def test_png_file_metadata_and_per_call_claims_follow_the_fixed_priority(tmp_pat
     assert (header.color.colorspace, header.color.gamma, header.color.mappable) == ("Rec.2020", "PQ", True)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_png_srgb_gama_and_unmappable_metadata_have_deterministic_mapping(tmp_path: Path) -> None:
     """PNG color chunks map supported values to metadata and warn before falling back from unsupported values."""
     values = np.array([[[1, 2, 3]]], dtype=np.uint8)
@@ -140,10 +140,10 @@ def test_png_srgb_gama_and_unmappable_metadata_have_deterministic_mapping(tmp_pa
     assert px.io.read_header(unknown_path).color.mappable is False
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("suffix", (".png", ".jpg", ".tiff"))
 def test_write_image_uint8_returns_none_and_external_reader_opens_output(tmp_path: Path, suffix: str) -> None:
-    """Writing a uint8 raster image returns None and produces a file readable by an independent image library."""
+    """Raster writing produces readable files and preserves JPEG chroma with explicit and default quality."""
     import cupy as cp
 
     values = np.array([[[10, 20, 30], [40, 50, 60]]], dtype=np.uint8)
@@ -156,10 +156,16 @@ def test_write_image_uint8_returns_none_and_external_reader_opens_output(tmp_pat
     with Image.open(path) as image:
         assert image.size == (2, 1)
         assert image.mode == "RGB"
+        if suffix == ".jpg":
+            assert JpegImagePlugin.get_sampling(image) == 0
+    if suffix == ".jpg":
+        px.io.write_image(path, frame)
+        with Image.open(path) as image:
+            assert JpegImagePlugin.get_sampling(image) == 0
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("suffix", (".png", ".tiff"))
 def test_write_image_preserves_uint16_gray_depth_round_trip(tmp_path: Path, suffix: str) -> None:
     """PNG and TIFF writing preserve uint16 grayscale codes through a file round trip."""
@@ -182,8 +188,8 @@ def test_write_image_preserves_uint16_gray_depth_round_trip(tmp_path: Path, suff
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_write_image_validates_named_quality_and_writes_no_raster_color_chunks(tmp_path: Path) -> None:
     """Raster writing accepts a named quality option and omits unsupported color metadata chunks."""
     import cupy as cp
@@ -201,8 +207,8 @@ def test_write_image_validates_named_quality_and_writes_no_raster_color_chunks(t
     assert b"sRGB" not in payload and b"cICP" not in payload and b"gAMA" not in payload
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_read_image_errors_distinguish_missing_extension_and_decode_failure(tmp_path: Path) -> None:
     """Image reading distinguishes missing files, unsupported extensions, and decode failures with actionable errors."""
     missing = tmp_path / "missing.png"
@@ -219,8 +225,8 @@ def test_read_image_errors_distinguish_missing_extension_and_decode_failure(tmp_
         px.io.read_image(corrupt)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("name", "args"),
     (
@@ -239,7 +245,7 @@ def test_image_path_boundaries_translate_invalid_path_types_actionably(name: str
     assert isinstance(error.value.__cause__, TypeError)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_read_header_reports_jpeg_tiff_and_float_tiff_without_decoding_pixels(tmp_path: Path) -> None:
     """Header inspection reports JPEG and TIFF dimensions, channels, and storage dtype without decoding pixels."""
     jpeg = tmp_path / "sample.jpg"

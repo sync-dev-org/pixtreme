@@ -38,7 +38,7 @@ def _identity_lut(
     return px.core.Lut(data=cp.asarray(data), domain_min=domain_min, domain_max=domain_max)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_lut_constructs_directly_with_defaults_and_reference_data() -> None:
     """A 3D LUT validates a caller-provided GPU grid and retains that grid by reference."""
     data = cp.zeros((2, 2, 2, 3), dtype=cp.float32)
@@ -52,8 +52,8 @@ def test_lut_constructs_directly_with_defaults_and_reference_data() -> None:
     assert lut.domain_max == (1.0, 1.0, 1.0)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "case",
     (
@@ -94,7 +94,7 @@ def test_lut_rejects_invalid_construction_actionably(case: str) -> None:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_read_lut_parses_cube_domain_metadata_comments_and_red_fastest_order(tmp_path: Path) -> None:
     """Reading a Cube LUT applies its domain metadata and maps red-fastest rows to RGB grid indices."""
     path = tmp_path / "asymmetric.cube"
@@ -127,7 +127,7 @@ DOMAIN_MAX 1 2 3
     assert lut.domain_max == (1.0, 2.0, 3.0)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_read_lut_parses_recognized_metadata_between_data_rows(tmp_path: Path) -> None:
     """Cube LUT metadata is recognized between data rows without becoming pixel data."""
     path = tmp_path / "interleaved-metadata.cube"
@@ -157,7 +157,7 @@ DOMAIN_MAX 1 2 3
     assert lut.domain_max == (1.0, 2.0, 3.0)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_parse_cube_accepts_untranslated_crlf_directives_and_data_rows() -> None:
     """Cube LUT parsing accepts CRLF line endings in directives and data rows."""
     import pixtreme._io.formats.lut as implementation
@@ -187,7 +187,7 @@ def test_parse_cube_accepts_untranslated_crlf_directives_and_data_rows() -> None
     assert parsed.domain_max == (1.0, 2.0, 3.0)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_read_lut_accepts_crlf_files_at_the_public_boundary(tmp_path: Path) -> None:
     """Reading a Cube LUT file accepts CRLF line endings."""
     path = tmp_path / "crlf.cube"
@@ -214,7 +214,7 @@ def test_read_lut_accepts_crlf_files_at_the_public_boundary(tmp_path: Path) -> N
     assert lut.domain_max == (1.0, 2.0, 3.0)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_read_lut_accepts_str_paths_and_default_domain(tmp_path: Path) -> None:
     """Reading a Cube LUT accepts string paths and defaults an omitted domain to the unit cube."""
     path = tmp_path / "identity.cube"
@@ -229,8 +229,8 @@ def test_read_lut_accepts_str_paths_and_default_domain(tmp_path: Path) -> None:
     assert lut.domain_max == (1.0, 1.0, 1.0)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 def test_read_lut_translates_invalid_path_types_actionably() -> None:
     """Reading a LUT rejects invalid path types with guidance while preserving the underlying cause."""
     with pytest.raises(ValueError) as error:
@@ -242,8 +242,8 @@ def test_read_lut_translates_invalid_path_types_actionably() -> None:
     assert isinstance(error.value.__cause__, TypeError)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "body",
     (
@@ -265,8 +265,8 @@ def test_read_lut_rejects_broken_cube_actionably(tmp_path: Path, body: str) -> N
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 def test_read_lut_rejects_missing_files_actionably(tmp_path: Path) -> None:
     """Reading an absent LUT file raises FileNotFoundError with a usable correction."""
     with pytest.raises(FileNotFoundError) as error:
@@ -274,7 +274,7 @@ def test_read_lut_rejects_missing_files_actionably(tmp_path: Path) -> None:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_read_lut_parser_is_bulk_vectorized_uncached_and_pure(tmp_path: Path) -> None:
     """Reading a LUT parses numeric rows in bulk without caching or writing files."""
     import pixtreme._io.formats.lut as implementation
@@ -300,7 +300,7 @@ def test_read_lut_parser_is_bulk_vectorized_uncached_and_pure(tmp_path: Path) ->
     assert tuple(sorted(item.name for item in tmp_path.iterdir())) == before
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_lut_transform_signature_is_keyword_only_after_frame() -> None:
     """Applying a LUT exposes the documented arguments as keyword-only after the Frame."""
     signature = inspect.signature(px.color.apply_lut)
@@ -313,7 +313,7 @@ def test_lut_transform_signature_is_keyword_only_after_frame() -> None:
     assert signature.parameters["interpolation"].default is None
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize(
     ("interpolation", "expected"),
     (("trilinear", 11.34375 / 64.0), ("tetrahedral", 0.28515625)),
@@ -335,7 +335,7 @@ def test_lut_transform_matches_hand_calculated_two_cube_oracles(interpolation: s
     np.testing.assert_allclose(cp.asnumpy(result.data)[0, 0], (expected, expected, expected), rtol=0.0, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_tetrahedral_lut_preserves_arbitrary_channel_stride_fallback() -> None:
     """Tetrahedral lookup respects a GPU LUT grid's channel strides and matches the same reference pixels."""
     scalar_vertices = np.asarray(
@@ -358,7 +358,7 @@ def test_tetrahedral_lut_preserves_arbitrary_channel_stride_fallback() -> None:
     np.testing.assert_allclose(cp.asnumpy(result.data)[0, 0], (0.28515625,) * 3, rtol=0.0, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize("interpolation", ("trilinear", "tetrahedral"))
 def test_lut_transform_selects_the_correct_cell_in_a_three_cube(interpolation: str) -> None:
     """Both 3D LUT interpolation choices select the expected cell on a three-point grid."""
@@ -373,7 +373,7 @@ def test_lut_transform_selects_the_correct_cell_in_a_three_cube(interpolation: s
     np.testing.assert_allclose(cp.asnumpy(result.data)[0, 0], (expected, expected, expected), rtol=0.0, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize("interpolation", ("trilinear", "tetrahedral"))
 def test_lut_transform_preserves_wide_finite_domain_affine_mapping(interpolation: str) -> None:
     """LUT lookup maps the midpoint of a wide finite input domain to the midpoint of its grid."""
@@ -391,9 +391,9 @@ def test_lut_transform_preserves_wide_finite_domain_affine_mapping(interpolation
     np.testing.assert_allclose(cp.asnumpy(result.data)[0, 0], (0.5, 0.5, 0.5), rtol=0.0, atol=1e-7)
 
 
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("interpolation", ("trilinear", "tetrahedral"))
 def test_identity_lut_uses_declared_domain_and_clamps_lookup_without_output_clip(interpolation: str) -> None:
     """An identity LUT uses its declared domain, clamps lookup coordinates, and leaves output values unclipped."""
@@ -406,9 +406,9 @@ def test_identity_lut_uses_declared_domain_and_clamps_lookup_without_output_clip
     np.testing.assert_allclose(cp.asnumpy(result.data), expected, rtol=0.0, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-110")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-110")
 def test_lut_transform_preserves_metadata_and_non_rgb_channels() -> None:
     """Applying a LUT transforms labeled RGB channels and preserves Frame color information and all other channels."""
     data = cp.empty((2, 2, 2, 3), dtype=cp.float32)
@@ -432,7 +432,7 @@ def test_lut_transform_preserves_metadata_and_non_rgb_channels() -> None:
         assert required in docstring
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_lut_transform_does_not_mutate_frame_or_lut() -> None:
     """Applying a LUT leaves the source Frame and referenced LUT grid unchanged."""
     lut = _identity_lut(size=3)
@@ -447,8 +447,8 @@ def test_lut_transform_does_not_mutate_frame_or_lut() -> None:
     cp.testing.assert_array_equal(lut.data, lut_before)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("channels", (("Y", "Cb", "Cr"), ("R", "G"), ("R", "G", "A")))
 def test_lut_transform_rejects_frames_without_all_rgb_labels(channels: tuple[str, ...]) -> None:
     """Applying a LUT rejects a Frame missing any RGB label before lookup."""
@@ -460,8 +460,8 @@ def test_lut_transform_rejects_frames_without_all_rgb_labels(channels: tuple[str
     assert "R, G, and B" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "routes"),
     (
@@ -484,8 +484,8 @@ def test_lut_transform_rejects_non_float32_with_dtype_specific_guidance(
     assert tuple(message.index(route) for route in routes) == tuple(sorted(message.index(route) for route in routes))
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("interpolation", ("linear", "cubic"))
 def test_lut_transform_rejects_unknown_interpolation_tokens(interpolation: object) -> None:
     """A 3D LUT rejects interpolation names outside its two supported choices."""
@@ -498,8 +498,8 @@ def test_lut_transform_rejects_unknown_interpolation_tokens(interpolation: objec
         assert token in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 def test_lut_transform_rejects_non_frame_and_non_lut_inputs() -> None:
     """Applying a LUT rejects non-Frame images and non-LUT grids with corrective errors."""
     with pytest.raises(ValueError) as frame_error:

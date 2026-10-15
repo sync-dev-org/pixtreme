@@ -2,6 +2,23 @@
 
 Notable changes to pixtreme are documented in this file.
 
+## Unreleased
+
+## 1.9.0 - 2026-10-15
+
+pixtreme 1.9.0 moves its GPU dependencies from the CUDA 12 builds to the CUDA 13 builds, including CuPy
+(`cupy-cuda13x`). It requires NVIDIA driver R580 or newer and an NVIDIA GPU with compute capability 7.5 or higher;
+use pixtreme 1.8.0 for CUDA 12 environments. Public operation names, arguments, accepted names, and return shapes
+remain compatible.
+The published performance report (`docs/performance.md`) and README performance table still show the earlier
+CUDA 12.9 baseline measured at commit `260fe6e`; CUDA 13 measurements have not been taken for this release.
+
+### Changed
+
+- pixtreme now requires CUDA 13 builds of its GPU dependencies, NVIDIA driver R580 or newer, and an NVIDIA GPU
+  with compute capability 7.5 or higher. Applications pinned to CUDA 12 dependency builds must migrate to CUDA 13;
+  drivers older than R580 and GPUs with compute capability 7.0 or lower are no longer supported.
+
 ## 1.8.0 - 2026-10-06
 
 pixtreme 1.8.0 allows separately installed font packages to contribute subpackages beneath `pixtreme.fonts`.

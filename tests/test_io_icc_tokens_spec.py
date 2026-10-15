@@ -91,8 +91,8 @@ def _prophoto_encode(values: np.ndarray) -> np.ndarray:
     return result
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_icc_tokens_extend_the_canonical_vocabulary_without_alias_changes() -> None:
     """ICC color and transfer tokens extend the canonical vocabulary without changing existing aliases."""
     colorspaces = get_args(px.core.Colorspace)
@@ -116,7 +116,7 @@ def test_icc_tokens_extend_the_canonical_vocabulary_without_alias_changes() -> N
     assert len(_PERMANENT_TOKEN_ALIASES) == 4
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_icc_colorspace_definitions_derive_normalized_matrices_from_xy() -> None:
     """ICC color-space matrices match independent derivations from published primaries and white points."""
     from pixtreme._color.transform import _RGB_TO_XYZ
@@ -129,7 +129,7 @@ def test_icc_colorspace_definitions_derive_normalized_matrices_from_xy() -> None
         np.testing.assert_allclose(expected.sum(axis=1), _xy_to_xyz(definition[1]), rtol=0.0, atol=1e-12)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_icc_colorspaces_use_native_rows_and_bradford_for_different_whites() -> None:
     """ICC color spaces use their native luma rows and Bradford adaptation between white points."""
     from pixtreme._color.transform import _compose_matrix
@@ -146,9 +146,9 @@ def test_icc_colorspaces_use_native_rows_and_bradford_for_different_whites() -> 
     np.testing.assert_allclose(gray.data.get()[0, :, 0], expected_y, rtol=0.0, atol=6e-6)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_icc_transfer_tokens_match_independent_unclipped_oracles() -> None:
     """ICC transfer tokens encode and decode with their published equations without clipping scene values."""
     values = np.asarray(
@@ -178,10 +178,10 @@ def test_icc_transfer_tokens_match_independent_unclipped_oracles() -> None:
         np.testing.assert_array_equal(result.data.get()[0, :, 0], linear.data.get()[0, :, 0])
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_icc_transfer_round_trips_and_remains_independent_from_colorspace() -> None:
     """ICC transfers round trip scene values without inferring a color space from the gamma name."""
     values = np.asarray((-0.25, 0.0, 1 / 512, 0.18, 1 / 32, 1.0, 1.25), dtype=np.float32)
@@ -198,7 +198,7 @@ def test_icc_transfer_round_trips_and_remains_independent_from_colorspace() -> N
     assert (tagged.colorspace, tagged.gamma) == ("Adobe-RGB", "Gamma-1.8")
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_existing_gamma_codes_remain_bit_stable_when_new_codes_are_appended() -> None:
     """Other supported gamma names retain their exact GPU transfer outputs."""
     from pixtreme._color.transform import _GAMMA_CODES

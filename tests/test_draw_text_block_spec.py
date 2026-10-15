@@ -338,7 +338,7 @@ def _base_kwargs() -> dict[str, object]:
     }
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_unification_public_signature_is_the_complete_layout_contract() -> None:
     """Text drawing exposes the complete public font, layout, and supersampling signature."""
     signature = inspect.signature(px.draw.text)
@@ -383,7 +383,7 @@ def test_draw_text_unification_public_signature_is_the_complete_layout_contract(
     assert signature.parameters["supersample"].annotation == "bool"
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_unification_removes_draw_text_block_from_the_public_surface() -> None:
     """The public drawing module exposes one text operation and no separate text block operation."""
     assert not hasattr(px.draw, "draw_text_block")
@@ -421,8 +421,8 @@ def test_draw_text_unification_removes_draw_text_block_from_the_public_surface()
     assert "draw-text-block-cjk-outline" not in draw_registry_names
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_empty_and_zero_opacity_preserve_metadata_in_new_storage() -> None:
     """For text layout and drawing, no-op paths preserve pixels and metadata but always allocate."""
     source_values = np.arange(7 * 9, dtype=np.float32).reshape(7, 9, 1) / np.float32(11.0)
@@ -447,7 +447,7 @@ def test_draw_text_empty_and_zero_opacity_preserve_metadata_in_new_storage() -> 
         )
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 @pytest.mark.parametrize("anchor", ANCHORS)
 @pytest.mark.parametrize("language", LANGUAGES)
 @pytest.mark.parametrize("blend", BLENDS)
@@ -477,7 +477,7 @@ def test_draw_text_default_single_line_matches_independent_oracle_for_every_anch
     assert actual.model_dump(exclude={"data"}) == source.model_dump(exclude={"data"})
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 @pytest.mark.parametrize(
     "kwargs,channels",
     (
@@ -499,8 +499,8 @@ def test_draw_text_default_single_line_covers_empty_notdef_matte_and_outside_pat
     np.testing.assert_array_equal(_host(actual), expected)
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "overrides,tokens",
     (
@@ -531,8 +531,8 @@ def test_draw_text_extension_validation_is_actionable(
     _assert_actionable(error, tokens)
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "overrides",
     (
@@ -554,7 +554,7 @@ def test_draw_text_inherited_validation_keeps_three_element_errors(overrides: di
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 @pytest.mark.parametrize("align", ALIGNS)
 def test_draw_text_matches_independent_multiline_layout_and_raster_oracle(align: str) -> None:
     """For text layout and drawing, multiline layout and rasterization match a host oracle."""
@@ -586,7 +586,7 @@ def test_draw_text_matches_independent_multiline_layout_and_raster_oracle(align:
     assert np.max(_host(actual)) > 1.0
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 @pytest.mark.parametrize("anchor", ANCHORS)
 def test_draw_text_all_anchors_use_block_width_first_ascender_and_last_descender(anchor: str) -> None:
     """For text layout and drawing, all anchors use the block box, including a trailing empty line."""
@@ -607,7 +607,7 @@ def test_draw_text_all_anchors_use_block_width_first_ascender_and_last_descender
     np.testing.assert_array_equal(_host(actual), expected)
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_width_overflow_negative_tracking_and_justify_do_not_clip_or_shrink() -> None:
     """For text layout and drawing, signed advances overflow fixed width while justify adds only space."""
     source_values = np.zeros((96, 260, 1), dtype=np.float32)
@@ -628,7 +628,7 @@ def test_draw_text_width_overflow_negative_tracking_and_justify_do_not_clip_or_s
         np.testing.assert_array_equal(_host(actual), expected)
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_single_glyph_justify_keeps_the_block_left_origin() -> None:
     """For text layout and drawing, a one-glyph line with positive remainder has no justify gap."""
     source = _zeros(height=72, width=160, channels=("matte",))
@@ -643,7 +643,7 @@ def test_draw_text_single_glyph_justify_keeps_the_block_left_origin() -> None:
     np.testing.assert_array_equal(_host(actual), _host(expected))
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 @pytest.mark.parametrize(
     ("layout", "text", "visible_text", "visible_anchor"),
     (
@@ -676,7 +676,7 @@ def test_draw_text_large_finite_layout_values_only_draw_image_intersections(
     np.testing.assert_array_equal(_host(actual), _host(expected))
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_kerning_switch_preserves_ligature_and_locl_shaping() -> None:
     """For text layout and drawing, disabling kern keeps liga and locl while tracking is post-shaping."""
     size_26_6 = round(40.0 * 64.0)
@@ -716,8 +716,8 @@ def test_draw_text_kerning_switch_preserves_ligature_and_locl_shaping() -> None:
     assert not np.array_equal(_host(unkerned), _host(tracked))
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-019")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-019")
 def test_draw_text_mono_font_assets_weight_range_and_numerical_oracle() -> None:
     """Monospaced text uses its supported weight range and matches independently rasterized pixels."""
     import freetype
@@ -750,7 +750,7 @@ def test_draw_text_mono_font_assets_weight_range_and_numerical_oracle() -> None:
     np.testing.assert_array_equal(_host(actual), expected)
 
 
-@pytest.mark.req("REQ-PIX-012")
+@pytest.mark.req("SP-PIX-012")
 def test_draw_text_caches_full_layout_with_bit_identity() -> None:
     """For text layout and drawing, repeated layout and raster results are privately cached."""
     import pixtreme._draw.text as draw_text_module

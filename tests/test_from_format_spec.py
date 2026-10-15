@@ -275,7 +275,7 @@ def _pack_v210_row(y: list[int], cb: list[int], cr: list[int], *, width: int) ->
     return words
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("ndi_shape", (False, True))
 def test_from_uyvy422_accepts_flat_and_ndi_shapes_with_the_same_pixel_layout(ndi_shape: bool) -> None:
     """Flat and image-shaped UYVY buffers decode the same interleaved chroma and luma pixels with half-up nearest
@@ -318,7 +318,7 @@ def test_from_uyvy422_accepts_flat_and_ndi_shapes_with_the_same_pixel_layout(ndi
     )
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 def test_from_v210_decodes_words_and_ignores_the_zero_filled_128_byte_row_padding() -> None:
     """v210 input decodes packed words and ignores zero-filled padding to each 128-byte row boundary."""
     width, height = 7, 1
@@ -356,7 +356,7 @@ def test_from_v210_decodes_words_and_ignores_the_zero_filled_128_byte_row_paddin
     )
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize(
     ("name", "bit_depth", "dtype", "container_shift"),
     (("from_nv12", 8, np.uint8, 0), ("from_p010", 10, np.uint16, 6)),
@@ -405,8 +405,8 @@ def test_semiplanar_420_formats_decode_y_then_interleaved_cbcr(
     )
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize(
     ("name", "bit_depth", "height", "width", "plane_count", "subsample_x", "subsample_y"),
     (
@@ -476,9 +476,9 @@ def test_planar_bit_depths_use_lower_aligned_codes_and_plane_order(
     assert result.channels == (("Y", "Cb", "Cr", "A") if plane_count == 4 else ("Y", "Cb", "Cr"))
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-103")
 def test_from_yuv422p_replaces_the_old_name_and_preserves_ten_bit_range_headroom() -> None:
     """Ten-bit planar 4:2:2 decoding preserves code values below and above legal range without clipping."""
     y = np.asarray([0, 1023], dtype=np.uint16)
@@ -509,7 +509,7 @@ def test_from_yuv422p_replaces_the_old_name_and_preserves_ten_bit_range_headroom
     assert not hasattr(px, "from_yuv422p10le")
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize(
     ("name", "bit_depth", "dtype", "shift", "semiplanar"),
     (
@@ -574,7 +574,7 @@ def test_from_420_carrier_filter_and_siting_match_the_independent_coordinate_ora
     )
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("interpolation", INTERPOLATIONS)
 def test_from_yuv422p_uses_the_same_horizontal_filter_family_without_vertical_filtering(interpolation: str) -> None:
     """Planar 4:2:2 decoding applies its selected horizontal interpolation without filtering vertically."""
@@ -612,7 +612,7 @@ def test_from_yuv422p_uses_the_same_horizontal_filter_family_without_vertical_fi
     )
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize(
     ("name", "bit_depth", "dtype", "shift"),
     (("from_nv12", 8, np.uint8, 0), ("from_p010", 10, np.uint16, 6)),
@@ -660,7 +660,7 @@ def test_semiplanar_formats_share_center_sited_lanczos_mapping(
     )
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 def test_siting_tokens_have_numerically_distinct_impulse_centroids() -> None:
     """The six H.273 chroma siting choices produce distinct impulse centroids in 4:2:0 decoding."""
     height = width = 12
@@ -690,8 +690,8 @@ def test_siting_tokens_have_numerically_distinct_impulse_centroids() -> None:
     assert len(set(centroids.values())) == 6
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize(
     ("name", "source", "dtype", "kwargs", "channels"),
     (
@@ -752,8 +752,8 @@ def test_all_from_formats_return_fixed_contiguous_fp32_placeholder_frames(
     assert (result.colorspace, result.gamma, result.channels) == ("Rec.709", "Rec.709", channels)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("name", [case[0] for case in FROM_FORMAT_CASES])
 def test_from_format_signatures_expose_keyword_only_metadata_overrides(name: str) -> None:
     """Every YUV input function exposes optional keyword-only color metadata overrides."""
@@ -766,8 +766,8 @@ def test_from_format_signatures_expose_keyword_only_metadata_overrides(name: str
         assert parameter.default is None
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize(
     ("colorspace", "gamma", "expected"),
     (
@@ -802,9 +802,9 @@ def test_from_format_metadata_overrides_resolve_independently_over_placeholders(
     assert (result.colorspace, result.gamma) == expected
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("axis", "accepted"),
     (("colorspace", COLORSPACES), ("gamma", GAMMAS), ("matrix", MATRICES)),
@@ -838,8 +838,8 @@ def test_from_format_metadata_tokens_match_frame_assignment_domains(
     assert repr(accepted) in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize(
     ("name", "source", "dtype", "kwargs"),
     FROM_FORMAT_CASES,
@@ -868,8 +868,8 @@ def test_from_format_metadata_overrides_do_not_change_pixels(
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize(
     ("name", "source", "dtype", "kwargs"),
     FROM_FORMAT_CASES,
@@ -901,8 +901,8 @@ def test_from_format_frames_still_allow_post_construction_metadata_correction(
     )
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("name", "source", "dtype", "kwargs"),
     (
@@ -929,8 +929,8 @@ def test_all_from_formats_reject_unknown_range_tokens_actionably(
     assert "('legal', 'full')" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("name", ("from_yuv420p", "from_nv12", "from_p010"))
 def test_420_formats_reject_unknown_siting_and_interpolation_tokens_actionably(name: str) -> None:
     """YUV 4:2:0 input rejects unknown siting and interpolation names and lists accepted choices."""
@@ -949,9 +949,9 @@ def test_420_formats_reject_unknown_siting_and_interpolation_tokens_actionably(n
     assert repr(INTERPOLATIONS) in str(interpolation_error.value)
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("name", "valid_depths", "invalid_depth"),
     (
@@ -975,8 +975,8 @@ def test_planar_formats_reject_bit_depths_outside_their_closed_domains(
     assert repr(valid_depths) in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("name", "source", "dtype", "kwargs"),
     (
@@ -1022,8 +1022,8 @@ def test_from_formats_reject_non_cupy_wrong_dtype_size_and_noncontiguous_buffers
     _actionable(contiguous_error)
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("name", "source", "kwargs", "bad_width", "bad_height"),
     (
@@ -1052,8 +1052,8 @@ def test_subsampled_even_dimension_constraints_fail_fast(
     _actionable(height_error)
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 def test_v210_accepts_odd_width_but_requires_the_aligned_row_word_count() -> None:
     """v210 input accepts odd widths when the buffer contains the full aligned word count for every row."""
     source = _device(np.zeros(32), dtype=np.uint32)
@@ -1066,8 +1066,8 @@ def test_v210_accepts_odd_width_but_requires_the_aligned_row_word_count() -> Non
     assert "32" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-018")
 def test_from_format_kernel_entries_are_declared_and_each_public_call_launches_once(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

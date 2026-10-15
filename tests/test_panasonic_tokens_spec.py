@@ -260,8 +260,8 @@ def _adjacent_float32(center: np.float32, radius: int) -> np.ndarray:
     return np.concatenate((below, np.asarray((center,), dtype=np.float32), above))
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_panasonic_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> None:
     """Panasonic color tokens appear in the canonical vocabulary and public annotations without extra aliases."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
@@ -282,8 +282,8 @@ def test_panasonic_tokens_extend_canonical_vocabulary_and_public_static_surfaces
     assert not any(token in {"V-Gamut", "V-Log"} for alias in _PERMANENT_TOKEN_ALIASES for token in alias)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_panasonic_token_keys_and_invalid_inputs_follow_the_shared_boundary(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -325,9 +325,9 @@ def test_panasonic_token_keys_and_invalid_inputs_follow_the_shared_boundary(
         assert "Panasonic V-Log" not in message.replace(f"received gamma={value!r}", "")
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_vlog_encode_dense_grids_selected_points_and_published_anchors_match_independent_oracle() -> None:
     """Panasonic V-Log encoding matches its published anchors and signed branches across scene values."""
     wide = np.linspace(-0.5, 64.0, 400_001, dtype=np.float64).astype(np.float32)
@@ -360,7 +360,7 @@ def test_vlog_encode_dense_grids_selected_points_and_published_anchors_match_ind
     assert encoded.gamma == "V-Log"
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_vlog_decode_dense_grid_cut_branches_and_anchors_match_independent_oracle() -> None:
     """Panasonic V-Log decoding selects its derived cut and matches the inverse curve at anchors."""
     cut = np.float32(_ENCODED_CUT)
@@ -394,7 +394,7 @@ def test_vlog_decode_dense_grid_cut_branches_and_anchors_match_independent_oracl
     assert decoded.gamma == "linear"
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_vlog_cut_is_c1_monotone_and_regression_mutants_are_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     """Panasonic V-Log and its first derivative remain continuous and monotone through the branch cut."""
     linear_value = _M * _LINEAR_CUT + _D
@@ -464,10 +464,10 @@ def test_vlog_cut_is_c1_monotone_and_regression_mutants_are_rejected(monkeypatch
     assert int(correct[1].view(np.uint32)) != int(inclusive_mutant[1].view(np.uint32))
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_vlog_round_trips_standalone_fused_metadata_and_no_clip_contracts() -> None:
     """Panasonic V-Log round trips through public paths without clipping or losing Frame metadata."""
     linear_values = np.asarray((-2.0, -0.5, 0.0, 0.01, 0.18, 0.9, 1.5, 64.0), dtype=np.float32)
@@ -499,7 +499,7 @@ def test_vlog_round_trips_standalone_fused_metadata_and_no_clip_contracts() -> N
     assert _rgb_values(standalone_encoded)[-1, 0] > 1.0
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_v_gamut_matrix_conversions_native_row_and_printed_matrix_match_independent_oracles() -> None:
     """Panasonic V-Gamut matrices, conversions, and native luma row match independent calculations."""
     from pixtreme._core.colorspace import _COLORSPACE_DEFINITIONS
@@ -525,7 +525,7 @@ def test_v_gamut_matrix_conversions_native_row_and_printed_matrix_match_independ
     assert np.any(_rgb_values(converted) < 0.0) and np.any(_rgb_values(converted) > 1.0)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_v_gamut_uses_d65_identity_and_bradford_for_aces_auxiliary_matrix() -> None:
     """Panasonic V-Gamut uses D65 identity and Bradford adaptation in color conversion."""
     from pixtreme._color.transform import _compose_matrix
@@ -542,8 +542,8 @@ def test_v_gamut_uses_d65_identity_and_bradford_for_aces_auxiliary_matrix() -> N
     assert (result.colorspace, result.gamma) == ("Rec.709", "Canon-Log")
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("target", ("Rec.709", "ACES2065-1"))
 def test_panasonic_frames_convert_end_to_end_with_independent_transfer_and_gamut_oracle(target: str) -> None:
     """Panasonic Frames combine V-Gamut and V-Log conversion while preserving auxiliary channels."""
@@ -566,7 +566,7 @@ def test_panasonic_frames_convert_end_to_end_with_independent_transfer_and_gamut
     assert np.any(_rgb_values(converted) < 0.0) and np.any(_rgb_values(converted) > 1.0)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_existing_token_bits_remain_at_the_pre_panasonic_baseline() -> None:
     """Other supported color tokens retain their exact transfer and gamut pixel values."""
     # Provenance: captured from the complete pre-Panasonic commit
@@ -667,7 +667,7 @@ def test_existing_token_bits_remain_at_the_pre_panasonic_baseline() -> None:
         assert (converted.colorspace, converted.gamma) == ("Rec.709", "linear")
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_vlog_dpx_transfer_code_is_logarithmic_and_existing_mappings_remain_unchanged(tmp_path: Path) -> None:
     """DPX writing identifies Panasonic V-Log as logarithmic and preserves other transfer mappings."""
     from pixtreme._io.formats.dpx import _dpx_transfer_from_gamma

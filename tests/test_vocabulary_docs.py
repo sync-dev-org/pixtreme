@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 def test_legal_to_full_docstring_contains_the_reverse_composition_recipe() -> None:
     """The public legal-to-full documentation shows color conversion, range conversion, and the reverse color
     step in order."""

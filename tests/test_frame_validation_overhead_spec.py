@@ -37,9 +37,9 @@ def _host_snapshot(frame: px.core.Frame) -> tuple[np.ndarray, str, str, tuple[st
     return (cp.asnumpy(frame.data), frame.colorspace, frame.gamma, frame.channels, frame.matrix)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-021")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-021")
+@pytest.mark.req("SP-PIX-017")
 def test_validation_fast_path_stays_private_and_preserves_the_public_surface() -> None:
     """Faster Frame construction remains private and preserves public constructor and array import signatures."""
     import pixtreme.core as public_core
@@ -71,9 +71,9 @@ def test_validation_fast_path_stays_private_and_preserves_the_public_surface() -
     assert len(model_construct_calls) == 1
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-021")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-021")
+@pytest.mark.req("SP-PIX-017")
 def test_direct_frame_construction_keeps_full_validation_and_normalization() -> None:
     """Direct Frame construction validates and normalizes both valid and invalid pixel and metadata inputs."""
     import cupy as cp
@@ -118,9 +118,9 @@ def test_direct_frame_construction_keeps_full_validation_and_normalization() -> 
         )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-021")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-021")
+@pytest.mark.req("SP-PIX-017")
 def test_frame_assignment_keeps_transactional_full_validation() -> None:
     """Each assignable Frame field validates a new value before changing the stored image or metadata."""
     import cupy as cp
@@ -160,8 +160,8 @@ def test_frame_assignment_keeps_transactional_full_validation() -> None:
         assert (frame.data, frame.colorspace, frame.gamma, frame.channels, frame.matrix) == original
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-021")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-021")
 def test_from_array_fast_path_preserves_valid_storage_and_stays_within_scope() -> None:
     """Array import preserves valid GPU pixel storage while direct Frame construction continues full validation."""
     import cupy as cp
@@ -215,9 +215,9 @@ def test_from_array_fast_path_preserves_valid_storage_and_stays_within_scope() -
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-021")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-021")
+@pytest.mark.req("SP-PIX-017")
 def test_from_array_invalid_public_inputs_keep_their_entry_rejection_timing_and_type(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -261,8 +261,8 @@ def test_from_array_invalid_public_inputs_keep_their_entry_rejection_timing_and_
     assert launches == []
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-021")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-021")
 def test_from_array_token_spellings_resolve_to_identical_canonical_results() -> None:
     """Array import resolves canonical tokens, spelling variants, and permanent aliases to identical Frame values."""
     import cupy as cp
@@ -293,8 +293,8 @@ def test_from_array_token_spellings_resolve_to_identical_canonical_results() -> 
         np.testing.assert_array_equal(cp.asnumpy(result.data), values)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-021")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-021")
 def test_common_operations_keep_bits_metadata_ownership_and_reject_corrupt_current_shapes() -> None:
     """Common Frame operations preserve pixels, metadata, and ownership and reject a corrupted current shape."""
     import cupy as cp
@@ -350,9 +350,9 @@ def test_common_operations_keep_bits_metadata_ownership_and_reject_corrupt_curre
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-021")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-021")
+@pytest.mark.req("SP-PIX-017")
 def test_existing_cache_state_does_not_change_results_and_fast_validation_adds_no_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

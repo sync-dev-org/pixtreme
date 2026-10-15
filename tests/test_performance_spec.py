@@ -2975,7 +2975,7 @@ def test_exr_piz_public_backend_performance_report(performance_inputs: _Inputs) 
     assert all(count >= _BOUNDARY_MEASURED_MINIMUM_FRAMES for count in iterations.values())
 
 
-@pytest.mark.req("REQ-PIX-021")
+@pytest.mark.req("SP-PIX-021")
 @pytest.mark.performance
 def test_draw_text_supersample_warm_performance_gate(performance_inputs: _Inputs) -> None:
     """Warm-cache text supersampling meets the same-run duration ratio and latency thresholds."""
@@ -3003,7 +3003,7 @@ def test_draw_text_supersample_warm_performance_gate(performance_inputs: _Inputs
     assert sampled_ms <= 1.0
 
 
-@pytest.mark.req("REQ-PIX-021")
+@pytest.mark.req("SP-PIX-021")
 @pytest.mark.performance
 def test_draw_text_supersample_cold_performance_gate(performance_inputs: _Inputs) -> None:
     """Cold-cache text supersampling meets the same-run duration ratio and latency thresholds."""
@@ -3139,7 +3139,7 @@ def lut_shaper_timings(performance_inputs: _Inputs) -> dict[str, list[float]]:
     return timings
 
 
-@pytest.mark.req("REQ-PIX-021")
+@pytest.mark.req("SP-PIX-021")
 @pytest.mark.performance
 def test_lut_shaper_same_run_median_ratio(lut_shaper_timings: dict[str, list[float]]) -> None:
     """The LUT shaper keeps its same-run median duration increase within the 25 percent budget."""

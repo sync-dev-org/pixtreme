@@ -34,8 +34,8 @@ def _frame(values: Any) -> px.core.Frame:
     return px.io.from_array(data, colorspace="ACEScg", gamma="linear", channels="RGB")
 
 
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("retired_token", ("aces-1.3-lut", "aces-2.0-lut"))
 def test_retired_lut_tonemap_tokens_fail_with_the_closed_set_recipe(retired_token: str) -> None:
     """Output transformation rejects retired LUT modes before pixel work and lists supported modes."""
@@ -58,7 +58,7 @@ def test_retired_lut_tonemap_tokens_fail_with_the_closed_set_recipe(retired_toke
     assert np.isfinite(_frame((0.18, 0.18, 0.18)).data.get()).all()
 
 
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-005")
 def test_public_vocabulary_and_runtime_supply_exactly_three_tokens_and_six_combinations() -> None:
     """Output transformation advertises only three modes and their six supported output combinations."""
     from pixtreme._color.transform import _SUPPORTED_COMBINATIONS as runtime_combinations
@@ -67,7 +67,7 @@ def test_public_vocabulary_and_runtime_supply_exactly_three_tokens_and_six_combi
     assert runtime_combinations == _SUPPORTED_COMBINATIONS
 
 
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-005")
 def test_characterization_retained_tonemap_outputs_freeze_pre_removal_float32_bits() -> None:
     """Supported output-transform routes retain their recorded float32 pixels for fixed inputs.
 

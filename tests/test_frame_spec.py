@@ -23,8 +23,8 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError]) -> None:
     assert "; how=" in message
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("value", ("", "rgb", 42, ["R", ""]))
 def test_channel_validation_errors_are_actionable(value: object) -> None:
     """Invalid compact or sequence channel labels produce errors that explain the value and a correction."""
@@ -34,8 +34,8 @@ def test_channel_validation_errors_are_actionable(value: object) -> None:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "metadata",
     (
@@ -52,8 +52,8 @@ def test_frame_metadata_token_errors_are_actionable(metadata: dict[str, str | No
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-017")
 def test_frame_data_validation_errors_are_actionable() -> None:
     """Frame rejects invalid pixel type, rank, dtype, or channel count with cause, value, and recovery in order."""
     import cupy as cp
@@ -84,8 +84,8 @@ def test_frame_data_validation_errors_are_actionable() -> None:
     _assert_actionable(channels_data_error)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "shape",
     ((0, 2, 3), (2, 0, 3), (2, 2, 0)),
@@ -119,8 +119,8 @@ def test_frame_rejects_empty_hwc_dimensions_at_construction_and_assignment(
     assert frame.data is original
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-015")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-015")
 def test_from_array_constructs_from_hwc_cupy_and_checks_channel_count_and_rank() -> None:
     """Array import accepts HWC CuPy pixels when rank and channel count agree with the declared Frame metadata."""
     import cupy as cp
@@ -139,8 +139,8 @@ def test_from_array_constructs_from_hwc_cupy_and_checks_channel_count_and_rank()
         px.io.from_array(cp.zeros((1, 2, 3, 4), dtype=cp.float32), colorspace="sRGB", gamma="sRGB", channels="RGBA")
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-015")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-015")
 def test_from_array_makes_non_contiguous_input_c_contiguous() -> None:
     """Array import with copy=None makes noncontiguous GPU pixels contiguous before storing them in Frame."""
     import cupy as cp
@@ -161,8 +161,8 @@ def test_from_array_makes_non_contiguous_input_c_contiguous() -> None:
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-102")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-102")
 def test_frame_accepts_only_the_specified_storage_dtypes() -> None:
     """Frame accepts the five declared pixel storage dtypes and rejects any other dtype."""
     import cupy as cp
@@ -176,7 +176,7 @@ def test_frame_accepts_only_the_specified_storage_dtypes() -> None:
             px.io.from_array(cp.zeros((1, 2, 3), dtype=dtype), colorspace="sRGB", gamma="sRGB", channels="RGB")
 
 
-@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("SP-PIX-002")
 @pytest.mark.parametrize(
     "colorspace",
     (
@@ -218,7 +218,7 @@ def test_frame_accepts_each_colorspace_token(colorspace: str) -> None:
     assert result.colorspace == colorspace
 
 
-@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("SP-PIX-002")
 @pytest.mark.parametrize(
     "gamma",
     (
@@ -267,8 +267,8 @@ def test_frame_accepts_each_gamma_token(gamma: str) -> None:
     assert result.channels == ("red", "green", "blue")
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-017")
 def test_frame_rejects_unknown_metadata_tokens() -> None:
     """Frame rejects color metadata tokens outside the declared vocabulary before changing the image."""
     data = _sample_data()
@@ -279,7 +279,7 @@ def test_frame_rejects_unknown_metadata_tokens() -> None:
         px.io.from_array(data, colorspace="sRGB", gamma="unknown", channels="RGB")
 
 
-@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("SP-PIX-002")
 def test_metadata_assignment_revalidates_transactionally_without_touching_data() -> None:
     """Frame metadata assignment normalizes valid tokens and preserves prior metadata and pixels when validation fails."""
     result = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="sRGB", channels="RGB")
@@ -306,7 +306,7 @@ def test_metadata_assignment_revalidates_transactionally_without_touching_data()
     assert result.data.data.ptr == data_pointer
 
 
-@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("SP-PIX-002")
 def test_frame_data_assignment_checks_channel_count_transactionally() -> None:
     """Frame pixel assignment preserves the prior pixels when the new channel count conflicts with metadata."""
     import cupy as cp
@@ -327,7 +327,7 @@ def test_frame_data_assignment_checks_channel_count_transactionally() -> None:
     assert source.shape == (2, 2, 3)
 
 
-@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("SP-PIX-002")
 def test_channels_normalizes_compact_and_sequence_inputs() -> None:
     """Frame parses compact known channel labels greedily and accepts explicit sequences with arbitrary labels."""
     assert px.core.channels("YCbCrA") == ("Y", "Cb", "Cr", "A")
@@ -341,8 +341,8 @@ def test_channels_normalizes_compact_and_sequence_inputs() -> None:
         px.core.channels(["R", ""])
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-015")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-015")
 def test_all_channel_entry_points_accept_the_same_input_forms() -> None:
     """Frame construction, channel assignment, and array export accept the same channel declaration forms."""
     result = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="sRGB", channels="RGB")
@@ -354,7 +354,7 @@ def test_all_channel_entry_points_accept_the_same_input_forms() -> None:
     assert output.shape == result.shape
 
 
-@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("SP-PIX-002")
 def test_channels_read_as_tuple_and_repr_uses_compact_form_only_for_known_labels() -> None:
     """Frame returns channel labels as a tuple and abbreviates them in repr only when every label is known."""
     known = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="sRGB", channels="RGB")
@@ -370,8 +370,8 @@ def test_channels_read_as_tuple_and_repr_uses_compact_form_only_for_known_labels
     assert "channels=('depth', 'mask')" in repr(unknown)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-102")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-102")
 def test_frame_exposes_read_only_geometry_and_dtype_without_operator_forwarding() -> None:
     """Frame exposes read-only geometry and dtype while avoiding implicit array operators."""
     source = px.io.from_array(_sample_data(), colorspace="sRGB", gamma="sRGB", channels="RGB")

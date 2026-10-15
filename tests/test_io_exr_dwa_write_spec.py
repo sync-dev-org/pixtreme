@@ -390,10 +390,10 @@ def _oracle_quantization_tables(dwa_level: float) -> tuple[np.ndarray, np.ndarra
     return base_error * _JPEG_LUMINANCE / np.float32(10.0), base_error * _JPEG_CHROMA / np.float32(17.0)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_dwa_quantization_tables_and_gpu_selection_match_an_independent_half_oracle() -> None:
     """GPU DWA coefficient quantization and HALF selection match an independently calculated result."""
     import cupy as cp
@@ -551,7 +551,7 @@ def test_dwa_quantization_tables_and_gpu_selection_match_an_independent_half_ora
     np.testing.assert_array_equal(actual, expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_dwa_quantizer_breaks_an_equal_population_and_distance_tie_by_magnitude() -> None:
     """DWA quantization resolves equal population and distance ties in favor of the smaller HALF magnitude."""
     import cupy as cp
@@ -576,9 +576,9 @@ def test_dwa_quantizer_breaks_an_equal_population_and_distance_tie_by_magnitude(
     assert actual == _minimum_population_half(float(source_value), float(tolerance))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_gpu_huffman_encoder_builds_a_histogram_codebook_and_round_trips_runs() -> None:
     """GPU DWA Huffman encoding builds canonical histogram codes whose repeated symbols decode exactly."""
     import cupy as cp
@@ -598,9 +598,9 @@ def test_gpu_huffman_encoder_builds_a_histogram_codebook_and_round_trips_runs() 
     assert table.data_bit_count < sum(lengths[int(symbol)] for symbol in symbols)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_gpu_huffman_batch_encoder_round_trips_independent_chunk_codebooks() -> None:
     """GPU DWA Huffman encoding batches chunks while preserving each chunk's independent codebook and bit stream."""
     import cupy as cp
@@ -631,9 +631,9 @@ def test_gpu_huffman_batch_encoder_round_trips_independent_chunk_codebooks() -> 
         np.testing.assert_array_equal(actual, expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_gpu_byte_rle_batch_encoder_round_trips_independent_chunks() -> None:
     """GPU DWA byte RLE encoding batches chunks without letting a run cross a chunk boundary."""
     import cupy as cp
@@ -659,7 +659,7 @@ def test_gpu_byte_rle_batch_encoder_round_trips_independent_chunks() -> None:
         assert actual == expected
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_candidate_file_transmits_the_independent_host_oracle_coefficients(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -782,9 +782,9 @@ def _dwa_transfer_trial_frame(
     return px.io.from_array(cp.asarray(values), colorspace="ACEScg", gamma="linear", channels=channels)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize(
     ("compression", "dwa_level", "dtype", "channels"),
     (
@@ -819,8 +819,8 @@ def test_dwa_transfer_fusion_preserves_encode_bitstream_characterization(
     assert candidate_path.read_bytes() == eager_path.read_bytes()
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_hybrid_dwaa_writer_clamps_finite_float_samples_to_the_half_range(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -852,7 +852,7 @@ def test_hybrid_dwaa_writer_clamps_finite_float_samples_to_the_half_range(
     np.testing.assert_array_equal(actual, expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("compression", ("dwaa", "dwab"))
 @pytest.mark.parametrize("dtype", (np.uint8, np.uint16, np.float16, np.float32))
 def test_hybrid_dwa_writer_cross_backend_round_trips_every_storage_and_channel_class(
@@ -904,7 +904,7 @@ def test_hybrid_dwa_writer_cross_backend_round_trips_every_storage_and_channel_c
         assert np.isfinite(decoded).all()
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_hybrid_dwaa_writer_emits_partial_compressed_and_raw_chunks_with_real_offsets(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -940,7 +940,7 @@ def test_hybrid_dwaa_writer_emits_partial_compressed_and_raw_chunks_with_real_of
     np.testing.assert_array_equal(decoded, values[..., 0])
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("compression", ("dwaa", "dwab"))
 def test_hybrid_dwa_writer_emits_independent_y_chroma_alpha_and_unknown_routes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, compression: str
@@ -968,7 +968,7 @@ def test_hybrid_dwa_writer_emits_independent_y_chroma_alpha_and_unknown_routes(
         assert np.isfinite(np.asarray(decoded[label].pixels)).all()
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_hybrid_dwa_write_helper_graph_limits_every_device_to_host_transfer(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1010,8 +1010,8 @@ def test_hybrid_dwa_write_helper_graph_limits_every_device_to_host_transfer(
     ]
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_unexpected_hybrid_dwa_write_failure_is_actionable_and_never_falls_back(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1037,7 +1037,7 @@ def test_unexpected_hybrid_dwa_write_failure_is_actionable_and_never_falls_back(
     assert not path.exists()
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_hybrid_dwa_header_uses_the_resolved_default_level() -> None:
     """DWA EXR writes store the resolved default compression level as a float32 header value."""
     encoded_channels = exr_packing._encode_exr_output_channels(("R",))

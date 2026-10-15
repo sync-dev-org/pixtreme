@@ -36,7 +36,7 @@ def _exr_header(*attributes: bytes) -> bytes:
     return struct.pack("<II", 20000630, 2) + b"".join(attributes) + b"\x00"
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_image_header_is_a_frozen_minimal_pydantic_model(tmp_path: Path) -> None:
     """Image header inspection exposes a fixed immutable model with orientation and storage fields."""
     path = tmp_path / "sample.png"
@@ -54,7 +54,7 @@ def test_image_header_is_a_frozen_minimal_pydantic_model(tmp_path: Path) -> None
         header.width = 4  # type: ignore[misc]
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_read_header_uses_no_gpu_codec_or_cuda_visible_device(tmp_path: Path) -> None:
     """Reading an image header succeeds without decoding pixels or opening a CUDA device."""
     path = tmp_path / "sample.png"
@@ -81,7 +81,7 @@ assert "OpenEXR" not in sys.modules
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_pixtreme_import_is_lazy_with_both_io_dependencies_blocked() -> None:
     """Importing pixtreme succeeds even when optional image I/O backends cannot be imported."""
     script = """
@@ -109,8 +109,8 @@ assert "nvidia.nvimgcodec" not in sys.modules
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("suffix", (".gif", ".heic", ".cin", ""))
 def test_read_header_rejects_unsupported_extensions_with_actionable_errors(tmp_path: Path, suffix: str) -> None:
     """Header inspection rejects unsupported filename extensions and explains the accepted image formats."""
@@ -121,8 +121,8 @@ def test_read_header_rejects_unsupported_extensions_with_actionable_errors(tmp_p
         px.io.read_header(path)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("suffix", "payload", "observed"),
     (

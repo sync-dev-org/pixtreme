@@ -80,8 +80,8 @@ def _recode_oracle(values: np.ndarray, target_dtype: str) -> np.ndarray:
     return np.floor(np.clip(source.astype(np.float64), 0.0, 1.0) * maximum + 0.5).astype(target)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_hand_built_uint_and_mixed_wire_reads_follow_the_public_dtype_contract(tmp_path: Path) -> None:
     """EXR reads apply documented float32 and unchanged native type rules to UINT and mixed type files, including
     lossy storage."""
@@ -123,9 +123,9 @@ def test_hand_built_uint_and_mixed_wire_reads_follow_the_public_dtype_contract(t
         px.io.read_image(mixed_path, unchanged=True)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("suffix", ("png", "tga", "hdr", "dpx"))
 def test_explicit_write_dtype_is_rejected_outside_exr(tmp_path: Path, suffix: str) -> None:
     """Image writes reject an EXR-only dtype option for other formats and explain how to choose a valid format."""
@@ -135,9 +135,9 @@ def test_explicit_write_dtype_is_rejected_outside_exr(tmp_path: Path, suffix: st
         px.io.write_image(tmp_path / f"image.{suffix}", frame, dtype="float16")
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("dtype", ("uint16", "fp32", "FLOAT", "", 32, True))
 def test_exr_write_dtype_rejects_values_outside_the_three_token_set(tmp_path: Path, dtype: object) -> None:
     """EXR writes reject dtype values outside the three supported storage type names."""
@@ -147,8 +147,8 @@ def test_exr_write_dtype_rejects_values_outside_the_three_token_set(tmp_path: Pa
         px.io.write_image(tmp_path / "invalid.exr", frame, dtype=dtype)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     ("input_dtype", "dtype", "storage_dtype"),
     (
@@ -192,8 +192,8 @@ def test_exr_write_dtype_resolution_matches_independent_full_scale_oracle(
     cp.testing.assert_array_equal(frame.data, before)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("compression", _COMPRESSIONS)
 def test_native_uint32_write_is_bit_exact_for_every_compression(tmp_path: Path, compression: str) -> None:
     """Every EXR compression preserves native UINT32 bits and returns literal values on default reads."""

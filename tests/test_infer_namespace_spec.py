@@ -60,8 +60,8 @@ def _assert_process_succeeded(result: subprocess.CompletedProcess[str]) -> None:
     assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
 
 
-@pytest.mark.req("REQ-PIX-112")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-112")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("name", "distribution"),
     (("infer", "pixtreme-infer"), ("transport", "pixtreme-transport")),
@@ -89,14 +89,14 @@ else:
     _assert_process_succeeded(result)
 
 
-@pytest.mark.req("REQ-PIX-112")
+@pytest.mark.req("SP-PIX-112")
 def test_unknown_root_attribute_remains_attribute_error() -> None:
     """An unknown root package attribute raises AttributeError when it is not a reserved companion name."""
     with pytest.raises(AttributeError, match="module 'pixtreme' has no attribute 'nonexistent'"):
         px.nonexistent
 
 
-@pytest.mark.req("REQ-PIX-112")
+@pytest.mark.req("SP-PIX-112")
 def test_split_companion_loads_without_changing_the_root_surface(tmp_path: Path) -> None:
     """Loading an installed companion exposes its reserved namespace without adding other root exports."""
     companion_root = _write_infer_companion(tmp_path, 'MARKER = "split-companion"\n')
@@ -123,7 +123,7 @@ assert "infer" not in vars(px)
     _assert_process_succeeded(result)
 
 
-@pytest.mark.req("REQ-PIX-112")
+@pytest.mark.req("SP-PIX-112")
 def test_infer_internal_module_not_found_error_propagates_unchanged(tmp_path: Path) -> None:
     """A missing dependency inside an installed infer companion raises its original import error."""
     companion_root = _write_infer_companion(tmp_path, "import deliberately_missing_infer_dependency\n")

@@ -111,8 +111,8 @@ def _tetrahedral_host(cube: np.ndarray, coordinate: np.ndarray) -> np.ndarray:
     return v000 + fb * (v001 - v000) + fg * (v011 - v001) + fr * (v111 - v011)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-103")
 def test_cube_1d_preserves_independent_curves_domains_and_unbounded_outputs(tmp_path: Path) -> None:
     """A Cube 1D LUT preserves independent RGB curves, per-channel domains, and outputs outside the unit range."""
     path = _write_lut_fixture(tmp_path, ".cube", _cube_1d_text())
@@ -128,8 +128,8 @@ def test_cube_1d_preserves_independent_curves_domains_and_unbounded_outputs(tmp_
     assert lut.domain_max == (1.0, 2.0, 3.0)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "text",
     (
@@ -154,7 +154,7 @@ def test_cube_parser_rejects_ambiguous_or_malformed_1d_inputs(tmp_path: Path, te
     _assert_actionable(error.value)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_lustre_3dl_header_controls_edge_scale_and_blue_fastest_mapping(tmp_path: Path) -> None:
     """Lustre 3DL parsing uses header edge and scale values and maps blue-fastest rows to RGB indices."""
     edge = 17
@@ -178,7 +178,7 @@ def test_lustre_3dl_header_controls_edge_scale_and_blue_fastest_mapping(tmp_path
     np.testing.assert_array_equal(cp.asnumpy(lut.data)[8, 3, 14], cube[8, 3, 14].astype(np.float32) / 255.0)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize(
     ("maximum", "full_scale"),
     ((511, 255), (512, 1023), (2047, 1023), (2048, 4095), (8191, 4095), (8192, 65535), (65535, 65535)),
@@ -195,7 +195,7 @@ def test_headerless_3dl_uses_ocio_integer_scale_boundaries(tmp_path: Path, maxim
     assert cp.asnumpy(lut.data)[1, 1, 1, 0] == expected
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_headerless_3dl_near_identity_spacing_preserves_normalized_cube_bits(tmp_path: Path) -> None:
     """A near-identity 3DL shaper keeps normalized cube data without resampling."""
     edge = 3
@@ -210,7 +210,7 @@ def test_headerless_3dl_near_identity_spacing_preserves_normalized_cube_bits(tmp
     np.testing.assert_array_equal(cp.asnumpy(lut.data), expected)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_headerless_3dl_bakes_nonidentity_shaper_with_independent_tetrahedral_oracle(tmp_path: Path) -> None:
     """A nonidentity 3DL shaper bakes into the cube according to an independent float64 tetrahedral reference."""
     edge = 3
@@ -245,7 +245,7 @@ def test_headerless_3dl_bakes_nonidentity_shaper_with_independent_tetrahedral_or
     np.testing.assert_allclose(cp.asnumpy(lut.data), expected.astype(np.float32), rtol=0.0, atol=1e-7)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_headerless_3dl_blue_fastest_rows_transpose_into_rgb_indexed_data(tmp_path: Path) -> None:
     """Headerless 3DL parsing places blue-fastest rows at the correct RGB grid indices."""
     cube = np.empty((2, 2, 2, 3), dtype=np.int64)
@@ -262,8 +262,8 @@ def test_headerless_3dl_blue_fastest_rows_transpose_into_rgb_indexed_data(tmp_pa
     np.testing.assert_array_equal(cp.asnumpy(lut.data), (cube.astype(np.float64) / scale).astype(np.float32))
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "text",
     (
@@ -286,7 +286,7 @@ def test_3dl_rejects_invalid_codes_spacing_rows_and_headers(tmp_path: Path, text
     _assert_actionable(error.value)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize(
     ("components", "expected"),
     (
@@ -309,8 +309,8 @@ def test_spi1d_maps_each_component_variant_and_shared_domain(
     assert lut.domain_max == (4.0, 4.0, 4.0)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "text",
     (
@@ -335,7 +335,7 @@ def test_spi1d_rejects_invalid_grammar_and_table_shape(tmp_path: Path, text: str
     _assert_actionable(error.value)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_spi3d_uses_explicit_indices_independent_of_row_order(tmp_path: Path) -> None:
     """SPI3D parsing places each row at its explicit grid index regardless of row order."""
     rows = _spi3d_text().splitlines()[3:]
@@ -353,8 +353,8 @@ def test_spi3d_uses_explicit_indices_independent_of_row_order(tmp_path: Path) ->
     assert lut.domain_max == (1.0, 1.0, 1.0)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("case", ("header", "sizes", "duplicate", "missing", "range", "width", "numeric"))
 def test_spi3d_rejects_invalid_headers_and_index_sets(tmp_path: Path, case: str) -> None:
     """SPI3D parsing rejects invalid headers, sizes, and missing or duplicate grid indices."""
@@ -381,7 +381,7 @@ def test_spi3d_rejects_invalid_headers_and_index_sets(tmp_path: Path, case: str)
     _assert_actionable(error.value)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize(
     ("suffix", "text", "expected_type"),
     (
@@ -400,8 +400,8 @@ def test_read_lut_routes_case_insensitive_closed_extensions(
     assert isinstance(px.io.read_lut(path), expected_type)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 def test_read_lut_rejects_unsupported_extension_before_filesystem_access(tmp_path: Path) -> None:
     """Reading a LUT rejects an unsupported extension before touching the file system."""
     unsupported = tmp_path / "does-not-exist.look"
@@ -413,7 +413,7 @@ def test_read_lut_rejects_unsupported_extension_before_filesystem_access(tmp_pat
     assert not isinstance(error.value, FileNotFoundError)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_read_lut_distinguishes_missing_utf8_and_malformed_files(tmp_path: Path) -> None:
     """Reading a LUT distinguishes missing files, invalid UTF-8, and malformed format data by exception type."""
     with pytest.raises(FileNotFoundError) as missing:
@@ -433,7 +433,7 @@ def test_read_lut_distinguishes_missing_utf8_and_malformed_files(tmp_path: Path)
     _assert_actionable(parsed.value)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize(
     ("suffix", "text"),
     (
@@ -463,8 +463,8 @@ def test_decode_lut_sniffs_each_format_and_matches_read_lut(tmp_path: Path, suff
     np.testing.assert_array_equal(cp.asnumpy(decoded.data), cp.asnumpy(read.data))
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "payload",
     (
@@ -482,8 +482,8 @@ def test_decode_lut_rejects_ambiguous_unknown_non_utf8_and_non_bytes(payload: ob
     _assert_actionable(error.value)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 def test_decode_lut_does_not_fall_through_after_marker_parse_failure() -> None:
     """Decoding a marked Cube LUT reports its parser error without trying a different format."""
     payload = b"LUT_1D_SIZE nope\n0 255\n0 0 0\n0 0 0\n0 0 0\n0 0 0\n0 0 0\n0 0 0\n0 0 0\n0 0 0\n"
@@ -495,7 +495,7 @@ def test_decode_lut_does_not_fall_through_after_marker_parse_failure() -> None:
     assert "LUT_1D_SIZE" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_decode_lut_sniffs_headerless_3dl_after_ignoring_vendor_metadata() -> None:
     """Decoding a headerless 3DL LUT skips vendor metadata before inspecting the first numeric row."""
     text = "Flame export metadata\nLUT name ignored\n" + _headerless_3dl_text((0, 85, 170, 255))
@@ -506,7 +506,7 @@ def test_decode_lut_sniffs_headerless_3dl_after_ignoring_vendor_metadata() -> No
     assert decoded.data.shape == (4, 4, 4, 3)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_decode_lut_marked_cube_sniff_avoids_active_line_materialization(monkeypatch: pytest.MonkeyPatch) -> None:
     """Decoding a marked Cube LUT detects its format without materializing every active line."""
     import pixtreme._io.formats.lut as implementation
@@ -525,7 +525,7 @@ def test_decode_lut_marked_cube_sniff_avoids_active_line_materialization(monkeyp
     )
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_read_lut_cube_extracts_directives_in_one_structural_scan(tmp_path: Path) -> None:
     """Reading a Cube LUT extracts its directives in one scan of active lines."""
     import pixtreme._io.formats.lut as implementation
@@ -544,7 +544,7 @@ def test_read_lut_cube_extracts_directives_in_one_structural_scan(tmp_path: Path
     )
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_write_lut_emits_deterministic_cube_text_for_1d_and_3d(tmp_path: Path) -> None:
     """Writing a 1D or 3D Cube LUT emits deterministic UTF-8 text with complete domain and grid data."""
     one_d = px.core.Lut1D(
@@ -582,7 +582,7 @@ def test_write_lut_emits_deterministic_cube_text_for_1d_and_3d(tmp_path: Path) -
     assert three_path.read_bytes().endswith(b"\n")
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_write_lut_bulk_serialization_keeps_shortest_float32_bytes_without_python_row_iteration(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -618,7 +618,7 @@ def test_write_lut_bulk_serialization_keeps_shortest_float32_bytes_without_pytho
     )
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize("kind", ("1d", "3d"))
 def test_write_read_roundtrip_preserves_every_float32_bit_and_domain(tmp_path: Path, kind: str) -> None:
     """Writing and reading a finite LUT preserves every float32 table bit and its domain."""
@@ -655,8 +655,8 @@ def test_write_read_roundtrip_preserves_every_float32_bit_and_domain(tmp_path: P
     )
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 def test_write_lut_rejects_before_mutation_and_preserves_backend_causes(tmp_path: Path) -> None:
     """Writing a LUT validates before changing the destination and preserves backend error causes."""
     finite = px.core.Lut1D(cp.zeros((2, 3), dtype=cp.float32))
@@ -689,7 +689,7 @@ def test_write_lut_rejects_before_mutation_and_preserves_backend_causes(tmp_path
     assert isinstance(write_error.value.__cause__, OSError)
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 @pytest.mark.parametrize(
     "text",
     (
@@ -721,7 +721,7 @@ def test_each_decode_parser_performs_one_bulk_host_to_device_transfer(
     assert isinstance(transfers[0], np.ndarray)
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 @pytest.mark.parametrize("kind", ("1d", "3d"))
 def test_write_lut_performs_one_device_to_host_transfer(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, kind: str

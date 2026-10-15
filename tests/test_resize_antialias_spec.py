@@ -142,7 +142,7 @@ def _full_support_mask(input_extent: int, output_extent: int, lobes: int) -> np.
     return mask
 
 
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-010")
 def test_interpolation_vocabulary_and_resize_variants_are_canonical() -> None:
     """Resizing exposes three antialiased Lanczos variants alongside its point-sampled interpolation choices."""
     expected = (
@@ -171,7 +171,7 @@ def test_interpolation_vocabulary_and_resize_variants_are_canonical() -> None:
             )
 
 
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-010")
 @pytest.mark.parametrize(("token", "lobes"), tuple(zip(AA_TOKENS, (2, 3, 4), strict=True)))
 @pytest.mark.parametrize(("width", "height"), ((4, 3), (4, 11), (13, 3)))
 def test_antialiased_lanczos_matches_exact_support_numpy_oracle(
@@ -192,7 +192,7 @@ def test_antialiased_lanczos_matches_exact_support_numpy_oracle(
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=3e-5)
 
 
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-010")
 @pytest.mark.parametrize("token", AA_TOKENS)
 def test_antialiased_lanczos_normalizes_before_replicate_mapping(token: str) -> None:
     """Antialiased Lanczos includes every edge tap in normalization before replicate border mapping."""
@@ -209,7 +209,7 @@ def test_antialiased_lanczos_normalizes_before_replicate_mapping(token: str) -> 
     np.testing.assert_allclose(constant_result, expected_constant, rtol=0.0, atol=2e-6)
 
 
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-010")
 @pytest.mark.parametrize(("aa_token", "point_token"), tuple(AA_TO_POINT.items()))
 @pytest.mark.parametrize(("width", "height"), ((7, 5), (13, 11), (7, 11), (13, 5)))
 def test_nonshrinking_antialiased_lanczos_is_bit_identical_to_point_sampled(
@@ -226,7 +226,7 @@ def test_nonshrinking_antialiased_lanczos_is_bit_identical_to_point_sampled(
     np.testing.assert_array_equal(antialiased, point_sampled)
 
 
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-010")
 def test_existing_resize_output_bits_remain_frozen_characterization() -> None:
     """characterization: Existing resize tokens retain recorded output bits across shrinking, enlargement,
     and unchanged sizes.
@@ -246,7 +246,7 @@ def test_existing_resize_output_bits_remain_frozen_characterization() -> None:
         assert digest.hexdigest() == _BASELINE_DIGESTS[token]
 
 
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-010")
 @pytest.mark.parametrize(
     ("width", "height", "explicit"),
     ((4, 3, "area"), (4, 11, "area"), (13, 3, "area"), (9, 7, "lanczos4"), (13, 11, "lanczos4")),
@@ -260,7 +260,7 @@ def test_resize_auto_default_remains_bit_identical(width: int, height: int, expl
     np.testing.assert_array_equal(automatic, selected)
 
 
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-010")
 def test_lanczos3_aa_matches_pillow_on_the_fixed_full_support_corpus() -> None:
     """Antialiased Lanczos3 matches Pillow in full-support interior pixels and the independent edge oracle elsewhere."""
     from PIL import Image
@@ -305,10 +305,10 @@ def test_lanczos3_aa_matches_pillow_on_the_fixed_full_support_corpus() -> None:
     assert worst <= 2e-5, f"production-path Pillow interior max absolute error was {worst:.9g}"
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-010")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-010")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("token", AA_TOKENS)
 def test_antialiased_lanczos_preserves_frame_and_unclamped_channel_contract(token: str) -> None:
     """Antialiased Lanczos keeps each channel and Frame metadata, retains out-of-range values, and returns separate float32 pixels."""
@@ -404,7 +404,7 @@ def _non_resize_calls(token: str) -> tuple[tuple[str, Callable[[], object]], ...
     return tuple(calls)
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "token",
     ("lanczos2-aa", "LANCZOS2_AA", "lanczos3-aa", "Lanczos.3 AA", "lanczos4-aa", "LANCZOS4AA"),
@@ -420,8 +420,8 @@ def test_non_resize_interpolation_subsets_reject_antialiased_lanczos_before_pixe
         assert all(candidate not in how for candidate in AA_TOKENS), name
 
 
-@pytest.mark.req("REQ-PIX-010")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-010")
+@pytest.mark.req("SP-PIX-017")
 def test_resize_fail_fast_boundaries_include_the_expanded_canonical_subset() -> None:
     """Resizing lists antialiased Lanczos options for unknown tokens and explains invalid tokens, inputs, and sizes."""
     import cupy as cp
@@ -453,8 +453,8 @@ def test_resize_fail_fast_boundaries_include_the_expanded_canonical_subset() -> 
     _assert_actionable(size_error)
 
 
-@pytest.mark.req("REQ-PIX-010")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-010")
+@pytest.mark.req("SP-PIX-017")
 def test_resize_antialias_docstring_is_self_contained_and_llm_readable() -> None:
     """Developers can find antialias selection, filter support, edge behavior, and comparison limits in the resize docstring."""
     docstring = inspect.getdoc(px.transform.resize)

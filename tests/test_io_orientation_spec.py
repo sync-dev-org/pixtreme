@@ -59,8 +59,8 @@ def _assert_same_frame(actual: px.core.Frame, expected: px.core.Frame) -> None:
     cp.testing.assert_array_equal(actual.data, expected.data)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_orientation_public_signatures_and_exact_bool_validation_are_fixed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -90,7 +90,7 @@ def test_orientation_public_signatures_and_exact_bool_validation_are_fixed(
             px.io.decode_image(payload, apply_exif_orientation=invalid)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("format_name", _TARGET_FORMATS)
 @pytest.mark.parametrize("orientation", range(1, 9))
 def test_target_formats_apply_the_normative_orientation_at_file_bytes_and_header_boundaries(
@@ -127,7 +127,7 @@ def test_target_formats_apply_the_normative_orientation_at_file_bytes_and_header
     assert (header.width, header.height, header.orientation) == (expected_width, expected_height, orientation)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("format_name", _TARGET_FORMATS)
 def test_orientation_preserves_channel_selection_and_file_bytes_equivalence(tmp_path: Path, format_name: str) -> None:
     """Applying orientation preserves selected channel labels and yields equal samples from file and bytes input."""
@@ -146,7 +146,7 @@ def test_orientation_preserves_channel_selection_and_file_bytes_equivalence(tmp_
     np.testing.assert_array_equal(_frame_values(oriented_bytes), _oriented(_frame_values(stored), 6))
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_lossless_webp_exif_is_decoded_at_file_and_bytes_boundaries(tmp_path: Path) -> None:
     """Lossless WebP files and bytes apply EXIF orientation with the same mapping as lossy WebP."""
     payload = encode_lossless_oriented_webp(6)
@@ -164,8 +164,8 @@ def test_lossless_webp_exif_is_decoded_at_file_and_bytes_boundaries(tmp_path: Pa
     assert (header.width, header.height, header.orientation) == (18, 24, 6)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_webp_payload_read_failure_after_header_parse_is_actionable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -193,7 +193,7 @@ def test_webp_payload_read_failure_after_header_parse_is_actionable(
     assert read_calls == [path]
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_image_header_orientation_defaults_to_one_for_direct_construction(tmp_path: Path) -> None:
     """Directly constructed image headers use orientation one when no orientation is supplied."""
     path = tmp_path / "plain.png"
@@ -207,7 +207,7 @@ def test_image_header_orientation_defaults_to_one_for_direct_construction(tmp_pa
     assert set(px.io.ImageHeader.model_fields) == {"format", "width", "height", "parts", "color", "orientation"}
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_oriented_headers_for_all_target_formats_are_codec_lazy_and_gpu_free(tmp_path: Path) -> None:
     """Orientation-aware header inspection reads JPEG, PNG, TIFF, and WebP without codecs or GPU work."""
     paths: list[Path] = []
@@ -248,7 +248,7 @@ _INVALID_EXIF = (
 )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("case", "metadata"), _INVALID_EXIF, ids=lambda value: value if isinstance(value, str) else None
 )
@@ -272,7 +272,7 @@ def test_invalid_orientation_metadata_warns_and_falls_back_at_every_boundary(
             np.testing.assert_array_equal(_frame_values(frame), orientation_pattern())
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("format_name", _TARGET_FORMATS)
 def test_missing_orientation_is_silent_identity_for_every_target_format(tmp_path: Path, format_name: str) -> None:
     """An image without an orientation tag silently uses identity orientation at every input boundary."""
@@ -291,7 +291,7 @@ def test_missing_orientation_is_silent_identity_for_every_target_format(tmp_path
     assert [item for item in caught if "EXIF orientation" in str(item.message)] == []
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_secondary_ifd_orientation_does_not_apply_to_the_primary_image(tmp_path: Path) -> None:
     """Orientation in a TIFF thumbnail or secondary image directory does not rotate the primary image."""
     metadata = exif_payload((), secondary_entries=((274, 3, 1, 6),))
@@ -309,7 +309,7 @@ def test_secondary_ifd_orientation_does_not_apply_to_the_primary_image(tmp_path:
     assert [item for item in caught if "EXIF orientation" in str(item.message)] == []
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_non_target_file_and_bytes_formats_ignore_the_orientation_switch(tmp_path: Path) -> None:
     """Image formats without orientation support accept the orientation switch without changing decoded results."""
     values = np.arange(4 * 8 * 3, dtype=np.uint8).reshape(4, 8, 3)

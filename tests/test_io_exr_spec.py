@@ -37,8 +37,8 @@ def _rgb(dtype: type[np.generic] = np.float16) -> dict[str, np.ndarray]:
     }
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_read_exr_defaults_to_rgb_float32_and_preserves_half_unchanged(tmp_path: Path) -> None:
     """EXR reads select RGB and return float32 by default, while unchanged reads retain native HALF pixels."""
     path = tmp_path / "rgb.EXR"
@@ -70,7 +70,7 @@ def test_read_exr_defaults_to_rgb_float32_and_preserves_half_unchanged(tmp_path:
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_read_exr_keeps_alpha_and_selects_dotted_channels_by_sequence(tmp_path: Path) -> None:
     """EXR reads include alpha by default and return selected dotted channel names in the requested order."""
     path = tmp_path / "multilayer.exr"
@@ -95,8 +95,8 @@ def test_read_exr_keeps_alpha_and_selects_dotted_channels_by_sequence(tmp_path: 
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_read_exr_without_rgb_requires_explicit_selection_and_names_read_header(tmp_path: Path) -> None:
     """EXR reads without RGB require explicit channels and direct callers to header inspection when selection is
     missing."""
@@ -109,8 +109,8 @@ def test_read_exr_without_rgb_requires_explicit_selection_and_names_read_header(
     assert result.channels == ("Z",)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_true_multipart_exr_resolves_unique_and_qualified_names_and_rejects_ambiguity(tmp_path: Path) -> None:
     """Multipart EXR reads accept unique channel names and part-qualified names while rejecting ambiguous names."""
     path = tmp_path / "multipart.exr"
@@ -143,8 +143,8 @@ def test_true_multipart_exr_resolves_unique_and_qualified_names_and_rejects_ambi
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_true_multipart_exr_rejects_selected_channels_with_different_dimensions(tmp_path: Path) -> None:
     """Multipart EXR reads reject selected channels from parts with different dimensions before combining pixels."""
     path = tmp_path / "dimensions.exr"
@@ -160,8 +160,8 @@ def test_true_multipart_exr_rejects_selected_channels_with_different_dimensions(
         px.io.read_image(path, channels=["small.R", "large.G"])
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_exr_mixed_channel_types_promote_by_default_and_reject_unchanged(tmp_path: Path) -> None:
     """EXR reads promote mixed HALF and FLOAT channels to float32 by default and reject unchanged mixed type output."""
     path = tmp_path / "mixed.exr"
@@ -177,8 +177,8 @@ def test_exr_mixed_channel_types_promote_by_default_and_reject_unchanged(tmp_pat
         px.io.read_image(path, unchanged=True)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_exr_uint32_channels_use_literal_float32_default_and_native_unchanged_reads(tmp_path: Path) -> None:
     """EXR reads convert UINT32 values literally to float32 by default and retain uint32 with unchanged output."""
     path = tmp_path / "uint.exr"
@@ -204,8 +204,8 @@ def test_exr_uint32_channels_use_literal_float32_default_and_native_unchanged_re
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_exr_file_color_metadata_maps_and_per_call_claims_override_it(tmp_path: Path) -> None:
     """EXR reads map ACES and chromaticities metadata to Frame color information unless the caller supplies an
     override."""
@@ -227,7 +227,7 @@ def test_exr_file_color_metadata_maps_and_per_call_claims_override_it(tmp_path: 
     assert "chromaticities" in header.color.raw and "acesImageContainerFlag" in header.color.raw
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_read_header_exr_reports_every_part_channel_type_and_data_window_dimensions(tmp_path: Path) -> None:
     """EXR header inspection reports all parts, channel types, and data-window dimensions without decoding pixels."""
     path = tmp_path / "header.exr"
@@ -248,9 +248,9 @@ def test_read_header_exr_reports_every_part_channel_type_and_data_window_dimensi
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(("dtype", "expected_dtype"), (("float16", "float16"), ("float32", "float16")))
 def test_write_exr_uses_default_half_storage_and_writes_mappable_chromaticities(
     tmp_path: Path,
@@ -280,7 +280,7 @@ def test_write_exr_uses_default_half_storage_and_writes_mappable_chromaticities(
     assert "chromaticities" in exr_header
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_write_exr_preserves_custom_channel_names(tmp_path: Path) -> None:
     """EXR writes use the Frame's custom channel labels as file channel names."""
     import cupy as cp
@@ -306,8 +306,8 @@ def test_write_exr_preserves_custom_channel_names(tmp_path: Path) -> None:
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_write_exr_rejects_duplicate_channel_labels_with_actionable_context(tmp_path: Path) -> None:
     """EXR writes reject duplicate channel labels and explain which labels must be made unique."""
     import cupy as cp

@@ -318,8 +318,8 @@ def _conversion(
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_canon_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> None:
     """Canon color tokens appear in the canonical vocabulary and public annotations without extra aliases."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
@@ -339,8 +339,8 @@ def test_canon_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -
     assert not any("Canon" in item for alias in _PERMANENT_TOKEN_ALIASES for item in alias)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_canon_token_keys_and_invalid_inputs_follow_the_shared_boundary(monkeypatch: pytest.MonkeyPatch) -> None:
     """Canon tokens normalize within their families, and invalid values receive canonical recovery guidance."""
     from pixtreme._core.validation import _normalized_closed_token
@@ -387,9 +387,9 @@ def test_canon_token_keys_and_invalid_inputs_follow_the_shared_boundary(monkeypa
         assert repr(_GAMMAS) in message
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize(
     ("gamma", "reflectance", "float64_codes", "integer_codes"),
     (
@@ -441,9 +441,9 @@ def test_canon_log_and_log2_encode_match_independent_piecewise_oracles(
     assert encoded.data.dtype == cp.float32
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("gamma", ("Canon-Log", "Canon-Log-2"))
 def test_canon_log_and_log2_decode_grids_ulp_and_round_trips_match_independent_inverses(gamma: str) -> None:
     """Canon Log and Canon Log 2 decode signed values and round trip within the independent inverse tolerance."""
@@ -483,7 +483,7 @@ def test_canon_log_and_log2_decode_grids_ulp_and_round_trips_match_independent_i
     np.testing.assert_allclose(_rgb_values(reencoded)[:, 0], round_trip_encoded, rtol=2e-6, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_canon_log3_encode_includes_both_cuts_in_the_linear_branch_and_matches_anchors() -> None:
     """Canon Log 3 encoding puts both branch cuts in the linear branch and matches published anchors."""
     cut = np.float32(_CURVES["Canon-Log-3"]["cut"])
@@ -526,9 +526,9 @@ def test_canon_log3_encode_includes_both_cuts_in_the_linear_branch_and_matches_a
     assert (encoded.gamma, encoded.matrix, encoded.channels) == ("Canon-Log-3", None, ("Z", "B", "R", "G"))
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_canon_log3_decode_thresholds_monotonicity_ulp_and_round_trips_match_oracle() -> None:
     """Canon Log 3 decoding selects its derived thresholds and round trips signed values monotonically."""
     constants = _CURVES["Canon-Log-3"]
@@ -597,7 +597,7 @@ def test_canon_log3_decode_thresholds_monotonicity_ulp_and_round_trips_match_ora
     np.testing.assert_allclose(_rgb_values(reencoded)[:, 0], encoded_round_trip, rtol=2e-6, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("gamma", ("Canon-Log", "Canon-Log-2", "Canon-Log-3"))
 def test_canon_transfer_standalone_and_fused_paths_are_bit_identical(gamma: str) -> None:
     """Canon transfers produce identical pixels through standalone and fused color paths."""
@@ -615,7 +615,7 @@ def test_canon_transfer_standalone_and_fused_paths_are_bit_identical(gamma: str)
     assert cp.array_equal(standalone_decoded.data[..., 0], encoded.data[..., 0])
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_canon_cinema_gamut_matrix_conversions_and_native_row_match_independent_oracles() -> None:
     """Canon Cinema Gamut matrices, conversions, and native luma row match independent calculations."""
     from pixtreme._core.colorspace import _COLORSPACE_DEFINITIONS
@@ -641,7 +641,7 @@ def test_canon_cinema_gamut_matrix_conversions_and_native_row_match_independent_
     assert np.any(_rgb_values(converted) < 0.0) and np.any(_rgb_values(converted) > 1.0)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_canon_cinema_gamut_uses_d65_identity_bradford_and_cat02_only_as_auxiliary_oracle() -> None:
     """Canon Cinema Gamut uses D65 identity and Bradford adaptation for public color conversion."""
     from pixtreme._color.transform import _compose_matrix
@@ -660,8 +660,8 @@ def test_canon_cinema_gamut_uses_d65_identity_bradford_and_cat02_only_as_auxilia
     assert np.max(np.abs(canon_to_aces_bradford - _CANON_CAT02_TO_ACES)) > 5e-3
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("gamma", ("Canon-Log", "Canon-Log-2", "Canon-Log-3"))
 @pytest.mark.parametrize("target", ("Rec.709", "ACES2065-1"))
 def test_canon_frames_convert_end_to_end_with_independent_transfer_and_gamut_oracle(gamma: str, target: str) -> None:
@@ -687,7 +687,7 @@ def test_canon_frames_convert_end_to_end_with_independent_transfer_and_gamut_ora
     assert np.any(_rgb_values(converted) < 0.0) and np.any(_rgb_values(converted) > 1.0)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_existing_token_bits_remain_at_the_pre_canon_baseline() -> None:
     """Other supported color tokens retain their exact transfer and gamut pixel values."""
     # Provenance: captured from the complete pre-Canon commit
@@ -748,7 +748,7 @@ def test_existing_token_bits_remain_at_the_pre_canon_baseline() -> None:
         )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_canon_dpx_transfer_codes_are_logarithmic_and_existing_mappings_remain_unchanged(tmp_path: Path) -> None:
     """DPX writing identifies Canon Log transfers as logarithmic and preserves other transfer mappings."""
     from pixtreme._io.formats.dpx import _dpx_transfer_from_gamma

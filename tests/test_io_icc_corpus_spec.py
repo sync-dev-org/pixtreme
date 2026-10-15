@@ -185,8 +185,8 @@ def _corpus() -> tuple[tuple[str, bytes, str, str, str], ...]:
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_deterministic_icc_corpus_maps_and_matches_colour_lcms_and_composite_oracles() -> None:
     """ICC v2 and v4 curve profiles map to color metadata that agrees with independent color-library oracles."""
     corpus = _corpus()

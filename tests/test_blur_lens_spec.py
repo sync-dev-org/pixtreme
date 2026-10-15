@@ -108,8 +108,8 @@ def _lens_reference(
     return output
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_lens_public_signature_frame_entry_and_return_contract() -> None:
     """Lens blur accepts a Frame through its public signature, returns a Frame, and explains invalid array inputs."""
     import cupy as cp
@@ -133,8 +133,8 @@ def test_blur_lens_public_signature_frame_entry_and_return_contract() -> None:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("radius", (-1, -0.25, True, "1", float("nan"), float("inf"), float("-inf")))
 def test_blur_lens_radius_is_a_nonnegative_finite_non_bool_real(radius: object) -> None:
     """For lens blur, radius rejects negative, non-real, bool, and non-finite values."""
@@ -144,7 +144,7 @@ def test_blur_lens_radius_is_a_nonnegative_finite_non_bool_real(radius: object) 
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize("radius", (0, 0.25, 2, np.float32(1.5)))
 def test_blur_lens_radius_accepts_nonnegative_reals_without_an_artificial_upper_bound(radius: float) -> None:
     """For lens blur, finite nonnegative real radii are accepted without an API cap."""
@@ -152,8 +152,8 @@ def test_blur_lens_radius_accepts_nonnegative_reals_without_an_artificial_upper_
     assert px.filter.lens_blur(source, radius=radius).shape == source.shape
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("blades", (-1, 0, 1, 2, True, 3.0, "3"))
 def test_blur_lens_blades_is_none_or_an_integer_of_at_least_three(blades: object) -> None:
     """For lens blur, blades rejects values outside None or non-bool integers >= 3."""
@@ -163,7 +163,7 @@ def test_blur_lens_blades_is_none_or_an_integer_of_at_least_three(blades: object
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize("blades", (None, 3, 6, np.int32(5)))
 def test_blur_lens_blades_accepts_none_and_integral_values(blades: Integral | None) -> None:
     """Lens blur uses a circular aperture when blades is None and a polygon when it is an integer count."""
@@ -171,8 +171,8 @@ def test_blur_lens_blades_accepts_none_and_integral_values(blades: Integral | No
     assert px.filter.lens_blur(source, radius=1.0, blades=blades).shape == source.shape
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_lens_rotation_requires_blades_and_defaults_to_zero_for_polygons() -> None:
     """For lens blur, rotation is polygon-only and omitted means the +x zero-degree vertex."""
     source = _frame(np.arange(35, dtype=np.float32).reshape(5, 7, 1), channels=["signal"])
@@ -190,8 +190,8 @@ def test_blur_lens_rotation_requires_blades_and_defaults_to_zero_for_polygons() 
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("rotation", (True, "0", float("nan"), float("inf"), float("-inf")))
 def test_blur_lens_polygon_rotation_is_a_finite_non_bool_real(rotation: object) -> None:
     """For lens blur, polygon rotation rejects bool, non-real, and non-finite values."""
@@ -201,8 +201,8 @@ def test_blur_lens_polygon_rotation_is_a_finite_non_bool_real(rotation: object) 
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_lens_border_axis_defaults_and_fails_fast_with_all_tokens() -> None:
     """For lens blur, border is the exact four-token axis defaulting to mirror."""
     source = _frame(np.arange(12, dtype=np.float32).reshape(3, 4, 1), channels=["signal"])
@@ -224,8 +224,8 @@ def test_blur_lens_border_axis_defaults_and_fails_fast_with_all_tokens() -> None
         assert token in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_lens_border_value_contract_is_finite_real_symmetric_and_bool_excluding() -> None:
     """For lens blur, constant requires border_value and every other border forbids it."""
     source = _frame(np.zeros((2, 3, 1)), channels=["signal"])
@@ -243,7 +243,7 @@ def test_blur_lens_border_value_contract_is_finite_real_symmetric_and_bool_exclu
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 def test_radius_one_circle_matches_the_hand_counted_3x3_coverage_kernel() -> None:
     """For lens blur, radius-one circle uses the hand-counted 16x16 coverage weights."""
     values = np.zeros((7, 7, 1), dtype=np.float32)
@@ -263,7 +263,7 @@ def test_radius_one_circle_matches_the_hand_counted_3x3_coverage_kernel() -> Non
     )
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize(("blades", "rotation"), ((None, 0.0), (3, 0.0), (5, 27.5), (6, -40.0)))
 @pytest.mark.parametrize("border", BORDERS)
 def test_blur_lens_matches_independent_numpy_coverage_and_direct_convolution_oracle(
@@ -305,8 +305,8 @@ def test_blur_lens_matches_independent_numpy_coverage_and_direct_convolution_ora
     assert result.dtype == np.dtype(np.float32)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize(("radius", "blades"), ((0.0, None), (0.0, 5), (0.01, None), (0.01, 3)))
 def test_zero_and_zero_coverage_apertures_are_exact_identities_in_private_storage(
     radius: float,
@@ -330,10 +330,10 @@ def test_zero_and_zero_coverage_apertures_are_exact_identities_in_private_storag
     assert (result.colorspace, result.gamma, result.channels) == ("ACEScg", "ARRI-LogC4", ("depth", "confidence"))
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-103")
 def test_blur_lens_preserves_metadata_channels_and_unclamped_scene_values_in_private_storage() -> None:
     """Lens blur preserves channels, color metadata, and out of range pixel values in separate storage."""
     values = np.asarray(
@@ -370,8 +370,8 @@ def test_blur_lens_preserves_metadata_channels_and_unclamped_scene_values_in_pri
     )
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_lens_docstring_is_a_self_contained_llm_readable_contract() -> None:
     """Developers can find the lens blur aperture, border, identity, and cost rules in the public docstring."""
     docstring = inspect.getdoc(px.filter.lens_blur)

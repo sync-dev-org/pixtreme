@@ -133,8 +133,8 @@ def _vector_reference(
     return output.astype(np.float32)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_vector_public_signature_frame_entry_and_return_contract() -> None:
     """Vector blur accepts matching Frames, returns a Frame, and explains invalid array inputs."""
     import cupy as cp
@@ -157,8 +157,8 @@ def test_blur_vector_public_signature_frame_entry_and_return_contract() -> None:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_vector_requires_a_two_channel_spatially_matching_frame_field() -> None:
     """Vector blur requires a two channel Frame field matching the source dimensions and explains invalid fields."""
     import cupy as cp
@@ -177,7 +177,7 @@ def test_blur_vector_requires_a_two_channel_spatially_matching_frame_field() -> 
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 def test_blur_vector_component_positions_use_x_right_and_y_down_independent_of_labels() -> None:
     """For vector blur, channel positions are +x right and +y down in pixel coordinates."""
     y, x = np.mgrid[:4, :4]
@@ -209,8 +209,8 @@ def test_blur_vector_component_positions_use_x_right_and_y_down_independent_of_l
     assert float(vertical[1, 1, 0]) == 21.0
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_vector_shutter_axis_defaults_and_fails_fast_with_all_tokens() -> None:
     """Vector blur defaults its shutter mode and lists the three accepted modes on invalid input."""
     source = _frame(np.arange(12, dtype=np.float32).reshape(3, 4, 1), channels=["signal"])
@@ -232,8 +232,8 @@ def test_blur_vector_shutter_axis_defaults_and_fails_fast_with_all_tokens() -> N
         assert token in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_vector_border_axis_defaults_and_fails_fast_with_all_tokens() -> None:
     """Vector blur defaults its border mode and lists the four accepted modes on invalid input."""
     source = _frame(np.arange(12, dtype=np.float32).reshape(3, 4, 1), channels=["signal"])
@@ -256,8 +256,8 @@ def test_blur_vector_border_axis_defaults_and_fails_fast_with_all_tokens() -> No
         assert token in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_vector_border_value_contract_is_finite_real_symmetric_and_bool_excluding() -> None:
     """For vector blur, constant requires a finite non-bool real and other borders forbid it."""
     source = _frame(np.zeros((2, 3, 1)), channels=["signal"])
@@ -277,8 +277,8 @@ def test_blur_vector_border_value_contract_is_finite_real_symmetric_and_bool_exc
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(("name", "kwargs"), EXISTING_CALLS)
 def test_existing_blurs_share_the_symmetric_border_value_fail_fast_contract(
     name: str,
@@ -299,8 +299,8 @@ def test_existing_blurs_share_the_symmetric_border_value_fail_fast_contract(
         _assert_actionable(invalid_value)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize("shutter", SHUTTERS)
 @pytest.mark.parametrize("border", BORDERS)
 def test_blur_vector_matches_independent_numpy_gather_bicubic_oracle(shutter: str, border: str) -> None:
@@ -341,7 +341,7 @@ def test_blur_vector_matches_independent_numpy_gather_bicubic_oracle(shutter: st
     assert result.dtype == np.dtype(np.float32)
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 def test_blur_vector_zero_field_is_exact_identity_in_private_storage() -> None:
     """For vector blur, zero vectors interpolate exactly into new storage."""
     values = np.linspace(-0.75, 1.75, 30, dtype=np.float32).reshape(3, 5, 2)
@@ -359,7 +359,7 @@ def test_blur_vector_zero_field_is_exact_identity_in_private_storage() -> None:
     )
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 def test_uniform_centered_vector_matches_directional_blur_known_solution() -> None:
     """For vector blur, a uniform integer horizontal field matches directional blur."""
     rng = np.random.default_rng(17)
@@ -379,8 +379,8 @@ def test_uniform_centered_vector_matches_directional_blur_known_solution() -> No
     np.testing.assert_array_equal(actual, expected)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-011")
 def test_blur_vector_preserves_source_metadata_and_ignores_vector_metadata() -> None:
     """Vector blur carries the source Frame's color metadata and ignores the vector field's metadata."""
     values = np.linspace(-0.5, 1.5, 24, dtype=np.float32).reshape(3, 4, 2)
@@ -405,8 +405,8 @@ def test_blur_vector_preserves_source_metadata_and_ignores_vector_metadata() -> 
     )
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_vector_docstring_is_a_self_contained_llm_readable_contract() -> None:
     """Developers can find vector blur sampling, borders, and cost rules in the public docstring."""
     docstring = inspect.getdoc(px.filter.vector_blur)

@@ -79,7 +79,7 @@ def _read_raster_pixels(source: Path | bytes, header: ImageHeader) -> cp.ndarray
             allow_any_depth=True,
             apply_exif_orientation=False,
         )
-        decoded = nvimgcodec.Decoder().decode(code_stream, params=params)
+        decoded = nvimgcodec.Decoder(options=":fancy_upsampling=0").decode(code_stream, params=params)
         if decoded is None:
             raise RuntimeError(
                 _actionable_error(
@@ -497,6 +497,8 @@ def _encode_raster(
             parameter_kind, parameter_value = parameter
             quality_type = nvimgcodec.QUALITY if parameter_kind == "quality" else nvimgcodec.LOSSLESS
             parameter_options.update(quality_type=quality_type, quality_value=parameter_value)
+        if format_name == "JPEG" and len(frame.channels) >= 3:
+            parameter_options["chroma_subsampling"] = nvimgcodec.ChromaSubsampling.CSS_444
         if format_name == "JPEG2000":
             bitstream_type = nvimgcodec.J2K if jpeg2000_bitstream == "j2k" else nvimgcodec.JP2
             parameter_options["jpeg2k_encode_params"] = nvimgcodec.Jpeg2kEncodeParams(bitstream_type=bitstream_type)

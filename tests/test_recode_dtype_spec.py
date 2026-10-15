@@ -41,8 +41,8 @@ def _host(frame: px.core.Frame) -> np.ndarray:
     ).get()
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 def test_recode_dtype_is_public_with_the_exact_dtype_signature() -> None:
     """The public pixel dtype conversion accepts one required keyword-only target dtype."""
     operation = getattr(px.values, "recode_dtype")
@@ -55,8 +55,8 @@ def test_recode_dtype_is_public_with_the_exact_dtype_signature() -> None:
     assert signature.parameters["dtype"].default is inspect.Parameter.empty
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("invalid", ("fp32", "float64", "int32", "uint64", None, 1, True, ("float32",)))
 def test_recode_dtype_rejects_values_outside_the_five_token_closed_set(invalid: object) -> None:
     """Pixel dtype conversion rejects names outside its five supported dtypes with actionable guidance."""
@@ -64,15 +64,15 @@ def test_recode_dtype_rejects_values_outside_the_five_token_closed_set(invalid: 
         getattr(px.values, "recode_dtype")(_frame([0.0, 0.5, 1.0], dtype="float32"), dtype=invalid)
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 def test_recode_dtype_rejects_non_frames() -> None:
     """Pixel dtype conversion requires a Frame and rejects other input types."""
     with pytest.raises(ValueError, match="Frame"):
         getattr(px.values, "recode_dtype")(object(), dtype="float32")
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     ("source_dtype", "target_dtype", "maximum", "codes"),
     (
@@ -100,7 +100,7 @@ def test_uint_to_float_maps_the_complete_container_code_range(
     np.testing.assert_array_equal(_host(result).reshape(-1), expected)
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(("source_dtype", "bit_depth"), (("uint8", 8), ("uint16", 16)))
 def test_uint_to_float32_is_bit_identical_to_dequantize_values(source_dtype: str, bit_depth: int) -> None:
     """Converting integer pixels to float32 matches full-container dequantization bit for bit."""
@@ -114,7 +114,7 @@ def test_uint_to_float32_is_bit_identical_to_dequantize_values(source_dtype: str
     np.testing.assert_array_equal(_host(result), _host(expected))
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(("target_dtype", "bit_depth"), (("uint8", 8), ("uint16", 16)))
 def test_float32_to_uint_clips_scales_and_rounds_half_away_from_zero(
     target_dtype: str,
@@ -134,7 +134,7 @@ def test_float32_to_uint_clips_scales_and_rounds_half_away_from_zero(
     np.testing.assert_array_equal(_host(result).reshape(-1), expected)
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(("target_dtype", "bit_depth"), (("uint8", 8), ("uint16", 16)))
 def test_float32_to_uint_is_bit_identical_to_quantize_values(target_dtype: str, bit_depth: int) -> None:
     """Converting float32 pixels to integers matches full-container quantization bit for bit."""
@@ -147,7 +147,7 @@ def test_float32_to_uint_is_bit_identical_to_quantize_values(target_dtype: str, 
     np.testing.assert_array_equal(_host(result), _host(expected))
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 def test_float32_to_uint32_clips_scales_and_rounds_half_away_from_zero() -> None:
     """Float32-to-uint32 conversion clips and rounds on the 4294967295-code full-scale grid."""
     maximum = 4294967295
@@ -160,7 +160,7 @@ def test_float32_to_uint32_clips_scales_and_rounds_half_away_from_zero() -> None
     np.testing.assert_array_equal(_host(result).reshape(-1), expected)
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     ("source_dtype", "target_dtype", "codes"),
     (
@@ -187,7 +187,7 @@ def test_uint32_integer_pairs_match_exact_full_scale_host_arithmetic(
     np.testing.assert_array_equal(_host(result).reshape(-1), expected)
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     ("target_dtype", "expected"), (("uint8", [0, 0, 128, 255, 255]), ("uint16", [0, 0, 32768, 65535, 65535]))
 )
@@ -200,8 +200,8 @@ def test_float16_to_uint_preserves_normalized_meaning(target_dtype: str, expecte
     np.testing.assert_array_equal(_host(result).reshape(-1), np.asarray(expected, dtype=target_dtype))
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("source_dtype", ("float32", "float16"))
 @pytest.mark.parametrize("target_dtype", ("float32", "float16"))
 def test_float_to_float_is_bit_identical_to_literal_cast(source_dtype: str, target_dtype: str) -> None:
@@ -214,7 +214,7 @@ def test_float_to_float_is_bit_identical_to_literal_cast(source_dtype: str, targ
     np.testing.assert_array_equal(_host(result), _host(expected))
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 def test_uint8_to_uint16_is_exactly_code_times_257_and_round_trips() -> None:
     """Every uint8 code widens to its value times 257 and survives a uint16-to-uint8 round trip."""
     codes = np.arange(256, dtype=np.uint8)
@@ -227,7 +227,7 @@ def test_uint8_to_uint16_is_exactly_code_times_257_and_round_trips() -> None:
     np.testing.assert_array_equal(_host(restored), _host(source))
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 def test_uint16_to_uint8_uses_divide_by_257_equivalent_rounding() -> None:
     """Narrowing uint16 codes to uint8 follows normalized scaling with half-away rounding."""
     codes = np.asarray([0, 1, 128, 129, 257, 385, 386, 65406, 65407, 65535], dtype=np.uint16)
@@ -238,8 +238,8 @@ def test_uint16_to_uint8_uses_divide_by_257_equivalent_rounding() -> None:
     np.testing.assert_array_equal(_host(result).reshape(-1), expected)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("source_dtype", DTYPES)
 @pytest.mark.parametrize("target_dtype", DTYPES)
 def test_every_dtype_pair_returns_private_storage_and_preserves_metadata(

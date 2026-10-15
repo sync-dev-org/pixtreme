@@ -211,7 +211,7 @@ def _bitmap_slice(values: set[int], *, include_zero_bit: bool = False) -> tuple[
     return minimum, maximum, bytes(bitmap[minimum : maximum + 1])
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("values", "include_zero_bit"),
     (
@@ -237,7 +237,7 @@ def test_piz_reverse_lut_matches_absolute_unsigned_rank(
     assert np.count_nonzero(reverse[expected.size :]) == 0
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("compact_max", (16383, 16384))
 def test_piz_compact_max_fixes_wavelet_mode_at_the_flip_boundary(compact_max: int) -> None:
     """PIZ decoding selects the w14 or w16 wavelet mode from the compact alphabet size at its boundary."""
@@ -249,9 +249,9 @@ def test_piz_compact_max_fixes_wavelet_mode_at_the_flip_boundary(compact_max: in
     assert exr_piz._piz_uses_w14(max_value) is (compact_max < 16384)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("shape", ((2, 2), (4, 3), (3, 4), (5, 5), (7, 31), (8, 1), (1, 8)))
 @pytest.mark.parametrize("w14", (True, False))
 def test_piz_inverse_wavelet_host_and_gpu_match_independent_all_level_oracle(
@@ -300,7 +300,7 @@ def test_piz_inverse_wavelet_host_and_gpu_match_independent_all_level_oracle(
     np.testing.assert_array_equal(device.get(), original)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("zero_gap", (1, 2, 5, 6, 261, 262))
 def test_piz_huffman_length_table_expands_every_zero_run_boundary(zero_gap: int) -> None:
     """PIZ Huffman length tables expand short, long, and split zero runs exactly through the final symbol."""
@@ -314,7 +314,7 @@ def test_piz_huffman_length_table_expands_every_zero_run_boundary(zero_gap: int)
     assert table.data_span.start == 20 + len(_pack_lengths(lengths))
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("lane", ("host", "gpu"))
 def test_piz_huffman_decodes_a_58_bit_code_in_both_lanes(lane: str) -> None:
     """Host and GPU PIZ Huffman reads accept valid codes as long as 58 bits."""
@@ -328,7 +328,7 @@ def test_piz_huffman_decodes_a_58_bit_code_in_both_lanes(lane: str) -> None:
     np.testing.assert_array_equal(actual, np.asarray((expected_symbol,), dtype=np.uint16))
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("lane", ("host", "gpu"))
 def test_piz_huffman_decodes_largest_actual_symbol_and_pseudo_repeat_boundary(lane: str) -> None:
     """PIZ Huffman reads distinguish the largest actual symbol from its following repeat marker."""
@@ -347,7 +347,7 @@ def test_piz_huffman_decodes_largest_actual_symbol_and_pseudo_repeat_boundary(la
     np.testing.assert_array_equal(actual, np.full(2, 0xFFFF, dtype=np.uint16))
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_piz_huffman_previous_symbol_repeat_accepts_the_maximum_group() -> None:
     """PIZ Huffman repeat markers expand the maximum group to 256 copies of the preceding symbol."""
     lengths = (1, 1)
@@ -368,7 +368,7 @@ def test_piz_huffman_previous_symbol_repeat_accepts_the_maximum_group() -> None:
     np.testing.assert_array_equal(device.get(), host)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("lane", ("host", "gpu"))
 @pytest.mark.parametrize("noncanonical", ("redundant_fields", "trailing_bytes", "extra_declared_data"))
 def test_piz_huffman_permissive_read_ignores_safe_noncanonical_fields(lane: str, noncanonical: str) -> None:
@@ -399,8 +399,8 @@ def test_piz_huffman_permissive_read_ignores_safe_noncanonical_fields(lane: str,
     np.testing.assert_array_equal(actual, np.asarray((0,), dtype=np.uint16))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("lengths", "data_fields", "expected_count"),
     (
@@ -426,8 +426,8 @@ def test_piz_huffman_rejects_unsafe_repeat_and_word_count_boundaries(
         _decode_huffman_lane(lane, stream, table, expected_count=expected_count)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_piz_huffman_rejects_oversubscribed_canonical_lengths() -> None:
     """PIZ Huffman reads reject code lengths that cannot form a prefix-free table."""
     stream = _huffman_stream((1, 1, 1), [])
@@ -436,8 +436,8 @@ def test_piz_huffman_rejects_oversubscribed_canonical_lengths() -> None:
         exr_piz._parse_piz_huffman_table(stream)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_piz_huffman_rejects_equal_actual_and_pseudo_symbol_bounds() -> None:
     """PIZ Huffman reads reject equal bounds for actual and repeat symbols."""
     lengths = (1,)
@@ -451,8 +451,8 @@ def test_piz_huffman_rejects_equal_actual_and_pseudo_symbol_bounds() -> None:
         exr_piz._parse_piz_huffman_table(stream)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("zero_gap", (2, 6, 261))
 def test_piz_huffman_rejects_length_run_overshoot_and_truncation(zero_gap: int) -> None:
     """PIZ Huffman reads reject length runs that cross the final symbol or end inside a token."""
@@ -515,7 +515,7 @@ def _reference_piz_file(path: Path, *, line_order: object) -> dict[str, np.ndarr
     return decoded
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 @pytest.mark.parametrize("line_order_name", ("INCREASING_Y", "DECREASING_Y", "RANDOM_Y"))
 def test_openexr_piz_writer_cross_decodes_in_both_internal_read_lanes(
@@ -566,7 +566,7 @@ def test_openexr_piz_writer_cross_decodes_in_both_internal_read_lanes(
     np.testing.assert_array_equal(uint_values, reference["mask.U"].astype(np.float32))
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_piz_all_zero_bitmap_and_partial_one_row_chunk_decode(backend: str, tmp_path: Path) -> None:
     """PIZ reads decode an empty bitmap and a final one-row chunk as valid image data."""
@@ -592,7 +592,7 @@ def test_piz_all_zero_bitmap_and_partial_one_row_chunk_decode(backend: str, tmp_
     np.testing.assert_array_equal(actual, expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_piz_read_combines_compressed_and_raw_chunks_without_changing_word_bits(backend: str, tmp_path: Path) -> None:
     """PIZ reads combine compressed and raw chunks into one Frame without changing pixel word bits."""
@@ -633,7 +633,7 @@ def test_piz_read_combines_compressed_and_raw_chunks_without_changing_word_bits(
         )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_piz_zero_byte_outer_raw_chunk_materializes_zero_words(backend: str, tmp_path: Path) -> None:
     """PIZ reads recover zero pixel words from a zero-byte raw chunk without applying PIZ transforms."""
@@ -663,9 +663,9 @@ def test_piz_zero_byte_outer_raw_chunk_materializes_zero_words(backend: str, tmp
     np.testing.assert_array_equal(actual, np.zeros((1, 16), dtype=np.float16))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_piz_gpu_huffman_splits_one_record_at_repeat_safe_boundaries(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -697,9 +697,9 @@ def test_piz_gpu_huffman_splits_one_record_at_repeat_safe_boundaries(
     np.testing.assert_array_equal(actual, expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_piz_gpu_image_read_crosses_multiple_bounded_batches_with_mixed_storage_and_fields(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -758,7 +758,7 @@ def test_piz_gpu_image_read_crosses_multiple_bounded_batches_with_mixed_storage_
     np.testing.assert_array_equal(actual[..., 2], unsigned.astype(np.float32))
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_piz_gpu_lane_keeps_sample_planes_and_symbols_on_device(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -817,8 +817,8 @@ def test_piz_gpu_lane_keeps_sample_planes_and_symbols_on_device(
     assert len(image_transfers) == 1
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_piz_corrupt_length_table_fails_in_forced_route_without_openexr_retry(
     backend: str,

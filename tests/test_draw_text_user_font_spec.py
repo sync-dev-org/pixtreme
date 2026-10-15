@@ -113,10 +113,10 @@ def _oracle_bitmap(
     return coverage, int(rendered.left), int(rendered.top)
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_draw_font_public_surface_signature_and_immutability(tmp_path: Path) -> None:
     """A user supplied Font has one public constructor and can be selected through the text drawing signature without
     mutation.
@@ -159,8 +159,8 @@ def test_draw_font_public_surface_signature_and_immutability(tmp_path: Path) -> 
     assert not {"axes", "variations", "fallback", "path"} & {name for name in dir(first) if not name.startswith("_")}
 
 
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_draw_font_loader_accepts_content_not_extension_and_measures_axes(tmp_path: Path) -> None:
     """For user supplied fonts, both backends accept the selected face and measure valid axes."""
     opaque_path = tmp_path / "font.payload"
@@ -179,9 +179,9 @@ def test_draw_font_loader_accepts_content_not_extension_and_measures_axes(tmp_pa
     assert np.any(_host(result) != 0.0)
 
 
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 @pytest.mark.parametrize("kind", ("object", "bytes-path", "missing", "directory"))
 def test_draw_font_loader_rejects_unusable_paths_actionably(tmp_path: Path, kind: str) -> None:
     """For user supplied fonts, unusable path states fail as actionable ValueError."""
@@ -205,9 +205,9 @@ def test_draw_font_loader_rejects_unusable_paths_actionably(tmp_path: Path, kind
     assert "font file" in message
 
 
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_draw_font_loader_distinguishes_freetype_and_harfbuzz_failures(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -232,9 +232,9 @@ def test_draw_font_loader_distinguishes_freetype_and_harfbuzz_failures(
     assert isinstance(harfbuzz_error.value.__cause__, RuntimeError)
 
 
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 @pytest.mark.parametrize("face_index", (True, 1.0, -1, 2))
 def test_draw_font_face_index_is_strict_and_uses_measured_collection_count(face_index: object) -> None:
     """For user supplied fonts, face index is a non-bool in-range int checked against the TTC."""
@@ -246,9 +246,9 @@ def test_draw_font_face_index_is_strict_and_uses_measured_collection_count(face_
     assert "0 <= face_index < face_count" in message
 
 
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_draw_font_axis_measurement_failure_is_eager_and_chained(monkeypatch: pytest.MonkeyPatch) -> None:
     """For user supplied fonts, malformed or unreadable axis tables fail during construction."""
     import pixtreme._draw.text as draw_text_module
@@ -264,9 +264,9 @@ def test_draw_font_axis_measurement_failure_is_eager_and_chained(monkeypatch: py
     assert isinstance(error.value.__cause__, RuntimeError)
 
 
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_draw_font_axis_measurement_distinguishes_static_absence_from_variable_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -294,8 +294,8 @@ def test_draw_font_axis_measurement_distinguishes_static_absence_from_variable_f
     assert isinstance(error.value.__cause__, RuntimeError)
 
 
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_draw_font_snapshots_bytes_across_rewrite_and_delete(tmp_path: Path) -> None:
     """For user supplied fonts, identity and rendering use construction-time bytes only."""
     path = tmp_path / "mutable.otf"
@@ -332,9 +332,9 @@ def test_draw_font_snapshots_bytes_across_rewrite_and_delete(tmp_path: Path) -> 
     np.testing.assert_array_equal(_host(after_rewrite), _host(before))
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_draw_text_token_calls_with_absent_variations_are_bit_identical() -> None:
     """For user supplied fonts, omitted, None, and empty variations preserve both token paths bitwise."""
     source = _frame()
@@ -355,10 +355,10 @@ def test_draw_text_token_calls_with_absent_variations_are_bit_identical() -> Non
         np.testing.assert_array_equal(_host(empty), _host(omitted))
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 @pytest.mark.parametrize(
     ("font_path", "weight", "variations", "required"),
     (
@@ -399,9 +399,9 @@ def test_draw_text_user_weight_and_variation_failures_are_actionable(
     assert all(part in message for part in required)
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_draw_text_user_font_matches_independent_shaping_and_raster_oracles() -> None:
     """For user supplied fonts, resolved axes reach HarfBuzz and FreeType identically."""
     import pixtreme._draw.text as draw_text_module
@@ -486,9 +486,9 @@ def test_draw_text_user_font_matches_independent_shaping_and_raster_oracles() ->
     assert np.any(_host(result) != 0.0)
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_draw_text_user_font_cache_identity_and_limits_are_content_based(tmp_path: Path) -> None:
     """User font caches use font contents and axis values to distinguish rendered results within their limits."""
     import pixtreme._draw.text as draw_text_module
@@ -538,9 +538,9 @@ def test_draw_text_user_font_cache_identity_and_limits_are_content_based(tmp_pat
     assert not np.array_equal(_host(changed), _host(output_b))
 
 
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-019")
-@pytest.mark.req("REQ-PIX-107")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-019")
+@pytest.mark.req("SP-PIX-107")
 def test_draw_text_user_font_missing_codepoint_shapes_selected_face_notdef() -> None:
     """For user supplied fonts, a missing code point stays glyph zero without fallback discovery."""
     import pixtreme._draw.text as draw_text_module
@@ -560,7 +560,7 @@ def test_draw_text_user_font_missing_codepoint_shapes_selected_face_notdef() -> 
     assert result.shape == (72, 160, 1)
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_draw_text_user_font_bitmap_guard_identifies_selected_asset(monkeypatch: pytest.MonkeyPatch) -> None:
     """For user supplied fonts, bitmap layout guards identify user path and face without token-only repair."""
     import pixtreme._draw.text as draw_text_module

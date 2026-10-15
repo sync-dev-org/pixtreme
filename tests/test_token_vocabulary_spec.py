@@ -323,18 +323,18 @@ def _expected_parameter_families(module_name: str, operation: str, parameter: st
     return (family,)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-010")
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-013")
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-010")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-013")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 def test_literal_aliases_are_the_independent_canonical_vocabulary() -> None:
     """Public Literal aliases contain the canonical names for supported image operations and metadata."""
     assert len(EXPECTED_VOCABULARY) == 30
@@ -342,19 +342,19 @@ def test_literal_aliases_are_the_independent_canonical_vocabulary() -> None:
     assert {name: get_args(getattr(px.core, name)) for name in EXPECTED_VOCABULARY} == EXPECTED_VOCABULARY
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-010")
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-012")
-@pytest.mark.req("REQ-PIX-013")
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-010")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-012")
+@pytest.mark.req("SP-PIX-013")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 def test_public_token_annotations_use_only_canonical_literal_aliases() -> None:
     """Public image operation and metadata annotations expose canonical Literal names without legacy spellings."""
     frame_hints = get_type_hints(px.core.Frame)
@@ -399,7 +399,7 @@ def test_public_token_annotations_use_only_canonical_literal_aliases() -> None:
                     assert descriptor.default in expected, (module.__name__, operation, parameter, descriptor.default)
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_every_canonical_token_accepts_case_and_separator_variants() -> None:
     """Every canonical image operation and metadata token accepts case and separator variants at runtime."""
     from pixtreme._core.validation import _normalized_closed_token
@@ -410,7 +410,7 @@ def test_every_canonical_token_accepts_case_and_separator_variants() -> None:
                 assert _normalized_closed_token(variant, axis=family, accepted=canonical_tokens) == canonical
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_all_legacy_spellings_are_permanent_runtime_aliases() -> None:
     """Legacy spellings for color, display, and test-pattern tokens resolve to their canonical runtime names."""
     from pixtreme._core.validation import _normalized_closed_token
@@ -421,7 +421,7 @@ def test_all_legacy_spellings_are_permanent_runtime_aliases() -> None:
             assert _normalized_closed_token(legacy, axis=family, accepted=EXPECTED_VOCABULARY[family]) == canonical
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_token_keys_are_collision_free_per_family_and_never_cross_families() -> None:
     """Normalized token keys are unique within each family and do not resolve across families."""
     from pixtreme._core.validation import _normalized_closed_token
@@ -436,8 +436,8 @@ def test_token_keys_are_collision_free_per_family_and_never_cross_families() -> 
         _normalized_closed_token("PQ", axis="colorspace", accepted=EXPECTED_VOCABULARY["Colorspace"])
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_frame_and_array_boundary_expose_only_canonical_metadata() -> None:
     """Frame construction and array boundaries expose canonical color metadata after accepting token variants."""
     frame = px.io.from_array(
@@ -460,8 +460,8 @@ def test_frame_and_array_boundary_expose_only_canonical_metadata() -> None:
     assert (frame.colorspace, frame.gamma, frame.matrix) == ("ACEScg", "S-Log3", "native")
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("rejected", ["unknown", "", " .-_ ", 709, None])
 def test_invalid_tokens_fail_with_raw_actionable_errors(rejected: object) -> None:
     """Invalid color and metadata tokens produce errors with the supplied value and accepted canonical names."""
@@ -478,8 +478,8 @@ def test_invalid_tokens_fail_with_raw_actionable_errors(rejected: object) -> Non
     assert repr(EXPECTED_VOCABULARY["Colorspace"]) in message
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_gamma_aliases_preserve_pixels_and_non_token_observables() -> None:
     """Canonical and alias gamma names produce the same pixels and preserve other Frame properties."""
     source = px.io.from_array(

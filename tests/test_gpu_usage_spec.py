@@ -16,7 +16,7 @@ import pixtreme as px
 ROOT = Path(__file__).resolve().parents[1]
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_import_keeps_the_cuda_primary_context_inactive() -> None:
     """Importing pixtreme leaves the CUDA primary context inactive and allocates no GPU resource.
 
@@ -55,7 +55,7 @@ assert primary_context_active() == 0
     assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_tga_read_transfers_pixel_payload_to_gpu_once_without_returning_pixels_to_cpu(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -131,7 +131,7 @@ def _oracle(
     return _encode_hlg(scaled) if output_gamma == "HLG" else _encode_pq(scaled)
 
 
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-005")
 def test_bt2408_coexists_with_the_fixed_signature_and_exact_six_combination_table() -> None:
     """Output transformation exposes the documented signature and six supported output combinations."""
     import pixtreme._color.transform as implementation
@@ -150,7 +150,7 @@ def test_bt2408_coexists_with_the_fixed_signature_and_exact_six_combination_tabl
     )
 
 
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-005")
 @pytest.mark.parametrize(("tonemap", "output_colorspace", "output_gamma"), (*_ACES_COMBINATIONS, *_BT2408_COMBINATIONS))
 def test_every_tonemap_combination_is_operational(tonemap: str, output_colorspace: str, output_gamma: str) -> None:
     """Each supported ACES output transform and BT.2408 direct-mapping combination produces a Frame."""
@@ -168,8 +168,8 @@ def test_every_tonemap_combination_is_operational(tonemap: str, output_colorspac
     ).all()
 
 
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("tonemap", "output_colorspace", "output_gamma"),
     (
@@ -197,7 +197,7 @@ def test_bt2408_missing_unknown_and_table_external_combinations_fail_with_action
     assert all(part in message for part in ("why=", "what=", "how=", "BT.2408", "Rec.2020", "HLG", "PQ"))
 
 
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-005")
 @pytest.mark.parametrize(("output_gamma", "expected"), (("HLG", 0.75), ("PQ", None)))
 def test_bt2408_places_rec709_linear_reference_white_from_independent_published_equations(
     output_gamma: str, expected: float | None
@@ -224,9 +224,9 @@ def test_bt2408_places_rec709_linear_reference_white_from_independent_published_
     )
 
 
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("output_gamma", ("HLG", "PQ"))
 def test_bt2408_matches_independent_decode_matrix_gain_encode_oracle_for_signed_scene_values(
     output_gamma: str,
@@ -260,8 +260,8 @@ def test_bt2408_matches_independent_decode_matrix_gain_encode_oracle_for_signed_
     assert output[1].max() > white_signal
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-005")
 @pytest.mark.parametrize("output_gamma", ("HLG", "PQ"))
 def test_bt2408_input_claims_override_metadata_and_equivalent_rec2020_linear_inputs_converge(
     output_gamma: str,
@@ -311,7 +311,7 @@ def test_bt2408_input_claims_override_metadata_and_equivalent_rec2020_linear_inp
     )
 
 
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-005")
 @pytest.mark.parametrize(
     "input_colorspace",
     (
@@ -360,7 +360,7 @@ def test_bt2408_accepts_every_input_colorspace_token(input_colorspace: str) -> N
     ).all()
 
 
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-005")
 @pytest.mark.parametrize(
     "input_gamma",
     (
@@ -415,8 +415,8 @@ def test_bt2408_accepts_every_input_gamma_token(input_gamma: str) -> None:
     ).all()
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-005")
 def test_bt2408_is_label_driven_preserves_auxiliary_bits_and_returns_private_metadata() -> None:
     """BT.2408 direct mapping transforms RGB labels and preserves auxiliary bits in a separate Frame with output
     color information."""
@@ -456,8 +456,8 @@ def test_bt2408_is_label_driven_preserves_auxiliary_bits_and_returns_private_met
     assert result.data.data.ptr != source.data.data.ptr
 
 
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("channels", ("YCbCr", "RG", ["R", "G", "A"]))
 def test_bt2408_rejects_frames_without_all_rgb_labels(channels: str | list[str]) -> None:
     """BT.2408 direct mapping rejects Frames without complete RGB labels before processing pixels."""
@@ -471,8 +471,8 @@ def test_bt2408_rejects_frames_without_all_rgb_labels(channels: str | list[str])
         )
 
 
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "routes"),
     (
@@ -497,8 +497,8 @@ def test_bt2408_rejects_non_float32_with_dtype_specific_guidance(
     assert all(route in message for route in routes)
 
 
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-017")
 def test_bt2408_rejects_non_frame_and_unknown_axis_tokens_before_pixel_processing() -> None:
     """BT.2408 direct mapping rejects non-Frames and unknown color names before processing pixels."""
     with pytest.raises(ValueError, match="must be a Frame"):
@@ -518,7 +518,7 @@ def test_bt2408_rejects_non_frame_and_unknown_axis_tokens_before_pixel_processin
         )
 
 
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-005")
 def test_bt2408_uses_one_fused_analytic_pass() -> None:
     """BT.2408 direct mapping computes its output analytically in one GPU pass."""
     import pixtreme._color.transform as implementation

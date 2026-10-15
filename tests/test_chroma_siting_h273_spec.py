@@ -66,7 +66,7 @@ def _digest(array: np.ndarray) -> str:
     return hashlib.sha256(array.tobytes()).hexdigest()
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 def test_chroma_siting_literal_and_normalization_follow_the_h273_table() -> None:
     """YUV 4:2:0 conversion accepts the six H.273 chroma locations by their canonical names."""
     from pixtreme._core.validation import _normalized_closed_token
@@ -89,7 +89,7 @@ def test_chroma_siting_literal_and_normalization_follow_the_h273_table() -> None
     assert len(keys) == len(set(keys)) == 6
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 def test_six_420_functions_retain_their_static_signatures() -> None:
     """The six YUV 4:2:0 conversion functions retain their documented signatures while accepting all chroma
     locations."""
@@ -138,8 +138,8 @@ def test_six_420_functions_retain_their_static_signatures() -> None:
             assert parameters[parameter_name].default == default
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("rejected", ("diagonal", 3, ("top", "bottom"), "", " .-_ "))
 def test_420_functions_reject_non_singular_or_unknown_siting_before_pixels(rejected: object) -> None:
     """YUV 4:2:0 conversion rejects unknown or nonscalar chroma locations before processing pixels."""
@@ -167,7 +167,7 @@ def test_420_functions_reject_non_singular_or_unknown_siting_before_pixels(rejec
         assert repr(tuple(SITING_OFFSETS)) in message
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 def test_existing_three_siting_paths_remain_bit_exact_characterization() -> None:
     """characterization: Three established YUV 4:2:0 chroma locations retain their recorded output pixels for fixed
     inputs.
@@ -220,8 +220,8 @@ def test_existing_three_siting_paths_remain_bit_exact_characterization() -> None
     assert actual == expected
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 def test_six_420_docstrings_explain_the_single_progressive_frame_offset_contract() -> None:
     """The six YUV 4:2:0 conversion help texts explain progressive-frame chroma offsets."""
     h273_mapping = (

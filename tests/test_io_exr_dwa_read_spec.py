@@ -36,7 +36,7 @@ def _repeat_huffman_stream(*, repeat_count: int = 2) -> bytes:
     return struct.pack("<IIIII", 1, 3, len(table), data_bit_count, 0) + table + data
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_dwa_huffman_decode_expands_the_generic_repeat_symbol_and_consumes_every_bit() -> None:
     """DWA Huffman reads expand repeated symbols and consume exactly the encoded bit stream."""
     stream = _repeat_huffman_stream()
@@ -47,8 +47,8 @@ def test_dwa_huffman_decode_expands_the_generic_repeat_symbol_and_consumes_every
     np.testing.assert_array_equal(decoded, np.asarray((2, 2, 2, 1), dtype=np.uint16))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_dwa_huffman_decode_rejects_a_zero_length_repeat() -> None:
     """DWA Huffman reads reject a zero-length repeat with a useful error."""
     stream = _repeat_huffman_stream(repeat_count=0)
@@ -58,9 +58,9 @@ def test_dwa_huffman_decode_rejects_a_zero_length_repeat() -> None:
         exr_dwa._decode_dwa_huffman_host(stream, table, expected_count=2)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_dwa_gpu_huffman_decode_parallel_segments_match_host_across_a_repeat_boundary() -> None:
     """Parallel GPU DWA Huffman decoding matches host output when a repeated symbol crosses a segment boundary."""
     table_bits, _ = _pack_bits([(1, 6), (2, 6), (2, 6)])
@@ -146,9 +146,9 @@ def _eager_dwa_reconstruct_lossy_blocks(
     return cp.ascontiguousarray(reconstructed).view(cp.uint16).reshape(-1)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("compression", ("dwaa", "dwab"))
 def test_dwa_transfer_fusion_preserves_decode_output_characterization(
     tmp_path: Path,
@@ -186,7 +186,7 @@ def test_dwa_transfer_fusion_preserves_decode_output_characterization(
     np.testing.assert_array_equal(candidate_half.data.get().view(np.uint16), eager_half.data.get().view(np.uint16))
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("compression", ("dwaa", "dwab"))
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_reference_dwa_read_lanes_cover_lossy_lossless_partial_and_selected_channels(
@@ -237,8 +237,8 @@ def test_reference_dwa_read_lanes_cover_lossy_lossless_partial_and_selected_chan
         np.testing.assert_allclose(actual[..., output_index], reference[name].astype(np.float32), rtol=2e-3, atol=2e-3)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_dwa_read_lanes_fail_fast_on_a_corrupt_zlib_substream(
     tmp_path: Path,
@@ -263,8 +263,8 @@ def test_dwa_read_lanes_fail_fast_on_a_corrupt_zlib_substream(
         px.io.read_image(path, channels=("depth.Z",))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_custom_cpu_dwa_read_preserves_uniform_half_with_unchanged(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

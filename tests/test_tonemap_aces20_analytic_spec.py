@@ -55,7 +55,7 @@ def _frame(
     return px.io.from_array(data, colorspace=colorspace, gamma=gamma, channels=channels)
 
 
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-005")
 def test_public_signature_tokens_and_exact_six_row_supply_table() -> None:
     """ACES 2.0 output transformation exposes its documented signature and six supported output combinations."""
     import pixtreme._color.transform as implementation
@@ -85,8 +85,8 @@ def test_public_signature_tokens_and_exact_six_row_supply_table() -> None:
         assert (result.colorspace, result.gamma, result.matrix) == (output_colorspace, output_gamma, None)
 
 
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("tonemap", "output_colorspace", "output_gamma"),
     (
@@ -114,8 +114,8 @@ def test_table_external_forms_fail_before_pixel_processing_with_the_complete_six
         assert repr(combination) in how
 
 
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-109")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-109")
 @pytest.mark.parametrize(
     ("output_colorspace", "output_gamma", "fixture_key"),
     (
@@ -155,8 +155,8 @@ def test_analytic_output_matches_the_raw_ocio_cpu_oracle_corpus(
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=2e-4)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-005")
 def test_analytic_input_claims_override_metadata_and_equivalent_ap1_ap0_light_converges() -> None:
     """Explicit input color claims control ACES 2.0 rendering and equivalent AP1 and AP0 light produces equivalent
     output."""
@@ -190,7 +190,7 @@ def test_analytic_input_claims_override_metadata_and_equivalent_ap1_ap0_light_co
     assert (source_ap1.colorspace, source_ap1.gamma) == ("sRGB", "sRGB")
 
 
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-005")
 def test_analytic_accepts_every_input_axis_token() -> None:
     """ACES 2.0 output transformation accepts every named input color space and gamma."""
     from pixtreme._core.frame import _COLORSPACE_TOKENS, _GAMMA_TOKENS
@@ -227,8 +227,8 @@ def test_table_tool_recreates_the_checked_in_source_byte_for_byte(tmp_path: Path
     assert first.read_bytes() == second.read_bytes() == TABLE_PATH.read_bytes()
 
 
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-109")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-109")
 def test_analytic_runtime_is_one_fused_pass_with_constant_tables_and_no_lut_or_ocio_dependency(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -263,10 +263,10 @@ def test_analytic_runtime_is_one_fused_pass_with_constant_tables_and_no_lut_or_o
     assert "cp.clip" not in module_source
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-103")
 def test_frame_contract_and_reference_internal_range_are_preserved() -> None:
     """ACES 2.0 output transformation preserves Frame metadata and auxiliary channels while retaining internal scene
     range."""
@@ -288,8 +288,8 @@ def test_frame_contract_and_reference_internal_range_are_preserved() -> None:
     cp.testing.assert_array_equal(source.data, before)
 
 
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("channels", ("YCbCr", "RG", ["R", "G", "A"]))
 def test_analytic_rejects_missing_rgb_before_rendering(channels: str | list[str]) -> None:
     """ACES 2.0 output transformation rejects a Frame missing any RGB label before rendering."""
@@ -302,8 +302,8 @@ def test_analytic_rejects_missing_rgb_before_rendering(channels: str | list[str]
         )
 
 
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "routes"),
     (
@@ -328,8 +328,8 @@ def test_analytic_rejects_non_float32_with_dtype_specific_guidance(
     assert tuple(message.index(route) for route in routes) == tuple(sorted(message.index(route) for route in routes))
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-005")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-005")
 def test_remaining_routes_retain_their_exact_float32_bits_and_metadata() -> None:
     """The supported output routes retain their recorded float32 pixels and Frame metadata."""
     from pixtreme._color.aces13_analytic import _apply_aces13_data
@@ -376,8 +376,8 @@ def test_oracle_tool_recreates_the_committed_fixture_byte_for_byte(tmp_path: Pat
     assert first.read_bytes() == second.read_bytes() == ORACLE_PATH.read_bytes()
 
 
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-021")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-021")
 @pytest.mark.performance
 def test_analytic_fhd_median_is_within_the_absolute_limit() -> None:
     """The ACES 2.0 output transform has a measured FHD median no greater than 1.5 ms under its performance

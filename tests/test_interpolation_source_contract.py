@@ -44,7 +44,7 @@ def _reference_weight(interpolation: str, distance: float) -> float:
     return lobes * math.sin(pi_x) * math.sin(pi_x / lobes) / (pi_x * pi_x)
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("interpolation", _POINT_INTERPOLATION_TOKENS[1:])
 def test_specialized_point_weight_source_matches_independent_piecewise_boundary_oracle(interpolation: str) -> None:
     """Wire interpolation weights match independent equations at each filter-support boundary."""

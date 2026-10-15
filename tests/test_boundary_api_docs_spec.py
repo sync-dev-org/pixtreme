@@ -9,8 +9,8 @@ import pytest
 import pixtreme as px
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-017")
 def test_array_boundary_docstrings_state_copy_out_dlpack_and_inverse_affine_contracts() -> None:
     """The public array boundary documentation explains copy, out, DLPack, and inverse affine behavior."""
     to_doc = " ".join((inspect.getdoc(px.io.to_array) or "").split())

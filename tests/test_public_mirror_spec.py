@@ -133,9 +133,9 @@ def _make_repository(tmp_path: Path, *, public_has_main: bool) -> _RepositoryFix
     )
 
 
-def _run_script(repository: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
+def _run_script(repository: Path, *arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     script = require_repo_file("tools/mirror_public.py")
-    completed = _run([sys.executable, str(script), *arguments], cwd=repository)
+    completed = _run([sys.executable, str(script), *arguments], cwd=repository, check=check)
     assert isinstance(completed, subprocess.CompletedProcess)
     assert isinstance(completed.stdout, str)
     return completed
@@ -144,6 +144,127 @@ def _run_script(repository: Path, *arguments: str) -> subprocess.CompletedProces
 @pytest.fixture
 def repository(tmp_path: Path) -> _RepositoryFixture:
     return _make_repository(tmp_path, public_has_main=True)
+
+
+def _add_development_origin(repository: _RepositoryFixture) -> Path:
+    origin = repository.dev.parent / "origin.git"
+    _init_repository(origin, bare=True)
+    _git(repository.dev, "remote", "add", "origin", str(origin))
+    _git(repository.dev, "push", "origin", "main")
+    return origin
+
+
+@pytest.mark.parametrize("push", [False, True], ids=["dry-run", "push"])
+def test_development_origin_is_rejected_without_changing_refs(repository: _RepositoryFixture, push: bool) -> None:
+    """Issue #80: using origin for a mirror fails and preserves development, origin and public refs."""
+    origin = _add_development_origin(repository)
+    repositories = (repository.dev, origin, repository.public)
+    refs_before = tuple(_git(repo, "show-ref") for repo in repositories)
+    arguments = ["--push"] if push else []
+
+    completed = _run_script(repository.dev, "--remote", "origin", *arguments, check=False)
+
+    assert tuple(_git(repo, "show-ref") for repo in repositories) == refs_before
+    assert completed.returncode == 2
+    assert "development remote 'origin'" in completed.stderr
+    assert "public" in completed.stderr
+    assert completed.stdout == ""
+
+
+@pytest.mark.parametrize("push", [False, True], ids=["dry-run", "push"])
+@pytest.mark.parametrize("relative", [False, True], ids=["absolute", "relative"])
+@pytest.mark.parametrize("origin_url", ["fetch", "push"])
+@pytest.mark.parametrize("mirror_url", ["fetch", "push"])
+def test_remote_alias_sharing_an_origin_url_is_rejected_without_changing_refs(
+    tmp_path: Path, mirror_url: str, origin_url: str, relative: bool, push: bool
+) -> None:
+    """Issue #80: matching any resolved fetch/push URL rejects an alias and preserves all refs and tags."""
+    repository = _make_repository(tmp_path, public_has_main=False)
+    origin = _add_development_origin(repository)
+    origin_push = tmp_path / "origin-push.git"
+    _init_repository(origin_push, bare=True)
+    _git(repository.dev, "push", str(origin_push), "main")
+    _git(repository.dev, "remote", "set-url", "--push", "origin", str(origin_push))
+    _git(repository.dev, "push", "public", "main")
+
+    remote = "mirror"
+    _git(repository.dev, "remote", "add", remote, str(repository.public))
+    shared_endpoint = origin if origin_url == "fetch" else origin_push
+    shared_url = f"../{shared_endpoint.name}" if relative else str(shared_endpoint)
+    url_arguments = ["--push"] if mirror_url == "push" else []
+    _git(repository.dev, "remote", "set-url", *url_arguments, remote, shared_url)
+    # Keep the other URL distinct so each case isolates one URL pairing.
+    if mirror_url == "fetch":
+        _git(repository.dev, "remote", "set-url", "--push", remote, str(repository.public))
+
+    tag = "v9.9.9"
+    _git(repository.dev, "tag", tag, repository.source_sha)
+    repositories = (repository.dev, origin, origin_push, repository.public)
+    refs_before = tuple(_git(repo, "show-ref") for repo in repositories)
+    arguments = ["--push"] if push else []
+
+    completed = _run_script(repository.dev, "--remote", remote, "--tag", tag, *arguments, check=False)
+
+    assert tuple(_git(repo, "show-ref") for repo in repositories) == refs_before
+    assert completed.returncode == 2
+    assert remote in completed.stderr
+    assert "development remote 'origin'" in completed.stderr
+    assert "public" in completed.stderr
+    assert completed.stdout == ""
+
+
+@pytest.mark.parametrize("push", [False, True], ids=["dry-run", "push"])
+def test_origin_url_is_rejected_before_accessing_an_unavailable_remote(
+    repository: _RepositoryFixture, push: bool
+) -> None:
+    """Issue #80: a shared origin URL reports the destination error before attempting to read remote main."""
+    unavailable = repository.dev.parent / "unavailable.git"
+    _git(repository.dev, "remote", "add", "origin", str(unavailable))
+    _git(repository.dev, "remote", "add", "mirror", "../unavailable.git")
+    repositories = (repository.dev, repository.public)
+    refs_before = tuple(_git(repo, "show-ref") for repo in repositories)
+    arguments = ["--push"] if push else []
+
+    completed = _run_script(repository.dev, "--remote", "mirror", "--init", *arguments, check=False)
+
+    assert completed.returncode == 2
+    assert "development remote 'origin'" in completed.stderr
+    assert tuple(_git(repo, "show-ref") for repo in repositories) == refs_before
+    assert not unavailable.exists()
+
+
+@pytest.mark.parametrize("push", [False, True], ids=["dry-run", "push"])
+def test_public_mirror_succeeds_when_a_distinct_development_origin_exists(
+    repository: _RepositoryFixture, push: bool
+) -> None:
+    """Issue #80: a distinct public remote still supports dry runs and tagged pushes when origin exists."""
+    origin = _add_development_origin(repository)
+    tag = "v9.9.9"
+    _git(repository.dev, "tag", tag, repository.source_sha)
+    development_repositories = (repository.dev, origin)
+    development_refs_before = tuple(_git(repo, "show-ref") for repo in development_repositories)
+    public_refs_before = _git(repository.public, "show-ref")
+    arguments = ["--push"] if push else []
+
+    completed = _run_script(repository.dev, "--tag", tag, *arguments)
+
+    assert completed.returncode == 0
+    assert f"source-commit: {repository.source_sha}" in completed.stdout
+    assert f"manifest-count: {len(repository.included)}" in completed.stdout
+    assert tuple(_git(repo, "show-ref") for repo in development_repositories) == development_refs_before
+    if push:
+        public_tip = _git(repository.public, "rev-parse", "refs/heads/main")
+        assert _git(repository.public, "rev-list", "--parents", "-n", "1", public_tip).split() == [
+            public_tip,
+            repository.public_tip,
+        ]
+        assert tuple(_git(repository.public, "ls-tree", "-r", "--name-only", public_tip).splitlines()) == tuple(
+            sorted(repository.included)
+        )
+        assert _git(repository.public, "cat-file", "-t", f"refs/tags/{tag}") == "tag"
+        assert _git(repository.public, "rev-parse", f"refs/tags/{tag}^{{commit}}") == public_tip
+    else:
+        assert _git(repository.public, "show-ref") == public_refs_before
 
 
 def test_dry_run_manifest_is_deterministic_and_remote_is_unchanged(repository: _RepositoryFixture) -> None:
@@ -243,18 +364,91 @@ def test_init_push_creates_a_root_snapshot(tmp_path: Path) -> None:
 
 
 def test_tag_pushes_an_annotated_release_tag(repository: _RepositoryFixture) -> None:
-    """A tagged push publishes an annotated tag and release commit message."""
+    """Issue #77: a ref matching an annotated development tag publishes a release tag and message."""
     tag = "v9.9.9"
     remote = "mirror"
+    _git(repository.dev, "tag", "-a", tag, "-m", "fixture: development release", repository.source_sha)
     _git(repository.dev, "remote", "add", remote, str(repository.public))
 
-    _run_script(repository.dev, "--remote", remote, "--push", "--tag", tag)
+    _run_script(repository.dev, "--remote", remote, "--push", "--tag", tag, "--ref", repository.source_sha)
 
     public_tip = _git(repository.public, "rev-parse", "refs/heads/main")
     tag_ref = f"refs/tags/{tag}"
     assert _git(repository.public, "cat-file", "-t", tag_ref) == "tag"
     assert _git(repository.public, "rev-parse", f"{tag_ref}^{{commit}}") == public_tip
     assert _git(repository.public, "show", "-s", "--format=%B", public_tip) == f"release: {tag}"
+
+
+@pytest.mark.parametrize("push", [False, True], ids=["dry-run", "push"])
+@pytest.mark.parametrize("annotated", [False, True], ids=["lightweight", "annotated"])
+def test_tag_selects_the_development_tag_after_head_advances(
+    repository: _RepositoryFixture, push: bool, annotated: bool
+) -> None:
+    """Issue #77: a release snapshots the development tag's commit even after HEAD advances."""
+    tag = "v9.9.9"
+    tag_arguments = ["-a", "-m", "fixture: development release"] if annotated else []
+    _git(repository.dev, "tag", *tag_arguments, tag, repository.source_sha)
+    _write(repository.dev, "README.md", b"# later development state\n")
+    _write(repository.dev, "late.txt", b"must not enter the release snapshot\n")
+    _git(repository.dev, "add", "README.md", "late.txt")
+    _git(repository.dev, "commit", "-m", "fixture: after development release")
+    refs_before = _git(repository.public, "show-ref")
+    arguments = ["--push"] if push else []
+
+    completed = _run_script(repository.dev, "--tag", tag, *arguments)
+
+    assert f"source-commit: {repository.source_sha}\n" in completed.stdout
+    assert f"manifest-count: {len(repository.included)}\n" in completed.stdout
+    if push:
+        public_tip = _git(repository.public, "rev-parse", "refs/heads/main")
+        assert _git(repository.public, "rev-parse", f"refs/tags/{tag}^{{commit}}") == public_tip
+        assert tuple(_git(repository.public, "ls-tree", "-r", "--name-only", public_tip).splitlines()) == tuple(
+            sorted(repository.included)
+        )
+        assert _git_bytes(repository.public, "show", f"{public_tip}:README.md") == repository.included["README.md"]
+    else:
+        assert _git(repository.public, "show-ref") == refs_before
+
+
+@pytest.mark.parametrize("push", [False, True], ids=["dry-run", "push"])
+@pytest.mark.parametrize("same_named_branch", [False, True], ids=["absent", "branch-only"])
+def test_missing_development_tag_is_rejected_without_changing_public_refs(
+    repository: _RepositoryFixture, push: bool, same_named_branch: bool
+) -> None:
+    """Issue #77: a missing development tag fails without publishing, even if a branch has that name."""
+    tag = "v9.9.9"
+    if same_named_branch:
+        _git(repository.dev, "branch", tag)
+    refs_before = _git(repository.public, "show-ref")
+    arguments = ["--push"] if push else []
+
+    completed = _run_script(repository.dev, "--tag", tag, *arguments, check=False)
+
+    assert completed.returncode == 2
+    assert "error:" in completed.stderr
+    assert _git(repository.public, "show-ref") == refs_before
+
+
+@pytest.mark.parametrize("push", [False, True], ids=["dry-run", "push"])
+def test_tag_rejects_an_explicit_ref_at_a_different_commit_without_changing_public_refs(
+    repository: _RepositoryFixture, push: bool
+) -> None:
+    """Issue #77: an explicit HEAD differing from the development tag fails without publishing."""
+    tag = "v9.9.9"
+    _git(repository.dev, "tag", tag, repository.source_sha)
+    _write(repository.dev, "late.txt", b"a different source commit\n")
+    _git(repository.dev, "add", "late.txt")
+    _git(repository.dev, "commit", "-m", "fixture: after development release")
+    refs_before = _git(repository.public, "show-ref")
+    arguments = ["--push"] if push else []
+
+    completed = _run_script(repository.dev, "--tag", tag, "--ref", "HEAD", *arguments, check=False)
+
+    assert completed.returncode == 2
+    assert "error:" in completed.stderr
+    assert "--ref" in completed.stderr
+    assert tag in completed.stderr
+    assert _git(repository.public, "show-ref") == refs_before
 
 
 def test_script_imports_only_python_standard_library_modules() -> None:

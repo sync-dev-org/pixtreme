@@ -264,8 +264,8 @@ def _rgb_to_xyz(
     return primary_matrix @ np.diag(scales)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_sony_tokens_extend_the_canonical_vocabulary_and_public_static_surfaces() -> None:
     """Sony color tokens appear in the canonical vocabulary and public annotations without extra aliases."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
@@ -282,7 +282,7 @@ def test_sony_tokens_extend_the_canonical_vocabulary_and_public_static_surfaces(
     assert "gamma='S-Log'" in repr(frame)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_sony_token_keys_are_collision_free_family_local_and_separator_normalized() -> None:
     """Sony token variants normalize to unique keys within their color and gamma families."""
     from pixtreme._core.validation import _normalized_closed_token
@@ -312,9 +312,9 @@ def test_sony_token_keys_are_collision_free_family_local_and_separator_normalize
         _normalized_closed_token("S-Gamut", axis="gamma", accepted=_GAMMAS)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize(("gamma", "encode", "_decode", "anchors"), _CURVES)
 def test_sony_log_encode_matches_independent_float64_oracles_and_published_anchors(
     gamma: str,
@@ -340,9 +340,9 @@ def test_sony_log_encode_matches_independent_float64_oracles_and_published_ancho
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize(("gamma", "encode", "decode", "_anchors"), _CURVES)
 def test_sony_log_decode_matches_independent_float64_oracles_through_the_branch_cut(
     gamma: str,
@@ -372,9 +372,9 @@ def test_sony_log_decode_matches_independent_float64_oracles_through_the_branch_
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=2e-5)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize(("gamma", "encode", "decode", "_anchors"), _CURVES)
 def test_sony_log_round_trips_both_directions_without_clipping(
     gamma: str,
@@ -397,8 +397,8 @@ def test_sony_log_round_trips_both_directions_without_clipping(
     np.testing.assert_allclose(_red_values(restored_encoded), encoded_values, rtol=0.0, atol=2e-5)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_slog3_nonnegative_bits_and_metadata_identity_remain_unchanged() -> None:
     """Sony S-Log3 produces exact nonnegative GPU pixels while retaining its gamma metadata name."""
     linear = np.asarray((0.0, 0.01125, 0.18, 1.0, 1.5), dtype=np.float32)
@@ -411,8 +411,8 @@ def test_slog3_nonnegative_bits_and_metadata_identity_remain_unchanged() -> None
     assert frame.gamma == "S-Log3"
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("gamma", ("S-Log", "S-Log2"))
 def test_all_transfer_paths_preserve_frame_contract_and_auxiliary_bits(gamma: str) -> None:
     """Sony transfers preserve Frame labels, color metadata, and auxiliary pixel bits through public paths."""
@@ -451,7 +451,7 @@ def test_all_transfer_paths_preserve_frame_contract_and_auxiliary_bits(gamma: st
     assert encoded is not source and encoded.data.data.ptr != source.data.data.ptr
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_sgamut_primaries_and_native_row_match_an_independent_float64_matrix() -> None:
     """Sony S-Gamut primaries, conversion matrices, and native luma row match independent calculations."""
     sgamut = _rgb_to_xyz(
@@ -474,8 +474,8 @@ def test_sgamut_primaries_and_native_row_match_an_independent_float64_matrix() -
     assert grayscale.matrix == "native"
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_sgamut_and_sgamut3_are_bit_identical_but_keep_distinct_metadata() -> None:
     """Sony S-Gamut and S-Gamut3 yield identical pixels while preserving distinct metadata names."""
     values = np.asarray(((1.0, -0.25, 0.18), (0.2, 0.4, 1.5)), dtype=np.float32)
@@ -497,8 +497,8 @@ def test_sgamut_and_sgamut3_are_bit_identical_but_keep_distinct_metadata() -> No
     assert (gray_sgamut.matrix, gray_sgamut3.matrix) == ("native", "native")
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("operation", "parameter", "rejected", "candidates"),
     (

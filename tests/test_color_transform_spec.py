@@ -96,7 +96,7 @@ _TRANSFER_FIXTURES = (
 )
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize(("gamma", "encoded", "linear", "atol"), _TRANSFER_FIXTURES)
 def test_every_gamma_decodes_and_encodes_published_representative_and_boundary_points(
     gamma: str,
@@ -128,7 +128,7 @@ def test_every_gamma_decodes_and_encodes_published_representative_and_boundary_p
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_cineon_matches_independent_numpy_float64_kodak_equations() -> None:
     """Cineon encoding and decoding match independent Kodak equations evaluated in float64."""
     black_offset = np.float64(10.0) ** ((np.float64(95.0) - np.float64(685.0)) / np.float64(300.0))
@@ -163,7 +163,7 @@ def test_cineon_matches_independent_numpy_float64_kodak_equations() -> None:
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("gamma", tuple(fixture[0] for fixture in _TRANSFER_FIXTURES))
 def test_every_gamma_decode_encode_round_trip_stays_within_float32_transfer_error(gamma: str) -> None:
     """Every named gamma transfer round-trips representative values within float32 transfer error.
@@ -193,9 +193,9 @@ def test_every_gamma_decode_encode_round_trip_stays_within_float32_transfer_erro
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("gamma", ("PQ", "Cineon", "Gamma-2.2", "Gamma-2.4", "Gamma-2.6"))
 def test_log_and_pure_power_extensions_are_sign_preserving_mirrors(gamma: str) -> None:
     """Log and pure-power transfers mirror positive values into the negative domain without losing sign."""
@@ -219,9 +219,9 @@ def test_log_and_pure_power_extensions_are_sign_preserving_mirrors(gamma: str) -
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize(
     ("gamma", "linear", "encoded"),
     (
@@ -246,9 +246,9 @@ def test_piecewise_transfer_extensions_follow_their_natural_negative_branch(
     ).get()[0, 0, 0] == pytest.approx(linear, abs=3e-6)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_transfer_functions_preserve_scene_overshoot_without_clipping() -> None:
     """Gamma conversion round-trips negative and above-one scene values without clipping."""
     source = _gray_frame((-0.25, 1.5))
@@ -280,9 +280,9 @@ def test_transfer_functions_preserve_scene_overshoot_without_clipping() -> None:
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("gamma", tuple(fixture[0] for fixture in _TRANSFER_FIXTURES))
 def test_every_transfer_preserves_negative_and_above_one_scene_values(gamma: str) -> None:
     """Every named transfer preserves negative and above-one scene values through a round trip."""
@@ -320,7 +320,7 @@ _RED_TO_REC709_FIXTURES = (
 )
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize(("colorspace", "expected_red"), _RED_TO_REC709_FIXTURES)
 def test_every_colorspace_uses_its_published_primaries_and_bradford_white_adaptation(
     colorspace: str, expected_red: tuple[float, float, float]
@@ -352,7 +352,7 @@ def test_every_colorspace_uses_its_published_primaries_and_bradford_white_adapta
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_srgb_and_rec709_colorspace_conversion_is_value_exact_identity() -> None:
     """Converting between sRGB and Rec.709 primaries leaves pixel values exactly unchanged."""
     values = np.array([[[-0.25, 0.125, 1.5], [0.2, 0.4, 0.8]]], dtype=np.float32)
@@ -369,7 +369,7 @@ def test_srgb_and_rec709_colorspace_conversion_is_value_exact_identity() -> None
     assert result.colorspace == "Rec.709"
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("colorspace", tuple(fixture[0] for fixture in _RED_TO_REC709_FIXTURES))
 def test_every_colorspace_round_trip_stays_within_accumulated_float32_matrix_error(colorspace: str) -> None:
     """A color-space conversion and its inverse recover pixels within two float32 matrix passes."""
@@ -392,8 +392,8 @@ def test_every_colorspace_round_trip_stays_within_accumulated_float32_matrix_err
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_input_claims_override_metadata_without_mutating_the_input_frame() -> None:
     """Explicit input color claims control conversion without changing the source Frame's color information."""
     source = _gray_frame((0.5,), gamma="linear")
@@ -425,8 +425,8 @@ def test_input_claims_override_metadata_without_mutating_the_input_frame() -> No
     assert (result.colorspace, result.gamma, result.channels) == ("sRGB", "linear", ("R", "G", "B"))
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_input_colorspace_claim_overrides_metadata_without_relabeling_the_input() -> None:
     """An explicit input color space controls the conversion matrix without relabeling the source Frame."""
     source = _frame([1.0, 0.0, 0.0], colorspace="ACEScg")
@@ -445,8 +445,8 @@ def test_input_colorspace_claim_overrides_metadata_without_relabeling_the_input(
     assert result.colorspace == "Rec.709"
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_partial_output_changes_only_that_axis_and_updates_its_metadata() -> None:
     """Changing one output color axis preserves the other axis and records the new color information in the result."""
     source = _gray_frame((0.5,), gamma="sRGB")
@@ -457,8 +457,8 @@ def test_partial_output_changes_only_that_axis_and_updates_its_metadata() -> Non
     assert (source.colorspace, source.gamma, source.channels) == ("sRGB", "sRGB", ("R", "G", "B"))
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize(
     "kwargs",
     (
@@ -490,7 +490,7 @@ def test_omitted_or_equal_outputs_return_a_new_frame_no_op(kwargs: dict[str, str
     assert (result.colorspace, result.gamma, result.channels) == (source.colorspace, source.gamma, source.channels)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_combined_colorspace_and_gamma_transform_matches_decode_then_matrix_fixture() -> None:
     """Combined color conversion decodes gamma, converts primaries, and encodes gamma in that order."""
     source = _frame([0.5, 0.0, 0.0], colorspace="Rec.709", gamma="sRGB")
@@ -507,8 +507,8 @@ def test_combined_colorspace_and_gamma_transform_matches_decode_then_matrix_fixt
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_color_transform_docstring_warns_that_split_partial_calls_add_passes() -> None:
     """The public color-conversion help explains that splitting one combined conversion adds GPU passes."""
     docstring = inspect.getdoc(px.color.rgb_to_rgb)
@@ -517,9 +517,9 @@ def test_color_transform_docstring_warns_that_split_partial_calls_add_passes() -
         assert required in docstring
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-005")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-005")
+@pytest.mark.req("SP-PIX-017")
 def test_color_transform_docstring_scopes_rendering_to_tonemap_selection() -> None:
     """The public color-conversion help distinguishes technical conversion from output rendering and direct mapping."""
     docstring = inspect.getdoc(px.color.rgb_to_rgb)
@@ -529,7 +529,7 @@ def test_color_transform_docstring_scopes_rendering_to_tonemap_selection() -> No
         assert required in opening
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_rgb_labels_drive_conversion_and_non_rgb_labels_pass_through_exactly() -> None:
     """Color conversion transforms channels labeled R, G, and B while preserving Z and A bit for bit."""
     source = _frame([9.0, 0.3, 0.8, 0.1, 0.2], gamma="Gamma-2.2", channels=["Z", "B", "A", "R", "G"])
@@ -545,8 +545,8 @@ def test_rgb_labels_drive_conversion_and_non_rgb_labels_pass_through_exactly() -
     np.testing.assert_allclose(output[[1, 3, 4]], np.power([0.3, 0.1, 0.2], 2.2), rtol=0.0, atol=2e-6)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("dtype", (np.float16, np.uint8, np.uint16))
 def test_color_transform_rejects_non_float32_actionably(dtype: type[np.generic]) -> None:
     """Color conversion rejects non-float32 Frames and names a usable conversion path."""
@@ -556,8 +556,8 @@ def test_color_transform_rejects_non_float32_actionably(dtype: type[np.generic])
     assert str(np.dtype(dtype)) in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("channels", ("YCbCr", "RG", ["R", "G", "A"]))
 def test_color_transform_rejects_frames_without_all_rgb_labels(channels: str | list[str]) -> None:
     """Color conversion rejects Frames missing an R, G, or B channel and explains the required labels."""
@@ -568,8 +568,8 @@ def test_color_transform_rejects_frames_without_all_rgb_labels(channels: str | l
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("parameter", "value"),
     (

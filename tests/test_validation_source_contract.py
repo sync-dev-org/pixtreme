@@ -49,7 +49,7 @@ def _accepted_values(message: str) -> tuple[str, ...]:
     return accepted
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_real_validation_contract_preserves_numeric_boundaries_and_error_semantics() -> None:
     """Numeric validation preserves finite, positive, and bounded input rules and explains invalid values."""
     validation = _validation()
@@ -97,7 +97,7 @@ def test_real_validation_contract_preserves_numeric_boundaries_and_error_semanti
     assert (slots["why"], slots["how"]) == (bounded_why, bounded_how)
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_array_pair_and_scalar_or_pair_contract_preserves_numpy_scalar_acceptance() -> None:
     """Array-pair and scalar-or-pair validation accepts NumPy scalars and reports invalid shapes with a correction."""
     validation = _validation()
@@ -150,7 +150,7 @@ def test_array_pair_and_scalar_or_pair_contract_preserves_numpy_scalar_acceptanc
     assert (slots["why"], slots["how"]) == (scale_why, scale_how)
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_bool_and_closed_token_contract_preserves_validation_variants() -> None:
     """Boolean and closed-token validation accepts declared forms and explains rejected values."""
     validation = _validation()

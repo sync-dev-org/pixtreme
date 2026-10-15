@@ -7,8 +7,8 @@ import pytest
 import pixtreme as px
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-105")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-105")
 def test_from_array_passes_the_current_consumer_stream_to_dlpack() -> None:
     """DLPack array import passes the current CUDA consumer stream to the producer before using its GPU pixels."""
     import cupy as cp

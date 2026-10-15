@@ -161,7 +161,7 @@ def _compressible_rgb(height: int, width: int, dtype: type[np.generic] = np.floa
     }
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_host_predictor_restore_matches_hand_calculated_fixture() -> None:
     """The EXR ZIP predictor restores bytes to the hand-calculated expected sequence."""
     transformed = np.asarray((10, 20, 250, 1), dtype=np.uint8)
@@ -171,9 +171,9 @@ def test_host_predictor_restore_matches_hand_calculated_fixture() -> None:
     np.testing.assert_array_equal(restored, np.asarray((10, 158, 24, 153), dtype=np.uint8))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_gpu_segmented_predictor_restore_matches_independent_host_oracle() -> None:
     """Segmented GPU restoration of EXR ZIP bytes matches the independent host calculation."""
     import cupy as cp
@@ -194,10 +194,10 @@ def test_gpu_segmented_predictor_restore_matches_independent_host_oracle() -> No
     np.testing.assert_array_equal(device.get(), expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_gpu_restore_reports_adler_mismatch_chunk_and_accepts_valid_checksums() -> None:
     """GPU restoration accepts valid EXR ZIP checksums and identifies the chunk with an Adler-32 mismatch."""
     import cupy as cp
@@ -222,7 +222,7 @@ def test_gpu_restore_reports_adler_mismatch_chunk_and_accepts_valid_checksums() 
     np.testing.assert_array_equal(failed, np.asarray((1,), dtype=np.int64))
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_container_parser_describes_reordered_partial_zip_chunks_without_codec_import(tmp_path: Path) -> None:
     """EXR parsing validates reordered and partial ZIP chunks without importing the compression backend."""
     fixture = _build_exr(
@@ -267,8 +267,8 @@ def test_container_parser_describes_reordered_partial_zip_chunks_without_codec_i
     } == codec_modules_before
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("corruption", ("duplicate-offset", "duplicate-y", "truncated-payload"))
 def test_container_corruption_fails_before_pixel_decode(tmp_path: Path, corruption: str) -> None:
     """EXR reads reject malformed chunk topology before decoding pixels."""
@@ -287,8 +287,8 @@ def test_container_corruption_fails_before_pixel_decode(tmp_path: Path, corrupti
         px.io.read_header(path)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_unknown_version_flag_is_rejected_before_gpu_or_cpu_decode(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -314,9 +314,9 @@ def test_unknown_version_flag_is_rejected_before_gpu_or_cpu_decode(
     assert backend_calls == []
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize(
     ("compression", "height", "storage"),
     (("zips", 2, ("deflate", "raw")), ("zip", 17, ("deflate", "raw"))),
@@ -366,7 +366,7 @@ def test_public_gpu_read_handles_none_deflate_raw_and_partial_blocks(
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("compression", "height", "storage"),
     (("zips", 2, ("deflate", "raw")), ("zip", 17, ("deflate", "raw"))),
@@ -424,10 +424,10 @@ def test_public_custom_cpu_read_handles_none_deflate_raw_and_partial_blocks(
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_gpu_read_promotes_mixed_types_and_preserves_dotted_selection_order(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -465,10 +465,10 @@ def test_gpu_read_promotes_mixed_types_and_preserves_dotted_selection_order(
         px.io.read_image(path, channels=["diffuse.R", "B"], unchanged=True)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_gpu_deflate_read_writes_uniform_half_directly_to_float16_storage(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -490,11 +490,11 @@ def test_gpu_deflate_read_writes_uniform_half_directly_to_float16_storage(
     )
 
 
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("compression_name", ("NO_COMPRESSION", "ZIPS_COMPRESSION", "ZIP_COMPRESSION"))
 def test_openexr_reference_files_use_gpu_and_preserve_scene_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, compression_name: str
@@ -542,9 +542,9 @@ def test_openexr_reference_files_use_gpu_and_preserve_scene_values(
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_piz_reference_file_uses_the_source_fixed_gpu_route(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Public PIZ EXR reads use the built-in GPU route and return the reference image pixels."""
     from openexr_dev_oracle import OpenEXR
@@ -573,8 +573,8 @@ def test_piz_reference_file_uses_the_source_fixed_gpu_route(tmp_path: Path, monk
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("corruption", ("zlib-header", "preset-dictionary", "inflate-size", "adler"))
 def test_zip_integrity_failure_is_actionable_and_never_falls_back(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, corruption: str
@@ -611,7 +611,7 @@ def test_zip_integrity_failure_is_actionable_and_never_falls_back(
     assert expected_word in str(error.value).lower()
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_zlib_trailing_byte_before_adler_is_actionable_and_never_falls_back(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -631,8 +631,8 @@ def test_zlib_trailing_byte_before_adler_is_actionable_and_never_falls_back(
         px.io.read_image(path)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_unexpected_nvcomp_failure_keeps_cause_and_never_falls_back(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -654,7 +654,7 @@ def test_unexpected_nvcomp_failure_keeps_cause_and_never_falls_back(
     assert "synthetic nvCOMP failure" in str(error.value.__cause__)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_exr_header_probe_and_import_remain_nvcomp_codec_and_gpu_free(tmp_path: Path) -> None:
     """Importing EXR support and reading an EXR header do not initialize a GPU or compression codec."""
     fixture = _build_exr(_compressible_rgb(1, 8), compression="none")
@@ -688,7 +688,7 @@ assert "nvidia.nvcomp" not in sys.modules
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_gpu_read_lane_has_one_image_staging_transfer_and_no_host_frame_synthesis(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -725,7 +725,7 @@ def test_gpu_read_lane_has_one_image_staging_transfer_and_no_host_frame_synthesi
     assert not [transfer for transfer in transfers if transfer.direction == "d2h" and transfer.shape == actual.shape]
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_none_read_lane_unpacks_directly_from_container_storage(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -761,10 +761,10 @@ def test_none_read_lane_unpacks_directly_from_container_storage(
     assert not [transfer for transfer in transfers if transfer.direction == "d2h"]
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("compression", ("none", "zip", "zips"))
 @pytest.mark.parametrize("dtype", (np.uint8, np.uint16, np.float16, np.float32))
 def test_gpu_writer_cross_backend_round_trips_every_storage_dtype(
@@ -827,9 +827,9 @@ def test_gpu_writer_cross_backend_round_trips_every_storage_dtype(
     np.testing.assert_array_equal(decoded, expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_gpu_writer_batches_zips_chunks_beyond_cuda_grid_y_limit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -856,7 +856,7 @@ def test_gpu_writer_batches_zips_chunks_beyond_cuda_grid_y_limit(
     np.testing.assert_array_equal(decoded, expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(("compression", "height"), (("zips", 65_536), ("zip", 1_048_561)))
 def test_gpu_writer_chunk_launch_ranges_cover_cuda_grid_y_boundary(compression: str, height: int) -> None:
     """GPU ZIP and ZIPS writes cover all chunks across the CUDA grid-Y launch boundary."""
@@ -867,9 +867,9 @@ def test_gpu_writer_chunk_launch_ranges_cover_cuda_grid_y_boundary(compression: 
     assert exr_packing._chunk_launch_ranges(chunk_count) == ((0, 65_535), (65_535, 65_536))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize(("compression", "height"), (("zip", 17), ("zips", 3)))
 def test_gpu_writer_emits_independent_zlib_streams_and_raw_fallback(
     tmp_path: Path,
@@ -921,7 +921,7 @@ def test_gpu_writer_emits_independent_zlib_streams_and_raw_fallback(
         assert raw_container.data[chunk.payload_start : chunk.payload_end] == expected
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_gpu_write_lane_has_no_openexr_gate_or_full_frame_host_synthesis(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -968,7 +968,7 @@ def test_gpu_write_lane_has_no_openexr_gate_or_full_frame_host_synthesis(
     ]
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_none_write_interleaves_chunk_headers_before_one_pinned_transfer(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1011,8 +1011,8 @@ def test_none_write_interleaves_chunk_headers_before_one_pinned_transfer(
     assert len(final_transfers) == 1
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_unexpected_nvcomp_write_failure_keeps_cause_and_never_falls_back(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1038,8 +1038,8 @@ def test_unexpected_nvcomp_write_failure_keeps_cause_and_never_falls_back(
     assert not path.exists()
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_unexpected_nvcomp_write_value_error_is_actionable_and_keeps_cause(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -72,8 +72,8 @@ def _host_recode(values: np.ndarray, target_dtype: str) -> np.ndarray:
     return np.floor(scaled + np.float32(0.5)).astype(target_dtype)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     ("route", "format_name", "format_token", "suffix", "kwargs"),
     (
@@ -139,8 +139,8 @@ def test_write_boundaries_accept_every_frame_dtype_and_preserve_the_input(
     assert (frame.colorspace, frame.gamma, frame.channels, frame.matrix) == before_metadata
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     ("format_token", "suffix", "dtype", "kwargs"),
     (
@@ -179,8 +179,8 @@ def test_native_dtype_selection_does_not_call_recode_dtype(
         assert px.io.write_image(tmp_path / f"native{suffix}", frame, **kwargs) is None
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_write_image_preserves_the_unwritable_output_path_error(tmp_path: Path) -> None:
     """Image writing reports an unwritable output path with an actionable runtime error."""
     frame = px.io.from_array(

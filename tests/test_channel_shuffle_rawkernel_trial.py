@@ -47,8 +47,8 @@ def _assert_bit_equal(actual: cp.ndarray, expected: cp.ndarray) -> None:
     cp.testing.assert_array_equal(actual.view(cp.uint32), expected.view(cp.uint32))
 
 
-@pytest.mark.req("REQ-PIX-001")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-001")
+@pytest.mark.req("SP-PIX-003")
 def test_shuffle_rawkernel_trial_matches_legacy_reorder_multi_fill_and_adapt_bits_characterization() -> None:
     """characterization: Channel shuffle keeps bit-exact reorder, multi-Frame fill, and adaptation results."""
     first_bits = np.asarray(

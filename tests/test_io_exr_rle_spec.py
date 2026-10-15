@@ -83,7 +83,7 @@ def _decode_packets(payload: bytes, *, expected_size: int) -> bytes:
     return bytes(decoded)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_forced_rle_read_accepts_full_signed_header_grammar(
     tmp_path: Path,
@@ -111,8 +111,8 @@ def test_forced_rle_read_accepts_full_signed_header_grammar(
     np.testing.assert_array_equal(actual_bits, expected_bits)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 @pytest.mark.parametrize(
     ("payload", "produced_size", "why"),
@@ -155,9 +155,9 @@ def test_forced_rle_read_rejects_complete_packet_stream_with_wrong_materialized_
     assert "how=" in message
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_rle_gpu_packet_encoder_emits_only_canonical_boundaries() -> None:
     """GPU RLE writes emit canonical literal and repeated-byte packet boundaries."""
     cp = importlib.import_module("cupy")
@@ -182,9 +182,9 @@ def test_rle_gpu_packet_encoder_emits_only_canonical_boundaries() -> None:
     assert _decode_packets(host[offsets[1] : offsets[1] + sizes[1]], expected_size=len(second)) == second
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize(
     ("run_length", "expected_packets", "expected_literal_classes"),
     (
@@ -221,7 +221,7 @@ def test_rle_gpu_packet_encoder_splits_long_run_short_tails_canonically(
     assert _decode_packets(host, expected_size=run_length) == transformed_bytes
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_openexr_rle_write_round_trips_through_both_forced_read_lanes(
     tmp_path: Path,
@@ -264,9 +264,9 @@ def test_openexr_rle_write_round_trips_through_both_forced_read_lanes(
     np.testing.assert_array_equal(frame.data.get(), reference)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("dtype", (np.float16, np.float32))
 def test_gpu_rle_write_round_trips_in_openexr_with_compressed_and_raw_rows(
     tmp_path: Path,
@@ -313,7 +313,7 @@ def test_gpu_rle_write_round_trips_in_openexr_with_compressed_and_raw_rows(
     np.testing.assert_array_equal(decoded, values)
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_rle_lanes_keep_image_level_transfer_boundaries(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -372,7 +372,7 @@ def test_rle_lanes_keep_image_level_transfer_boundaries(
     assert cpu_actual.dtype == gpu_actual.dtype
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_rle_descriptor_preserves_mixed_channels_raw_storage_and_row_order(tmp_path: Path) -> None:
     """RLE EXR parsing records mixed channel types, raw storage, and file channel order for each chunk."""
     fixture = _build_exr_chunk_fixture("rle")
@@ -408,7 +408,7 @@ def test_rle_descriptor_preserves_mixed_channels_raw_storage_and_row_order(tmp_p
     assert descriptor.packets[0].output_span == exr_common._ExrByteSpan(0, expected_raw)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_rle_subsampled_channels_use_the_supported_fallback(tmp_path: Path) -> None:
     """RLE EXR reads classify valid subsampled channels for the supported fallback route."""
     fixture = _build_exr_chunk_fixture("rle", channels=(_channel("H", 1, sampling=(2, 1)),))
@@ -420,8 +420,8 @@ def test_rle_subsampled_channels_use_the_supported_fallback(tmp_path: Path) -> N
     assert px.io.read_header(path).format == "EXR"
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_rle_oversized_payload_is_actionable_corruption(tmp_path: Path) -> None:
     """RLE EXR reads reject compressed chunks larger than their raw form and explain the corrupt payload."""
     expected_raw = _raw_size(_MIXED_CHANNELS, width=8, row_count=1)
@@ -432,7 +432,7 @@ def test_rle_oversized_payload_is_actionable_corruption(tmp_path: Path) -> None:
         px.io.read_header(path)
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_rle_corruption_error_names_its_compression(tmp_path: Path) -> None:
     """An invalid RLE chunk identifies its compression so the developer can repair the input."""
     expected_raw = _raw_size(_MIXED_CHANNELS, width=8, row_count=1)
@@ -446,8 +446,8 @@ def test_rle_corruption_error_names_its_compression(tmp_path: Path) -> None:
     assert not _has_numbered_step(message)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_rle_packet_grammar_errors_are_actionable_before_materialization(tmp_path: Path) -> None:
     """RLE EXR reads reject a truncated packet before decoding pixels."""
     fixture = _build_exr_chunk_fixture(

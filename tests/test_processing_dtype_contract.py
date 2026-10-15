@@ -111,8 +111,8 @@ def _assert_float32_guidance(
         assert hasattr(getattr(px, module_name), operation_name)
 
 
-@pytest.mark.req("REQ-PIX-001")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-001")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(("operation", "kwargs"), _OPERATION_KWARGS)
 @pytest.mark.parametrize("dtype", _NON_FLOAT32_DTYPES)
 def test_public_processing_operations_reject_non_float32_before_identity_shortcuts(
@@ -133,8 +133,8 @@ def test_public_processing_operations_reject_non_float32_before_identity_shortcu
     _assert_float32_guidance(error, operation=operation, dtype=dtype)
 
 
-@pytest.mark.req("REQ-PIX-001")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-001")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("dtype", _NON_FLOAT32_DTYPES)
 def test_vector_blur_rejects_non_float32_vector_frame(dtype: type[np.generic]) -> None:
     """Vector blur rejects a vector Frame with non-float32 pixels as well as a non-float32 image."""
@@ -144,8 +144,8 @@ def test_vector_blur_rejects_non_float32_vector_frame(dtype: type[np.generic]) -
     _assert_float32_guidance(error, operation="filter.vector_blur", dtype=dtype)
 
 
-@pytest.mark.req("REQ-PIX-001")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-001")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("dtype", _NON_FLOAT32_DTYPES)
 def test_text_rejects_non_float32_before_opacity_identity(dtype: type[np.generic]) -> None:
     """Text drawing rejects non-float32 image data even when opacity is zero."""

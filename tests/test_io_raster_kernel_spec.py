@@ -36,8 +36,8 @@ def _composed_decode(source: cp.ndarray, indices: tuple[int, ...], *, unchanged:
     return cp.ascontiguousarray(output)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("dtype", (np.uint8, np.uint16, np.float16, np.float32), ids=np.dtype)
 @pytest.mark.parametrize(
     ("component_count", "indices"),
@@ -60,8 +60,8 @@ def test_fused_decode_repack_is_bit_identical_to_the_composed_boundary_character
     _assert_bit_equal(actual, expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_fused_decode_repack_is_bit_identical_for_strided_source_storage_characterization() -> None:
     """characterization: GitHub issue #1 RawKernel trial freezes strided bits."""
     source = _raster_values(np.uint16, 4)[:, ::2, :]
@@ -85,8 +85,8 @@ def _composed_write(frame: Frame, format_name: str) -> cp.ndarray:
     return cp.ascontiguousarray(prepared.data[..., indices])
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     ("format_name", "dtype", "channels"),
     (

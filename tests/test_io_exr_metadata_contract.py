@@ -23,8 +23,8 @@ _ACES_CHROMATICITIES = (
 )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_exr_metadata_priority_default_channels_explicit_order_and_header_are_preserved(tmp_path: Path) -> None:
     """EXR reads preserve file color metadata, default channel selection, explicit channel order, and header
     information."""

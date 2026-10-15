@@ -86,7 +86,7 @@ def _ssim_reference(reference: np.ndarray, candidate: np.ndarray, *, data_range:
     return output
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_quality_metrics_public_signatures_paths_and_array_contract_are_exact() -> None:
     """PSNR, SSIM, and SSIM maps each have one public path and return separate device arrays."""
     for name in ("psnr", "ssim", "ssim_map"):
@@ -142,8 +142,8 @@ def test_quality_metrics_public_signatures_paths_and_array_contract_are_exact() 
             assert not hasattr(result, metadata_name)
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("name", ("psnr", "ssim", "ssim_map"))
 def test_quality_metrics_reject_non_frame_and_non_float32_inputs_actionably(name: str) -> None:
     """For image quality metrics, both inputs must be float32 Frames with conversion guidance."""
@@ -173,8 +173,8 @@ def test_quality_metrics_reject_non_frame_and_non_float32_inputs_actionably(name
                 assert f"px.values.{guidance}" in message
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("name", ("psnr", "ssim", "ssim_map"))
 @pytest.mark.parametrize(
     ("field", "candidate"),
@@ -199,8 +199,8 @@ def test_quality_metrics_reject_every_pair_mismatch_actionably(name: str, field:
     assert "candidate" in message
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 def test_ssim_metrics_enforce_the_11x11_minimum_geometry() -> None:
     """SSIM rejects images smaller than its eleven by eleven valid window with guidance."""
     for shape in ((10, 11, 1), (11, 10, 1)):
@@ -213,8 +213,8 @@ def test_ssim_metrics_enforce_the_11x11_minimum_geometry() -> None:
             assert "11" in message
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("name", ("psnr", "ssim", "ssim_map"))
 def test_quality_metrics_validate_data_range_without_inference(name: str) -> None:
     """Quality metrics require an explicit positive finite data range and explain invalid values."""
@@ -231,7 +231,7 @@ def test_quality_metrics_validate_data_range_without_inference(name: str) -> Non
         assert isinstance(result, cp.ndarray)
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_psnr_matches_one_global_float64_oracle_and_ieee_special_values() -> None:
     """PSNR uses one mean squared error over all samples and propagates infinity and NaN according to its formula."""
     cases = (
@@ -271,7 +271,7 @@ def test_psnr_matches_one_global_float64_oracle_and_ieee_special_values() -> Non
     assert bool(cp.isneginf(px.metrics.psnr(infinite_reference, finite)))
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_ssim_map_matches_direct_population_oracle_and_scalar_is_its_fp32_mean() -> None:
     """For image quality metrics, valid Gaussian SSIM matches an independent float64 oracle."""
     generator = np.random.default_rng(20260806)
@@ -296,9 +296,9 @@ def test_ssim_map_matches_direct_population_oracle_and_scalar_is_its_fp32_mean()
     assert px.metrics.ssim_map(minimal, minimal).shape == (1, 1)
 
 
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize(
     ("mean", "deviation", "channel_count", "shape", "data_range", "boundary"),
     (
@@ -343,9 +343,9 @@ def test_ssim_scene_values_match_float64_oracle_at_every_valid_position(
     np.testing.assert_allclose(actual_scalar.get(), np.float32(np.mean(expected_map)), rtol=4e-5, atol=4e-5)
 
 
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("channel_count", (1, 2, 3, 4))
 @pytest.mark.parametrize("shape", ((11, 11), (27, 43), (83, 79)))
 def test_ssim_preserves_every_window_across_image_sizes_and_channels(
@@ -374,9 +374,9 @@ def test_ssim_preserves_every_window_across_image_sizes_and_channels(
     cp.testing.assert_array_equal(px.metrics.ssim_map(reference, reference), cp.ones(actual.shape, dtype=cp.float32))
 
 
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("constant", (-2.5, 0.0, 1.0, 4.25))
 def test_ssim_identical_pairs_are_exact_one_without_clamp(constant: float) -> None:
     """For image quality metrics, finite identical scene values produce exact one."""
@@ -388,7 +388,7 @@ def test_ssim_identical_pairs_are_exact_one_without_clamp(constant: float) -> No
     cp.testing.assert_array_equal(result_scalar, cp.asarray(np.float32(1.0)))
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_ssim_nonconstant_identical_pair_is_exact_one() -> None:
     """For image quality metrics, finite nonconstant identical windows are exact fp32 one."""
     values = np.linspace(-0.45, 2.5, 13 * 14 * 3, dtype=np.float32).reshape(13, 14, 3)
@@ -397,9 +397,9 @@ def test_ssim_nonconstant_identical_pair_is_exact_one() -> None:
     cp.testing.assert_array_equal(px.metrics.ssim(frame, frame), cp.asarray(np.float32(1.0)))
 
 
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-103")
 def test_ssim_evaluates_distinct_constants_and_nonfinite_values_without_clamp() -> None:
     """For image quality metrics, constants and IEEE values follow the formula unchanged."""
     reference_values = np.full((11, 11, 2), np.float32(-2.0), dtype=np.float32)
@@ -418,7 +418,7 @@ def test_ssim_evaluates_distinct_constants_and_nonfinite_values_without_clamp() 
     assert bool(cp.isnan(px.metrics.ssim(nan_frame, candidate)))
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_quality_metrics_preserve_both_inputs_and_do_not_share_storage() -> None:
     """For image quality metrics, metrics do not mutate, normalize, clip, scan, or alias either input."""
     values = np.linspace(-2.0, 3.0, 12 * 12 * 2, dtype=np.float32).reshape(12, 12, 2)
@@ -442,8 +442,8 @@ def test_quality_metrics_preserve_both_inputs_and_do_not_share_storage() -> None
         assert result.data.ptr not in (reference.data.data.ptr, candidate.data.data.ptr)
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 def test_quality_metric_docstrings_are_self_contained_operational_contracts() -> None:
     """Developers can find PSNR and SSIM formulas, input requirements, device array outputs, and reconstruction
     guidance in the public docstrings.

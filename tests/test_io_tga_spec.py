@@ -130,7 +130,7 @@ def _uint8_oracle(values: np.ndarray) -> np.ndarray:
     return np.floor(np.clip(normalized, 0.0, 1.0) * np.float32(255.0) + np.float32(0.5)).astype(np.uint8)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("image_type", (2, 10), ids=("uncompressed", "rle"))
 @pytest.mark.parametrize("pixel_depth", (24, 32), ids=("rgb", "rgba"))
 @pytest.mark.parametrize("top_origin", (False, True), ids=("bottom-left", "top-left"))
@@ -171,9 +171,9 @@ def test_tga_read_supports_true_color_rle_and_both_vertical_origins(
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_tga_read_unchanged_selects_channels_and_overrides_metadata(tmp_path: Path) -> None:
     """Unchanged TGA reading retains uint8 codes while applying requested channel order and color metadata claims."""
     rgba = np.array([[[1, 2, 3, 4], [250, 128, 64, 32]]], dtype=np.uint8)
@@ -202,7 +202,7 @@ def test_tga_read_unchanged_selects_channels_and_overrides_metadata(tmp_path: Pa
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_tga_read_resolves_every_repeated_output_channel_position(tmp_path: Path) -> None:
     """TGA reading resolves repeated channel selections correctly beyond the fourth output position."""
     rgba = np.array([[[1, 2, 3, 4]]], dtype=np.uint8)
@@ -220,8 +220,8 @@ def test_tga_read_resolves_every_repeated_output_channel_position(tmp_path: Path
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("payload", "observed"),
     (
@@ -264,7 +264,7 @@ def test_tga_read_rejects_out_of_scope_configurations_before_gpu_transfer(
     assert observed in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("channels", "values"),
     (
@@ -322,7 +322,7 @@ def test_tga_write_is_rle_top_left_and_independently_decodable(
     np.testing.assert_array_equal(file_pixels, expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_tga_write_packets_never_cross_scanlines(tmp_path: Path) -> None:
     """TGA writing starts a new RLE packet at each scanline boundary even when neighboring rows share a color."""
     values = np.full((2, 3, 3), 17, dtype=np.uint8)
@@ -337,7 +337,7 @@ def test_tga_write_packets_never_cross_scanlines(tmp_path: Path) -> None:
     assert packet_lengths == (3, 3)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("packet_kind", ("raw", "run"))
 @pytest.mark.parametrize("pixel_count", (128, 129))
 def test_tga_read_decodes_rle_packet_count_boundaries(tmp_path: Path, packet_kind: str, pixel_count: int) -> None:
@@ -370,7 +370,7 @@ def test_tga_read_decodes_rle_packet_count_boundaries(tmp_path: Path, packet_kin
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("packet_kind", "pixel_count", "expected_packets"),
     (
@@ -403,8 +403,8 @@ def test_tga_write_splits_raw_and_run_packets_at_128_pixels(
     np.testing.assert_array_equal(actual_bgr[..., [2, 1, 0]], values)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("width", "packet_data", "observed"),
     (
@@ -428,8 +428,8 @@ def test_tga_read_rejects_malformed_rle_packets_with_actionable_runtime_error(
     assert observed in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_tga_write_read_round_trip_is_exact_on_the_255_grid(tmp_path: Path) -> None:
     """TGA writing and reading preserve uint8 codes and their normalized float32 values exactly."""
     codes = np.array(
@@ -457,8 +457,8 @@ def test_tga_write_read_round_trip_is_exact_on_the_255_grid(tmp_path: Path) -> N
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     ("dtype", "samples"),
     (
@@ -490,8 +490,8 @@ def test_tga_write_converts_every_frame_dtype_to_uint8_with_independent_oracle(
     cp.testing.assert_array_equal(frame.data, before)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_tga_write_rejects_non_rgb_layout(tmp_path: Path) -> None:
     """TGA writing rejects non-RGB channel layouts while accepting every supported Frame dtype."""
     y_frame = px.io.from_array(cp.zeros((1, 1, 1), dtype=cp.uint8), colorspace="sRGB", gamma="sRGB", channels="Y")
@@ -501,7 +501,7 @@ def test_tga_write_rejects_non_rgb_layout(tmp_path: Path) -> None:
     assert not (tmp_path / "gray.tga").exists()
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_tga_read_header_is_gpu_free_and_preserves_the_public_model(tmp_path: Path) -> None:
     """TGA header inspection reports effective orientation one without GPU work."""
     path = tmp_path / "header.tga"
@@ -529,8 +529,8 @@ assert "OpenEXR" not in sys.modules
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_tga_remains_outside_bytes_boundaries(tmp_path: Path) -> None:
     """TGA is available through image files and is rejected at bytes input and output boundaries."""
     payload = _header(width=1, height=1) + b"\x03\x02\x01"

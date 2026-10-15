@@ -41,8 +41,8 @@ def _assert_actionable(error: pytest.ExceptionInfo[ValueError]) -> None:
     assert message.index("why=") < message.index("what=") < message.index("how=")
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-010")
 def test_stack_images_public_signature_empty_input_and_single_input_copy() -> None:
     """Developers stack Frames through the public transform operation; empty input fails and one input yields a separate copy."""
     signature = inspect.signature(px.transform.stack)
@@ -72,7 +72,7 @@ def test_stack_images_public_signature_empty_input_and_single_input_copy() -> No
         np.testing.assert_array_equal(_host(result), _host(source))
 
 
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-010")
 @pytest.mark.parametrize(
     ("direction", "first_values", "second_values", "expected_shape"),
     (
@@ -108,7 +108,7 @@ def test_stack_images_places_exact_copies_in_enumeration_order(
     np.testing.assert_array_equal(_host(result), expected)
 
 
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-010")
 @pytest.mark.parametrize("dtype", (np.float32, np.float16, np.uint8, np.uint16, np.uint32))
 def test_default_stack_accepts_every_frame_storage_dtype_without_numeric_conversion(dtype: Any) -> None:
     """Default stacking copies pixels exactly for every Frame storage dtype without converting numeric values."""
@@ -121,7 +121,7 @@ def test_default_stack_accepts_every_frame_storage_dtype_without_numeric_convers
     np.testing.assert_array_equal(_host(result), np.asarray([[[1], [2]], [[3], [4]]], dtype=dtype))
 
 
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-010")
 def test_default_stack_preserves_uint32_identities_above_float32_exact_range() -> None:
     """Default stacking preserves uint32 pixel identities above the exact float32 integer range."""
     above_exact = np.uint32(16_777_217)  # 2^24 + 1: rounds to 16_777_216 through float32
@@ -136,8 +136,8 @@ def test_default_stack_preserves_uint32_identities_above_float32_exact_range() -
     np.testing.assert_array_equal(_host(result), expected)
 
 
-@pytest.mark.req("REQ-PIX-010")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-010")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("direction", ("diagonal", "row", "vertical\t", ""))
 def test_stack_direction_is_closed_vocabulary(direction: str) -> None:
     """Stacking accepts only vertical and horizontal directions and lists them for an unknown direction."""
@@ -152,9 +152,9 @@ def test_stack_direction_is_closed_vocabulary(direction: str) -> None:
     assert "horizontal" in message
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-010")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-010")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("direction", "field", "first_value", "second_value"),
     (
@@ -206,7 +206,7 @@ def test_default_stack_rejects_every_incompatible_axis_with_both_values(
     assert str(second_value) in message
 
 
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-010")
 @pytest.mark.parametrize(
     ("direction", "master_shape", "source_shape", "resized_shape", "expected_shape"),
     (
@@ -242,9 +242,9 @@ def test_adapt_resizes_the_orthogonal_axis_to_first_with_half_up_aspect_rounding
     np.testing.assert_array_equal(_host(result), expected)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-010")
 def test_adapt_matches_channel_color_channel_then_default_resize_composition() -> None:
     """Adaptive stacking converts channels and color before resizing and uses the first Frame's metadata in the result."""
     master = _frame(
@@ -285,8 +285,8 @@ def test_adapt_matches_channel_color_channel_then_default_resize_composition() -
     np.testing.assert_array_equal(_host(result), expected)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-010")
 @pytest.mark.parametrize(
     (
         "master_channels",
@@ -348,8 +348,8 @@ def test_adapt_matches_public_channel_color_channel_composition_bit_exactly(
         )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-010")
 def test_adapt_reorders_an_equal_arbitrary_channel_set_without_changing_values() -> None:
     """Adaptive stacking reorders an equal set of arbitrary channel labels to match the first Frame without changing values."""
     master = _frame(np.zeros((1, 2, 3), dtype=np.float32), channels=("matte", "Z", "A"))
@@ -364,8 +364,8 @@ def test_adapt_reorders_an_equal_arbitrary_channel_set_without_changing_values()
     np.testing.assert_array_equal(_host(result)[master.height :], _host(expected_source))
 
 
-@pytest.mark.req("REQ-PIX-010")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-010")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("master_channels", "source_channels"),
     (
@@ -393,9 +393,9 @@ def test_adapt_rejects_channel_pairs_without_a_deterministic_conversion(
     assert repr(source_channels) in message
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-010")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-010")
+@pytest.mark.req("SP-PIX-017")
 def test_adapt_preserves_dtype_and_color_conversion_fail_fast_boundaries() -> None:
     """Adaptive stacking explains unsupported dtype and color conversions and preserves the underlying error cause."""
     rgb = np.zeros((1, 2, 3), dtype=np.float32)
@@ -442,8 +442,8 @@ def test_adapt_preserves_dtype_and_color_conversion_fail_fast_boundaries() -> No
     assert "channels" in str(error.value) and "gamma" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-010")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-010")
+@pytest.mark.req("SP-PIX-017")
 def test_stack_images_rejects_non_frame_members() -> None:
     """Stacking rejects any collection member that is not a Frame."""
     with pytest.raises(ValueError, match="Frame"):

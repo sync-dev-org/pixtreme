@@ -75,8 +75,8 @@ def _warnings(call: object, *args: object, **kwargs: object) -> tuple[px.core.Fr
     return result, caught
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_public_signatures_and_image_header_shape_do_not_change_for_icc() -> None:
     """ICC color metadata uses the public image I/O parameters and ImageHeader color fields."""
     assert tuple(inspect.signature(px.io.read_image).parameters) == (
@@ -99,8 +99,8 @@ def test_public_signatures_and_image_header_shape_do_not_change_for_icc() -> Non
     assert set(px.io.ImageHeader.model_fields) == {"format", "width", "height", "parts", "color", "orientation"}
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("name", (b"A", b"profile-name", b"\xa1\xff", b"A" * 79))
 def test_png_iccp_accepts_valid_names_and_maps_exact_decompressed_profile(tmp_path: Path, name: bytes) -> None:
     """PNG reading exposes the exact decompressed ICC profile bytes when the iCCP carrier has a valid name."""
@@ -111,8 +111,8 @@ def test_png_iccp_accepts_valid_names_and_maps_exact_decompressed_profile(tmp_pa
     assert (color.colorspace, color.gamma, color.mappable) == ("Adobe-RGB", "Adobe-RGB", True)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("name", (b"", b" A", b"A ", b"A  B", b"\x1f", b"\x7f", b"\xa0", b"A" * 80))
 def test_png_iccp_rejects_invalid_names_without_rejecting_the_image(tmp_path: Path, name: bytes) -> None:
     """A PNG with an invalid iCCP profile name still decodes pixels while leaving optional color metadata unmapped."""
@@ -123,8 +123,8 @@ def test_png_iccp_rejects_invalid_names_without_rejecting_the_image(tmp_path: Pa
     assert (color.colorspace, color.gamma, color.mappable) == (None, None, False)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     "payload",
     (
@@ -142,8 +142,8 @@ def test_png_iccp_carrier_failures_have_no_raw_profile(tmp_path: Path, payload: 
     assert (color.colorspace, color.gamma, color.mappable) == (None, None, False)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_png_color_source_priority_never_falls_through_to_shadowed_iccp(tmp_path: Path) -> None:
     """PNG color metadata chooses cICP ahead of iCCP, sRGB, and gAMA without using shadowed data."""
     profile = icc_profile(version=3)
@@ -161,8 +161,8 @@ def test_png_color_source_priority_never_falls_through_to_shadowed_iccp(tmp_path
     assert (invalid_icc.colorspace, invalid_icc.gamma, invalid_icc.mappable) == (None, None, False)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_png_cicp_priority_skips_oversized_preceding_iccp_payload(tmp_path: Path) -> None:
     """PNG reading skips an oversized iCCP payload when a higher-priority cICP chunk determines color metadata."""
     compressed_limit = 17_825_792
@@ -178,8 +178,8 @@ def test_png_cicp_priority_skips_oversized_preceding_iccp_payload(tmp_path: Path
     assert peak < 2 * 1024 * 1024
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_png_oversized_compressed_stream_is_rejected_before_payload_read(tmp_path: Path) -> None:
     """PNG reading rejects an ICC compressed stream larger than the supported input limit before materializing it."""
     compressed_limit = 17_825_792
@@ -195,8 +195,8 @@ def test_png_oversized_compressed_stream_is_rejected_before_payload_read(tmp_pat
     assert peak < 2 * 1024 * 1024
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_jpeg_app2_reassembles_shuffled_segments_and_rejects_invalid_sequences(tmp_path: Path) -> None:
     """JPEG reading reconstructs ICC APP2 segments by sequence number and rejects incomplete, duplicate, or
     inconsistent sets.
@@ -224,8 +224,8 @@ def test_jpeg_app2_reassembles_shuffled_segments_and_rejects_invalid_sequences(t
     assert absent.mappable is None
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_tiff_intercolorprofile_requires_one_undefined_first_ifd_tag(tmp_path: Path) -> None:
     """TIFF reading accepts one type-UNDEFINED ICC profile tag in the first image directory and exposes its exact
     bytes.
@@ -244,8 +244,8 @@ def test_tiff_intercolorprofile_requires_one_undefined_first_ifd_tag(tmp_path: P
     assert absent.mappable is None
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_tiff_broken_optional_profile_offset_does_not_become_container_corruption(tmp_path: Path) -> None:
     """A TIFF with a valid first image directory remains decodable when an optional ICC profile offset is unreadable."""
     payload = bytearray(tiff_header(profiles=(icc_profile(),)))
@@ -264,8 +264,8 @@ def test_tiff_broken_optional_profile_offset_does_not_become_container_corruptio
     assert color.mappable is False
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_tiff_duplicate_profiles_are_rejected_before_payload_read(tmp_path: Path) -> None:
     """TIFF reading discards duplicate first-directory ICC tags before reading their payloads."""
     profile = b"\x00" * (4 * 1024 * 1024)
@@ -281,8 +281,8 @@ def test_tiff_duplicate_profiles_are_rejected_before_payload_read(tmp_path: Path
     assert peak < 2 * 1024 * 1024
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_webp_iccp_requires_vp8x_flag_unique_chunk_and_normative_order(tmp_path: Path) -> None:
     """WebP reading accepts ICC metadata only with the VP8X flag, one ICCP chunk, and the required chunk order."""
     profile = icc_profile(colorspace="Adobe-RGB", gamma="Adobe-RGB")
@@ -304,8 +304,8 @@ def test_webp_iccp_requires_vp8x_flag_unique_chunk_and_normative_order(tmp_path:
     assert _header(tmp_path, webp_header(profiles=(), icc_flag=False), ".webp").color.mappable is None
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_webp_icc_is_independent_from_exif_orientation_and_pixel_samples(tmp_path: Path) -> None:
     """WebP ICC labeling leaves orientation, dimensions, and decoded pixel samples unchanged."""
     plain = encode_oriented_raster("WEBP", 6)
@@ -337,8 +337,8 @@ def test_webp_icc_is_independent_from_exif_orientation_and_pixel_samples(tmp_pat
     assert (header.orientation, header.width, header.height) == (6, embedded_frame.width, embedded_frame.height)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("format_name", ("PNG", "TIFF", "WEBP"))
 def test_profile_size_limit_accepts_exact_16_mib_and_rejects_one_more_byte(tmp_path: Path, format_name: str) -> None:
     """PNG, TIFF, and WebP ICC carriers accept a 16 MiB profile and reject a profile one byte larger."""
@@ -361,8 +361,8 @@ def test_profile_size_limit_accepts_exact_16_mib_and_rejects_one_more_byte(tmp_p
     assert oversized.mappable is False
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_png_compressed_input_limit_accepts_exact_17_mib_and_rejects_one_more_byte(tmp_path: Path) -> None:
     """PNG ICC parsing accepts exactly 17 MiB of compressed input and rejects one additional byte."""
     compressed_limit = 17_825_792
@@ -377,8 +377,8 @@ def test_png_compressed_input_limit_accepts_exact_17_mib_and_rejects_one_more_by
     assert oversized.mappable is False
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_jpeg_accepts_the_maximum_255_segment_reconstruction(tmp_path: Path) -> None:
     """JPEG ICC parsing reconstructs a complete 255-segment profile without exceeding bounded storage."""
     segment_size = 65_519
@@ -396,8 +396,8 @@ def test_jpeg_accepts_the_maximum_255_segment_reconstruction(tmp_path: Path) -> 
     assert color.mappable is False
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_jpeg_rejects_oversized_duplicate_aggregate_with_bounded_retention(tmp_path: Path) -> None:
     """JPEG ICC parsing stops retaining APP2 data once duplicate segments make a large aggregate invalid."""
     segment = b"\x00" * 65_519
@@ -413,8 +413,8 @@ def test_jpeg_rejects_oversized_duplicate_aggregate_with_bounded_retention(tmp_p
     assert peak < 2 * 1024 * 1024
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_webp_duplicate_iccp_chunks_discard_and_skip_payloads(tmp_path: Path) -> None:
     """WebP ICC parsing discards duplicate ICCP chunks without retaining their payload collection."""
     profile = b"\x00" * (4 * 1024 * 1024)
@@ -430,8 +430,8 @@ def test_webp_duplicate_iccp_chunks_discard_and_skip_payloads(tmp_path: Path) ->
     assert peak < 8 * 1024 * 1024
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("format_name", tuple(_SUFFIXES))
 def test_file_and_bytes_boundaries_resolve_valid_partial_invalid_absent_and_overrides_identically(
     tmp_path: Path, format_name: str
@@ -480,8 +480,8 @@ def test_file_and_bytes_boundaries_resolve_valid_partial_invalid_absent_and_over
         assert len(override_warnings) == warning_count
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(("mode", "expected"), (("RGB", True), ("RGBA", True), ("P", True), ("L", False)))
 def test_icc_application_uses_preselection_standard_container_channels(
     tmp_path: Path, mode: str, expected: bool
@@ -505,8 +505,8 @@ def test_icc_application_uses_preselection_standard_container_channels(
         assert (result.colorspace, result.gamma, len(caught)) == ("sRGB", "sRGB", 1)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_read_header_maps_valid_and_invalid_icc_without_codec_or_cuda_initialization(tmp_path: Path) -> None:
     """Image header inspection maps valid ICC data and falls back from invalid data without a codec or CUDA
     initialization.

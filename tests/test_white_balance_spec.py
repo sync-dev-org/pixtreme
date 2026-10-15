@@ -164,7 +164,7 @@ def _import_colour_oracle():
     return colour
 
 
-@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("SP-PIX-020")
 @pytest.mark.parametrize(("token", "oracle_name"), tuple(_CAT_ORACLE_NAMES.items()))
 def test_every_cat_matrix_matches_colour_science(token: str, oracle_name: str) -> None:
     """Each chromatic adaptation choice uses the corresponding colour-science matrix."""
@@ -184,7 +184,7 @@ def test_every_cat_matrix_matches_colour_science(token: str, oracle_name: str) -
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=2e-15)
 
 
-@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("SP-PIX-020")
 def test_default_cat_is_cat02_and_cat_tokens_remain_distinct() -> None:
     """Omitting the chromatic adaptation choice selects CAT02 while other named choices keep distinct results."""
     source = _frame((0.31, 0.47, 0.82))
@@ -199,8 +199,8 @@ def test_default_cat_is_cat02_and_cat_tokens_remain_distinct() -> None:
     assert len(set(outputs.values())) == len(_CAT_ORACLE_NAMES)
 
 
-@pytest.mark.req("REQ-PIX-020")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-020")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("input_white", "output_white", "cat"),
     (
@@ -240,8 +240,8 @@ def test_chromatic_adaptation_rejects_invalid_public_arguments_before_pixel_proc
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-020")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-020")
+@pytest.mark.req("SP-PIX-017")
 def test_chromatic_adaptation_rejects_numerically_zero_cat_response() -> None:
     """Chromatic adaptation rejects a white point that makes a cone response numerically zero."""
     y = np.float64(0.1)
@@ -257,8 +257,8 @@ def test_chromatic_adaptation_rejects_numerically_zero_cat_response() -> None:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-020")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-020")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("operation", "kwargs"),
     (
@@ -288,8 +288,8 @@ def test_both_apis_fail_fast_for_non_frame_dtype_and_rgb_contract(
     assert "Frame" in str(error.value) or "float32" in str(error.value) or "R" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-020")
 def test_adaptation_is_one_pass_label_driven_private_and_metadata_preserving(monkeypatch: pytest.MonkeyPatch) -> None:
     """Chromatic adaptation transforms labeled RGB in one GPU pass and preserves color information and auxiliary
     bits."""
@@ -336,7 +336,7 @@ def test_adaptation_is_one_pass_label_driven_private_and_metadata_preserving(mon
     assert (source.colorspace, source.gamma, source.channels, source.matrix) == metadata_snapshot
 
 
-@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("SP-PIX-020")
 @pytest.mark.parametrize("cat", tuple(_CAT_ORACLE_NAMES))
 def test_equal_white_points_return_bit_preserving_private_copy(cat: str) -> None:
     """Equal source and target whites produce a separate bit-identical Frame for every adaptation method."""
@@ -357,9 +357,9 @@ def test_equal_white_points_return_bit_preserving_private_copy(cat: str) -> None
     assert output.matrix is None
 
 
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-020")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-020")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("gamma", ("linear", "sRGB"))
 def test_scene_values_match_independent_host_matrix_and_reverse_round_trip(gamma: str) -> None:
     """Chromatic adaptation matches an independent matrix reference and round-trips signed scene values without
@@ -408,7 +408,7 @@ def test_scene_values_match_independent_host_matrix_and_reverse_round_trip(gamma
     )
 
 
-@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("SP-PIX-020")
 @pytest.mark.parametrize(
     ("mired", "tint"),
     ((600.0, 0.0), (325.0, 0.0), (287.5, 0.0), (287.5, 0.0137), (1e-6, -0.0042)),
@@ -426,8 +426,8 @@ def test_temperature_table_records_off_grid_interpolation_and_uv_conversion(mire
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=1e-12)
 
 
-@pytest.mark.req("REQ-PIX-020")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-020")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("temperature", (True, math.nan, math.inf, -math.inf, 0.0, 1600.0))
 def test_temperature_validation_rejects_invalid_or_below_table_values(temperature: object) -> None:
     """White balance rejects nonfinite, boolean, and below-table Temperature values with guidance."""
@@ -436,15 +436,15 @@ def test_temperature_validation_rejects_invalid_or_below_table_values(temperatur
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("SP-PIX-020")
 def test_temperature_accepts_every_finite_value_through_float64_max() -> None:
     """White balance accepts every finite Temperature at or above its minimum, including float64's maximum."""
     output = px.color.white_balance(_frame((0.2, 0.3, 0.4)), temperature=np.finfo(np.float64).max)
     assert np.isfinite(px.io.to_array(output).get()).all()
 
 
-@pytest.mark.req("REQ-PIX-020")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-020")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("tint", (True, math.nan, math.inf, -math.inf, 1.0))
 def test_tint_validation_rejects_nonfinite_and_out_of_chromaticity_without_clamping(tint: object) -> None:
     """White balance rejects nonfinite Tint and invalid resulting chromaticity instead of clamping it."""
@@ -453,7 +453,7 @@ def test_tint_validation_rejects_nonfinite_and_out_of_chromaticity_without_clamp
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("SP-PIX-020")
 def test_tint_is_signed_raw_duv_with_positive_green_side() -> None:
     """Positive and negative Tint move symmetrically along the raw Duv axis, with positive toward green."""
     from pixtreme._color.white_balance import _temperature_to_xy
@@ -467,7 +467,7 @@ def test_tint_is_signed_raw_duv_with_positive_green_side() -> None:
     assert positive_delta[0] < 0.0 < positive_delta[1]
 
 
-@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("SP-PIX-020")
 @pytest.mark.parametrize(
     ("temperature", "tint", "cat"),
     ((2800.0, -0.008, "Bradford"), (6500.0, 0.0, "CAT02"), (12000.0, 0.011, "von-Kries")),
@@ -490,7 +490,7 @@ def test_white_balance_is_bit_identical_to_explicit_low_level_call(temperature: 
     assert px.io.to_array(convenience).get().tobytes() == px.io.to_array(direct).get().tobytes()
 
 
-@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("SP-PIX-020")
 def test_temperature_and_tint_have_source_illuminant_correction_semantics() -> None:
     """White balance corrects hotter source light toward warmth and positive green Tint toward magenta."""
     source = _frame((0.18, 0.18, 0.18))
@@ -506,7 +506,7 @@ def test_temperature_and_tint_have_source_illuminant_correction_semantics() -> N
     assert negative_tint[1] / np.mean(negative_tint[[0, 2]]) > nominal[1] / np.mean(nominal[[0, 2]])
 
 
-@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("SP-PIX-020")
 def test_calls_are_bit_deterministic_across_order_and_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """White balance returns the same bits regardless of call order, environment, or unrelated Frame metadata."""
     source = _frame(
@@ -522,7 +522,7 @@ def test_calls_are_bit_deterministic_across_order_and_environment(monkeypatch: p
     assert first == second
 
 
-@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("SP-PIX-020")
 def test_adaptation_cache_states_and_uncached_composition_are_publicly_bit_identical(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

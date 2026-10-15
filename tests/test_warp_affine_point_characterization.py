@@ -37,7 +37,7 @@ GEOMETRIES = (
 )
 
 
-@pytest.mark.req("REQ-PIX-010")
+@pytest.mark.req("SP-PIX-010")
 @pytest.mark.parametrize("interpolation", POINT_INTERPOLATIONS)
 @pytest.mark.parametrize("border", BORDERS)
 @pytest.mark.parametrize("channels", (1, 2, 3, 4))

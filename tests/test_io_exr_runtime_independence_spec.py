@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_all_exr_codecs_run_when_openexr_import_is_blocked(tmp_path: Path) -> None:
     """Every supported EXR codec reads and writes when importing OpenEXR is blocked."""
     script = r"""

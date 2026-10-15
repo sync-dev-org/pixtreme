@@ -9,7 +9,7 @@ import pytest
 import pixtreme._io.formats.exr.packing as exr_packing
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("compression", ("rle", "pxr24", "b44", "b44a"))
 def test_exr_write_stores_raw_chunks_when_compression_does_not_shrink_them(compression: str) -> None:
     """EXR writes store raw chunks when compression yields an equal or larger payload."""

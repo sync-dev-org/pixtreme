@@ -197,7 +197,7 @@ def _scanline_chunk(part_index: int, y: int, values: tuple[float, ...]) -> bytes
     return struct.pack("<iii", part_index, y, len(payload)) + payload
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("compression", range(10))
 @pytest.mark.parametrize("level_mode", (0, 1, 2))
 @pytest.mark.parametrize("line_order", (0, 1, 2))
@@ -223,7 +223,7 @@ def test_tiled_level_zero_materializes_all_compressions_without_table_or_line_or
     np.testing.assert_array_equal(actual.data.get(), expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_multipart_channels_decode_from_their_own_part_and_preserve_requested_order(tmp_path: Path) -> None:
     """Multipart EXR reads obtain each selected channel from its owning part and return channels in the requested
     order."""
@@ -263,8 +263,8 @@ def test_multipart_channels_decode_from_their_own_part_and_preserve_requested_or
     assert actual.channels == ("fill.G", "R")
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_default_selection_ignores_deep_duplicates_and_explicit_deep_selection_is_actionable(tmp_path: Path) -> None:
     """EXR reads ignore deep-part name collisions by default and explain why explicitly selected deep channels cannot
     be read."""
@@ -398,7 +398,7 @@ def _build_rle_subsampled_fixture() -> tuple[bytes, dict[str, np.ndarray]]:
     return header + table + b"".join(chunks), expected
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_subsampled_channels_materialize_only_stored_lattice_samples(tmp_path: Path) -> None:
     """EXR reads return only stored samples from subsampled channels with the corresponding HWC dimensions."""
     payload, expected = _build_subsampled_fixture()
@@ -417,7 +417,7 @@ def test_subsampled_channels_materialize_only_stored_lattice_samples(tmp_path: P
     assert "why=" in message and "what=" in message and "how=" in message
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_compressed_subsampled_channels_materialize_without_openexr_fallback(tmp_path: Path) -> None:
     """Compressed subsampled EXR channels decode on their stored sampling lattice without an OpenEXR runtime backend."""
     payload, expected = _build_rle_subsampled_fixture()

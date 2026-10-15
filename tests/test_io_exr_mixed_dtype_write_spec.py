@@ -142,9 +142,9 @@ def _assert_dwa_decode_matches_oracle(actual: np.ndarray, oracle: np.ndarray) ->
     np.testing.assert_allclose(actual, oracle, rtol=0.0, atol=_DWA_DECODE_ATOL)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 def test_write_exr_channels_keeps_exact_signature_in_public_io_surface() -> None:
     """Developers write mixed type EXR channels through the single documented file-writing operation and its exact
     signature."""
@@ -166,8 +166,8 @@ def test_write_exr_channels_keeps_exact_signature_in_public_io_surface() -> None
     assert not hasattr(px.io, "encode_exr_channels")
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("count", (1, 3))
 def test_write_exr_channels_accepts_one_or_multiple_frames(tmp_path: Path, count: int) -> None:
     """Mixed type EXR writes accept one Frame or a nonempty Frame sequence and retain each channel's native storage
@@ -187,8 +187,8 @@ def test_write_exr_channels_accepts_one_or_multiple_frames(tmp_path: Path, count
         _assert_unchanged(values, expected[label])
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_mixed_header_is_single_part_native_and_independently_parseable(tmp_path: Path) -> None:
     """Mixed type EXR writes store one part with independently readable native metadata for each channel."""
     frames, _ = _mixed_frames()
@@ -221,9 +221,9 @@ def test_mixed_header_is_single_part_native_and_independently_parseable(tmp_path
     }
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_grouping_sequence_metadata_and_channel_order_do_not_change_file_bytes(tmp_path: Path) -> None:
     """Mixed type EXR writes produce the same bytes for equivalent channel labels and samples regardless of Frame
     grouping."""
@@ -247,9 +247,9 @@ def test_grouping_sequence_metadata_and_channel_order_do_not_change_file_bytes(t
     assert first.read_bytes() == second.read_bytes()
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_colorspace_metadata_and_compression_defaults_match_the_existing_exr_writer(tmp_path: Path) -> None:
     """Mixed type EXR writes preserve common color metadata and use the same default compression as ordinary EXR
     writes."""
@@ -294,8 +294,8 @@ def test_colorspace_metadata_and_compression_defaults_match_the_existing_exr_wri
     assert tuple(observed) == pytest.approx(expected_chromaticities)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("compression", _COMPRESSIONS)
 def test_every_codec_writes_three_pixel_types_and_preserves_uint_ids(tmp_path: Path, compression: str) -> None:
     """Every supported EXR compression writes mixed HALF, FLOAT, and UINT channels while preserving UINT bits."""
@@ -328,8 +328,8 @@ def test_every_codec_writes_three_pixel_types_and_preserves_uint_ids(tmp_path: P
             _assert_dwa_decode_matches_oracle(np.zeros_like(oracle["layer.Y"]), oracle["layer.Y"])
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("compression", ("dwaa", "dwab"))
 @pytest.mark.parametrize("dtype", (np.float16, np.float32), ids=("half", "float"))
 @pytest.mark.parametrize("channels", _DWA_COLOR_UNITS, ids=("rgb", "y", "by", "ry"))
@@ -401,8 +401,8 @@ def test_dwa_mixed_color_routes_match_the_existing_coefficient_oracle(
         _assert_unchanged(decoded[label], ids[..., index])
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_lossless_codecs_preserve_special_float_bit_patterns(tmp_path: Path) -> None:
     """Lossless mixed type EXR writes preserve signed zero, subnormal, NaN, and infinity bit patterns."""
     half_bits = np.asarray((0x0000, 0x8000, 0x0001, 0x7C00, 0xFC00, 0x7E01), dtype=np.uint16)
@@ -423,9 +423,9 @@ def test_lossless_codecs_preserve_special_float_bit_patterns(tmp_path: Path) -> 
         _assert_unchanged(actual["object_id"], ids[..., 0])
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 def test_mixed_readback_keeps_existing_asymmetric_selection_contract(tmp_path: Path) -> None:
     """Mixed type EXR reads require homogeneous selected channels for unchanged native pixel types."""
     frames, expected = _mixed_frames(height=3, width=6)
@@ -445,9 +445,9 @@ def test_mixed_readback_keeps_existing_asymmetric_selection_contract(tmp_path: P
     assert "float16" in str(error.value) and "uint32" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("frames", (None, "RGB", b"RGB", bytearray(b"RGB"), (), (object(),), iter(())))
 def test_frames_validation_happens_before_file_creation(tmp_path: Path, frames: object) -> None:
     """Mixed type EXR writes reject invalid Frame containers before creating a file."""
@@ -459,9 +459,9 @@ def test_frames_validation_happens_before_file_creation(tmp_path: Path, frames: 
     assert not path.exists()
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("dtype", (np.uint8, np.uint16))
 def test_non_native_exr_dtypes_explain_literal_and_normalized_preparation(
     tmp_path: Path, dtype: type[np.generic]
@@ -480,10 +480,10 @@ def test_non_native_exr_dtypes_explain_literal_and_normalized_preparation(
     assert not path.exists()
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 def test_shape_colorspace_and_duplicate_validation_precedes_truncation(tmp_path: Path) -> None:
     """Mixed type EXR writes reject conflicting dimensions, color metadata, and channel labels without truncating an
     existing file."""
@@ -505,10 +505,10 @@ def test_shape_colorspace_and_duplicate_validation_precedes_truncation(tmp_path:
         assert path.read_bytes() == b"keep-me"
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.req("SP-PIX-101")
 def test_device_mismatch_is_rejected_before_writing_when_two_visible_devices_exist(tmp_path: Path) -> None:
     """Mixed type EXR writes reject Frames on different GPU devices instead of copying them implicitly."""
     if cp.cuda.runtime.getDeviceCount() < 2:
@@ -526,9 +526,9 @@ def test_device_mismatch_is_rejected_before_writing_when_two_visible_devices_exi
     assert not path.exists()
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("label", "accepted"),
     (
@@ -557,9 +557,9 @@ def test_channel_label_byte_boundaries_and_long_name_flag(tmp_path: Path, label:
     assert bool(version & _LONG_NAMES_FLAG) is (len(label.encode("utf-8")) > 31)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("compression", ("gzip", 1, True))
 def test_compression_validation_precedes_truncation(tmp_path: Path, compression: object) -> None:
     """Mixed type EXR writes reject unsupported compression before truncating an existing file."""
@@ -573,9 +573,9 @@ def test_compression_validation_precedes_truncation(tmp_path: Path, compression:
     assert path.read_bytes() == b"keep-me"
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("compression", "dwa_level"),
     (
@@ -599,9 +599,9 @@ def test_dwa_validation_precedes_truncation(tmp_path: Path, compression: str, dw
     assert path.read_bytes() == b"keep-me"
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 def test_path_and_post_validation_io_failures_follow_public_error_contract(tmp_path: Path) -> None:
     """Mixed type EXR writes reject invalid paths early and retain the cause of later file I/O failures."""
     frames, _ = _mixed_frames(height=2, width=3)
@@ -617,9 +617,9 @@ def test_path_and_post_validation_io_failures_follow_public_error_contract(tmp_p
     assert not missing_parent.exists()
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 def test_cuda_runtime_failure_is_actionable_and_preserves_its_cause(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -643,9 +643,9 @@ def test_cuda_runtime_failure_is_actionable_and_preserves_its_cause(
     assert not path.exists()
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_inputs_are_not_mutated_by_mixed_write(tmp_path: Path) -> None:
     """Mixed type EXR writes leave every input Frame's pixels and metadata unchanged."""
     frames, _ = _mixed_frames(height=4, width=5)
@@ -678,9 +678,9 @@ def test_inputs_are_not_mutated_by_mixed_write(tmp_path: Path) -> None:
         assert (frame.data.device.id, frame.data.data.ptr) == (device, pointer)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 def test_public_docstring_describes_mixed_exr_boundary_contract() -> None:
     """The public mixed type EXR writing docstring explains accepted Frames, channel types, and failure conditions."""
     docstring = inspect.getdoc(px.io.write_exr_channels) or ""

@@ -117,7 +117,7 @@ def _host_recode_float32(values: np.ndarray) -> np.ndarray:
     return values.astype(np.float32) / np.float32(np.iinfo(values.dtype).max)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_hdr_read_decodes_flat_rgbe_with_published_ldexp_oracle(tmp_path: Path) -> None:
     """HDR reading decodes flat RGBE pixels into top-down float32 Rec.709 linear values matching the published
     exponent equation.
@@ -149,7 +149,7 @@ def test_hdr_read_decodes_flat_rgbe_with_published_ldexp_oracle(tmp_path: Path) 
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_hdr_read_decodes_old_style_runs_and_multibyte_counts(tmp_path: Path) -> None:
     """HDR reading expands old-style repeat markers with consecutive higher-order count bytes."""
     pixel = bytes((17, 34, 51, 130))
@@ -168,7 +168,7 @@ def test_hdr_read_decodes_old_style_runs_and_multibyte_counts(tmp_path: Path) ->
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_hdr_read_decodes_new_style_component_runs_and_literals(tmp_path: Path) -> None:
     """HDR reading decodes hand-built new-style RGBE component runs and literal packets."""
     width = 8
@@ -205,7 +205,7 @@ def test_hdr_read_decodes_new_style_component_runs_and_literals(tmp_path: Path) 
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_hdr_read_accepts_new_style_literal_packets_of_length_128(tmp_path: Path) -> None:
     """HDR reading accepts a new-style RGBE literal packet at the 128-sample count boundary."""
     rgbe = np.empty((1, 128, 4), dtype=np.uint8)
@@ -224,9 +224,9 @@ def test_hdr_read_accepts_new_style_literal_packets_of_length_128(tmp_path: Path
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_hdr_read_unchanged_selects_channels_and_overrides_metadata(tmp_path: Path) -> None:
     """Unchanged HDR reading keeps float32 pixels while honoring channel selection and color metadata overrides."""
     rgbe = np.array([[[128, 64, 32, 129] for _ in range(8)]], dtype=np.uint8)
@@ -255,8 +255,8 @@ def test_hdr_read_unchanged_selects_channels_and_overrides_metadata(tmp_path: Pa
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_hdr_header_variables_are_raw_only_and_do_not_change_pixels_or_metadata(tmp_path: Path) -> None:
     """HDR exposure, primaries, and color-correction variables remain inspectable without altering decoded pixels or
     color metadata.
@@ -287,8 +287,8 @@ def test_hdr_header_variables_are_raw_only_and_do_not_change_pixels_or_metadata(
     }
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("format_value", "resolution", "observed"),
     (
@@ -314,8 +314,8 @@ def test_hdr_read_rejects_xyze_and_nonstandard_orientations_before_transfer(
     assert observed in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("scanline", "observed"),
     (
@@ -337,7 +337,7 @@ def test_hdr_read_rejects_malformed_new_style_scanlines(tmp_path: Path, scanline
     assert observed in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_hdr_read_transfers_only_flat_uint8_rgbe_before_gpu_decode(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -361,8 +361,8 @@ def test_hdr_read_transfers_only_flat_uint8_rgbe_before_gpu_decode(
     assert (host_inputs[0].dtype, host_inputs[0].shape) == (np.dtype(np.uint8), (1 * 8 * 4,))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     "dtype", (np.uint8, np.uint16, np.uint32, np.float16, np.float32), ids=lambda value: np.dtype(value).name
 )
@@ -392,8 +392,8 @@ def test_hdr_write_accepts_every_dtype_and_matches_independent_frexp_oracle(
     cp.testing.assert_array_equal(frame.data, before)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_hdr_write_float32_native_bypasses_recode_dtype(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """HDR writing passes native float32 pixels to RGBE encoding without a dtype recode."""
     frame = px.io.from_array(cp.ones((1, 8, 3), dtype=cp.float32), colorspace="Rec.709", gamma="linear", channels="RGB")
@@ -406,8 +406,8 @@ def test_hdr_write_float32_native_bypasses_recode_dtype(tmp_path: Path, monkeypa
     assert px.io.write_image(tmp_path / "native.hdr", frame) is None
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("shape", "channels", "observed"),
     (
@@ -432,7 +432,7 @@ def test_hdr_write_rejects_non_rgb_layouts_and_widths_outside_new_style(
     assert not path.exists()
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_hdr_write_read_matches_encoded_rgbe_decode_oracle(tmp_path: Path) -> None:
     """An HDR file round trip matches independently calculated RGBE encode and decode values."""
     values = np.array(
@@ -455,7 +455,7 @@ def test_hdr_write_read_matches_encoded_rgbe_decode_oracle(tmp_path: Path) -> No
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_hdr_read_header_is_gpu_free_and_preserves_the_public_model(tmp_path: Path) -> None:
     """HDR header inspection reports effective orientation one without initializing the GPU."""
     path = tmp_path / "header.hdr"
@@ -485,8 +485,8 @@ assert "OpenEXR" not in sys.modules
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_hdr_remains_outside_bytes_boundaries_and_encode_options(tmp_path: Path) -> None:
     """HDR stays file-only and rejects bytes encoding or options reserved for other formats."""
     payload = _header(width=8, height=1) + np.zeros((1, 8, 4), dtype=np.uint8).tobytes()

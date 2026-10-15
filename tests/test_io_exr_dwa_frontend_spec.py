@@ -57,7 +57,7 @@ def _channel(
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_default_dwa_channel_rules_are_case_sensitive_and_group_only_matching_rgb_triplets() -> None:
     """DWA EXR channel rules group only matching RGB triplets and respect channel case, prefix, type, and sampling."""
     channels = (
@@ -98,7 +98,7 @@ def test_default_dwa_channel_rules_are_case_sensitive_and_group_only_matching_rg
     assert all(by_name[name].csc_group is None for name in ("matte.R", "matte.G", "matte.B"))
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_huffman_parser_expands_every_table_run_and_accepts_a_58_bit_code() -> None:
     """DWA Huffman parsing expands each valid table run and accepts codes up to 58 bits."""
     fields = [
@@ -127,7 +127,7 @@ def test_huffman_parser_expands_every_table_run_and_accepts_a_58_bit_code() -> N
     assert table.data_span.size == 8
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("stream", "message"),
     (
@@ -265,7 +265,7 @@ def _build_dwa_exr(
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_dwa_v2_container_descriptor_covers_streams_partial_geometry_and_raw_storage(tmp_path: Path) -> None:
     """DWA v2 EXR parsing records stream spans, partial rows, and raw chunks with their actual geometry."""
     fixture = _build_dwa_exr()
@@ -310,7 +310,7 @@ def test_dwa_v2_container_descriptor_covers_streams_partial_geometry_and_raw_sto
     assert raw.dwa.geometry.mirror_bottom == 7
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_dwa_v2_container_accepts_a_well_formed_rule_unrelated_to_file_channels(tmp_path: Path) -> None:
     """DWA v2 EXR reads accept valid channel rules even when no file channel uses them."""
     fixture = _build_dwa_exr(additional_rules=(_rule("Z", scheme=0, pixel_type=2),))
@@ -327,7 +327,7 @@ def test_dwa_v2_container_accepts_a_well_formed_rule_unrelated_to_file_channels(
     assert tuple(group.channel_names for group in compressed.dwa.channel_layout.csc_groups) == (("R", "G", "B"),)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_valid_dwa_v1_chunk_is_described_but_remains_gpu_ineligible(tmp_path: Path) -> None:
     """DWA v1 EXR chunks remain readable through the supported fallback route without being treated as corrupt."""
     fixture = _build_dwa_exr(version=1)
@@ -342,7 +342,7 @@ def test_valid_dwa_v1_chunk_is_described_but_remains_gpu_ineligible(tmp_path: Pa
     assert container.chunks[0].dwa.leader.version == 1
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_dwab_descriptor_uses_256_lines_and_represents_the_final_partial_chunk(tmp_path: Path) -> None:
     """DWAB EXR parsing uses 256-line chunks and records the final partial chunk accurately."""
     fixture = _build_dwa_exr(compression="dwab")
@@ -361,8 +361,8 @@ def test_dwab_descriptor_uses_256_lines_and_represents_the_final_partial_chunk(t
     assert container.chunks[1].dwa.geometry.mirror_bottom == 7
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "corruption",
     ("truncated-leader", "unknown-ac-scheme", "span-mismatch", "truncated-rules", "dc-count-mismatch"),

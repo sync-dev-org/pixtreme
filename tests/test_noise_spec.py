@@ -206,7 +206,7 @@ def _grain_reference(
     return output
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 def test_noise_public_signatures_are_keyword_only_and_minimal() -> None:
     """Public noise generators expose only their documented keyword arguments."""
     expected = {
@@ -255,8 +255,8 @@ def test_noise_public_signatures_are_keyword_only_and_minimal() -> None:
     assert len(px.generate.__all__) == 7
 
 
-@pytest.mark.req("REQ-PIX-013")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-013")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("name", NOISE_NAMES)
 @pytest.mark.parametrize("axis,value", (("width", 0), ("height", -1), ("width", 1.5), ("height", True)))
 def test_noise_dimensions_are_positive_non_bool_integers(name: str, axis: str, value: object) -> None:
@@ -266,8 +266,8 @@ def test_noise_dimensions_are_positive_non_bool_integers(name: str, axis: str, v
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-013")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-013")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("name", "axis", "value"),
     (
@@ -292,8 +292,8 @@ def test_noise_shape_and_amplitude_parameters_fail_fast(name: str, axis: str, va
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-013")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-013")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("name", NOISE_NAMES)
 @pytest.mark.parametrize("value", (True, 1.5, "7"))
 def test_noise_seed_rejects_bool_and_non_integer_types(name: str, value: object) -> None:
@@ -303,8 +303,8 @@ def test_noise_seed_rejects_bool_and_non_integer_types(name: str, value: object)
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-013")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-013")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("name", NOISE_NAMES)
 @pytest.mark.parametrize("value", (math.nan, math.inf, -math.inf, True))
 def test_noise_evolution_requires_a_finite_non_bool_real(name: str, value: object) -> None:
@@ -314,8 +314,8 @@ def test_noise_evolution_requires_a_finite_non_bool_real(name: str, value: objec
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-013")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-013")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("value", (0, 1, "true", None))
 def test_grain_monochromatic_accepts_bool_only(value: object) -> None:
     """Grain generation accepts only Boolean values for monochromatic mode and explains invalid values."""
@@ -324,9 +324,9 @@ def test_grain_monochromatic_accepts_bool_only(value: object) -> None:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-013")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-013")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("name", NOISE_NAMES)
 @pytest.mark.parametrize(("axis", "token"), (("colorspace", "P3"), ("gamma", "log")))
 def test_noise_metadata_tokens_fail_fast(name: str, axis: str, token: str) -> None:
@@ -336,8 +336,8 @@ def test_noise_metadata_tokens_fail_fast(name: str, axis: str, token: str) -> No
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-013")
 @pytest.mark.parametrize("name", NOISE_NAMES)
 def test_noise_outputs_are_new_contiguous_fp32_frames_with_requested_metadata(name: str) -> None:
     """Noise generation returns separate contiguous float32 Frames with requested dimensions, channels, and color
@@ -354,7 +354,7 @@ def test_noise_outputs_are_new_contiguous_fp32_frames_with_requested_metadata(na
     assert (first.colorspace, first.gamma, first.channels) == ("S-Gamut3", "S-Log3", expected_channels)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 def test_color_grain_has_three_independent_rgb_channels() -> None:
     """For noise generation, color grain declares RGB and folds channel identity into independent streams."""
     result = px.generate.grain(**(_base_kwargs("grain") | {"monochromatic": False, "width": 64, "height": 64}))
@@ -365,7 +365,7 @@ def test_color_grain_has_three_independent_rgb_channels() -> None:
     assert not np.array_equal(host[..., 1], host[..., 2])
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 @pytest.mark.parametrize("name", NOISE_NAMES)
 def test_fixed_seed_calls_are_bit_deterministic(name: str) -> None:
     """For noise generation, identical fixed-seed calls return bit-identical fp32 values."""
@@ -373,7 +373,7 @@ def test_fixed_seed_calls_are_bit_deterministic(name: str) -> None:
     assert np.array_equal(_host(getattr(px.generate, name)(**kwargs)), _host(getattr(px.generate, name)(**kwargs)))
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 @pytest.mark.parametrize(
     ("scale", "lacunarity", "octaves"),
     (
@@ -407,7 +407,7 @@ def test_fractal_noise_extreme_positive_finite_inputs_remain_finite_and_determin
     assert np.array_equal(first, second)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 def test_fractal_noise_extreme_xy_uses_documented_lattice_origin_limit() -> None:
     """Fractal noise evaluates coordinates beyond its lattice limit at the defined origin without nonfinite output."""
     seed = 17
@@ -439,7 +439,7 @@ def test_fractal_noise_extreme_xy_uses_documented_lattice_origin_limit() -> None
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=_INTERPOLATED_ATOL)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 def test_fractal_noise_regular_domain_remains_bit_identical_characterization() -> None:
     """characterization: Fractal noise retains its current regular domain output bits."""
     actual = _host(
@@ -462,7 +462,7 @@ def test_fractal_noise_regular_domain_remains_bit_identical_characterization() -
     assert np.array_equal(actual.view(np.uint32), expected_bits)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 def test_turbulent_noise_regular_domain_remains_bit_identical_characterization() -> None:
     """characterization: Turbulent noise retains its current regular domain output bits."""
     actual = _host(
@@ -485,7 +485,7 @@ def test_turbulent_noise_regular_domain_remains_bit_identical_characterization()
     assert np.array_equal(actual.view(np.uint32), expected_bits)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 @pytest.mark.parametrize(
     ("name", "expected_values"),
     (
@@ -521,7 +521,7 @@ def test_tiled_gradient_noise_output_remains_bit_identical_characterization(
     assert np.array_equal(actual.view(np.uint32), expected_bits)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 def test_color_grain_lattice_aligned_output_remains_bit_identical_characterization() -> None:
     """characterization: Color grain retains its current output bits at lattice aligned sample positions."""
     actual = _host(
@@ -562,7 +562,7 @@ def test_color_grain_lattice_aligned_output_remains_bit_identical_characterizati
     assert np.array_equal(actual.view(np.uint32), expected_bits)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 def test_none_seed_uses_local_entropy_without_process_global_rng_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     """For noise generation, entropy realization is local and two calls differ."""
     import cupy as cp
@@ -579,7 +579,7 @@ def test_none_seed_uses_local_entropy_without_process_global_rng_calls(monkeypat
     assert not np.array_equal(first, second)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 @pytest.mark.parametrize("name", NOISE_NAMES)
 def test_noise_values_stay_in_unit_interval(name: str) -> None:
     """For noise generation, every generator stays in the documented normalized interval."""
@@ -592,7 +592,7 @@ def test_noise_values_stay_in_unit_interval(name: str) -> None:
     assert np.all(result <= 1.0)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 def test_pcg4d_integer_hash_matches_the_independent_reference_exactly() -> None:
     """For noise generation, device PCG4D uint32 output exactly matches the paper-derived oracle."""
     import cupy as cp
@@ -617,7 +617,7 @@ def test_pcg4d_integer_hash_matches_the_independent_reference_exactly() -> None:
     assert np.array_equal(cp.asnumpy(device_output), expected)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 def test_gradient_noise_lattice_points_have_exact_normalized_values() -> None:
     """For noise generation, integer lattice evaluation has exact zero gradient contribution."""
     common = {
@@ -633,7 +633,7 @@ def test_gradient_noise_lattice_points_have_exact_normalized_values() -> None:
     assert _host(px.generate.turbulent_noise(**common)).item() == np.float32(0.0)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 @pytest.mark.parametrize(("name", "turbulent"), (("fractal_noise", False), ("turbulent_noise", True)))
 def test_gradient_noise_matches_independent_numpy_equations(name: str, turbulent: bool) -> None:
     """For noise generation, representative multi-octave output matches the independent NumPy oracle."""
@@ -663,7 +663,7 @@ def test_gradient_noise_matches_independent_numpy_equations(name: str, turbulent
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=_INTERPOLATED_ATOL)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 @pytest.mark.parametrize("monochromatic", (True, False))
 def test_grain_matches_independent_numpy_equations(monochromatic: bool) -> None:
     """For noise generation, grain interpolation and channel streams match the independent oracle."""
@@ -690,7 +690,7 @@ def test_grain_matches_independent_numpy_equations(monochromatic: bool) -> None:
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=_INTERPOLATED_ATOL)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 @pytest.mark.parametrize("name", NOISE_NAMES)
 def test_evolution_changes_continuously_for_small_phase_steps(name: str) -> None:
     """For noise generation, a small phase change produces a bounded continuous output change."""
@@ -701,7 +701,7 @@ def test_evolution_changes_continuously_for_small_phase_steps(name: str) -> None
     assert not np.array_equal(first, second)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 @pytest.mark.parametrize("name", ("fractal_noise", "turbulent_noise"))
 def test_different_noise_seeds_are_effectively_uncorrelated(name: str) -> None:
     """For noise generation, separate seed realizations have no material linear correlation."""
@@ -712,7 +712,7 @@ def test_different_noise_seeds_are_effectively_uncorrelated(name: str) -> None:
     assert abs(correlation) < 0.15
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 def test_grain_statistics_match_the_three_sigma_normalization() -> None:
     """For noise generation, size-one grain has the specified mean, sigma, and clipping residual."""
     intensity = 1.0
@@ -733,7 +733,7 @@ def test_grain_statistics_match_the_three_sigma_normalization() -> None:
     assert clip_rate == pytest.approx(0.0027, abs=0.001)
 
 
-@pytest.mark.req("REQ-PIX-013")
+@pytest.mark.req("SP-PIX-013")
 def test_color_grain_channels_and_integer_evolution_steps_are_uncorrelated() -> None:
     """For noise generation, channel folds and adjacent integer phases select independent realizations."""
     kwargs = {
@@ -753,9 +753,9 @@ def test_color_grain_channels_and_integer_evolution_steps_are_uncorrelated() -> 
     assert abs(float(np.corrcoef(first[..., 0].ravel(), second[..., 0].ravel())[0, 1])) < 0.03
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-013")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-013")
+@pytest.mark.req("SP-PIX-017")
 def test_noise_docstrings_are_self_contained_llm_readable_contracts() -> None:
     """Developers can find the noise numeric domains, seeds, output values, and color metadata in public docstrings."""
     combined = "\n".join(inspect.getdoc(getattr(px.generate, name)) or "" for name in NOISE_NAMES).lower()
@@ -784,7 +784,7 @@ def test_noise_docstrings_are_self_contained_llm_readable_contracts() -> None:
         assert required in fractal_contract
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 def test_noise_generators_keep_pixels_on_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
     """Noise generators produce pixels without transferring them between CPU and GPU.
 

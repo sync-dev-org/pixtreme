@@ -34,8 +34,8 @@ def _trace_from_array_kernel(monkeypatch: pytest.MonkeyPatch) -> list[tuple[obje
     return launches
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("matrix", "repacking"),
     (
@@ -80,8 +80,8 @@ def test_from_array_rejects_invalid_matrix_before_any_repacking(
     np.testing.assert_array_equal(cp.asnumpy(source), values)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-017")
 def test_from_array_invalid_matrix_is_rejected_at_the_same_stage_as_other_tokens(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -115,8 +115,8 @@ def test_from_array_invalid_matrix_is_rejected_at_the_same_stage_as_other_tokens
     assert launches == []
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-015")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-015")
 def test_from_array_valid_matrix_spellings_and_none_keep_canonical_results(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

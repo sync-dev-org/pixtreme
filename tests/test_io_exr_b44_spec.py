@@ -194,9 +194,9 @@ def _single_chunk_file(header: bytes, payload: bytes) -> bytes:
     return header + struct.pack("<Q", chunk_offset) + struct.pack("<ii", 0, len(payload)) + payload
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("b44a", (False, True), ids=("b44", "b44a"))
 def test_b44_gpu_block_primitive_matches_dense_flat_shift_rounding_and_nonfinite_oracle(b44a: bool) -> None:
     """GPU B44 block encoding matches independent bit results for dense and flat blocks, rounding, shifts, and
@@ -231,9 +231,9 @@ def test_b44_gpu_block_primitive_matches_dense_flat_shift_rounding_and_nonfinite
     np.testing.assert_array_equal(decoded, independent)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("marker", (0x34, 0xFC, 0xFF))
 def test_b44a_gpu_decoder_accepts_complete_flat_marker_range(marker: int) -> None:
     """B44A reads accept every valid three-byte flat marker from 0x34 upward."""
@@ -247,10 +247,10 @@ def test_b44a_gpu_decoder_accepts_complete_flat_marker_range(marker: int) -> Non
     np.testing.assert_array_equal(decoded, _decode_block(payload))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 def test_b44_plinear_gpu_luts_match_all_half_patterns() -> None:
     """GPU B44 pLinear conversion matches reference values for all 65,536 HALF bit patterns."""
     cp = importlib.import_module("cupy")
@@ -267,7 +267,7 @@ def test_b44_plinear_gpu_luts_match_all_half_patterns() -> None:
         assert actual_decode[pattern] == expected_decode[pattern]
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_b44_plinear_block_uses_transformed_first_sample_as_base() -> None:
     """B44 pLinear blocks use the transformed first sample as their base without an exact-maximum correction."""
     cp = importlib.import_module("cupy")
@@ -294,8 +294,8 @@ def test_b44_plinear_block_uses_transformed_first_sample_as_base() -> None:
     np.testing.assert_array_equal(decoded, _decode_block(expected, perceptually_linear=True))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_b44_uint_plane_primitive_is_file_channel_order_and_bit_exact() -> None:
     """B44 UINT wire sections retain raw pixel bits in file channel order."""
     cp = importlib.import_module("cupy")
@@ -321,10 +321,10 @@ def test_b44_uint_plane_primitive_is_file_channel_order_and_bit_exact() -> None:
     np.testing.assert_array_equal(planar, expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("codec", ("b44", "b44a"))
 def test_openexr_b44_uint_sections_are_bit_exact_in_gpu_and_host_materializers(
     tmp_path: Path,
@@ -363,7 +363,7 @@ def test_openexr_b44_uint_sections_are_bit_exact_in_gpu_and_host_materializers(
     np.testing.assert_array_equal(uint_bits(host_materialized), unsigned)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 @pytest.mark.parametrize("marker", (0x34, 0xFC, 0xFF))
 def test_forced_b44a_read_accepts_noncanonical_flat_markers(
@@ -384,8 +384,8 @@ def test_forced_b44a_read_accepts_noncanonical_flat_markers(
     np.testing.assert_array_equal(frame.data.get()[..., 0].view(np.uint16), expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("compression_code", "payload", "reason"),
     (
@@ -417,7 +417,7 @@ def test_b44_frontend_rejects_truncated_blocks_and_section_excess(
     assert "how=" in message
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_b44_materializer_rejects_mutated_block_ownership(tmp_path: Path) -> None:
     """B44 pixel materialization rejects block descriptors that assign pixels to the wrong owner."""
     from openexr_dev_oracle import OpenEXR
@@ -437,7 +437,7 @@ def test_b44_materializer_rejects_mutated_block_ownership(tmp_path: Path) -> Non
         exr_b44._prepare_exr_b44_read_chunks(mutated_container)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_b44_materializer_rejects_mutated_lazy_block_ownership(tmp_path: Path) -> None:
     """B44 reads report an actionable error if a deferred block descriptor has invalid ownership."""
     from openexr_dev_oracle import OpenEXR
@@ -457,7 +457,7 @@ def test_b44_materializer_rejects_mutated_lazy_block_ownership(tmp_path: Path) -
         exr_b44._prepare_exr_b44_read_chunks(mutated_container)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("codec", ("b44", "b44a"))
 @pytest.mark.parametrize("backend", ("custom_cpu", "gpu"))
 def test_openexr_b44_read_materializes_mixed_sections_edge_repeat_and_plinear(
@@ -538,9 +538,9 @@ def _b44_channel_oracle(container: exr_container._ExrContainer, channel_name: st
     return output
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("codec", ("b44", "b44a"))
 def test_gpu_b44_write_cross_decodes_in_openexr_with_dense_flat_and_partial_chunks(
     tmp_path: Path,
@@ -593,10 +593,10 @@ def test_gpu_b44_write_cross_decodes_in_openexr_with_dense_flat_and_partial_chun
         np.testing.assert_array_equal(decoded, _b44_channel_oracle(container, channel_name))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("codec", ("b44", "b44a"))
 def test_gpu_b44_float_write_uses_raw_fallback_after_plane_materialize(
     tmp_path: Path,
@@ -627,8 +627,8 @@ def test_gpu_b44_float_write_uses_raw_fallback_after_plane_materialize(
     np.testing.assert_array_equal(decoded.view(np.uint32), values.view(np.uint32))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("codec", ("b44", "b44a"))
 def test_forced_custom_cpu_b44_float_read_materializes_all_raw_chunks(
     tmp_path: Path,
@@ -661,7 +661,7 @@ def test_forced_custom_cpu_b44_float_read_materializes_all_raw_chunks(
     np.testing.assert_array_equal(decoded.data.get()[..., 0].view(np.uint32), values.view(np.uint32))
 
 
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-018")
 @pytest.mark.parametrize("codec", ("b44", "b44a"))
 def test_b44_lanes_keep_block_parallel_and_image_transfer_boundaries(
     tmp_path: Path,
@@ -774,7 +774,7 @@ def test_b44_lanes_keep_block_parallel_and_image_transfer_boundaries(
     cp.testing.assert_array_equal(cpu_actual, gpu_actual)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("compression", ("b44", "b44a"))
 def test_b44_descriptor_preserves_mixed_channels_raw_storage_and_block_order(tmp_path: Path, compression: str) -> None:
     """B44 EXR parsing records mixed channels, raw storage, partial rows, and file channel order."""
@@ -817,8 +817,8 @@ def test_b44_descriptor_preserves_mixed_channels_raw_storage_and_block_order(tmp
     assert {block.stored_size for block in descriptor.blocks} == expected_sizes
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("compression", ("b44", "b44a"))
 def test_b44_oversized_payload_is_actionable_corruption(tmp_path: Path, compression: str) -> None:
     """B44 EXR reads reject compressed chunks larger than their raw form and explain the corrupt payload."""
@@ -830,7 +830,7 @@ def test_b44_oversized_payload_is_actionable_corruption(tmp_path: Path, compress
         px.io.read_header(path)
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("compression", ("b44", "b44a"))
 def test_b44_corruption_error_names_its_compression(tmp_path: Path, compression: str) -> None:
     """An invalid B44 or B44A chunk identifies its compression so the developer can repair the input."""
@@ -845,8 +845,8 @@ def test_b44_corruption_error_names_its_compression(tmp_path: Path, compression:
     assert not _has_numbered_step(message)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("compression", ("b44", "b44a"))
 def test_b44_block_grammar_errors_are_actionable_before_materialization(tmp_path: Path, compression: str) -> None:
     """B44 EXR reads reject malformed block headers before decoding pixels."""

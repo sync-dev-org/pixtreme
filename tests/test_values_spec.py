@@ -37,9 +37,9 @@ def _frame(
     return px.io.from_array(cp.asarray(array), colorspace=colorspace, gamma=gamma, channels=labels)
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("shape", ((0, 2, 3), (2, 0, 3)), ids=("zero-height", "zero-width"))
 def test_frame_construction_rejects_empty_spatial_input_before_value_operations(
     shape: tuple[int, int, int],
@@ -59,7 +59,7 @@ def test_frame_construction_rejects_empty_spatial_input_before_value_operations(
     assert "at least 1" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 def test_quantize_values_clips_and_rounds_half_away_from_zero_at_ties() -> None:
     """Quantizing float32 pixels clips to the unsigned range and rounds exact half ties upward."""
     values = np.asarray(
@@ -81,7 +81,7 @@ def test_quantize_values_clips_and_rounds_half_away_from_zero_at_ties() -> None:
     )
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("bit_depth", BIT_DEPTHS)
 def test_quantize_values_derives_the_container_and_full_scale(bit_depth: int) -> None:
     """Quantization chooses an unsigned container and maximum code of two to the declared bit depth minus one."""
@@ -102,7 +102,7 @@ def test_quantize_values_derives_the_container_and_full_scale(bit_depth: int) ->
     )
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("bit_depth", BIT_DEPTHS)
 def test_dequantize_values_divides_by_the_declared_maximum_without_rounding(bit_depth: int) -> None:
     """Dequantization divides integer codes by the declared maximum and returns float32 pixels without rounding."""
@@ -124,9 +124,9 @@ def test_dequantize_values_divides_by_the_declared_maximum_without_rounding(bit_
     )
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_dequantize_values_preserves_codes_above_the_declared_maximum() -> None:
     """Dequantization preserves container-valid codes above the declared maximum as float32 values above one."""
     source = _frame([0, 1023, 2046, 65535], dtype=np.uint16)
@@ -143,8 +143,8 @@ def test_dequantize_values_preserves_codes_above_the_declared_maximum() -> None:
     )
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("invalid", (0, 7, 9, 11, 13, 15, 17, 18, "8", True, 10.0))
 @pytest.mark.parametrize("operation", ("quantize", "dequantize"))
 def test_value_quantization_rejects_bit_depths_outside_the_closed_set(operation: str, invalid: object) -> None:
@@ -157,8 +157,8 @@ def test_value_quantization_rejects_bit_depths_outside_the_closed_set(operation:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "routes"),
     (
@@ -183,8 +183,8 @@ def test_quantize_values_rejects_non_float32_with_a_conversion_route(
     assert positions == tuple(sorted(positions))
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("bit_depth", "dtype"),
     ((8, np.float32), (8, np.float16), (8, np.uint16), (10, np.float32), (10, np.float16), (10, np.uint8)),
@@ -202,8 +202,8 @@ def test_dequantize_values_requires_the_bit_depth_container(
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-002")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-002")
 def test_value_quantization_returns_new_frames_and_preserves_input_and_metadata() -> None:
     """Quantization and dequantization allocate new Frames, preserve input pixels, and carry color metadata forward."""
     float_source = _frame(
@@ -249,7 +249,7 @@ def test_value_quantization_returns_new_frames_and_preserves_input_and_metadata(
     )
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 def test_uint16_all_codes_round_trip_through_fp32_quantization() -> None:
     """Every uint16 code survives conversion to float32 and back under 16-bit quantization."""
     codes = np.arange(1 << 16, dtype=np.uint16).reshape(256, 256, 1)
@@ -265,7 +265,7 @@ def test_uint16_all_codes_round_trip_through_fp32_quantization() -> None:
     )
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     ("bit_depth", "denominator", "y_min", "y_max", "c_min", "c_max"),
     (
@@ -315,9 +315,9 @@ def test_range_functions_use_the_h273_luma_and_chroma_positions(
     )
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_range_functions_apply_luma_positions_to_rgb_and_round_trip_overshoot() -> None:
     """Range conversion applies luma positions to RGB and preserves values outside the nominal interval on a round trip."""
     rgb = _frame([16.0 / 255.0, 125.5 / 255.0, 235.0 / 255.0], channels="RGB")
@@ -348,7 +348,7 @@ def test_range_functions_apply_luma_positions_to_rgb_and_round_trip_overshoot() 
     )
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("operation", (px.values.legal_to_full, px.values.full_to_legal))
 def test_range_functions_default_to_eight_bit_positions(operation: Callable[..., px.core.Frame]) -> None:
     """Range conversion without a bit-depth argument matches an explicit eight-bit conversion."""
@@ -367,9 +367,9 @@ def test_range_functions_default_to_eight_bit_positions(operation: Callable[...,
     )
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("operation", ("legal_to_full", "full_to_legal"))
 def test_range_functions_allocate_preserve_metadata_and_reject_undefined_channels(operation: str) -> None:
     """Range conversion allocates a new Frame, preserves color metadata, and rejects undefined channel ranges with
@@ -406,8 +406,8 @@ def test_range_functions_allocate_preserve_metadata_and_reject_undefined_channel
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("dtype", "routes"),
     (
@@ -431,8 +431,8 @@ def test_range_functions_reject_non_float32_with_the_dtype_specific_route(
     assert positions == tuple(sorted(positions))
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("invalid", (0, 7, 9, 11, 13, 15, 17, 18, "8", True, 10.0))
 @pytest.mark.parametrize("operation", ("legal_to_full", "full_to_legal"))
 def test_range_functions_reject_bit_depths_outside_the_closed_set(operation: str, invalid: object) -> None:
@@ -443,8 +443,8 @@ def test_range_functions_reject_bit_depths_outside_the_closed_set(operation: str
         getattr(px.values, operation)(source, bit_depth=invalid)
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "operation",
     (

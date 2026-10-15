@@ -223,7 +223,7 @@ def _build_tiled_fixture(
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_multipart_parts_own_chunks_deep_state_and_sampling_geometry(tmp_path: Path) -> None:
     """EXR container parsing assigns chunks, deep state, and channel sampling geometry to the correct part."""
     fixture = _build_multipart_sampling_deep_fixture()
@@ -263,8 +263,8 @@ def test_multipart_parts_own_chunks_deep_state_and_sampling_geometry(tmp_path: P
     assert tuple((part.name, part.deep) for part in header.parts) == (("flat", False), ("deep", True))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("missing", "name", "image_type", "chunk_count"),
     (
@@ -309,7 +309,7 @@ def test_multipart_or_non_image_required_attributes_are_not_defaulted(
     _assert_actionable_identity(caught.value, "part=0", f"attribute={missing!r}")
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("version_flags", "image_type", "tiles"),
     (
@@ -355,8 +355,8 @@ def test_part_type_and_version_flags_must_describe_the_same_layout(
     _assert_actionable_identity(caught.value, "part=0", f"type={image_type!r}")
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("version_flags", "image_type", "part_version", "max_samples_per_pixel"),
     ((0, "scanlineimage", None, None), (0x800, "deepscanline", 1, 1)),
@@ -387,8 +387,8 @@ def test_non_tiled_parts_must_not_carry_a_tiles_attribute(
     _assert_actionable_identity(caught.value, "part=0", f"type={image_type!r}", "attribute='tiles'")
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("version_flags", "image_type"),
     ((0x200, "tiledimage"), (0x1000, "tiledimage"), (0x800, "deeptile")),
@@ -426,8 +426,8 @@ def test_tiled_part_requires_a_tile_description(
     _assert_actionable_identity(caught.value, "part=0", "attribute='tiles'")
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("missing", ("version", "maxSamplesPerPixel"))
 def test_deep_part_requires_its_deep_header_attributes(tmp_path: Path, missing: str) -> None:
     """EXR parsing requires the mandatory attributes of deep-part headers."""
@@ -448,7 +448,7 @@ def test_deep_part_requires_its_deep_header_attributes(tmp_path: Path, missing: 
     _assert_actionable_identity(caught.value, "part=0", f"attribute={missing!r}")
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("level_mode", "rounding_mode", "expected_levels", "expected_count"),
     (
@@ -503,8 +503,8 @@ def test_tiled_level_geometry_derives_every_grid_and_offset_entry(
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("corruption", "expected_context"),
     (
@@ -537,7 +537,7 @@ def test_tiled_level_corruption_reports_part_level_tile_and_action(
     _assert_actionable_identity(caught.value, "part=0", expected_context)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_nonselected_tiled_level_offsets_are_validated_eagerly(tmp_path: Path) -> None:
     """EXR reads validate offsets and byte spans for tiled levels even when the caller selects only level zero."""
     fixture = _build_tiled_fixture(level_mode=1, rounding_mode=1)
@@ -552,8 +552,8 @@ def test_nonselected_tiled_level_offsets_are_validated_eagerly(tmp_path: Path) -
     _assert_actionable_identity(caught.value, "part=0", "level=(3, 3)", "tile=(0, 0)")
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_tiled_offset_table_truncation_is_rejected_before_chunk_parsing(tmp_path: Path) -> None:
     """EXR reads reject a truncated tiled offset table before decoding chunk data."""
     fixture = _build_tiled_fixture(level_mode=1, rounding_mode=1)
@@ -567,8 +567,8 @@ def test_tiled_offset_table_truncation_is_rejected_before_chunk_parsing(tmp_path
     _assert_actionable_identity(caught.value, f"tables={fixture.table_start}:{table_end}")
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_tiled_chunk_spans_must_not_intersect(tmp_path: Path) -> None:
     """EXR reads reject tiled chunks whose file byte spans overlap."""
     fixture = _build_tiled_fixture(level_mode=1, rounding_mode=1, reverse_physical=False, compression=2)

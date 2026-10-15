@@ -14,8 +14,8 @@ from test_to_format_spec import _frame
 import pixtreme as px
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("direction", ("from", "to"))
 def test_p216_docstrings_expose_the_full_source_contract(direction: str) -> None:
     """The public P216 conversion documentation states its buffer layout, range mapping, sampling, and error
@@ -67,8 +67,8 @@ class _AllocationTrace(cp.cuda.MemoryHook):
         self.sizes.append(kwargs["size"])
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-018")
 @pytest.mark.parametrize(
     "direction,interpolation", [("from", token) for token in FROM_FILTERS] + [("to", token) for token in TO_FILTERS]
 )
@@ -119,8 +119,8 @@ def test_p216_uses_one_kernel_and_one_output_allocation_on_the_current_stream(
         assert np.all(np.abs(q64[changed] - boundary[changed]) <= 0.125)
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("direction", ("from", "to"))
 def test_p216_preserves_the_cause_if_a_backend_failure_is_converted(direction: str) -> None:
     """P216 conversion propagates backend allocation errors or retains them as the cause of a public error."""

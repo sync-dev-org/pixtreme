@@ -364,7 +364,7 @@ def _table_tokens(markdown: str, heading: str) -> tuple[str, ...]:
     )
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_root_surface_is_exact_and_version_matches_distribution() -> None:
     """The root namespace exports the declared modules and distribution version without named-format aliases."""
     assert px.__all__ == (*ROOT_MODULES, "__version__")
@@ -374,7 +374,7 @@ def test_root_surface_is_exact_and_version_matches_distribution() -> None:
     assert isinstance(px.__version__, str) and px.__version__
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_public_modules_expose_the_exact_function_type_helper_and_alias_contract() -> None:
     """Each public operation, type, helper, and alias appears in its declared module and no other public module."""
     assert len(IO_FUNCTIONS) == 31
@@ -400,7 +400,7 @@ def test_public_modules_expose_the_exact_function_type_helper_and_alias_contract
     assert inspect.isfunction(px.core.channels)
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_legacy_root_and_module_imports_fail_in_fresh_processes() -> None:
     """Removed paths have no aliases, shims, or import fallback."""
     legacy_root = (
@@ -442,9 +442,9 @@ def test_legacy_root_and_module_imports_fail_in_fresh_processes() -> None:
         assert result.returncode != 0, snippet
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-102")
-@pytest.mark.req("REQ-PIX-105")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-102")
+@pytest.mark.req("SP-PIX-105")
 def test_frame_is_data_metadata_properties_and_dlpack_only() -> None:
     """Frame exposes pixels, metadata, properties, and DLPack without named-format exit methods."""
     assert tuple(px.core.Frame.model_fields) == ("data", "colorspace", "gamma", "channels", "matrix")
@@ -473,8 +473,8 @@ def test_frame_is_data_metadata_properties_and_dlpack_only() -> None:
         assert all(parameter.kind is inspect.Parameter.KEYWORD_ONLY for parameter in parameters[1:])
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_literal_aliases_and_vocabulary_tables_are_identical() -> None:
     """Public type aliases, runtime tokens, and documented token tables describe the same accepted names."""
     from pixtreme._core import vocabulary as runtime_vocabulary
@@ -493,7 +493,7 @@ def test_literal_aliases_and_vocabulary_tables_are_identical() -> None:
     assert not hasattr(px.core, "Channels")
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("module_name", "function_name", "kwargs"),
     _ERROR_PATH_CASES,

@@ -128,8 +128,8 @@ def _pnm_payload(magic: str, values: np.ndarray) -> bytes:
     return header + samples
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_new_format_public_signatures_are_exact() -> None:
     """Image file and bytes APIs expose fixed documented selectors, including the output EXR dtype option."""
     read = inspect.signature(px.io.read_image)
@@ -172,8 +172,8 @@ def test_new_format_public_signatures_are_exact() -> None:
     assert encode.parameters["lossless"].default is None
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("token", ("jpeg2000", "webp", "bmp", "pnm"))
 def test_encode_image_accepts_the_extended_closed_token_set(token: str) -> None:
     """Bytes encoding accepts the documented image format names and rejects unknown names."""
@@ -190,7 +190,7 @@ def test_encode_image_accepts_the_extended_closed_token_set(token: str) -> None:
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("suffix", "format_name"),
     (
@@ -216,7 +216,7 @@ def test_file_extensions_are_case_insensitive_and_report_the_new_formats(
     assert px.io.read_header(path).format == format_name
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("suffix", "payload", "format_name", "width", "height", "channels", "dtype"),
     (
@@ -250,8 +250,8 @@ def test_read_header_parses_independent_minimal_new_format_headers(
     assert header.color.raw == {}
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_read_header_rejects_bmp_pixel_offset_beyond_the_declared_payload(tmp_path: Path) -> None:
     """BMP header inspection rejects pixel offsets outside the declared or available payload."""
     payload = bytearray(_minimal_bmp(1, 1, 24)[:54])
@@ -267,8 +267,8 @@ def test_read_header_rejects_bmp_pixel_offset_beyond_the_declared_payload(tmp_pa
     assert "pixel_offset=1000" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_read_header_stops_before_ascii_pnm_raster_while_decode_rejects_corruption(tmp_path: Path) -> None:
     """PNM header inspection stops before raster samples, while decoding validates corrupt sample data."""
     payload = b"P2\n1 1\n255\nnot-a-decimal-sample\n"
@@ -283,8 +283,8 @@ def test_read_header_stops_before_ascii_pnm_raster_while_decode_rejects_corrupti
         px.io.decode_image(payload)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("payload", "observed"),
     (
@@ -302,8 +302,8 @@ def test_decode_image_rejects_truncated_or_invalid_new_format_headers(payload: b
     assert observed.lower() in str(error.value).lower()
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("dtype", (np.uint8, np.uint16))
 @pytest.mark.parametrize("channels", ("Y", "RGB", "RGBA"))
 @pytest.mark.parametrize("suffix", (".jp2", ".j2k"))
@@ -324,7 +324,7 @@ def test_jpeg2000_lossless_file_round_trip_preserves_every_supported_layout(
         assert path.read_bytes().startswith(b"\xff\x4f\xff\x51")
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("format_token", "suffix", "channels"),
     (("webp", ".webp", "RGB"), ("bmp", ".bmp", "Y"), ("bmp", ".bmp", "RGB")),
@@ -346,8 +346,8 @@ def test_webp_and_bmp_supported_layouts_round_trip_at_file_and_bytes_boundaries(
     _assert_frame_equal(from_file, frame)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("dtype", (np.uint8, np.uint16))
 @pytest.mark.parametrize(("magic", "channels"), (("P2", "Y"), ("P3", "RGB"), ("P5", "Y"), ("P6", "RGB")))
 def test_pnm_ascii_and_binary_decode_preserve_samples_and_normalize(
@@ -372,8 +372,8 @@ def test_pnm_ascii_and_binary_decode_preserve_samples_and_normalize(
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("dtype", (np.uint8, np.uint16))
 @pytest.mark.parametrize(("channels", "magic", "suffix"), (("Y", b"P5", ".pgm"), ("RGB", b"P6", ".ppm")))
 def test_pnm_encode_is_bit_exact_big_endian_and_extension_checked(
@@ -406,8 +406,8 @@ def test_pnm_encode_is_bit_exact_big_endian_and_extension_checked(
         px.io.write_image(tmp_path / f"wrong{wrong_suffix}", frame)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("format_token", "dtype", "channels"),
     (
@@ -426,8 +426,8 @@ def test_new_formats_reject_unsupported_channel_layouts_before_codec(
         px.io.encode_image(frame, format=format_token)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("format_token", "kwargs"),
     (
@@ -450,7 +450,7 @@ def test_new_encode_parameters_are_typed_format_specific_and_non_conflicting(
         px.io.encode_image(_frame(np.uint8, "RGB"), format=format_token, **kwargs)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_webp_quality_controls_payload_and_independent_mse() -> None:
     """Increasing WebP quality changes encoded bytes and improves reconstruction error against the source image."""
     generator = np.random.default_rng(20260806)
@@ -465,7 +465,7 @@ def test_webp_quality_controls_payload_and_independent_mse() -> None:
     assert mse[2] <= mse[0]
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("format_token", ("jpeg2000", "webp"))
 def test_lossless_true_is_exact_and_false_or_none_is_lossy(format_token: str) -> None:
     """JPEG 2000 and WebP encoding preserve exact pixels with lossless mode and use lossy coding otherwise."""
@@ -482,8 +482,8 @@ def test_lossless_true_is_exact_and_false_or_none_is_lossy(format_token: str) ->
     assert bool(cp.any(explicit_lossy.data != frame.data).get())
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 def test_new_format_metadata_defaults_overrides_and_channel_selection() -> None:
     """BMP bytes decoding applies default and per-call color claims while selecting channels by label."""
     frame = _frame(np.uint8, "RGB")
@@ -497,7 +497,7 @@ def test_new_format_metadata_defaults_overrides_and_channel_selection() -> None:
     cp.testing.assert_array_equal(selected.data, frame.data[..., [2, 0]])
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_new_header_parsers_remain_codec_lazy_and_gpu_free(tmp_path: Path) -> None:
     """JPEG 2000, WebP, BMP, and PNM header inspection reads metadata without codecs or GPU allocation."""
     paths = []

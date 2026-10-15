@@ -10,7 +10,7 @@ from pathlib import Path
 import cupy as cp
 import numpy as np
 import pytest
-from PIL import Image
+from PIL import Image, JpegImagePlugin
 
 import pixtreme as px
 
@@ -66,8 +66,8 @@ def _sentence_containing(docstring: str, fragment: str) -> str:
     return matches[0]
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_bytes_boundary_public_signatures_are_exact() -> None:
     """Image file and bytes APIs expose the documented keyword parameters for reading, decoding, writing, and
     encoding.
@@ -109,21 +109,36 @@ def test_bytes_boundary_public_signatures_are_exact() -> None:
         assert encode.parameters[name].default is None
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("format_token", ("jpeg", "png", "tiff"))
 def test_decode_image_matches_the_file_boundary(tmp_path: Path, format_token: str) -> None:
-    """Decoding image bytes and reading the same file produce identical pixels and color metadata."""
+    """File and bytes decoding produce identical pixels and metadata, with nearest replication of JPEG chroma."""
     path = _save_fixture(tmp_path, format_token)
+    if format_token == "jpeg":
+        # Each 16x16 MCU has constant Y/Cb/Cr, so JPEG stores only exact DC coefficients at quality 100.
+        ycbcr = np.empty((16, 32, 3), dtype=np.uint8)
+        ycbcr[:, :16] = (128, 64, 192)
+        ycbcr[:, 16:] = (128, 192, 64)
+        Image.fromarray(ycbcr, mode="YCbCr").save(path, quality=100, subsampling=2)
 
     decoded = px.io.decode_image(path.read_bytes())
     from_file = px.io.read_image(path)
 
     _assert_frames_equal(decoded, from_file)
+    if format_token == "jpeg":
+        # Hand-calculated full-range BT.601: R=Y+1.402*(Cr-128), B=Y+1.772*(Cb-128),
+        # G=Y-0.344136*(Cb-128)-0.714136*(Cr-128), rounded to integer sample codes.
+        expected = np.empty((16, 32, 3), dtype=np.uint8)
+        expected[:, :16] = (218, 104, 15)
+        expected[:, 16:] = (38, 152, 241)
+        # Allow one sample code for integer color-conversion rounding; interpolation across the MCU edge exceeds it.
+        actual_codes = np.rint(cp.asnumpy(decoded.data) * np.float32(255.0)).astype(np.int16)
+        np.testing.assert_allclose(actual_codes, expected.astype(np.int16), rtol=0, atol=1)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "payload",
     (
@@ -138,8 +153,8 @@ def test_decode_image_rejects_recognizable_unsupported_and_unknown_bytes(payload
         px.io.decode_image(payload)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_read_and_decode_docstrings_state_the_file_only_and_bytes_boundaries() -> None:
     """The public image input documentation lists which formats are accepted from files and which are accepted from
     bytes.
@@ -165,8 +180,8 @@ def test_read_and_decode_docstrings_state_the_file_only_and_bytes_boundaries() -
     assert set(re.findall(r":class:`([^`]+)`", decode_docstring)) == {"ValueError", "RuntimeError"}
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_decode_image_rejects_malformed_headers_with_value_error() -> None:
     """A recognized image format with a malformed header is rejected as invalid input with an actionable error."""
     truncated_png = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\x0dIHDR"
@@ -174,9 +189,9 @@ def test_decode_image_rejects_malformed_headers_with_value_error() -> None:
         px.io.decode_image(truncated_png)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_decode_image_metadata_overrides_and_native_depth_match_read_image(tmp_path: Path) -> None:
     """Bytes decoding and file reading apply the same raster defaults, metadata overrides, and native-depth option."""
     values = np.array([[0, 1, 32768, 65535]], dtype=np.uint16)
@@ -192,8 +207,8 @@ def test_decode_image_metadata_overrides_and_native_depth_match_read_image(tmp_p
     assert (decoded.colorspace, decoded.gamma) == ("ACEScg", "linear")
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("format_token", ("jpg", "jpeg-x", "jpeg2k", None, 1))
 def test_encode_image_requires_a_supported_format_token(format_token: object) -> None:
     """Encoding image bytes requires a supported format name and explains invalid format names."""
@@ -205,8 +220,8 @@ def test_encode_image_requires_a_supported_format_token(format_token: object) ->
         px.io.encode_image(frame)  # type: ignore[call-arg]
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("quality", (0, 101, True, 90.0))
 def test_jpeg_quality_is_typed_bounded_and_format_specific(quality: object) -> None:
     """JPEG quality accepts built-in integers from 1 through 100 only for JPEG output."""
@@ -219,8 +234,8 @@ def test_jpeg_quality_is_typed_bounded_and_format_specific(quality: object) -> N
     assert isinstance(px.io.encode_image(frame, format="jpeg", quality=90), bytes)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("compression", ("zip", "deflate", 1))
 def test_tiff_compression_tokens_are_closed_and_format_specific(compression: object) -> None:
     """TIFF output accepts only its supported compression names and rejects them for other formats."""
@@ -231,7 +246,7 @@ def test_tiff_compression_tokens_are_closed_and_format_specific(compression: obj
         px.io.encode_image(frame, format="png", compression="lzw")
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("compression", ("none", "lzw"))
 def test_tiff_compression_round_trip_is_bit_exact(compression: str) -> None:
     """Both supported TIFF compression modes preserve pixel codes through a bytes round trip."""
@@ -240,7 +255,7 @@ def test_tiff_compression_round_trip_is_bit_exact(compression: str) -> None:
     _assert_frames_equal(decoded, frame)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("compression_level", range(10))
 def test_png_compression_levels_round_trip_bit_exactly(compression_level: int) -> None:
     """Every PNG compression level from 0 through 9 preserves pixel codes through a bytes round trip."""
@@ -252,8 +267,8 @@ def test_png_compression_levels_round_trip_bit_exactly(compression_level: int) -
     _assert_frames_equal(decoded, frame)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("compression_level", (-1, 10, True, 1.0, "1"))
 def test_png_compression_level_is_typed_bounded_and_format_specific(compression_level: object) -> None:
     """PNG compression levels accept built-in integers from 0 through 9 only for PNG output."""
@@ -264,8 +279,8 @@ def test_png_compression_level_is_typed_bounded_and_format_specific(compression_
         px.io.encode_image(frame, format="tiff", compression_level=1)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("format_token", "suffix", "kwargs"),
     (
@@ -280,7 +295,7 @@ def test_bytes_and_file_encode_round_trips_match(
     suffix: str,
     kwargs: dict[str, object],
 ) -> None:
-    """Encoding bytes and writing files with the same options preserve equivalent pixels and metadata on readback."""
+    """File and bytes encoding preserve equivalent pixels and metadata, with full-resolution JPEG chroma."""
     frame = _frame()
     path = tmp_path / f"round-trip{suffix}"
 
@@ -288,11 +303,16 @@ def test_bytes_and_file_encode_round_trips_match(
     px.io.write_image(path, frame, **kwargs)  # type: ignore[arg-type]
 
     assert isinstance(payload, bytes)
+    if format_token == "jpeg":
+        with Image.open(io.BytesIO(payload)) as image:
+            assert JpegImagePlugin.get_sampling(image) == 0  # JPEG 4:4:4.
+        with Image.open(path) as image:
+            assert JpegImagePlugin.get_sampling(image) == 0
     _assert_frames_equal(px.io.decode_image(payload, unchanged=True), px.io.read_image(path, unchanged=True))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_write_image_new_encode_parameters_share_fail_fast_validation(tmp_path: Path) -> None:
     """File writing rejects invalid format-specific encode parameters with the same rules as bytes encoding."""
     frame = _frame()
@@ -308,7 +328,7 @@ def test_write_image_new_encode_parameters_share_fail_fast_validation(tmp_path: 
             px.io.write_image(path, frame, **kwargs)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(("compression", "expected_tag"), (("none", 1), ("lzw", 5)))
 def test_tiff_compression_token_controls_bytes_output_encoding(compression: str, expected_tag: int) -> None:
     """The TIFF compression option selects the compression scheme recorded in encoded bytes."""
@@ -317,7 +337,7 @@ def test_tiff_compression_token_controls_bytes_output_encoding(compression: str,
         assert image.tag_v2[259] == expected_tag
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(("compression", "expected_tag"), (("none", 1), ("lzw", 5)))
 def test_tiff_compression_token_controls_file_output_encoding(
     tmp_path: Path, compression: str, expected_tag: int
@@ -329,7 +349,7 @@ def test_tiff_compression_token_controls_file_output_encoding(
         assert image.tag_v2[259] == expected_tag
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_png_compression_level_controls_bytes_output_size() -> None:
     """Higher PNG compression reduces the encoded size of a compressible image compared with level zero."""
     frame = _frame(np.zeros((64, 64, 3), dtype=np.uint8))
@@ -338,7 +358,7 @@ def test_png_compression_level_controls_bytes_output_size() -> None:
     assert len(smallest) < len(fastest)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_png_compression_level_controls_file_output_size(tmp_path: Path) -> None:
     """Writing a compressible PNG file applies the selected compression level to its output size."""
     frame = _frame(np.zeros((64, 64, 3), dtype=np.uint8))

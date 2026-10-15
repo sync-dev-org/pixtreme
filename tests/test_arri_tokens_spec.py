@@ -303,8 +303,8 @@ def _conversion_matrix(
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_arri_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> None:
     """ARRI color tokens appear in the canonical vocabulary and public annotations without extra aliases."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
@@ -321,7 +321,7 @@ def test_arri_tokens_extend_canonical_vocabulary_and_public_static_surfaces() ->
     assert "gamma='ARRI-LogC3'" in repr(frame)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_arri_token_keys_are_collision_free_family_local_and_separator_normalized() -> None:
     """ARRI token variants normalize to unique keys within their color and gamma families."""
     from pixtreme._core.validation import _normalized_closed_token
@@ -355,9 +355,9 @@ def test_arri_token_keys_are_collision_free_family_local_and_separator_normalize
         _normalized_closed_token("AWG3", axis="colorspace", accepted=_COLORSPACES)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_logc3_encode_matches_the_normative_oracle_and_is_continuous_monotonic_and_unclipped() -> None:
     """ARRI-LogC3 encoding matches the vendor curve across its cut and retains signed scene values."""
     cut = np.float32(_LOGC3_CUT)
@@ -420,9 +420,9 @@ def test_logc3_encode_matches_the_normative_oracle_and_is_continuous_monotonic_a
     assert int(np.floor(np.float64(1023.0) * np.float64(gray) + np.float64(0.5))) == 400
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_logc3_decode_matches_the_normative_oracle_through_the_boundary_without_clipping() -> None:
     """ARRI-LogC3 decoding matches the vendor inverse through its boundary without clipping scene values."""
     boundary = np.float32(_LOGC3_CODE_CUT)
@@ -474,8 +474,8 @@ def test_logc3_high_precision_coefficients_round_to_arri_values_and_bound_printe
     np.testing.assert_allclose(_printed_logc3_decode(encoded), _logc3_decode(encoded), rtol=0.0, atol=5e-6)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_logc3_round_trips_and_all_transfer_paths_preserve_the_frame_contract() -> None:
     """ARRI-LogC3 round trips through public transfer paths while preserving Frame metadata and auxiliary
     channels."""
@@ -527,7 +527,7 @@ def test_logc3_round_trips_and_all_transfer_paths_preserve_the_frame_contract() 
     assert encoded.data.dtype == restored.data.dtype == cp.float32
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("colorspace", ("ARRI-Wide-Gamut-3", "ARRI-Wide-Gamut-4"))
 def test_awg_primaries_conversion_and_native_row_match_independent_float64_oracles(
     colorspace: str,
@@ -550,7 +550,7 @@ def test_awg_primaries_conversion_and_native_row_match_independent_float64_oracl
     assert grayscale.matrix == "native"
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_awg_adaptation_and_independent_gamma_pairings_follow_existing_color_contracts() -> None:
     """ARRI Wide Gamut adapts between white points and accepts gamma pairings independently of gamut names."""
     values = np.asarray(((1.0, -0.25, 0.18), (0.2, 0.4, 1.5)), dtype=np.float32)
@@ -590,7 +590,7 @@ def test_awg_adaptation_and_independent_gamma_pairings_follow_existing_color_con
 # script imports CuPy, NumPy, and pixtreme; creates RGB Frames by repeating each exact float32 `linear` and `encoded`
 # array below over three channels; calls ARRI-LogC4 `linear_to_gamma` and `gamma_to_linear`; copies channel R to NumPy;
 # and prints each result with `.view(np.uint32).tolist()`.
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_logc4_gpu_bits_remain_identical_to_the_pre_arri_token_baseline() -> None:
     """ARRI-LogC4 produces its specified float32 pixel values through the GPU transfer path."""
     linear = np.asarray(
@@ -638,7 +638,7 @@ def test_logc4_gpu_bits_remain_identical_to_the_pre_arri_token_baseline() -> Non
     np.testing.assert_array_equal(actual_decode, expected_decode)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_dpx_classifies_logc3_as_logarithmic_without_changing_existing_mappings() -> None:
     """DPX writing identifies ARRI-LogC3 as logarithmic and preserves other transfer mappings."""
     from pixtreme._io.formats.dpx import _dpx_transfer_from_gamma
@@ -669,8 +669,8 @@ def test_dpx_classifies_logc3_as_logarithmic_without_changing_existing_mappings(
     }
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("operation", "parameter", "rejected", "candidates"),
     (

@@ -135,8 +135,8 @@ def _bilateral_reference(
     return output.astype(np.float32)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_public_signatures_and_frame_only_entries_are_actionable() -> None:
     """Public blur operations accept Frames and expose constant border values in their signatures and input errors."""
     import cupy as cp
@@ -172,8 +172,8 @@ def test_blur_public_signatures_and_frame_only_entries_are_actionable() -> None:
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("name", "parameter"),
     (("gaussian_blur", "sigma"), ("bilateral_blur", "sigma_space"), ("bilateral_blur", "sigma_value")),
@@ -190,8 +190,8 @@ def test_blur_rejects_nonpositive_or_nonfinite_real_sigmas(name: str, parameter:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("name", ("box_blur", "median_blur"))
 @pytest.mark.parametrize("size", (0, -1, 2, 2.0, True))
 def test_square_blurs_reject_invalid_odd_sizes(name: str, size: object) -> None:
@@ -203,8 +203,8 @@ def test_square_blurs_reject_invalid_odd_sizes(name: str, size: object) -> None:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_median_accepts_seven_and_rejects_the_first_larger_odd_size() -> None:
     """Median blur accepts an odd size of seven and rejects the next larger odd size with guidance."""
     source = _frame(np.arange(9, dtype=np.float32).reshape(3, 3, 1), channels=["signal"])
@@ -216,8 +216,8 @@ def test_median_accepts_seven_and_rejects_the_first_larger_odd_size() -> None:
     assert str(MEDIAN_MAX_SIZE) in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "size",
     (0, -1, 2, 2.0, True, (), (3,), (3, 3, 3), (0, 3), (3, 0), (2, 3), (3, 2), [3, 3]),
@@ -231,8 +231,8 @@ def test_convolve_box_rejects_invalid_scalar_or_pair_sizes(size: object) -> None
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_convolve_box_requires_an_explicit_boolean_normalize() -> None:
     """Box convolution requires an explicit Boolean normalize value and explains invalid values."""
     signature = inspect.signature(px.filter.convolve_box)
@@ -247,8 +247,8 @@ def test_convolve_box_requires_an_explicit_boolean_normalize() -> None:
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("name", "kwargs"),
     (
@@ -284,7 +284,7 @@ def test_blur_border_axis_accepts_exact_tokens_and_lists_them_on_error(name: str
         assert token in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 def test_box_known_corner_solutions_fix_all_border_definitions() -> None:
     """Box blur produces the hand calculated corner values for every supported border mode."""
     values = np.arange(9, dtype=np.float32).reshape(3, 3, 1)
@@ -305,7 +305,7 @@ def test_box_known_corner_solutions_fix_all_border_definitions() -> None:
         assert result.shape == source.shape
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 def test_wrap_uses_modulo_when_the_kernel_is_larger_than_the_image() -> None:
     """For blur operations, wrap remains periodic for a kernel wider and taller than the image."""
     values = np.arange(6, dtype=np.float32).reshape(2, 3, 1)
@@ -322,7 +322,7 @@ def test_wrap_uses_modulo_when_the_kernel_is_larger_than_the_image() -> None:
     )
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize("border", BORDERS)
 @pytest.mark.parametrize(
     ("name", "kwargs"),
@@ -385,10 +385,10 @@ def test_blur_kernels_match_independent_numpy_oracles(name: str, kwargs: dict[st
     assert result.dtype == np.dtype(np.float32)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-103")
 def test_blur_is_label_independent_unclamped_and_preserves_metadata_privately() -> None:
     """Blur filters preserve color metadata and out of range pixel values, regardless of channel names, in separate
     storage.
@@ -419,7 +419,7 @@ def test_blur_is_label_independent_unclamped_and_preserves_metadata_privately() 
     assert float(result.data.max()) > 1.0
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize(
     ("name", "kwargs"),
     (
@@ -445,7 +445,7 @@ def test_size_one_is_an_identity_with_private_storage(name: str, kwargs: dict[st
     )
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 def test_bilateral_value_distance_couples_all_channels() -> None:
     """For blur operations, one Euclidean all-channel distance supplies the weight for every channel."""
     values = np.asarray([[[0.0, 0.0], [0.1, 2.0], [0.2, 0.0]]], dtype=np.float32)
@@ -465,8 +465,8 @@ def test_bilateral_value_distance_couples_all_channels() -> None:
     assert not np.allclose(result, uncoupled, rtol=1e-4, atol=1e-4)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_docstrings_are_self_contained_llm_readable_contracts() -> None:
     """Developers can find blur signatures, border values, and sampling rules in the public docstrings."""
     for name in ("gaussian_blur", "box_blur", "median_blur", "bilateral_blur", "convolve_box"):

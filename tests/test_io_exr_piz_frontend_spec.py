@@ -234,7 +234,7 @@ def _assert_openexr_pixels_equal(actual: np.ndarray, expected: np.ndarray) -> No
         np.testing.assert_array_equal(actual_samples, expected_samples)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("height", "row_counts"),
     ((7, (7,)), (32, (32,)), (33, (32, 1)), (63, (32, 31))),
@@ -261,7 +261,7 @@ def test_piz_descriptor_covers_full_partial_and_subchunk_images(
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_piz_descriptor_classifies_compressed_equal_zero_and_oversized_storage(tmp_path: Path) -> None:
     """PIZ EXR parsing classifies compressed, equal-size raw, empty raw, and oversized corrupt chunks by stored size."""
     channels = (_channel("H", 1),)
@@ -292,7 +292,7 @@ def test_piz_descriptor_classifies_compressed_equal_zero_and_oversized_storage(t
         px.io.read_header(oversized_path)
 
 
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-017")
 def test_oversized_codec_chunk_error_names_its_compression(tmp_path: Path) -> None:
     """An invalid PIZ chunk identifies its compression so the developer can repair the input."""
     channels = (_channel("H", 1),)
@@ -309,7 +309,7 @@ def test_oversized_codec_chunk_error_names_its_compression(tmp_path: Path) -> No
     assert re.search("pha" + "se" + r"[ _-]*[1-4]", message, re.IGNORECASE) is None
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_piz_payload_selection_uses_raw_for_equal_or_larger_codec_output() -> None:
     """PIZ EXR writes store raw bytes when compression yields an equal or larger payload."""
     raw_chunks = (b"raw!", b"same", b"last")
@@ -332,7 +332,7 @@ def test_piz_payload_selection_uses_raw_for_equal_or_larger_codec_output() -> No
     assert selected.get().tobytes() == b"zip" + raw_chunks[1] + raw_chunks[2]
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("bitmap_minimum", "bitmap_maximum", "bitmap_size"),
     ((3, 5, 3), (4, 4, 1), (8191, 0, 0), (7, 2, 0)),
@@ -363,7 +363,7 @@ def test_piz_bitmap_and_huffman_spans_are_permissive_but_bounded(
     assert descriptor.trailing_span.size == len(b"permissive-trailing")
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_piz_descriptor_records_absolute_payload_and_huffman_boundaries(tmp_path: Path) -> None:
     """PIZ EXR parsing records each payload, bitmap, and Huffman span at its actual file byte offset."""
     bitmap = b"\x11\x22\x44"
@@ -420,8 +420,8 @@ def test_piz_descriptor_records_absolute_payload_and_huffman_boundaries(tmp_path
     assert fixture.payload[data_end:payload_end] == trailing
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("payload", "word"),
     (
@@ -444,7 +444,7 @@ def test_piz_descriptor_rejects_unsafe_bitmap_and_huffman_bounds(
         px.io.read_header(path)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_piz_channel_planes_preserve_file_order_dotted_names_and_word_slices(tmp_path: Path) -> None:
     """PIZ EXR reads keep file channel order and dotted names while assigning separate HALF and 32-bit word planes."""
     channels = (_channel("A.half", 1), _channel("beauty.F", 2), _channel("mask.U", 0))
@@ -467,7 +467,7 @@ def test_piz_channel_planes_preserve_file_order_dotted_names_and_word_slices(tmp
     )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("line_order", "table_order", "physical_order"),
     (
@@ -500,8 +500,8 @@ def test_piz_offset_table_order_is_independent_of_output_rows(
     assert tuple((chunk.row_start, chunk.row_count) for chunk in container.chunks) == ((0, 32), (32, 32), (64, 1))
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_piz_offset_spans_and_row_ranges_must_not_intersect_or_repeat(tmp_path: Path) -> None:
     """PIZ EXR reads reject chunks with overlapping byte spans or duplicate output row ownership."""
     channels = (_channel("H", 1),)
@@ -533,8 +533,8 @@ def test_piz_offset_spans_and_row_ranges_must_not_intersect_or_repeat(tmp_path: 
         px.io.read_header(repeated_path)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_piz_offset_table_rejects_an_exact_duplicate_chunk_span(tmp_path: Path) -> None:
     """PIZ EXR reads reject duplicate chunk offsets even when the spans are otherwise valid."""
     fixture = _build_piz_exr(width=16, height=33)
@@ -550,7 +550,7 @@ def test_piz_offset_table_rejects_an_exact_duplicate_chunk_span(tmp_path: Path) 
         px.io.read_header(path)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("structure", ("tiled", "multipart"))
 def test_tiled_and_multipart_containers_use_internal_read_paths(
     tmp_path: Path,
@@ -573,8 +573,8 @@ def test_tiled_and_multipart_containers_use_internal_read_paths(
     _assert_openexr_pixels_equal(actual.get()[..., 0], expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_explicit_deep_channel_reports_an_actionable_unsupported_error(
     tmp_path: Path,
 ) -> None:
@@ -589,8 +589,8 @@ def test_explicit_deep_channel_reports_an_actionable_unsupported_error(
         io._read_exr_pixels(path, container, header, [(part_index, channel, channel)], unchanged=True)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("sampling", ((2, 1), (1, 2)))
 def test_synthetic_sampled_piz_corruption_never_falls_back(
     tmp_path: Path,
@@ -610,8 +610,8 @@ def test_synthetic_sampled_piz_corruption_never_falls_back(
         io._read_exr_pixels(path, container, header, [(0, "H", "H")], unchanged=True)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_unknown_compression_header_fails_without_an_external_fallback(tmp_path: Path) -> None:
     """EXR reads reject unknown compression headers instead of invoking an external decoder."""
     fixture = _build_piz_exr(compression_code=10)
@@ -623,8 +623,8 @@ def test_unknown_compression_header_fails_without_an_external_fallback(tmp_path:
         io._read_exr_pixels(path, container, header, [(0, "H", "H")], unchanged=True)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 def test_piz_uint_and_mixed_public_output_dtype_resolution(tmp_path: Path) -> None:
     """Public PIZ EXR reads resolve UINT and mixed channel types before selecting a decoder."""
     channels = (_channel("F", 2), _channel("H", 1), _channel("U", 0))
@@ -642,7 +642,7 @@ def test_piz_uint_and_mixed_public_output_dtype_resolution(tmp_path: Path) -> No
         io._exr_output_dtype(header, [(0, "F", "F"), (0, "U", "U")], unchanged=True)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_piz_frontend_adds_no_public_selector_and_header_probe_remains_codec_lazy(tmp_path: Path) -> None:
     """PIZ EXR support keeps the public call signature stable and reads headers without loading a codec."""
     fixture = _build_piz_exr(width=16)

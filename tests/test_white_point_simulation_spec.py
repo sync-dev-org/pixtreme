@@ -119,7 +119,7 @@ def _expected(
     return _encode_srgb(transformed) if gamma == "sRGB" else transformed
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize(("token", "xy"), tuple(_REFERENCE_WHITES.items()))
 def test_reference_white_tokens_resolve_to_their_fixed_xy(
     token: str,
@@ -134,7 +134,7 @@ def test_reference_white_tokens_resolve_to_their_fixed_xy(
     assert cp.array_equal(token_output.data, xy_output.data)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("operation", ("chromatic_adaptation", "white_point_simulation"))
 @pytest.mark.parametrize("position", ("input_white", "output_white"))
 @pytest.mark.parametrize("spelling", ("DCI", "dci", "D.C_I"))
@@ -159,7 +159,7 @@ def test_dci_white_matches_direct_xy_in_each_operation_and_argument(
     assert not cp.array_equal(named_result.data, source.data)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize(
     "distinct_xy",
     (
@@ -179,8 +179,8 @@ def test_noncanonical_d93_coordinates_remain_distinct_direct_xy_inputs(
     assert not cp.array_equal(token_output.data, direct_output.data)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-020")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-020")
 @pytest.mark.parametrize("cat", _CAT_TOKENS)
 @pytest.mark.parametrize(("token", "xy"), tuple(_REFERENCE_WHITES.items()))
 def test_chromatic_adaptation_tokens_match_direct_xy_for_every_cat(
@@ -207,8 +207,8 @@ def test_chromatic_adaptation_tokens_match_direct_xy_for_every_cat(
     assert cp.array_equal(token_output.data, xy_output.data)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "invalid",
     (
@@ -252,8 +252,8 @@ def test_invalid_reference_whites_fail_actionably_before_pixel_processing(
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("invalid", ((0.640, 0.330), (5e-324, 5e-324)))
 def test_nonfinite_or_singular_device_matrices_fail_before_pixel_processing(
     monkeypatch: pytest.MonkeyPatch,
@@ -275,8 +275,8 @@ def test_nonfinite_or_singular_device_matrices_fail_before_pixel_processing(
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("invalid", ((0.640, 0.330), (5e-324, 5e-324)))
 def test_equal_singular_whites_fail_before_the_identity_copy(
     monkeypatch: pytest.MonkeyPatch,
@@ -298,8 +298,8 @@ def test_equal_singular_whites_fail_before_the_identity_copy(
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_implicit_input_white_uses_the_frame_colorspace_nominal_white() -> None:
     """An omitted input white uses the Frame color space's nominal white in reference-white simulation."""
     import cupy as cp
@@ -318,8 +318,8 @@ def test_implicit_input_white_uses_the_frame_colorspace_nominal_white() -> None:
     assert cp.array_equal(omitted.data, explicit_xy.data)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "invalid_frame",
     (
@@ -339,9 +339,9 @@ def test_white_point_simulation_requires_one_float32_rgb_triplet(invalid_frame: 
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize(("input_white", "output_white"), ((_D65, _D93), (_D93, _D65)))
 @pytest.mark.parametrize("colorspace", ("sRGB", "ACES2065-1"))
 def test_linear_output_matches_independent_device_matrix_and_preserves_signed_primary_scales(
@@ -388,7 +388,7 @@ def test_linear_output_matches_independent_device_matrix_and_preserves_signed_pr
     np.testing.assert_allclose(actual.data.get(), expected, rtol=1e-5, atol=1e-5)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize(("input_white", "output_white"), (("D65", _D65), (_D93, "D93")))
 def test_equal_resolved_whites_return_an_all_channel_bit_preserving_private_copy(
     input_white: object,
@@ -411,9 +411,9 @@ def test_equal_resolved_whites_return_an_all_channel_bit_preserving_private_copy
     assert output.matrix is None
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("gamma", ("linear", "sRGB"))
 def test_asymmetric_scene_values_match_host_oracle_and_reverse_round_trip(gamma: str) -> None:
     """Reference-white simulation matches a host oracle and reverses asymmetric signed scene values within tolerance."""
@@ -437,8 +437,8 @@ def test_asymmetric_scene_values_match_host_oracle_and_reverse_round_trip(gamma:
     np.testing.assert_allclose(reverse.data.get(), source.data.get(), rtol=tolerance, atol=tolerance)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_different_whites_use_one_label_driven_private_metadata_preserving_pass(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -481,8 +481,8 @@ def test_different_whites_use_one_label_driven_private_metadata_preserving_pass(
     assert (source.colorspace, source.gamma, source.channels, source.matrix) == metadata_snapshot
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_calls_are_bit_deterministic_and_do_not_stamp_implicit_metadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -504,7 +504,7 @@ def test_calls_are_bit_deterministic_and_do_not_stamp_implicit_metadata(
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_simulation_cache_states_and_uncached_composition_are_publicly_bit_identical(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -180,7 +180,7 @@ def _match_reference(source: np.ndarray, template: np.ndarray, *, method: str) -
     return output
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_analysis_public_signatures_paths_and_array_contract_are_exact() -> None:
     """Corner detection and template matching expose one public path each and return device arrays."""
     import cupy as cp
@@ -228,8 +228,8 @@ def test_analysis_public_signatures_paths_and_array_contract_are_exact() -> None
     assert not hasattr(px.core.Frame, "match_template")
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("name", ("corner_harris", "match_template"))
 def test_analysis_rejects_non_frame_and_non_float32_inputs_actionably(name: str) -> None:
     """For image analysis, both entries require float32 Frame inputs with conversion guidance."""
@@ -252,7 +252,7 @@ def test_analysis_rejects_non_frame_and_non_float32_inputs_actionably(name: str)
         assert any(token in str(error.value) for token in ("cast_dtype", "recode_dtype", "dequantize"))
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 @pytest.mark.parametrize("border", BORDERS)
 def test_corner_harris_matches_independent_color_tensor_oracle_for_every_border(border: str) -> None:
     """For image analysis, all borders match the host color-tensor Harris formula."""
@@ -271,7 +271,7 @@ def test_corner_harris_matches_independent_color_tensor_oracle_for_every_border(
     np.testing.assert_allclose(actual, expected, rtol=3e-5, atol=3e-4)
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 @pytest.mark.parametrize(("shape", "block_size"), (((1, 4, 2), 1), ((4, 1, 2), 5), ((2, 3, 2), 7)))
 def test_corner_harris_supports_one_pixel_axes_and_windows_larger_than_the_image(
     shape: tuple[int, int, int], block_size: int
@@ -287,9 +287,9 @@ def test_corner_harris_supports_one_pixel_axes_and_windows_larger_than_the_image
     np.testing.assert_allclose(actual, expected, rtol=5e-5, atol=5e-4)
 
 
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-103")
 def test_corner_harris_combines_channels_before_response_and_preserves_scene_scale() -> None:
     """For image analysis, orthogonal channels form one unclamped color tensor."""
     coordinates_y, coordinates_x = np.indices((7, 7), dtype=np.float32)
@@ -309,8 +309,8 @@ def test_corner_harris_combines_channels_before_response_and_preserves_scene_sca
     assert float(combined[3, 3]) != pytest.approx(float(channel_x[3, 3] + channel_y[3, 3]))
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("block_size", (True, 1.0, "3", 0, -1, 2, 4))
 def test_corner_harris_rejects_invalid_block_sizes_actionably(block_size: object) -> None:
     """Harris corner detection rejects block sizes that are not positive odd built-in integers with guidance."""
@@ -320,8 +320,8 @@ def test_corner_harris_rejects_invalid_block_sizes_actionably(block_size: object
     assert "odd" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "k",
     (True, "0.04", object(), 0.0, -0.1, 0.25, 1.0, float("nan"), float("inf"), float("-inf")),
@@ -334,7 +334,7 @@ def test_corner_harris_rejects_invalid_k_actionably(k: object) -> None:
     assert "0.25" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_corner_harris_accepts_real_k_boundaries_inside_the_open_interval() -> None:
     """For image analysis, representable values immediately inside both k bounds are accepted."""
     source = _frame(np.zeros((1, 1, 1)), channels=["Y"])
@@ -342,8 +342,8 @@ def test_corner_harris_accepts_real_k_boundaries_inside_the_open_interval() -> N
         assert px.feature.corner_harris(source, k=k).shape == (1, 1)
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 def test_corner_harris_uses_the_shared_border_error_contract() -> None:
     """For image analysis, border tokens and constant-only finite values fail fast."""
     source = _frame(np.zeros((2, 2, 1)), channels=["Y"])
@@ -363,7 +363,7 @@ def test_corner_harris_uses_the_shared_border_error_contract() -> None:
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 @pytest.mark.parametrize("method", METHODS)
 def test_match_template_matches_independent_valid_map_oracle_for_every_method(method: str) -> None:
     """For image analysis, every metric matches a host valid-window oracle."""
@@ -388,7 +388,7 @@ def test_match_template_matches_independent_valid_map_oracle_for_every_method(me
     np.testing.assert_allclose(actual, expected, rtol=4e-5, atol=4e-5)
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_match_template_valid_coordinates_equal_shapes_and_one_by_one_are_exact() -> None:
     """For image analysis, output indices are template top-left positions without padding."""
     values = np.arange(30, dtype=np.float32).reshape(3, 5, 2) - np.float32(7.0)
@@ -418,7 +418,7 @@ def test_match_template_valid_coordinates_equal_shapes_and_one_by_one_are_exact(
     np.testing.assert_allclose(one_pixel_response, _match_reference(values, one_pixel, method="ccorr"))
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_match_template_zero_denominators_follow_the_exact_method_rules() -> None:
     """For image analysis, zero energy and zero variance never introduce NaN or epsilon."""
     zeros = _frame(np.zeros((3, 4, 2), dtype=np.float32), channels=("A", "custom"))
@@ -433,7 +433,7 @@ def test_match_template_zero_denominators_follow_the_exact_method_rules() -> Non
         assert not np.isnan(px.feature.match_template(zeros, zero_template, method=method).get()).any()
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_window_sums_accumulator_dtype_is_explicit_and_preserves_integer_exactness() -> None:
     """Template matching uses the requested accumulator type and retains exact integer window sums."""
     import cupy as cp
@@ -451,7 +451,7 @@ def test_window_sums_accumulator_dtype_is_explicit_and_preserves_integer_exactne
     assert float(floating[0, 0, 0]) == float(host_integral[-1, -1, 0])
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 @pytest.mark.parametrize(("height", "width"), ((1, 1), (1, 3), (3, 1), (2, 3), (4, 4)))
 def test_match_template_constant_window_mask_matches_exact_host_property(height: int, width: int) -> None:
     """Template matching identifies constant multichannel windows exactly."""
@@ -473,7 +473,7 @@ def test_match_template_constant_window_mask_matches_exact_host_property(height:
     np.testing.assert_array_equal(actual, expected)
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 @pytest.mark.parametrize("method", ("ccorr_normed", "ccoeff", "ccoeff_normed"))
 @pytest.mark.parametrize("channel_count", (1, 2, 3, 4, 7, 16, 33))
 def test_match_template_fft_fused_response_preserves_compositional_bits_characterization(
@@ -537,7 +537,7 @@ def test_match_template_fft_fused_response_preserves_compositional_bits_characte
     np.testing.assert_array_equal(actual.get().view(np.uint32), expected.get().view(np.uint32))
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 @pytest.mark.parametrize(
     ("frame_shape", "template_shape", "uses_fft"),
     (
@@ -569,7 +569,7 @@ def test_match_template_nonzero_constant_ccoeff_normed_has_zero_variance(
     np.testing.assert_array_equal(response, np.zeros((output_height, output_width), dtype=np.float32))
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_match_template_large_ccoeff_normed_path_matches_the_independent_oracle() -> None:
     """For image analysis, the large-input path preserves per-channel normalized coefficients."""
     generator = np.random.default_rng(20260803)
@@ -584,7 +584,7 @@ def test_match_template_large_ccoeff_normed_path_matches_the_independent_oracle(
     np.testing.assert_allclose(actual, expected, rtol=2e-4, atol=2e-4)
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_match_template_score_direction_offset_scale_and_channel_means_are_fixed() -> None:
     """Template matching returns scores with the method's direction, scale, offset, and channel centering."""
     pattern = np.asarray(
@@ -609,8 +609,8 @@ def test_match_template_score_direction_offset_scale_and_channel_means_are_fixed
     assert not np.array_equal(ccoeff, ccorr)
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("method", ("difference", "ccoeff-extra", "tm_ccorr", 0, None, object()))
 def test_match_template_rejects_unknown_methods_actionably(method: object) -> None:
     """Template matching rejects unknown methods and lists the accepted method names."""
@@ -622,8 +622,8 @@ def test_match_template_rejects_unknown_methods_actionably(method: object) -> No
         assert token in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("attribute", "frame_kwargs", "template_kwargs"),
     (
@@ -650,8 +650,8 @@ def test_match_template_rejects_metadata_and_channel_mismatches_actionably(
     assert attribute in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("frame_shape", "template_shape"),
     (
@@ -673,7 +673,7 @@ def test_match_template_rejects_oversized_valid_geometry_actionably(
     assert "valid" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-014")
+@pytest.mark.req("SP-PIX-014")
 def test_analysis_preserves_both_inputs_and_returns_private_storage_every_time() -> None:
     """Image analysis leaves both input Frames unchanged and returns separately allocated device arrays."""
     values = np.arange(60, dtype=np.float32).reshape(4, 5, 3) / np.float32(7.0) - np.float32(2.0)
@@ -704,8 +704,8 @@ def test_analysis_preserves_both_inputs_and_returns_private_storage_every_time()
     assert (template.colorspace, template.gamma, template.channels, template.matrix) == template_metadata
 
 
-@pytest.mark.req("REQ-PIX-014")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-014")
+@pytest.mark.req("SP-PIX-017")
 def test_analysis_docstrings_are_self_contained_operational_contracts() -> None:
     """Developers can find image analysis formulas, array outputs, and reconstruction guidance in public docstrings."""
     corner_docstring = inspect.getdoc(px.feature.corner_harris) or ""

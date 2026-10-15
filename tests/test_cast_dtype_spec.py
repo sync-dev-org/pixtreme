@@ -25,7 +25,7 @@ def _frame(values: Any, *, dtype: str) -> px.core.Frame:
     return px.io.from_array(cp.asarray(array), colorspace="ACEScg", gamma="linear", channels=labels)
 
 
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("source_dtype", ("float32", "float16", "uint8", "uint16", "uint32"))
 @pytest.mark.parametrize("target_dtype", ("float32", "float16", "uint8", "uint16", "uint32"))
 def test_cast_dtype_matches_literal_astype_for_every_frame_dtype_pair(
@@ -50,8 +50,8 @@ def test_cast_dtype_matches_literal_astype_for_every_frame_dtype_pair(
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("dtype", ("float32", "float16", "uint8", "uint16", "uint32"))
 def test_cast_dtype_always_allocates_and_preserves_metadata(dtype: str) -> None:
     """Casting a Frame to its existing dtype still allocates separate storage and preserves its color metadata."""
@@ -68,8 +68,8 @@ def test_cast_dtype_always_allocates_and_preserves_metadata(dtype: str) -> None:
     )
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("invalid", ("fp32", "float64", "int32", "uint64", "unknown"))
 def test_cast_dtype_rejects_unknown_tokens(invalid: str) -> None:
     """Casting a Frame rejects unsupported dtype names with an error that lists valid choices."""

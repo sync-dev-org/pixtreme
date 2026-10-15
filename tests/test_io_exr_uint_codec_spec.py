@@ -229,8 +229,8 @@ def _reference_unpack_exr_uint_chunks(
     return output
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("compression", _UINT_COMPRESSIONS)
 def test_shared_unpack_kernel_matches_pretrial_uint_composition_characterization(compression: str) -> None:
     """characterization: Native UINT EXR unpacking retains the recorded pixel bits for each tested layout."""
@@ -250,8 +250,8 @@ def test_shared_unpack_kernel_matches_pretrial_uint_composition_characterization
     np.testing.assert_array_equal(actual.get(), expected.get())
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     "compression",
     ("none", "zips", "zip", "rle", "pxr24", "b44", "b44a", "dwaa", "dwab"),
@@ -315,8 +315,8 @@ def test_non_piz_codec_uint_write_and_read_lanes_preserve_sample_bits(
     np.testing.assert_array_equal(actual.get()[..., 0], samples)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("compression", ("b44", "b44a"))
 def test_b44_compressed_mixed_file_reads_raw_uint_section_as_native_uint32(
     tmp_path: Path,

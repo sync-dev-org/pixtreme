@@ -27,10 +27,10 @@ def _sample_hwc(*, dtype: Any = np.float32) -> np.ndarray:
     return np.arange(2 * 3 * 3, dtype=dtype).reshape(2, 3, 3)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-017")
 def test_array_layout_and_dtype_errors_are_actionable() -> None:
     """Array import and export reject invalid layout rank, batch size, and dtype tokens with the received value and a valid
     declaration.
@@ -84,9 +84,9 @@ def test_array_layout_and_dtype_errors_are_actionable() -> None:
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 def test_array_affine_value_errors_are_actionable() -> None:
     """Array import and export reject invalid affine scalars and sequences with the received value and channel count needed
     for correction.
@@ -113,8 +113,8 @@ def test_array_affine_value_errors_are_actionable() -> None:
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-017")
 def test_array_channel_and_storage_errors_are_actionable() -> None:
     """Array import and export reject unavailable channel labels, mismatched channel counts, and unsupported storage dtypes
     with recovery guidance.
@@ -137,8 +137,8 @@ def test_array_channel_and_storage_errors_are_actionable() -> None:
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-017")
 def test_to_array_rejects_non_frame_input_actionably() -> None:
     """Array export rejects a non-Frame input and explains how to supply a Frame."""
     with pytest.raises(ValueError) as error:
@@ -149,8 +149,8 @@ def test_to_array_rejects_non_frame_input_actionably() -> None:
     assert "px.io.to_array" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-017")
 def test_to_array_docstring_names_the_function_boundary_and_public_quantize_path() -> None:
     """The array export documentation names its Frame input and the public quantization operation for integer output."""
     docstring = px.io.to_array.__doc__ or ""
@@ -160,9 +160,9 @@ def test_to_array_docstring_names_the_function_boundary_and_public_quantize_path
     assert "Export this Frame" not in docstring
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 def test_array_bit_depth_option_errors_are_actionable() -> None:
     """Array import and export reject conflicting bit-depth options with the conflicting values and a valid call."""
     import cupy as cp
@@ -209,8 +209,8 @@ def test_array_bit_depth_option_errors_are_actionable() -> None:
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-018")
 def test_from_array_wraps_hwc_zero_copy_and_treats_channels_as_an_interpretation_claim() -> None:
     """Array import wraps contiguous HWC GPU data without copying or reordering it and treats channel labels as an
     interpretation.
@@ -226,8 +226,8 @@ def test_from_array_wraps_hwc_zero_copy_and_treats_channels_as_an_interpretation
     np.testing.assert_array_equal(_host(result.data), _sample_hwc())
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-018")
 def test_uint32_array_boundary_preserves_storage_and_zero_copy() -> None:
     """Array import and export preserve uint32 storage and the original GPU allocation when no conversion is requested."""
     import cupy as cp
@@ -242,8 +242,8 @@ def test_uint32_array_boundary_preserves_storage_and_zero_copy() -> None:
     np.testing.assert_array_equal(_host(output), _sample_hwc(dtype=np.uint32))
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-017")
 def test_from_array_rejects_host_arrays_with_an_actionable_device_recovery_path() -> None:
     """Array import rejects CPU arrays without transferring them implicitly and explains the GPU transfer route."""
     source = _sample_hwc()
@@ -256,8 +256,8 @@ def test_from_array_rejects_host_arrays_with_an_actionable_device_recovery_path(
     assert "cp.asarray" in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-018")
 def test_from_array_copy_tristate_controls_contiguity_and_private_ownership() -> None:
     """Array import uses copy=None opportunistically, requires zero copy for copy=False, and creates private storage for
     copy=True.
@@ -308,8 +308,8 @@ def test_from_array_copy_tristate_controls_contiguity_and_private_ownership() ->
     _assert_actionable(dtype_error)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-018")
 @pytest.mark.parametrize("layout", ("HWC", "NHWC", "CHW", "NCHW"))
 def test_from_array_normalizes_each_layout_against_an_independent_numpy_oracle(layout: str) -> None:
     """Array import converts each declared layout to contiguous HWC pixels matching an independent NumPy calculation."""
@@ -341,9 +341,9 @@ def test_from_array_normalizes_each_layout_against_an_independent_numpy_oracle(l
         assert result.data.data.ptr != source.data.ptr
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-017")
 def test_from_array_layout_rejects_batches_and_strict_transpose_copy() -> None:
     """Array import rejects batches larger than one and rejects a transpose that conflicts with copy=False."""
     import cupy as cp
@@ -363,8 +363,8 @@ def test_from_array_layout_rejects_batches_and_strict_transpose_copy() -> None:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
 def test_from_array_affine_and_dtype_follow_the_inverse_fp32_numpy_oracle() -> None:
     """Array import applies the inverse per-channel affine transform and dtype conversion to match a NumPy reference."""
     import cupy as cp
@@ -394,8 +394,8 @@ def test_from_array_affine_and_dtype_follow_the_inverse_fp32_numpy_oracle() -> N
     np.testing.assert_allclose(_host(result.data), expected, rtol=0.0, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("bit_depth", (8, 10, 12, 14, 16))
 def test_from_array_bit_depth_normalizes_the_declared_integer_grid(bit_depth: int) -> None:
     """Array import normalizes integer codes using the declared bit depth and the maximum code for that depth."""
@@ -421,8 +421,8 @@ def test_from_array_bit_depth_normalizes_the_declared_integer_grid(bit_depth: in
     )
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
 def test_from_array_bit_depth_matches_the_full_range_planar_format_entry() -> None:
     """Generic array import and full-range planar-format import produce equal pixels for the same integer codes."""
     import cupy as cp
@@ -461,10 +461,10 @@ def test_from_array_bit_depth_matches_the_full_range_planar_format_entry() -> No
     np.testing.assert_array_equal(_host(generic.data), _host(named.data))
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "kwargs",
     (
@@ -491,8 +491,8 @@ def test_from_array_bit_depth_rejects_affine_non_fp32_and_strict_zero_copy(
         )
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     ("bit_depth", "dtype"),
     ((8, "uint16"), (10, "uint8"), (12, "float32"), (14, "float16")),
@@ -520,9 +520,9 @@ def test_from_array_bit_depth_requires_the_matching_uint_container(bit_depth: in
         assert "omit bit_depth" in message
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 def test_array_boundary_rejects_unknown_tokens_and_malformed_affine_sequences() -> None:
     """Array import and export reject unknown layout or dtype tokens and malformed per-channel affine sequences with
     guidance.
@@ -540,8 +540,8 @@ def test_array_boundary_rejects_unknown_tokens_and_malformed_affine_sequences() 
             px.io.to_array(frame, **kwargs)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-018")
 def test_to_array_default_and_nhwc_are_zero_copy_views_while_copy_true_is_private() -> None:
     """Array export returns a zero-copy view for default and NHWC layouts and allocates private storage for copy=True."""
     import cupy as cp
@@ -565,7 +565,7 @@ def test_to_array_default_and_nhwc_are_zero_copy_views_while_copy_true_is_privat
     assert float(frame.data[0, 0, 0]) == pytest.approx(99.0)
 
 
-@pytest.mark.req("REQ-PIX-015")
+@pytest.mark.req("SP-PIX-015")
 def test_to_array_selects_channels_greedily_and_emits_each_layout() -> None:
     """Array export selects channels by label and emits each layout with pixels matching an independent NumPy reference."""
     import cupy as cp
@@ -590,8 +590,8 @@ def test_to_array_selects_channels_greedily_and_emits_each_layout() -> None:
         px.io.to_array(frame, channels=["Cb"])
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
 def test_to_array_affine_round_trips_through_from_array_with_the_same_constants() -> None:
     """Array export and import with the same per-channel affine constants restore the original pixels."""
     import cupy as cp
@@ -620,9 +620,9 @@ def test_to_array_affine_round_trips_through_from_array_with_the_same_constants(
     np.testing.assert_allclose(_host(restored.data), values, rtol=0.0, atol=3e-7)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
 def test_to_array_dtype_is_a_faithful_cast_without_rounding_or_clipping() -> None:
     """Array export casts pixel dtype using CuPy semantics after the affine transform without extra rounding or clipping."""
     import cupy as cp
@@ -635,8 +635,8 @@ def test_to_array_dtype_is_a_faithful_cast_without_rounding_or_clipping() -> Non
     np.testing.assert_array_equal(_host(result), values.astype(np.uint8))
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("bit_depth", (8, 10, 12, 14, 16))
 def test_to_array_bit_depth_quantizes_to_the_declared_integer_grid(bit_depth: int) -> None:
     """Bit-depth array export clips pixels, rounds ties upward, and chooses the matching unsigned container."""
@@ -661,9 +661,9 @@ def test_to_array_bit_depth_quantizes_to_the_declared_integer_grid(bit_depth: in
     )
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
 def test_to_array_bit_depth_composes_with_channels_layout_out_and_copy() -> None:
     """Bit-depth array export combines channel selection, layout, output storage, and copy options with the same quantized
     pixels.
@@ -692,10 +692,10 @@ def test_to_array_bit_depth_composes_with_channels_layout_out_and_copy() -> None
     assert private.data.ptr != out.data.ptr
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "kwargs",
     (
@@ -725,8 +725,8 @@ def test_to_array_bit_depth_rejects_affine_wrong_container_and_strict_zero_copy(
         px.io.to_array(frame, **kwargs)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize("dtype", ("float16", "uint8", "uint16"))
 def test_to_array_bit_depth_requires_float32_frame_values(dtype: str) -> None:
     """Bit-depth array export accepts float32 Frame pixels as the normalized source and rejects other storage dtypes."""
@@ -743,9 +743,9 @@ def test_to_array_bit_depth_requires_float32_frame_values(dtype: str) -> None:
         px.io.to_array(frame, bit_depth=8)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-017")
 def test_to_array_copy_false_rejects_copy_requiring_repacking() -> None:
     """Array export with copy=False rejects channel selection, transpose, dtype, and affine requests that require new
     storage.
@@ -766,8 +766,8 @@ def test_to_array_copy_false_rejects_copy_requiring_repacking() -> None:
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-018")
 def test_to_array_writes_directly_to_cupy_out_and_returns_the_same_array() -> None:
     """Array export writes directly into a compatible CuPy output array and returns that same array."""
     import cupy as cp
@@ -785,9 +785,9 @@ def test_to_array_writes_directly_to_cupy_out_and_returns_the_same_array() -> No
     np.testing.assert_array_equal(_host(out), expected)
 
 
-@pytest.mark.req("REQ-PIX-015")
-@pytest.mark.req("REQ-PIX-018")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-015")
+@pytest.mark.req("SP-PIX-018")
+@pytest.mark.req("SP-PIX-017")
 def test_to_array_out_rejects_non_cupy_and_incompatible_destinations_actionably() -> None:
     """Array export rejects non-CuPy, noncontiguous, or mismatched output storage and explains the required shape and
     dtype.

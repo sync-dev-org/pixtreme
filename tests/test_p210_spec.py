@@ -27,8 +27,8 @@ from test_to_format_spec import _frame
 import pixtreme as px
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("direction", ("from", "to"))
 def test_p210_has_the_exact_static_signature(direction: str) -> None:
     """P210 conversion exposes its documented parameters without extra bit-depth, siting, pitch, or positional
@@ -54,8 +54,8 @@ def test_p210_has_the_exact_static_signature(direction: str) -> None:
         assert all(parameters[name].default is None for name in ("colorspace", "gamma", "matrix"))
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 def test_from_p210_asymmetric_words_keep_layout_low_bits_and_row_phase(range_token: str) -> None:
     """P210 reading decodes asymmetric packed words in the correct plane order and row phase while ignoring low
@@ -77,8 +77,8 @@ def test_from_p210_asymmetric_words_keep_layout_low_bits_and_row_phase(range_tok
     np.testing.assert_allclose(result.data.get(), expected, rtol=0, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 def test_to_p210_direct_layout_sets_padding_to_zero(range_token: str) -> None:
     """P210 writing packs ten-bit codes in high bits and clears every low padding bit."""
@@ -99,9 +99,9 @@ def test_to_p210_direct_layout_sets_padding_to_zero(range_token: str) -> None:
     np.testing.assert_array_equal(result.get(), expected)
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 def test_from_p210_h273_endpoints_center_and_headroom(range_token: str) -> None:
     """P210 reading maps H.273 endpoints and chroma center while preserving legal-range headroom without clipping."""
@@ -118,7 +118,7 @@ def test_from_p210_h273_endpoints_center_and_headroom(range_token: str) -> None:
     np.testing.assert_allclose(result, expected, rtol=0, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 @pytest.mark.parametrize("interpolation", FROM_FILTERS)
 def test_from_p210_every_filter_matches_fp64_horizontal_reference(range_token: str, interpolation: str) -> None:
@@ -131,8 +131,8 @@ def test_from_p210_every_filter_matches_fp64_horizontal_reference(range_token: s
     np.testing.assert_allclose(actual.data.get(), expected, rtol=0, atol=3e-6)
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 @pytest.mark.parametrize("interpolation", TO_FILTERS)
 def test_to_p210_fixed_corpus_matches_bounded_near_tie_oracle(range_token: str, interpolation: str) -> None:
@@ -146,9 +146,9 @@ def test_to_p210_fixed_corpus_matches_bounded_near_tie_oracle(range_token: str, 
     assert_near_tie_codes(actual.get(), expected, q64, corpus=True)
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 def test_to_p210_hand_rounded_ties_and_code_only_clip(range_token: str) -> None:
     """P210 writing rounds half away from zero and clips only at the unsigned container bounds while retaining legal
@@ -175,7 +175,7 @@ def test_to_p210_hand_rounded_ties_and_code_only_clip(range_token: str) -> None:
     np.testing.assert_array_equal(actual.get(), expected)
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 @pytest.mark.parametrize("from_filter", FROM_FILTERS)
 @pytest.mark.parametrize("to_filter", TO_FILTERS)
@@ -191,7 +191,7 @@ def test_p210_constant_chroma_round_trips_all_32_filter_pairs(
     np.testing.assert_array_equal(result.get(), codes & np.uint16(0xFFC0))
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 def test_p210_nonconstant_nearest_code_origin_round_trip(range_token: str) -> None:
     """P210 data with varying chroma round-trips active codes through nearest sampling and clears padding bits."""
@@ -207,8 +207,8 @@ def test_p210_nonconstant_nearest_code_origin_round_trip(range_token: str) -> No
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-009")
 def test_p210_default_metadata_and_filters_have_the_specified_behavior() -> None:
     """P210 conversion uses legal range, bilinear input sampling, area output sampling, and documented float32
     metadata defaults.
@@ -233,8 +233,8 @@ def test_p210_default_metadata_and_filters_have_the_specified_behavior() -> None
     assert_near_tie_codes(px.io.to_p210(_frame(values)).get(), expected, q64)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize(
     ("axis", "token", "canonical"),
     [
@@ -256,7 +256,7 @@ def test_from_p210_metadata_tokens_stamp_without_changing_pixels(axis: str, toke
     )
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("direction", ("from", "to"))
 def test_p210_calls_leave_inputs_unchanged_and_return_private_storage(direction: str) -> None:
     """Repeated P210 conversions leave inputs unchanged and return independent output storage."""
@@ -303,8 +303,8 @@ def _reject_without_pixel_work(function: Any, source: Any, kwargs: dict[str, Any
     assert not graph.debug_dot_str(cp.cuda.runtime.cudaGraphDebugDotFlagsVerbose).count('label="{KERNEL')
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("case", "recovery"),
     [
@@ -348,8 +348,8 @@ def test_from_p210_rejects_invalid_buffer_before_pixel_work(case: str, recovery:
     _reject_without_pixel_work(function, source, {"width": 6, "height": 3}, recovery)
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("axis", "value"),
     [("width", v) for v in (0, -2, 1, 3, 2.5, True, "6", None)]
@@ -363,8 +363,8 @@ def test_from_p210_rejects_invalid_dimensions_before_pixel_work(axis: str, value
     )
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "case", ("object", "array", "RGB", "swapped", "alpha", "Y", "float16", "uint8", "uint16", "uint32", "odd-width")
 )
@@ -392,8 +392,8 @@ def test_to_p210_rejects_invalid_frames_before_pixel_work(case: str) -> None:
     _reject_without_pixel_work(function, source, {}, recovery)
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("direction", "axis", "value", "recovery"),
     [
@@ -421,7 +421,7 @@ def test_p210_rejects_invalid_tokens_before_pixel_work(direction: str, axis: str
     _reject_without_pixel_work(function, source, kwargs | {axis: value}, recovery)
 
 
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("pattern", ("ramp", "neutral", "edge", "alternation", "zone"))
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 @pytest.mark.parametrize("interpolation", FROM_FILTERS)
@@ -448,8 +448,8 @@ def test_from_p210_quality_patterns_match_fp64_phase_and_filter_reference(
         assert np.all(actual.data.get()[..., 1:] <= 0.75 + 2e-7)
 
 
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-009")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-009")
 @pytest.mark.parametrize("pattern", ("ramp", "neutral", "edge", "alternation", "zone"))
 @pytest.mark.parametrize("range_token", ("legal", "full"))
 @pytest.mark.parametrize("interpolation", TO_FILTERS)

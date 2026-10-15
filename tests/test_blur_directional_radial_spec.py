@@ -140,8 +140,8 @@ def _path_reference(
     return output.astype(np.float32)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_directional_radial_public_signatures_and_frame_only_entries_are_actionable() -> None:
     """Public directional and radial blur operations accept Frames and expose constant border values in their signatures
     and input errors.
@@ -174,8 +174,8 @@ def test_blur_directional_radial_public_signatures_and_frame_only_entries_are_ac
         _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("name", "parameter", "base"),
     (
@@ -200,7 +200,7 @@ def test_blur_directional_radial_reject_invalid_positive_magnitudes(
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize("angle", (0, -450.5, 720, np.float32(17.25)))
 def test_directional_accepts_any_finite_real_angle(angle: object) -> None:
     """For directional and radial blur, directional angle is a periodic signed real degree value."""
@@ -209,8 +209,8 @@ def test_directional_accepts_any_finite_real_angle(angle: object) -> None:
     assert px.filter.directional_blur(source, angle=angle, length=1.0).shape == source.shape
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("angle", (True, "0", float("nan"), float("inf")))
 def test_directional_rejects_nonfinite_or_nonreal_angles(angle: object) -> None:
     """Directional blur rejects nonfinite and nonreal angles with guidance."""
@@ -221,8 +221,8 @@ def test_directional_rejects_nonfinite_or_nonreal_angles(angle: object) -> None:
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("name", ("zoom_blur", "spin_blur"))
 @pytest.mark.parametrize("center", ((), (1.0,), (1.0, 2.0, 3.0), ("x", 1.0), (True, 1.0), (float("nan"), 1.0)))
 def test_radial_blurs_reject_invalid_centers_actionably(name: str, center: object) -> None:
@@ -235,7 +235,7 @@ def test_radial_blurs_reject_invalid_centers_actionably(name: str, center: objec
     _assert_actionable(error)
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize("name,kwargs", (("zoom_blur", {"amount": 0.4}), ("spin_blur", {"angle": 25.0})))
 def test_radial_default_center_is_geometric_and_off_image_centers_are_accepted(
     name: str,
@@ -258,7 +258,7 @@ def test_radial_default_center_is_geometric_and_off_image_centers_are_accepted(
     assert outside.shape == source.shape
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize(
     ("name", "kwargs"),
     (
@@ -322,7 +322,7 @@ def test_blur_directional_radial_matches_independent_numpy_oracles(
     assert result.dtype == np.dtype(np.float32)
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 def test_directional_known_axis_solutions_and_half_turn_periodicity() -> None:
     """Directional blur produces the hand calculated axis samples and repeats its result after a half turn."""
     y, x = np.mgrid[:5, :5]
@@ -351,7 +351,7 @@ def test_directional_known_axis_solutions_and_half_turn_periodicity() -> None:
     np.testing.assert_allclose(first, many_turns, rtol=2e-5, atol=2e-5)
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 @pytest.mark.parametrize("border", BORDERS)
 def test_paths_and_bicubic_support_may_cross_multiple_image_periods(border: str) -> None:
     """Directional and radial blur sample long paths correctly when their footprint crosses the image repeatedly."""
@@ -380,7 +380,7 @@ def test_paths_and_bicubic_support_may_cross_multiple_image_periods(border: str)
     )
 
 
-@pytest.mark.req("REQ-PIX-011")
+@pytest.mark.req("SP-PIX-011")
 def test_zero_length_pixels_are_exactly_interpolating_and_allocated_privately() -> None:
     """A zero length blur path returns the exact input pixels in separate storage."""
     values = np.linspace(-0.5, 1.5, 25, dtype=np.float32).reshape(5, 5, 1)
@@ -415,10 +415,10 @@ def test_zero_length_pixels_are_exactly_interpolating_and_allocated_privately() 
         assert result.data.data.ptr != source.data.data.ptr
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-103")
 def test_blur_directional_radial_is_label_independent_unclamped_and_preserves_metadata_privately() -> None:
     """Directional and radial blur preserve color metadata and out of range pixel values in separate storage."""
     values = np.asarray(
@@ -441,8 +441,8 @@ def test_blur_directional_radial_is_label_independent_unclamped_and_preserves_me
     assert float(result.data.max()) > 1.0
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     ("name", "kwargs"),
     (
@@ -476,8 +476,8 @@ def test_blur_directional_radial_border_axis_accepts_exact_tokens_and_lists_them
         assert token in str(error.value)
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-017")
 def test_blur_directional_radial_docstrings_are_self_contained_llm_readable_contracts() -> None:
     """Developers can find directional and radial blur paths, borders, and values in the public docstrings."""
     for name in ("directional_blur", "zoom_blur", "spin_blur"):

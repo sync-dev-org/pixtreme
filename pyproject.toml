@@ -12,7 +12,7 @@ license-files = [
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
-    "Environment :: GPU :: NVIDIA CUDA :: 12",
+    "Environment :: GPU :: NVIDIA CUDA :: 13",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: Microsoft :: Windows",
@@ -24,14 +24,14 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "cupy-cuda12x[ctk]>=13.4.1",
+    "cupy-cuda13x[ctk]>=14.1",
     "freetype-py>=2.5.1",
     "numpy",
-    "nvidia-nvcomp-cu12>=5.3.0.16",
-    "nvidia-nvimgcodec-cu12>=0.8",
-    "nvidia-nvjpeg-cu12>=12.4.0.76",
-    "nvidia-nvjpeg2k-cu12>=0.11.0.51",
-    "nvidia-nvtiff-cu12>=0.8.0.82",
+    "nvidia-nvcomp-cu13>=5.3.0.16",
+    "nvidia-nvimgcodec-cu13>=0.9",
+    "nvidia-nvjpeg>=13.2",
+    "nvidia-nvjpeg2k-cu13>=0.11.0.51",
+    "nvidia-nvtiff-cu13>=0.8.0.82",
     "pydantic>=2.9",
     "uharfbuzz>=0.55.0",
 ]
@@ -69,16 +69,15 @@ python_functions = ["test_*"]
 addopts = ["--strict-markers", "-m", "not performance"]
 markers = [
     "performance: opt-in performance/timing tests (excluded by default)",
-    "req(id): parent requirement ID in .nf/docs/requirements.md",
+    "req(id): spec item ID (SP-PIX-NNN) in .nf/docs/spec.md",
 ]
 
 [tool.uv]
 constraint-dependencies = [
-    "cuda-toolkit==12.9.1",
-    "nvidia-cublas-cu12==12.9.1.4",
+    "cuda-toolkit==13.2.2",
 ]
 index = [
-    { name = "pytorch-cuda", url = "https://download.pytorch.org/whl/cu129", explicit = true },
+    { name = "pytorch-cuda", url = "https://download.pytorch.org/whl/cu132", explicit = true },
 ]
 
 [tool.uv.sources]

@@ -287,8 +287,8 @@ def _conversion(
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_red_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> None:
     """RED color tokens appear in the canonical vocabulary and public annotations without extra aliases."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
@@ -311,8 +311,8 @@ def test_red_tokens_extend_canonical_vocabulary_and_public_static_surfaces() -> 
         assert compatibility not in get_args(px.core.Gamma)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_red_token_keys_aliases_and_invalid_inputs_follow_the_shared_boundary(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -375,10 +375,10 @@ def test_red_token_keys_aliases_and_invalid_inputs_follow_the_shared_boundary(
         assert repr(_GAMMAS) in message
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_red_log3g10_encode_matches_public_constants_anchors_and_frame_contract() -> None:
     """RED Log3G10 encodes signed scene values with its published curve and preserves Frame properties."""
     below = np.nextafter(np.float32(-0.01), np.float32(-np.inf))
@@ -411,9 +411,9 @@ def test_red_log3g10_encode_matches_public_constants_anchors_and_frame_contract(
     assert encoded.data.dtype == cp.float32
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_red_log3g10_decode_and_both_round_trips_match_the_independent_inverse() -> None:
     """RED Log3G10 decodes at its branch cut and round trips signed and above-one values."""
     below = np.nextafter(np.float32(0.0), np.float32(-np.inf))
@@ -444,8 +444,8 @@ def test_red_log3g10_decode_and_both_round_trips_match_the_independent_inverse()
     np.testing.assert_allclose(_rgb_values(reencoded)[:, 0], encoded_values, rtol=2e-6, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_redlogfilm_is_cineon_bit_identical_with_independent_metadata_and_mirror_behavior() -> None:
     """REDlogFilm and Cineon yield identical pixels while retaining independent gamma metadata names."""
     negative_zero_side = np.float32(-1e-7)
@@ -500,7 +500,7 @@ def test_redlogfilm_is_cineon_bit_identical_with_independent_metadata_and_mirror
     assert (red.gamma, cineon.gamma, red.channels, red.matrix) == ("REDlogFilm", "Cineon", source.channels, None)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_redwidegamutrgb_basis_neutral_vendor_matrices_and_native_row_match_independent_oracles() -> None:
     """REDWideGamutRGB matrices, neutral values, and native luma row match independent calculations."""
     from pixtreme._core.colorspace import _COLORSPACE_DEFINITIONS
@@ -524,7 +524,7 @@ def test_redwidegamutrgb_basis_neutral_vendor_matrices_and_native_row_match_inde
     assert (converted.colorspace, converted.gamma, converted.matrix) == ("ACES2065-1", "linear", None)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("colorspace", tuple(_GAMUTS)[1:])
 def test_legacy_red_gamut_coordinates_public_aces_matrices_and_native_rows_are_consistent(colorspace: str) -> None:
     """RED gamut coordinates, ACES conversion matrices, and native luma rows agree with independent values."""
@@ -549,10 +549,10 @@ def test_legacy_red_gamut_coordinates_public_aces_matrices_and_native_rows_are_c
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("target", ("Rec.709", "ACES2065-1"))
 def test_redwidegamut_log3g10_frame_converts_end_to_end_with_auxiliary_bits(target: str) -> None:
     """REDWideGamutRGB and Log3G10 Frames convert together without clipping or changing auxiliary channels."""
@@ -578,10 +578,10 @@ def test_redwidegamut_log3g10_frame_converts_end_to_end_with_auxiliary_bits(targ
     assert np.any(_rgb_values(converted) < 0.0) and np.any(_rgb_values(converted) > 1.0)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize(
     ("colorspace", "gamma"),
     (
@@ -617,8 +617,8 @@ def test_legacy_red_frames_convert_with_independent_transfer_pairing_and_auxilia
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_arri_renames_and_existing_token_bits_remain_at_the_pre_red_baseline() -> None:
     """ARRI token names and other supported color transfers retain their exact GPU pixel values."""
     # Provenance: these uint32 fixtures were captured before RED production changes from full commit
@@ -689,7 +689,7 @@ def test_arri_renames_and_existing_token_bits_remain_at_the_pre_red_baseline() -
     assert px.color.linear_to_gamma(_frame((0.18,)), gamma="logc4").gamma == "ARRI-LogC4"
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_red_dpx_transfer_codes_cover_logarithmic_and_printing_density_headers(tmp_path: Path) -> None:
     """DPX writing labels RED Log3G10 as logarithmic and REDlogFilm as printing density."""
     from pixtreme._io.formats.dpx import _dpx_transfer_from_gamma

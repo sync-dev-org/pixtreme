@@ -14,8 +14,8 @@ from test_to_format_spec import _frame
 import pixtreme as px
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("direction", ("from", "to"))
 def test_p210_docstrings_expose_the_full_source_contract(direction: str) -> None:
     """The public P210 conversion documentation states its buffer layout, range mapping, sampling, and error
@@ -69,8 +69,8 @@ class _AllocationTrace(cp.cuda.MemoryHook):
         self.sizes.append(kwargs["size"])
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-018")
 @pytest.mark.parametrize(
     "direction,interpolation", [("from", token) for token in FROM_FILTERS] + [("to", token) for token in TO_FILTERS]
 )
@@ -117,8 +117,8 @@ def test_p210_uses_one_kernel_and_one_output_allocation_on_the_current_stream(
         assert_near_tie_codes(actual, expected, q64)
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("direction", ("from", "to"))
 def test_p210_preserves_the_cause_if_a_backend_failure_is_converted(direction: str) -> None:
     """P210 conversion propagates backend allocation errors or retains them as the cause of a public error."""
@@ -137,8 +137,8 @@ def test_p210_preserves_the_cause_if_a_backend_failure_is_converted(direction: s
         assert re.fullmatch(r"why=.+; what=.+; how=.+", str(error.value))
 
 
-@pytest.mark.req("REQ-PIX-009")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-009")
+@pytest.mark.req("SP-PIX-018")
 @pytest.mark.parametrize("direction", ("from", "to"))
 def test_p210_nondefault_producer_and_waiting_consumer_observe_ordered_private_result(direction: str) -> None:
     """P210 conversion respects a nondefault producer stream and returns private data to a waiting consumer stream."""

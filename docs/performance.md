@@ -1,5 +1,8 @@
 # Performance
 
+The current package requires CUDA 13, NVIDIA driver R580 or newer, and a GPU with compute capability 7.5 or higher.
+This report records the earlier CUDA 12.9 baseline; CUDA 13 measurements have not yet been published.
+
 This is the complete 210-case FHD measurement report from a single full-suite `uv run pytest -m performance` run
 at pixtreme commit `260fe6e`. The run completed with 267 passed and 5,346 deselected in 3,337.74 seconds
 (0:55:38).

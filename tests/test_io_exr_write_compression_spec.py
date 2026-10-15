@@ -38,7 +38,7 @@ def _exr_header(path: Path) -> dict[str, object]:
     return dict(image.header())
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_write_image_signature_appends_optional_dwa_level() -> None:
     """EXR image writing accepts optional dtype and DWA level parameters after the existing file options."""
     signature = inspect.signature(px.io.write_image)
@@ -59,8 +59,8 @@ def test_write_image_signature_appends_optional_dwa_level() -> None:
     assert parameter.default is None
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("compression", ("gzip", "lzw", "htj2k256", 1, True))
 def test_exr_compression_rejects_unknown_tokens_and_non_strings_before_writing(
     tmp_path: Path, compression: object
@@ -75,7 +75,7 @@ def test_exr_compression_rejects_unknown_tokens_and_non_strings_before_writing(
     assert not path.exists()
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_exr_default_compression_remains_zip(tmp_path: Path) -> None:
     """EXR writes use ZIP compression when the caller omits compression."""
     from openexr_dev_oracle import OpenEXR
@@ -88,7 +88,7 @@ def test_exr_default_compression_remains_zip(tmp_path: Path) -> None:
     assert _exr_header(path)["compression"] == OpenEXR.ZIP_COMPRESSION
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize("compression", ("dwaa", "dwab"))
 @pytest.mark.parametrize(("dwa_level", "expected"), ((None, 45.0), (23.5, 23.5)))
 def test_dwa_level_defaults_and_explicit_values_are_written_to_the_header(
@@ -106,8 +106,8 @@ def test_dwa_level_defaults_and_explicit_values_are_written_to_the_header(
     assert _exr_header(path)["dwaCompressionLevel"] == pytest.approx(expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
 @pytest.mark.parametrize(
     ("dwa_level", "expected"),
     (
@@ -133,9 +133,9 @@ def test_dwa_level_accepts_values_that_round_to_a_positive_finite_header_float(
     assert _exr_header(path)["dwaCompressionLevel"] == expected
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-008")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-008")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "dwa_level",
     (0.0, -1.0, math.inf, -math.inf, math.nan, 1e308, 5e-324, 45, True, "45"),
@@ -160,8 +160,8 @@ def test_dwa_level_requires_an_exact_positive_finite_float(tmp_path: Path, dwa_l
         px.io.write_image(tmp_path / "invalid-level.exr", frame, compression="dwaa", dwa_level=dwa_level)  # type: ignore[arg-type]
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("compression", (None, "none", "zip", "piz", "pxr24", "b44a"))
 def test_dwa_level_is_rejected_for_every_non_dwa_exr_compression(tmp_path: Path, compression: str | None) -> None:
     """EXR writes reject a DWA level option when compression is not DWAA or DWAB."""
@@ -171,7 +171,7 @@ def test_dwa_level_is_rejected_for_every_non_dwa_exr_compression(tmp_path: Path,
         px.io.write_image(tmp_path / "not-dwa.exr", frame, compression=compression, dwa_level=45.0)
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 @pytest.mark.parametrize(
     ("compression", "constant_name", "dtype", "oracle"),
     (
@@ -221,8 +221,8 @@ def test_every_exr_compression_selects_its_header_and_round_trips_with_the_corre
         assert np.any(actual != expected)
 
 
-@pytest.mark.req("REQ-PIX-007")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
 def test_exr_and_raster_encode_options_remain_format_specific(tmp_path: Path) -> None:
     """Image writes reject EXR, TIFF, PNG, and byte-encoding options when used with the wrong format."""
     import cupy as cp

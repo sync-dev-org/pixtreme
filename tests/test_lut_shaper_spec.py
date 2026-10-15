@@ -62,7 +62,7 @@ def _actionable(error: BaseException) -> str:
     return message
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_lut_shaper_constructor_and_read_signatures_are_keyword_only() -> None:
     """Constructing and reading a shaped LUT expose their optional public arguments as keyword-only."""
     constructor = inspect.signature(px.core.Lut)
@@ -82,7 +82,7 @@ def test_lut_shaper_constructor_and_read_signatures_are_keyword_only() -> None:
         assert set(get_args(hints["return"])) == {px.core.Lut, px.core.Lut1D}
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize("strided", (False, True))
 def test_shaper_retains_shared_finite_nonmonotonic_output_by_reference(strided: bool) -> None:
     """A LUT shaper retains a caller-owned finite table even when samples decrease or leave the unit range."""
@@ -102,8 +102,8 @@ def test_shaper_retains_shared_finite_nonmonotonic_output_by_reference(strided: 
     assert float(lut.shaper[1]) == 0.25
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "case", ("host", "rank", "rgb-table", "float16", "float64", "empty", "one", "edge", "nan", "inf", "-inf")
 )
@@ -128,8 +128,8 @@ def test_shaper_rejects_invalid_storage_and_nonfinite_samples(case: str) -> None
     assert "shaper" in _actionable(error.value).lower()
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.skipif(
     "cp.cuda.runtime.getDeviceCount() < 2",
     reason="requires two visible CUDA devices; remove this guard when all test lanes provide two devices",
@@ -147,7 +147,7 @@ def test_shaper_rejects_a_different_cuda_device() -> None:
     assert "device" in _actionable(error.value).lower()
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize("lustre", (False, True))
 @pytest.mark.parametrize("mode", ("identity", "half-code", "nonidentity"))
 def test_3dl_default_bake_and_opt_in_use_independent_code_oracles(tmp_path: Path, lustre: bool, mode: str) -> None:
@@ -199,8 +199,8 @@ def test_3dl_default_bake_and_opt_in_use_independent_code_oracles(tmp_path: Path
             assert strict.shaper is None
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("spacing", ((255,), (0, 255), (0, 127, 255)), ids=("one-token", "two-tokens", "three-tokens"))
 @pytest.mark.parametrize("option", ("default", False, True), ids=("default", "bake", "preserve"))
 def test_decode_lut_rejects_short_headerless_spacing_rows(spacing: tuple[int, ...], option: str | bool) -> None:
@@ -218,7 +218,7 @@ def test_decode_lut_rejects_short_headerless_spacing_rows(spacing: tuple[int, ..
     assert "format" in message and "could not be identified" in message
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize(
     "suffix,text",
     ((".cube", _cube_1d_text()), (".cube", _cube_3d_text()), (".spi1d", _spi1d_text()), (".spi3d", _spi3d_text())),
@@ -239,8 +239,8 @@ def test_preserve_shaper_leaves_other_formats_unshaped(tmp_path: Path, suffix: s
             assert not hasattr(strict, "shaper")
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize(
     "payload,detail",
     (
@@ -256,8 +256,8 @@ def test_opt_in_keeps_parser_failure_and_rejects_combined_cube(payload: bytes, d
     assert detail.lower() in _actionable(error.value).lower()
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("bad", (None, 0, 1, "True", "false", [], np.bool_(True)))
 @pytest.mark.parametrize("entry", ("file", "bytes"))
 def test_non_boolean_opt_in_fails_before_io_parse_or_transfer(
@@ -288,8 +288,8 @@ def test_non_boolean_opt_in_fails_before_io_parse_or_transfer(
     assert touched == []
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-103")
 @pytest.mark.parametrize("edge", (2, 3, 17))
 @pytest.mark.parametrize("interpolation", (None, "tetrahedral", "trilinear"))
 def test_shaped_apply_matches_independent_two_stage_domain_and_clamp_oracle(
@@ -314,7 +314,7 @@ def test_shaped_apply_matches_independent_two_stage_domain_and_clamp_oracle(
     assert np.any(expected < 0) and np.any(expected > 1)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize("direction", (1, -1), ids=("increasing", "decreasing"))
 @pytest.mark.parametrize("interpolation", (None, "tetrahedral", "trilinear"))
 def test_shaped_apply_interpolates_extreme_finite_shaper_before_cube_clamp(
@@ -334,9 +334,9 @@ def test_shaped_apply_interpolates_extreme_finite_shaper_before_cube_clamp(
     np.testing.assert_allclose(cp.asnumpy(result.data).reshape(-1, 3), expected, rtol=0, atol=2e-6)
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-110")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-110")
 @pytest.mark.parametrize("interpolation", (None, "tetrahedral", "trilinear"))
 def test_shaped_apply_preserves_labels_metadata_storage_and_all_input_bits(interpolation: str | None) -> None:
     """Applying a shaped LUT preserves Frame color information, non-RGB bits, and all input storage.
@@ -370,8 +370,8 @@ def test_shaped_apply_preserves_labels_metadata_storage_and_all_input_bits(inter
     np.testing.assert_array_equal(cp.asnumpy(after.data)[..., [2, 4, 0]], np.broadcast_to(cube[0, 0, 0], (1, 2, 3)))
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 @pytest.mark.parametrize("case", ("float16", "uint8", "uint16", "uint32", "missing-rgb", "linear", "cubic", "strict"))
 def test_shaped_apply_keeps_float32_rgb_and_interpolation_validation(case: str) -> None:
     """A shaped LUT still requires a float32 RGB Frame and a supported interpolation choice."""
@@ -397,8 +397,8 @@ def test_shaped_apply_keeps_float32_rgb_and_interpolation_validation(case: str) 
         assert "trilinear" in message and "tetrahedral" in message
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-018")
 @pytest.mark.parametrize("interpolation", (None, "tetrahedral", "trilinear"))
 def test_shaped_apply_captures_one_kernel_without_host_transfer_or_intermediate_frame(
     interpolation: str | None,
@@ -447,7 +447,7 @@ def test_shaped_apply_captures_one_kernel_without_host_transfer_or_intermediate_
     np.testing.assert_allclose(cp.asnumpy(result.data).reshape(-1, 3), expected, rtol=0, atol=2e-6)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize("edge,curve", CASES)
 @pytest.mark.parametrize("interpolation", (None, "tetrahedral"))
 def test_preserved_shaper_matches_pinned_ocio_cpu_fixture(edge: int, curve: str, interpolation: str | None) -> None:
@@ -461,7 +461,7 @@ def test_preserved_shaper_matches_pinned_ocio_cpu_fixture(edge: int, curve: str,
     assert float(np.max(np.abs(result.astype(np.float64) - expected))) <= 2e-6
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 def test_default_bake_retains_a_counterexample_to_strict_ocio_parity() -> None:
     """Default 3DL shaper baking differs from preserved two-stage evaluation at a known input cell.
 
@@ -507,8 +507,8 @@ def test_ocio_fixture_regenerates_all_bytes_and_matches_3dl_cpu_processor(
     np.testing.assert_allclose(host, expected, rtol=0, atol=2e-6)
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-018")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-018")
 def test_shaped_write_bakes_nodes_on_gpu_once_and_roundtrips_baked_bits(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -558,7 +558,7 @@ def test_shaped_write_bakes_nodes_on_gpu_once_and_roundtrips_baked_bits(
     assert sorted(p.name for p in tmp_path.iterdir()) == ["baked.cube", "repeat.cube"]
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize("edge", (2, 3), ids=("diagonal", "four-vertex-simplex"))
 def test_shaped_write_uses_float64_intermediate_before_float32_table(tmp_path: Path, edge: int) -> None:
     """Writing a shaped LUT computes node values in float64 before storing float32 table entries.
@@ -603,7 +603,7 @@ def test_shaped_write_uses_float64_intermediate_before_float32_table(tmp_path: P
     _bits(cp.asnumpy(px.io.read_lut(path).data), expected)
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize("case", ("extension", "nonfinite-cube", "missing-parent"))
 def test_shaped_write_preserves_pre_mutation_errors(tmp_path: Path, case: str) -> None:
     """Writing a shaped LUT rejects invalid output before changing the destination file."""
@@ -626,7 +626,7 @@ def test_shaped_write_preserves_pre_mutation_errors(tmp_path: Path, case: str) -
         assert path.read_bytes() == b"keep"
 
 
-@pytest.mark.req("REQ-PIX-006")
+@pytest.mark.req("SP-PIX-006")
 @pytest.mark.parametrize("entry", ("file", "bytes"))
 def test_shaped_read_transfers_each_table_once_and_has_no_cache_or_filesystem_side_effect(
     monkeypatch: pytest.MonkeyPatch,
@@ -674,8 +674,8 @@ def test_shaped_read_transfers_each_table_once_and_has_no_cache_or_filesystem_si
     assert list(tmp_path.iterdir()) == [path] and path.read_bytes() == text
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-017")
 def test_public_docstrings_describe_shaper_and_lossy_cube_exit() -> None:
     """The public LUT help explains preserved shapers, strict application, and the lossy Cube export."""
     for obj in (px.core.Lut, px.io.read_lut, px.io.decode_lut, px.io.write_lut, px.color.apply_lut):
@@ -691,8 +691,8 @@ def test_public_docstrings_describe_shaper_and_lossy_cube_exit() -> None:
     assert "no shaper stage is implied" not in apply
 
 
-@pytest.mark.req("REQ-PIX-006")
-@pytest.mark.req("REQ-PIX-021")
+@pytest.mark.req("SP-PIX-006")
+@pytest.mark.req("SP-PIX-021")
 def test_performance_pair_has_fixed_registry_conditions_and_executable_inputs() -> None:
     """The shaped LUT performance cases have executable setup and fixed registry conditions."""
     import test_performance_spec as registry

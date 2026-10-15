@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/pixtreme.svg)](https://pypi.org/project/pixtreme/)
 ![Python](https://img.shields.io/badge/Python-%E2%89%A53.12-3776AB.svg)
-![CUDA](https://img.shields.io/badge/CUDA-12.x-76B900.svg)
+![CUDA](https://img.shields.io/badge/CUDA-13.x-76B900.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/sync-dev-org/pixtreme/blob/main/LICENSE)
 
 GPU-first image processing for Python, built on CUDA and CuPy.
@@ -28,6 +28,9 @@ so color meaning travels with pixels instead of living in ambient configuration.
   `read`/`write`, and `decode`/`encode` boundaries.
 
 ## Performance
+
+The current package requires CUDA 13, NVIDIA driver R580 or newer, and a GPU with compute capability 7.5 or higher.
+The table below records the earlier CUDA 12.9 baseline; CUDA 13 measurements have not yet been published.
 
 The following measurements are selected from the current 210-case registry, taken from the single full run at
 commit `260fe6e`. GPU cases use at least 1,000 FHD frames and 3 seconds after warmup, while file boundaries use at
@@ -64,8 +67,9 @@ I/O.
 ## Requirements
 
 - Python 3.12 or newer
-- CUDA 12.x
-- An NVIDIA GPU
+- CUDA 13.x
+- NVIDIA driver R580 or newer
+- An NVIDIA GPU with compute capability 7.5 or higher
 
 WSL2 is supported with the Windows NVIDIA driver and a working CUDA device. Depending on the WSL installation,
 `nvidia-smi` may be available at `/usr/lib/wsl/lib/nvidia-smi` rather than on the default `PATH`.

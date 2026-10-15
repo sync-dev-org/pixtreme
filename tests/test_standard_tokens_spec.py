@@ -304,8 +304,8 @@ def _adjacent_float32(center: np.float32, radius: int = 3000) -> np.ndarray:
     return np.concatenate((below, np.asarray((center,), dtype=np.float32), above))
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-017")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-017")
 def test_standard_tokens_extend_only_the_canonical_vocabulary_and_public_surfaces() -> None:
     """Standard color and transfer tokens appear in the canonical vocabulary and public annotations."""
     assert get_args(px.core.Colorspace) == _COLORSPACES
@@ -360,9 +360,9 @@ def test_standard_tokens_extend_only_the_canonical_vocabulary_and_public_surface
     assert "colorspace='P3-D65'" in repr(frame) and "gamma='ACEScc'" in repr(frame)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_gamma_25_matches_the_signed_power_oracle_and_rejects_neighbor_exponents() -> None:
     """Gamma-2.5 applies the exact sign-preserving power pair to scene values."""
     values = np.asarray((-4.0, -1.0, -0.18, 0.0, 0.18, 1.0, 4.0), dtype=np.float32)
@@ -389,7 +389,7 @@ def test_gamma_25_matches_the_signed_power_oracle_and_rejects_neighbor_exponents
     np.testing.assert_allclose(reencoded, encoded_values, rtol=2e-6, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_acescc_encode_matches_independent_branches_anchors_and_monotonicity() -> None:
     """ACEScc encoding follows its branches, cuts, anchors, and low-end collapse monotonically."""
     anchors = np.asarray((0.0, 2.0**-15, 0.0078125, 0.18, 1.0, 65504.0), dtype=np.float32)
@@ -410,9 +410,9 @@ def test_acescc_encode_matches_independent_branches_anchors_and_monotonicity() -
         assert np.all(np.diff(encoded) >= 0.0)
 
 
-@pytest.mark.req("REQ-PIX-003")
-@pytest.mark.req("REQ-PIX-004")
-@pytest.mark.req("REQ-PIX-103")
+@pytest.mark.req("SP-PIX-003")
+@pytest.mark.req("SP-PIX-004")
+@pytest.mark.req("SP-PIX-103")
 def test_acescc_decode_is_unclipped_and_round_trips_only_its_injective_domain() -> None:
     """ACEScc decoding preserves above-one values and round trips its one-to-one input domain."""
     values = np.linspace(-0.5, 1.5, 200001, dtype=np.float64).astype(np.float32)
@@ -439,7 +439,7 @@ def test_acescc_decode_is_unclipped_and_round_trips_only_its_injective_domain() 
     np.testing.assert_allclose(_rgb_values(reencoded)[:, 0], encoded_domain, rtol=2e-6, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_acescct_matches_public_branches_cut_residual_and_round_trip() -> None:
     """ACEScct follows its public branch equations and round trips values through the published cut."""
     anchors = np.asarray((0.0, 2.0**-15, 0.0078125, 0.18, 1.0, 65504.0), dtype=np.float32)
@@ -508,7 +508,7 @@ def test_acescct_matches_public_branches_cut_residual_and_round_trip() -> None:
     np.testing.assert_allclose(reencoded, encoded_domain[representable], rtol=2e-6, atol=2e-7)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 @pytest.mark.parametrize("gamma", ("Gamma-2.5", "ACEScc", "ACEScct"))
 def test_new_transfers_match_standalone_and_fused_paths(gamma: str) -> None:
     """Standard transfer tokens produce matching pixels through standalone and fused color paths."""
@@ -528,7 +528,7 @@ def test_new_transfers_match_standalone_and_fused_paths(gamma: str) -> None:
     )
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_standard_gamut_definitions_matrices_native_rows_and_adaptation_are_independent() -> None:
     """P3 and SMPTE-C gamut matrices, native luma rows, and white-point adaptation match independent
     calculations."""
@@ -566,8 +566,8 @@ def test_standard_gamut_definitions_matrices_native_rows_and_adaptation_are_inde
     )
 
 
-@pytest.mark.req("REQ-PIX-002")
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-002")
+@pytest.mark.req("SP-PIX-003")
 def test_representative_frames_compose_independent_transfer_and_gamut_oracles() -> None:
     """Standard color Frames compose transfer and gamut conversion with independent token choices."""
     encoded = np.asarray(((-0.25, 0.18, 1.5), (0.01, -0.1, 2.0)), dtype=np.float32)
@@ -602,7 +602,7 @@ def test_representative_frames_compose_independent_transfer_and_gamut_oracles() 
         assert cp.array_equal(source.data, before)
 
 
-@pytest.mark.req("REQ-PIX-003")
+@pytest.mark.req("SP-PIX-003")
 def test_existing_token_bits_remain_at_the_pre_standard_baseline() -> None:
     """Other supported color tokens retain their exact transfer and gamut pixel values."""
     # Provenance: captured from complete pre-standard-token commit
@@ -743,7 +743,7 @@ def test_existing_token_bits_remain_at_the_pre_standard_baseline() -> None:
         )
 
 
-@pytest.mark.req("REQ-PIX-007")
+@pytest.mark.req("SP-PIX-007")
 def test_standard_transfer_dpx_codes_preserve_existing_mapping(tmp_path: Path) -> None:
     """DPX writing labels ACES transfers as logarithmic and Gamma-2.5 as video without changing other mappings."""
     from pixtreme._io.formats.dpx import _dpx_transfer_from_gamma

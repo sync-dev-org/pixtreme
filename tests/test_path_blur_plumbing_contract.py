@@ -8,8 +8,8 @@ import pytest
 import pixtreme as px
 
 
-@pytest.mark.req("REQ-PIX-011")
-@pytest.mark.req("REQ-PIX-101")
+@pytest.mark.req("SP-PIX-011")
+@pytest.mark.req("SP-PIX-101")
 @pytest.mark.parametrize("operation", ("directional", "vector"))
 def test_path_blur_rgb_optimized_gather_is_bit_exact_with_generic_path(operation: str) -> None:
     """The optimized RGB path blur produces the same pixel bits as per channel gathering."""
