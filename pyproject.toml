@@ -54,9 +54,13 @@ dev = [
     "openexr==3.4.13",
     # Font fixture generation for user-font tests: static instancing / collection build only. Not a runtime dependency.
     "fonttools==4.63.0",
+    "colour-science==0.4.7",
+    { include-group = "docs" },
+]
+# Public documentation site build. The public repository's Pages workflow installs only this group.
+docs = [
     "mkdocs-material>=9.7.7",
     "mkdocstrings[python]>=1.0.6",
-    "colour-science==0.4.7",
 ]
 
 [tool.pytest.ini_options]
@@ -69,7 +73,7 @@ python_functions = ["test_*"]
 addopts = ["--strict-markers", "-m", "not performance"]
 markers = [
     "performance: opt-in performance/timing tests (excluded by default)",
-    "req(id): spec item ID (SP-PIX-NNN) in .nf/docs/spec.md",
+    "req(id): spec item ID (SP-PIX-NNN) that the test verifies",
 ]
 
 [tool.uv]

@@ -363,7 +363,7 @@ def generate(directory: Path) -> tuple[Path, Path]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output-dir", type=Path, default=Path(".nf/tmp/sheets-17-canon"))
+    parser.add_argument("--output-dir", type=Path, required=True)
     arguments = parser.parse_args()
     for path in generate(arguments.output_dir):
         print(path)

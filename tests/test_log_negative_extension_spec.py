@@ -332,7 +332,7 @@ def test_all_public_transfer_paths_bind_vendor_results_and_preserve_frame_contra
 # Baseline provenance: the integer fixtures below were regenerated from
 # 38b949d0bcf892f63e6383070ce77e667f95d945 and matched exactly. Extract that commit, then run the probe:
 #   BASE_FIXTURE_DIR=$(mktemp -d); git archive 38b949d0bcf892f63e6383070ce77e667f95d945 | tar -x -C "$BASE_FIXTURE_DIR"
-#   UV_PROJECT_ENVIRONMENT=/home/mia/repositories/pixtreme/.venv PYTHONPATH="$BASE_FIXTURE_DIR/src" uv run --no-sync python -c \
+#   UV_PROJECT_ENVIRONMENT="$PWD/.venv" PYTHONPATH="$BASE_FIXTURE_DIR/src" uv run --no-sync python -c \
 #   'import runpy,numpy as np,pixtreme as px;m=runpy.run_path("tests/test_log_negative_extension_spec.py");f=m["_frame"];r=m["_red_values"];rows=m["test_corrected_transfers_keep_pre_correction_nonnegative_bits_characterization"].pytestmark[0].args[1];[(print(g,r(px.color.linear_to_gamma(f(np.asarray(x,dtype=np.float32)),gamma=g)).view(np.uint32).tolist()),print(g,r(px.color.gamma_to_linear(f(np.asarray(e,dtype=np.float32),gamma=g),gamma=g)).view(np.uint32).tolist()))for g,x,_,e,_ in rows]'
 def test_corrected_transfers_keep_pre_correction_nonnegative_bits_characterization(
     gamma: str,

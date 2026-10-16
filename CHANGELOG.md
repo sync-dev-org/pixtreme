@@ -4,6 +4,19 @@ Notable changes to pixtreme are documented in this file.
 
 ## Unreleased
 
+## 1.9.1 - 2026-10-16
+
+pixtreme 1.9.1 does not change library behavior: the `pixtreme` package code is the same as in 1.9.0. Public
+operation names, arguments, accepted names, and return shapes remain compatible. This release changes how the
+documentation site and the development tooling in the source distribution are produced.
+
+### Changed
+
+- The documentation site is built and published to GitHub Pages by a GitHub Actions workflow in the public
+  repository. The documentation build dependencies (`mkdocs-material`, `mkdocstrings`) form a separate `docs`
+  dependency group, which the `dev` group includes.
+- The token sheet generator scripts under `tests/` require `--output-dir` instead of writing to a default directory.
+
 ## 1.9.0 - 2026-10-15
 
 pixtreme 1.9.0 moves its GPU dependencies from the CUDA 12 builds to the CUDA 13 builds, including CuPy

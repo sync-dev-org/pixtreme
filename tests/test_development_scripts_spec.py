@@ -18,16 +18,13 @@ PERFORMANCE_GATES = {
     Path("tests/run_exr_b44_gate_repeat.py"),
     Path("tests/run_exr_piz_gate_repeat.py"),
 }
-# The public mirror has its own behavior tests in test_public_mirror_spec.py.
-DEDICATED_TEST = {Path("tools/mirror_public.py")}
-EXCLUDED = PERFORMANCE_GATES | DEDICATED_TEST
 
 SCRIPT_PATHS = tuple(
     sorted(
         path.relative_to(ROOT)
         for directory, pattern in (("tools", "*.py"), ("tests", "generate_*.py"), ("tests", "run_*.py"))
         for path in (ROOT / directory).glob(pattern)
-        if path.relative_to(ROOT) not in EXCLUDED
+        if path.relative_to(ROOT) not in PERFORMANCE_GATES
     )
 )
 

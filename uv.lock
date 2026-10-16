@@ -1275,6 +1275,10 @@ dev = [
     { name = "ruff" },
     { name = "torch" },
 ]
+docs = [
+    { name = "mkdocs-material" },
+    { name = "mkdocstrings", extra = ["python"] },
+]
 
 [package.metadata]
 requires-dist = [
@@ -1303,6 +1307,10 @@ dev = [
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "ruff", specifier = ">=0.15.22" },
     { name = "torch", specifier = ">=2.8", index = "https://download.pytorch.org/whl/cu132" },
+]
+docs = [
+    { name = "mkdocs-material", specifier = ">=9.7.7" },
+    { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.6" },
 ]
 
 [[package]]

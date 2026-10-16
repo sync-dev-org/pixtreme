@@ -166,8 +166,5 @@ sandbox/
 
 .python-version
 
-# northframe volatile runtime areas
-.nf/logs/
-.nf/tmp/
 CURRENT_WORK.md
 PACKAGE_SPLIT_DESIGN.md
