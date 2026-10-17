@@ -995,12 +995,12 @@ wheels = [
 
 [[package]]
 name = "nvidia-libnvcomp-cu13"
-version = "5.3.0.16"
+version = "6.0.0.12"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/72/3e/eafc9f8537b823fe0f2c3bc3dce31110b68d901024a57a472f0a5c975971/nvidia_libnvcomp_cu13-5.3.0.16-py3-none-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:2aa7a981b87159d4fcf9865af8270ff99cab94eb5aeac5be2c1cff91ddc6f6db", size = 28314127, upload-time = "2026-07-14T21:05:57.864Z" },
-    { url = "https://files.pythonhosted.org/packages/8d/50/df4132c3e4171462130ddfc793e042fb8724d68249f14c16eff44236d5d2/nvidia_libnvcomp_cu13-5.3.0.16-py3-none-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:8bf2594c9a3d83bf485c95bffa8ac6406d98b5407ca9e8d9bef5e8fb5d6f5116", size = 28501375, upload-time = "2026-07-14T21:06:23.41Z" },
-    { url = "https://files.pythonhosted.org/packages/7c/02/61dbc3791452e9aa402815e44073cc846c51e8ddca8b2d01b360095b5380/nvidia_libnvcomp_cu13-5.3.0.16-py3-none-win_amd64.whl", hash = "sha256:34824f687625a48f1fcaeed9b4bd08935d88583ff5fc4811beca1c9a50e343b9", size = 19880933, upload-time = "2026-07-14T21:06:51.311Z" },
+    { url = "https://files.pythonhosted.org/packages/56/44/1bd7f69e68bd6437063c4042b85145097a663018beba17e17e4959fbd9b0/nvidia_libnvcomp_cu13-6.0.0.12-py3-none-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:becef25cb59b0fbb593d05733be39936ad2f508dc148e2fb125611c28c50a705", size = 33187557, upload-time = "2026-10-13T16:53:33.335Z" },
+    { url = "https://files.pythonhosted.org/packages/25/4d/13c2fe98da55aa5155211c3579582bbe1fe17c9b6856d5a4267e4c70ac77/nvidia_libnvcomp_cu13-6.0.0.12-py3-none-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d1cf156f7885b9b1ad17ac0059b678e04869466f81207e51fed330f8ffbfcd5a", size = 29765393, upload-time = "2026-10-13T16:53:57.558Z" },
+    { url = "https://files.pythonhosted.org/packages/65/80/bd6b88e9e960d88b34b7ac96cfde8d7d97675c7e81662cbd9b035f6e7374/nvidia_libnvcomp_cu13-6.0.0.12-py3-none-win_amd64.whl", hash = "sha256:1783c9dbcebf03a5c7ccc2feb00d080904a6d24992dd2450903abd39a38aae55", size = 22558409, upload-time = "2026-10-13T16:54:16.845Z" },
 ]
 
 [[package]]
@@ -1014,15 +1014,15 @@ wheels = [
 
 [[package]]
 name = "nvidia-nvcomp-cu13"
-version = "5.3.0.16"
+version = "6.0.0.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nvidia-libnvcomp-cu13" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ac/4c/63a16ca419a611a6378c411470eadcd3a2ec24876a336986f2b836ebce7d/nvidia_nvcomp_cu13-5.3.0.16-py3-none-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:45147aa996f1d2375d2e8cc391261c6e014c36a5957722c419699d22e9a0162e", size = 3574488, upload-time = "2026-07-14T21:08:47.173Z" },
-    { url = "https://files.pythonhosted.org/packages/a7/36/858d7584989940b37c20362c9f3cdf7b45a0a59e9c4118e6646c109e3127/nvidia_nvcomp_cu13-5.3.0.16-py3-none-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b0eeadb227fd087907c410332873a09015593ea61517a12c26732d3ea71d5789", size = 3771498, upload-time = "2026-07-14T21:09:09.654Z" },
-    { url = "https://files.pythonhosted.org/packages/87/92/6129bbb5e57868941ea6b978278a6824cb094c470b642e505598ac87c21b/nvidia_nvcomp_cu13-5.3.0.16-py3-none-win_amd64.whl", hash = "sha256:542f8184b92f2e61bfb6d0a4ac9808a8548dcc77ebba92585f8ff8bd3668894e", size = 1580719, upload-time = "2026-07-14T21:09:28.844Z" },
+    { url = "https://files.pythonhosted.org/packages/b3/3e/c8c482f66250ba05c04162a81bb94e6ac6336909eadb378c63acf568ec02/nvidia_nvcomp_cu13-6.0.0.12-py3-none-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:2a249d72451afed47a29f05491399bffd1a31df1dc54145d8b1bcbc40d7b6d2c", size = 3965151, upload-time = "2026-10-13T16:58:12.613Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/b5/198ac6e48031b220684f08ea0c29967c86704914c84db80d13b57c61df40/nvidia_nvcomp_cu13-6.0.0.12-py3-none-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:8386ba3ab6c968d001138eda0f66fe7b7a847e7241384a63232b1c2d50a79d74", size = 4206822, upload-time = "2026-10-13T16:58:32.091Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/f3/a7852a994e743503f09508d1e31bde4805a579764926a1a208d6232e5c73/nvidia_nvcomp_cu13-6.0.0.12-py3-none-win_amd64.whl", hash = "sha256:d37d4a3873f664faa955e0c27afeacbf3b2955ef8bfc5cb29d52fe08fc8e0b6c", size = 1755699, upload-time = "2026-10-13T16:58:56.82Z" },
 ]
 
 [[package]]

@@ -81,6 +81,76 @@ def test_dwa_gpu_huffman_decode_parallel_segments_match_host_across_a_repeat_bou
     np.testing.assert_array_equal(actual.get(), expected)
 
 
+def _write_dwa_with_late_huffman_repeat(path: Path, *, compression: str, tail_literal: bool, repeat_count: int) -> None:
+    from openexr_dev_oracle import OpenEXR
+
+    # A single scanline chunk contains 260 constant 8x8 Y blocks. Keep the
+    # independent writer's DC stream and encode its 260 EOBs explicitly so a
+    # parallel decode boundary lands on a repeat close to the end of the stream.
+    OpenEXR.File(
+        {
+            "compression": {"dwaa": OpenEXR.DWAA_COMPRESSION, "dwab": OpenEXR.DWAB_COMPRESSION}[compression],
+            "dwaCompressionLevel": 45.0,
+        },
+        {"Y": np.full((32, 520), np.float16(0.25), dtype=np.float16)},
+    ).write(str(path))
+    container = exr_container._parse_exr_container(path)
+    (chunk,) = container.chunks
+    descriptor = chunk.dwa
+    assert descriptor is not None and descriptor.leader is not None
+    assert descriptor.leader.ac_element_count == 260
+
+    # EOB 0xff00 and repeat 0xff01 have one-bit codes 0 and 1.
+    packed_table, _ = _pack_bits([(1, 6), (1, 6)])
+    fields = [(0, 1)] * 256 + [(1, 1), (repeat_count, 8)]
+    if tail_literal:
+        fields.append((0, 1))
+    encoded, bit_count = _pack_bits(fields)
+    stream = struct.pack("<IIIII", 0xFF00, 0xFF01, len(packed_table), bit_count, 0) + packed_table + encoded
+    payload = bytearray(container.data)
+    struct.pack_into("<Q", payload, chunk.payload_start + 24, len(stream))
+    size_delta = len(stream) - descriptor.ac_span.size
+    struct.pack_into("<i", payload, chunk.payload_start - 4, chunk.packed_size + size_delta)
+    payload[descriptor.ac_span.start : descriptor.ac_span.end] = stream
+    path.write_bytes(payload)
+
+
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.parametrize("compression", ("dwaa", "dwab"))
+@pytest.mark.parametrize("tail_literal", (True, False), ids=("literal-after-repeat", "repeat-at-end"))
+def test_dwa_read_matches_openexr_when_a_late_repeat_reaches_the_stream_end(
+    tmp_path: Path, compression: str, tail_literal: bool
+) -> None:
+    """DWA images remain readable when a repeat near the end follows many literal coefficients."""
+    from openexr_dev_oracle import OpenEXR
+
+    path = tmp_path / f"late-repeat-{compression}.exr"
+    _write_dwa_with_late_huffman_repeat(
+        path, compression=compression, tail_literal=tail_literal, repeat_count=3 if tail_literal else 4
+    )
+    expected = OpenEXR.File(str(path), separate_channels=True).channels()["Y"].pixels
+
+    actual = px.io.read_image(path, channels=("Y",), unchanged=True)
+
+    # The tolerance is one HALF ulp near 1 plus accumulated fp32 inverse-DCT rounding.
+    np.testing.assert_allclose(actual.data.get()[..., 0], expected, rtol=2e-3, atol=2e-3)
+
+
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.req("SP-PIX-017")
+@pytest.mark.parametrize("compression", ("dwaa", "dwab"))
+@pytest.mark.parametrize("repeat_count", (3, 5), ids=("too-few-coefficients", "too-many-coefficients"))
+def test_dwa_read_rejects_a_late_repeat_that_disagrees_with_the_declared_coefficient_count(
+    tmp_path: Path, compression: str, repeat_count: int
+) -> None:
+    """DWA reads reject a final repeat that leaves missing coefficients or adds excess coefficients."""
+    path = tmp_path / f"invalid-late-repeat-{compression}.exr"
+    _write_dwa_with_late_huffman_repeat(path, compression=compression, tail_literal=False, repeat_count=repeat_count)
+
+    with pytest.raises(RuntimeError, match=r"why=.*DWA.*what=.*how="):
+        px.io.read_image(path, channels=("Y",), unchanged=True)
+
+
 def _write_reference_dwa(path: Path, compression: str) -> dict[str, np.ndarray]:
     from openexr_dev_oracle import OpenEXR
 
@@ -112,6 +182,36 @@ def _write_reference_dwa(path: Path, compression: str) -> dict[str, np.ndarray]:
     OpenEXR.File(header, channels).write(str(path))
     reference = OpenEXR.File(str(path), separate_channels=True)
     return {name: np.asarray(reference.channels()[name].pixels) for name in channels}
+
+
+@pytest.mark.req("SP-PIX-007")
+@pytest.mark.parametrize("compression", ("dwaa", "dwab"))
+@pytest.mark.parametrize("dtype", ("float16", "float32"))
+@pytest.mark.parametrize("shape", ((4, 6), (8, 12), (16, 16), (64, 64), (128, 128), (256, 256), (512, 512)))
+def test_written_dwa_rgb_reads_match_openexr_across_sizes_and_float_storage(
+    tmp_path: Path,
+    compression: str,
+    dtype: str,
+    shape: tuple[int, int],
+) -> None:
+    """DWAA/DWAB RGB reads match OpenEXR across image sizes with float16 and float32 storage."""
+    from openexr_dev_oracle import OpenEXR
+
+    y, x = np.indices(shape, dtype=np.float32)
+    values = np.stack([((x + 9 * y + offset) % 256) / 255 for offset in (0, 41, 101)], axis=-1)
+    source = px.io.from_array(cp.asarray(values), colorspace="ACEScg", gamma="linear", channels="RGB")
+    path = tmp_path / f"rgb-{compression}-{dtype}.exr"
+    px.io.write_image(path, source, compression=compression, dtype=dtype)
+    reference = OpenEXR.File(str(path), separate_channels=True).channels()
+    expected = np.stack([reference[channel].pixels for channel in ("R", "G", "B")], axis=-1)
+
+    actual = px.io.read_image(path, unchanged=True)
+
+    assert actual.channels == ("R", "G", "B")
+    assert actual.data.dtype == np.dtype(dtype)
+    assert actual.data.flags.c_contiguous
+    # One HALF ulp near 1 plus accumulated fp32 inverse-DCT/CSC rounding, as in the reference read tests.
+    np.testing.assert_allclose(actual.data.get(), expected, rtol=2e-3, atol=2e-3)
 
 
 def _eager_dwa_reconstruct_lossy_blocks(

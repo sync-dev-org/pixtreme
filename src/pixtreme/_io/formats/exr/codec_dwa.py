@@ -2021,6 +2021,9 @@ extern "C" __global__ void pixtreme_dwa_huffman_token_boundaries(
             node = token_destination;
             produced += token_step;
         }
+        // Skipping repeats may finish the stream instead of finding another
+        // literal boundary. Leave that suffix in the existing final segment.
+        if (node == terminal && produced == (unsigned long long)output_counts[record]) break;
         if (produced >= (unsigned long long)output_counts[record]) {
             status[record] = 3;
             return;

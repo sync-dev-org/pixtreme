@@ -4,6 +4,16 @@ Notable changes to pixtreme are documented in this file.
 
 ## Unreleased
 
+## 1.9.2 - 2026-10-17
+
+pixtreme 1.9.2 fixes reading DWAA and DWAB EXR images. Public operation names, arguments, accepted names, and
+return shapes remain compatible.
+
+### Fixed
+
+- Fixed reading DWAA and DWAB EXR images with nvCOMP 6.0.
+- Fixed reading some DWAA and DWAB EXR images that previously failed during decompression.
+
 ## 1.9.1 - 2026-10-16
 
 pixtreme 1.9.1 does not change library behavior: the `pixtreme` package code is the same as in 1.9.0. Public

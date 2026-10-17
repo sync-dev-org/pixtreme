@@ -203,10 +203,17 @@ def _decode_deflate_chunks(
     from nvidia import nvcomp
 
     stream = cp.cuda.get_current_stream()
-    inputs = nvcomp.as_arrays(
-        [device_staging[offset : offset + size] for offset, size in input_ranges], cuda_stream=int(stream.ptr)
+    input_buffers = []
+    for offset, size in input_ranges:
+        source = device_staging[offset : offset + size]
+        # EXR substreams can start at any byte; nvCOMP Deflate requires four-byte-aligned inputs.
+        if source.data.ptr % 4:
+            source = source.copy()
+        input_buffers.append(source)
+    inputs = nvcomp.as_arrays(input_buffers, cuda_stream=int(stream.ptr))
+    outputs = nvcomp.as_arrays(
+        [decoded[offset : offset + size] for offset, size in output_ranges], cuda_stream=int(stream.ptr)
     )
-    outputs = [decoded[offset : offset + size] for offset, size in output_ranges]
     codec = _nvcomp_deflate_codec(cp.cuda.Device().id, int(stream.ptr))
     if verify_output_sizes:
         actual_sizes = tuple(int(codec.get_uncomp_buffer_size(source)) for source in inputs)
