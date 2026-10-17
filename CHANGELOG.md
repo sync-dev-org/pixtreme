@@ -4,6 +4,16 @@ Notable changes to pixtreme are documented in this file.
 
 ## Unreleased
 
+## 1.9.3 - 2026-10-17
+
+pixtreme 1.9.3 fixes reading DWAA and DWAB EXR images. Public operation names, arguments, accepted names, and
+return shapes remain compatible.
+
+### Fixed
+
+- Fixed reading DWAA and DWAB EXR images with Deflate-compressed AC coefficients, including small tiles written by
+  OpenEXR. Unsupported legacy DWA versions now report how to re-encode the image.
+
 ## 1.9.2 - 2026-10-17
 
 pixtreme 1.9.2 fixes reading DWAA and DWAB EXR images. Public operation names, arguments, accepted names, and

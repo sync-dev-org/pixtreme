@@ -28,15 +28,14 @@ from pixtreme._io.formats.exr.codec_common import _ExrCodecError
 from pixtreme._io.formats.exr.codec_dwa import (
     _classify_default_dwa_channels,
     _decode_dwa_ac_block_host,
+    _decode_dwa_ac_host,
     _decode_dwa_byte_rle_host,
-    _decode_dwa_huffman_host,
     _decompress_dwa_zlib_host,
     _dwa_lossy_units,
     _dwa_sample_array,
     _DwaChannelLayout,
     _inverse_dwa_dct_host,
     _inverse_dwa_transfer_host,
-    _parse_dwa_huffman_table,
     _read_exr_dwa_custom_cpu,
     _read_exr_dwa_gpu,
     _write_exr_dwa_gpu,
@@ -207,6 +206,24 @@ def _decode_exr_view(
     *,
     output_dtype: str,
 ) -> cp.ndarray:
+    if container.compression in ("dwaa", "dwab"):
+        versions = tuple(
+            sorted(
+                {
+                    chunk.dwa.leader.version
+                    for chunk in container.chunks
+                    if chunk.dwa and chunk.dwa.leader and chunk.dwa.leader.version != 2
+                }
+            )
+        )
+        if versions:
+            raise ValueError(
+                _actionable_error(
+                    why="this EXR image uses a legacy DWA chunk version that the reader does not support",
+                    what=f"compression={container.compression!r}, DWA_versions={versions!r}",
+                    how="re-encode the image with a current OpenEXR writer using DWA version 2, or choose ZIP compression",
+                )
+            )
     backend = _EXR_ROUTING.get((container.compression, "read"))
     if backend == "native":
         return _read_exr_native(container, selected_channels, output_dtype=output_dtype)
@@ -659,23 +676,7 @@ def _sampled_dwa_payloads(view: _ExrContainer) -> tuple[bytes, ...]:
                 )
             )
 
-        ac_symbols = np.empty(0, dtype=np.uint16)
-        if leader.ac_element_count:
-            table = descriptor.huffman
-            if table is None:
-                raise RuntimeError(
-                    _actionable_error(
-                        why="a sampled DWA AC stream has no parsed Huffman table",
-                        what=f"chunk_y={chunk.y}, ac_elements={leader.ac_element_count}",
-                        how="provide a complete canonical Huffman table for the AC stream",
-                    )
-                )
-            if not table.codes:
-                table = _parse_dwa_huffman_table(
-                    view.data[descriptor.ac_span.start : descriptor.ac_span.end],
-                    base_offset=descriptor.ac_span.start,
-                )
-            ac_symbols = _decode_dwa_huffman_host(view.data, table, expected_count=leader.ac_element_count)
+        ac_symbols = _decode_dwa_ac_host(view.data, descriptor, chunk_y=chunk.y)
         dc_values = np.empty(0, dtype=np.uint16)
         if leader.dc_element_count:
             transformed_dc = _decompress_dwa_zlib_host(

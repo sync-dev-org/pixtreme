@@ -873,6 +873,33 @@ def _decompress_dwa_zlib_host(payload: bytes, *, expected_size: int, stream_name
     return decoded
 
 
+def _decode_dwa_ac_host(data: bytes, descriptor: _DwaChunkDescriptor, *, chunk_y: int) -> np.ndarray:
+    leader = descriptor.leader
+    if leader is None or not leader.ac_element_count:
+        return np.empty(0, dtype=np.uint16)
+    if leader.ac_compression == _DWA_DEFLATE:
+        decoded = _decompress_dwa_zlib_host(
+            data[descriptor.ac_span.start : descriptor.ac_span.end],
+            expected_size=leader.ac_element_count * 2,
+            stream_name="AC",
+            chunk_y=chunk_y,
+        )
+        return np.frombuffer(decoded, dtype="<u2")
+    table = descriptor.huffman
+    if table is None:
+        raise _gpu_error(
+            why="the DWA AC stream has no parsed canonical Huffman table",
+            what=f"chunk_y={chunk_y}, ac_elements={leader.ac_element_count}",
+            how="provide one complete STATIC_HUFFMAN table and encoded stream",
+        )
+    if not table.codes:
+        table = _parse_dwa_huffman_table(
+            data[descriptor.ac_span.start : descriptor.ac_span.end],
+            base_offset=descriptor.ac_span.start,
+        )
+    return _decode_dwa_huffman_host(data, table, expected_count=leader.ac_element_count)
+
+
 def _decode_dwa_byte_rle_host(payload: bytes, *, expected_size: int, chunk_y: int) -> bytes:
     output = bytearray(expected_size)
     source_offset = 0
@@ -1141,25 +1168,7 @@ def _decode_dwa_compressed_chunk_host(
             how="make the RLE raw size equal the classified byte planes",
         )
 
-    ac_symbols = np.empty(0, dtype=np.uint16)
-    if leader.ac_element_count:
-        if descriptor.huffman is None:
-            raise _gpu_error(
-                why="the eligible DWA AC stream has no parsed canonical Huffman table",
-                what=f"chunk_y={chunk.y}, ac_elements={leader.ac_element_count}",
-                how="use STATIC_HUFFMAN with one complete table and encoded stream",
-            )
-        table = descriptor.huffman
-        if not table.codes:
-            table = _parse_dwa_huffman_table(
-                container.data[descriptor.ac_span.start : descriptor.ac_span.end],
-                base_offset=descriptor.ac_span.start,
-            )
-        ac_symbols = _decode_dwa_huffman_host(
-            container.data,
-            table,
-            expected_count=leader.ac_element_count,
-        )
+    ac_symbols = _decode_dwa_ac_host(container.data, descriptor, chunk_y=chunk.y)
     dc_values = np.empty(0, dtype=np.uint16)
     if leader.dc_element_count:
         transformed_dc = _decompress_dwa_zlib_host(
@@ -3090,7 +3099,7 @@ def _read_exr_dwa_gpu(
     device_staging = cp.asarray(host_staging)
 
     stream_records: list[tuple[int, str, _DwaByteSpan, int]] = []
-    for stream_name in ("UNKNOWN", "DC", "RLE"):
+    for stream_name in ("UNKNOWN", "DC", "RLE", "AC"):
         for chunk_index, chunk in enumerate(chunks):
             descriptor = chunk.dwa
             if chunk.raw_stored or descriptor is None or descriptor.leader is None:
@@ -3104,6 +3113,8 @@ def _read_exr_dwa_gpu(
                 stream_records.append((chunk_index, stream_name, descriptor.dc_span, leader.dc_element_count * 2))
             elif stream_name == "RLE" and leader.rle_compressed_size:
                 stream_records.append((chunk_index, stream_name, descriptor.rle_span, leader.rle_uncompressed_size))
+            elif stream_name == "AC" and leader.ac_compressed_size and leader.ac_compression == _DWA_DEFLATE:
+                stream_records.append((chunk_index, stream_name, descriptor.ac_span, leader.ac_element_count * 2))
 
     stream_sizes = np.asarray([record[3] for record in stream_records], dtype=np.int64)
     stream_offsets = _numpy_offsets(stream_sizes)
@@ -3113,6 +3124,7 @@ def _read_exr_dwa_gpu(
     unknown_decoded_offsets = np.full(chunk_count, -1, dtype=np.int64)
     dc_decoded_offsets = np.full(chunk_count, -1, dtype=np.int64)
     rle_encoded_offsets = np.full(chunk_count, -1, dtype=np.int64)
+    ac_decoded_offsets = np.full(chunk_count, -1, dtype=np.int64)
     for stream_index, (chunk_index, stream_name, span, expected_size) in enumerate(stream_records):
         chunk = chunks[chunk_index]
         input_offset, input_size, adler = _dwa_zlib_gpu_descriptor(
@@ -3130,8 +3142,10 @@ def _read_exr_dwa_gpu(
             unknown_decoded_offsets[chunk_index] = decoded_offset
         elif stream_name == "DC":
             dc_decoded_offsets[chunk_index] = decoded_offset
-        else:
+        elif stream_name == "RLE":
             rle_encoded_offsets[chunk_index] = decoded_offset
+        else:
+            ac_decoded_offsets[chunk_index] = decoded_offset
 
     decoded_byte_count = int(stream_sizes.sum())
     decoded = cp.empty(max(decoded_byte_count, 1), dtype=cp.uint8)
@@ -3221,13 +3235,32 @@ def _read_exr_dwa_gpu(
             for chunk_index, table in huffman_records
         )
         huffman_output_counts = tuple(int(ac_counts[chunk_index]) for chunk_index, _ in huffman_records)
-        ac_symbols = _decode_dwa_huffman_gpu(
+        huffman_symbols = _decode_dwa_huffman_gpu(
             device_staging,
             data_offsets=huffman_data_offsets,
             tables=tuple(table for _, table in huffman_records),
             output_counts=huffman_output_counts,
             record_labels=tuple(chunks[chunk_index].y for chunk_index, _ in huffman_records),
         )
+        if not np.any(ac_decoded_offsets >= 0):
+            ac_symbols = huffman_symbols
+        else:
+            source_offset = 0
+            for chunk_index, _ in huffman_records:
+                count = int(ac_counts[chunk_index])
+                target_offset = int(ac_offsets[chunk_index])
+                ac_symbols[target_offset : target_offset + count] = huffman_symbols[
+                    source_offset : source_offset + count
+                ]
+                source_offset += count
+    for chunk_index in np.flatnonzero(ac_decoded_offsets >= 0).tolist():
+        count = int(ac_counts[chunk_index])
+        source_offset = int(ac_decoded_offsets[chunk_index])
+        target_offset = int(ac_offsets[chunk_index])
+        # Lossless byte streams can leave AC at an odd offset; copy bytes into aligned coefficient storage.
+        ac_symbols.view(cp.uint8)[target_offset * 2 : (target_offset + count) * 2] = decoded[
+            source_offset : source_offset + count * 2
+        ]
 
     rle_chunk_indices = np.flatnonzero(rle_encoded_offsets >= 0)
     rle_raw_sizes = np.asarray(
@@ -4426,7 +4459,10 @@ def _dwa_gpu_eligible(channels: Sequence[_ExrChannel], chunks: Sequence[_ExrChun
             and chunk.dwa.leader is not None
             and chunk.dwa.leader.version == 2
             and chunk.dwa.channel_layout is not None
-            and (chunk.dwa.leader.ac_compressed_size == 0 or chunk.dwa.leader.ac_compression == _DWA_STATIC_HUFFMAN)
+            and (
+                chunk.dwa.leader.ac_compressed_size == 0
+                or chunk.dwa.leader.ac_compression in (_DWA_STATIC_HUFFMAN, _DWA_DEFLATE)
+            )
         )
         for chunk in chunks
     )
