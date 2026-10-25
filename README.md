@@ -66,10 +66,18 @@ I/O.
 
 ## Requirements
 
+- Linux x86_64; Windows users run the Linux package under WSL2
 - Python 3.12 or newer
 - CUDA 13.x
 - NVIDIA driver R580 or newer
 - An NVIDIA GPU with compute capability 7.5 or higher
+
+The 2.0.0 wheels target Linux x86_64 (`manylinux_2_28`) and CPython 3.12 or newer through the stable ABI.
+2.0.0 does not provide native Windows wheels. On Windows, use the Linux wheel under WSL2, or use 1.x for native Windows.
+Binary wheels need no C++ compiler or CUDA toolkit. Source builds require a C++17 compiler, the CUDA 13 toolkit,
+and the zlib headers and shared library. DWA compression uses native CPU workers. DWA reads decode entropy streams
+on the CPU and reconstruct dense colour blocks with compiled CUDA kernels on the CuPy current stream. Subsequent
+image processing continues on the GPU.
 
 WSL2 is supported with the Windows NVIDIA driver and a working CUDA device. Depending on the WSL installation,
 `nvidia-smi` may be available at `/usr/lib/wsl/lib/nvidia-smi` rather than on the default `PATH`.
@@ -88,7 +96,13 @@ With uv:
 uv add pixtreme
 ```
 
-Upgrading from 0.x? The 1.x series is a ground-up rewrite — see the [changelog](https://github.com/sync-dev-org/pixtreme/blob/main/CHANGELOG.md) for the migration summary.
+Upgrading from 0.x? The 1.x series is a ground-up rewrite — see the [changelog](https://sync-dev-org.github.io/pixtreme/changelog/) for the migration summary.
+
+## Release packages
+
+Download wheels and `SHA256SUMS` from [GitHub Releases](https://github.com/sync-dev-org/pixtreme/releases).
+The [C and C++ SDK guide](https://sync-dev-org.github.io/pixtreme/cpp/) explains how to use the headers,
+shared library, and CMake package included in the Linux wheel.
 
 ## Quickstart
 
@@ -194,9 +208,10 @@ Color processing is explicit, metadata-aware, and designed to preserve scene val
 
 ## Status & license
 
-The 1.x series is the current release line. It is a ground-up implementation and does not connect to the 0.x codebase. The
-final 0.x release, 0.9.0, remains available from the [`v0.9.0` Git tag](https://github.com/sync-dev-org/pixtreme/tree/v0.9.0)
-and the [PyPI release history](https://pypi.org/project/pixtreme/#history). See the [changelog](https://github.com/sync-dev-org/pixtreme/blob/main/CHANGELOG.md) for the
+The 2.x series is under development, with native C++ support behind the existing Python API. The 1.x series remains
+the current release line and continues to receive fixes for native Windows users. The 1.x implementation
+is a ground-up rewrite and does not connect to the 0.x codebase. The
+final 0.x release remains available as [pixtreme 0.9.0 on PyPI](https://pypi.org/project/pixtreme/0.9.0/). See the [changelog](https://sync-dev-org.github.io/pixtreme/changelog/) for the
 1.0 migration-impact summary.
 
 pixtreme is released under the [MIT License](https://github.com/sync-dev-org/pixtreme/blob/main/LICENSE).

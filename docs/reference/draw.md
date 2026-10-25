@@ -1,3 +1,0 @@
-# `pixtreme.draw`
-
-::: pixtreme.draw

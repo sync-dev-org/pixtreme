@@ -1,3 +1,0 @@
-# `pixtreme.io`
-
-::: pixtreme.io

@@ -1,3 +1,0 @@
-# `pixtreme.filter`
-
-::: pixtreme.filter

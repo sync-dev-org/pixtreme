@@ -1,3 +1,0 @@
-# `pixtreme.feature`
-
-::: pixtreme.feature

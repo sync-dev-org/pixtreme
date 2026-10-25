@@ -1,3 +1,0 @@
-# `pixtreme.transform`
-
-::: pixtreme.transform

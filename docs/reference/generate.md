@@ -1,3 +1,0 @@
-# `pixtreme.generate`
-
-::: pixtreme.generate

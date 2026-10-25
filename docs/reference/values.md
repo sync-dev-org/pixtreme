@@ -1,3 +1,0 @@
-# `pixtreme.values`
-
-::: pixtreme.values

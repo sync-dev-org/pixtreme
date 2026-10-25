@@ -1,3 +1,0 @@
-# `pixtreme.channel`
-
-::: pixtreme.channel

@@ -1,12 +1,9 @@
-# Builds the documentation site from the files noren sends to the public repository and publishes it to GitHub Pages.
-# GitHub Actions in this project is limited to the documentation site: no tests, build checks, package publishing,
-# or secrets.
+# Publishes the rendered documentation archive attached to a public Release.
 name: Documentation site
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -18,29 +15,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
-    if: github.repository == 'sync-dev-org/pixtreme'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.0
-        with:
-          python-version: "3.12"
-      - name: Install the documentation dependencies
-        run: uv sync --locked --only-group docs
-      - name: Build the site
-        run: uv run --locked --only-group docs --no-sync mkdocs build --strict --site-dir site
-      - uses: actions/configure-pages@v6
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: site
-
   deploy:
-    needs: build
+    if: github.repository == 'sync-dev-org/pixtreme' && !startsWith(github.event.release.tag_name, 'v1.')
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Download the documentation archive
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          curl --fail --location --retry 3 \
+            "https://github.com/sync-dev-org/pixtreme/releases/download/${RELEASE_TAG}/pixtreme-docs-${RELEASE_TAG}.tar.gz" \
+            --output site.tar.gz
+          mkdir site
+          tar --extract --gzip --file site.tar.gz --directory site --no-same-owner --no-same-permissions
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
       - id: deployment
         uses: actions/deploy-pages@v5

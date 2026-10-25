@@ -1,3 +1,0 @@
-# `pixtreme.morphology`
-
-::: pixtreme.morphology

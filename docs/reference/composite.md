@@ -1,3 +1,0 @@
-# `pixtreme.composite`
-
-::: pixtreme.composite
