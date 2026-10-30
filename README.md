@@ -7,7 +7,7 @@
 
 GPU-first image processing for Python, built on CUDA and CuPy.
 
-**[API reference and documentation](https://sync-dev-org.github.io/pixtreme/)** — the complete public API (14 modules, 102 operations) with per-function contracts, plus the full performance report.
+**[API reference and documentation](https://sync-dev-org.github.io/pixtreme/docs/)** — the complete public API (14 modules, 102 operations) with per-function contracts, plus the full performance report.
 
 ## Why pixtreme
 
@@ -30,9 +30,10 @@ so color meaning travels with pixels instead of living in ambient configuration.
 ## Performance
 
 The current package requires CUDA 13, NVIDIA driver R580 or newer, and a GPU with compute capability 7.5 or higher.
-The table below records the earlier CUDA 12.9 baseline; CUDA 13 measurements have not yet been published.
+The table below records the earlier CUDA 12.9 baseline. The DWA and WebP cases of the full performance report
+were measured separately with CUDA 13.
 
-The following measurements are selected from the current 210-case registry, taken from the single full run at
+The following measurements are selected from the original 210-case FHD report, taken from the single full run at
 commit `260fe6e`. GPU cases use at least 1,000 FHD frames and 3 seconds after warmup, while file boundaries use at
 least 20 iterations and the same 3-second floor. The test system used an NVIDIA RTX A6000, CUDA 12.9, CuPy 14.1.1, and
 Python 3.12 under WSL2.
@@ -64,6 +65,17 @@ Frame written without `dtype` stores HALF by default; pass `dtype="float32"` for
 above, the default ZIP/HALF path measured 40.758 ms to read unchanged and 40.572 ms to write, including temporary-file
 I/O.
 
+**Faster WebP decoding in 2.1.0.** WebP file reads and decoding from bytes now use pixtreme's C++ and CUDA decoder
+(VP8, VP8L, and alpha), writing pixels directly into a GPU Frame. In same-session comparisons with the former
+libwebp decode path, RGB and lossless RGBA were about 1.4–1.5 times as fast, and lossy RGBA about 1.1 times as fast.
+For FHD (1920×1080) uint8 images on an RTX A6000 with CUDA 13.2 under WSL2, read/decode medians were
+22.137/20.515 ms for lossless RGB, 23.300/20.903 ms for lossless RGBA, and 92.719/91.988 ms for lossy RGBA.
+File reads include temporary-file I/O; bytes decoding includes host-byte exchange, and both include synchronization
+until GPU output is ready. See the [WebP performance comparison](https://sync-dev-org.github.io/pixtreme/performance/#webp-decoder-replacement)
+for the baseline CPU builds, inputs, and sampling conditions. Still-image I/O supports RGBA with alpha. Malformed
+WebP input identified under RFC 6386 or RFC 9649 is rejected with a reason and a remedy. Encoding uses statically
+linked libwebp on the CPU and accepts `method` and `quality`.
+
 ## Requirements
 
 - Linux x86_64; Windows users run the Linux package under WSL2
@@ -72,8 +84,8 @@ I/O.
 - NVIDIA driver R580 or newer
 - An NVIDIA GPU with compute capability 7.5 or higher
 
-The 2.0.0 wheels target Linux x86_64 (`manylinux_2_28`) and CPython 3.12 or newer through the stable ABI.
-2.0.0 does not provide native Windows wheels. On Windows, use the Linux wheel under WSL2, or use 1.x for native Windows.
+The 2.x wheels target Linux x86_64 (`manylinux_2_28`) and CPython 3.12 or newer through the stable ABI.
+2.x does not provide native Windows wheels. On Windows, use the Linux wheel under WSL2, or use 1.x for native Windows.
 Binary wheels need no C++ compiler or CUDA toolkit. Source builds require a C++17 compiler, the CUDA 13 toolkit,
 and the zlib headers and shared library. DWA compression uses native CPU workers. DWA reads decode entropy streams
 on the CPU and reconstruct dense colour blocks with compiled CUDA kernels on the CuPy current stream. Subsequent
