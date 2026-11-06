@@ -12,8 +12,13 @@ GPU-first image processing for Python, built on CUDA and CuPy.
 ## Why pixtreme
 
 pixtreme keeps image data on the NVIDIA GPU and makes a metadata-bearing `Frame` the common value passed between
-operations. A `Frame` owns an HWC `cupy.ndarray` together with colorspace, transfer, channel, and YCbCr-matrix claims,
+operations. A `Frame` holds HWC GPU pixels together with colorspace, transfer, channel, and YCbCr-matrix claims,
 so color meaning travels with pixels instead of living in ambient configuration.
+
+Use `cupy.from_dlpack(frame)` or `torch.from_dlpack(frame)` to share writable pixels.
+DLPack orders the consumer stream after recorded writers and keeps the pixel owner alive.
+Read shape and dtype through `frame.shape` and `frame.dtype`. To replace the pixel storage,
+construct a new `px.core.Frame` and copy its colorspace, gamma, channels, matrix, range, and bit_depth.
 
 - Purpose-built `RawKernel` implementations and CuPy operations avoid unnecessary host round trips.
 - Color conversion, format conversion, channel routing, and affine numeric transforms fuse work into a single pass
@@ -88,8 +93,8 @@ The 2.x wheels target Linux x86_64 (`manylinux_2_28`) and CPython 3.12 or newer 
 2.x does not provide native Windows wheels. On Windows, use the Linux wheel under WSL2, or use 1.x for native Windows.
 Binary wheels need no C++ compiler or CUDA toolkit. Source builds require a C++17 compiler, the CUDA 13 toolkit,
 and the zlib headers and shared library. DWA compression uses native CPU workers. DWA reads decode entropy streams
-on the CPU and reconstruct dense colour blocks with compiled CUDA kernels on the CuPy current stream. Subsequent
-image processing continues on the GPU.
+on the CPU and reconstruct dense colour blocks on the supplied CUDA stream. When `stream` is omitted, they use
+the C++ interface's default stream. Subsequent image processing continues on the GPU.
 
 WSL2 is supported with the Windows NVIDIA driver and a working CUDA device. Depending on the WSL installation,
 `nvidia-smi` may be available at `/usr/lib/wsl/lib/nvidia-smi` rather than on the default `PATH`.
@@ -150,7 +155,7 @@ two-level path; the root does not re-export them, and `Frame` has no operation m
 | `px.morphology` | `erosion`, `dilation`, `opening`, `closing`, `morphological_gradient`, `white_tophat`, `black_tophat` | Morphological image operations |
 | `px.metrics` | `psnr`, `ssim`, `ssim_map` | Image-quality scalars and response maps |
 | `px.feature` | `corner_harris`, `match_template` | Image-feature response maps |
-| `px.values` | `quantize`, `dequantize`, `full_to_legal`, `legal_to_full`, `cast_dtype`, `recode_dtype` | Range, quantization, and storage representation |
+| `px.values` | `quantize`, `dequantize`, `cast_dtype`, `recode_dtype` | Pixel-value scale conversion, quantization, and storage representation |
 | `px.channel` | `shuffle` | Channel routing and assembly without implicit color meaning changes |
 | `px.composite` | `merge` | Transform-aware multi-image compositing |
 | `px.fonts` | `font_path`, `available` | Bundled and installed font-file discovery |
