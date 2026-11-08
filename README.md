@@ -15,6 +15,10 @@ pixtreme keeps image data on the NVIDIA GPU and makes a metadata-bearing `Frame`
 operations. A `Frame` holds HWC GPU pixels together with colorspace, transfer, channel, and YCbCr-matrix claims,
 so color meaning travels with pixels instead of living in ambient configuration.
 
+Frame and `px.NDArray` provide `view()` to share pixels with an independent description,
+and `clone(stream=None)` to duplicate pixels. Python `copy.copy` and `copy.deepcopy`
+also duplicate pixels; use `view()` when sharing is intended.
+
 Use `cupy.from_dlpack(frame)` or `torch.from_dlpack(frame)` to share writable pixels.
 DLPack orders the consumer stream after recorded writers and keeps the pixel owner alive.
 Read shape and dtype through `frame.shape` and `frame.dtype`. To replace the pixel storage,
