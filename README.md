@@ -206,8 +206,8 @@ from temporary-file and encoded-byte I/O measurements.
 
 Color processing is explicit, metadata-aware, and designed to preserve scene values until a declared output boundary.
 
-- The closed vocabulary carries 29 colorspace tokens and 36 transfer (gamma) tokens: the sRGB, Rec.709, Rec.2020,
-  P3, SMPTE-C, Adobe RGB, ProPhoto RGB, and ACES families plus the Sony, ARRI, Blackmagic Design, DaVinci, RED, Canon, Panasonic, DJI,
+- The closed vocabulary carries 30 colorspace tokens and 36 transfer (gamma) tokens: the sRGB, Rec.709, Rec.2020,
+  P3, Rec.601-525, Rec.601-625, Adobe RGB, ProPhoto RGB, and ACES families plus the Sony, ARRI, Blackmagic Design, DaVinci, RED, Canon, Panasonic, DJI,
   Fujifilm, Nikon, Leica, Apple, and Samsung camera encodings. Each token is derived from its published
   specification and documented with its provenance and domain-extension rules in the
   [token reference](https://sync-dev-org.github.io/pixtreme/tokens/).
