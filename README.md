@@ -7,7 +7,7 @@
 
 GPU-first image processing for Python, built on CUDA and CuPy.
 
-**[API reference and documentation](https://sync-dev-org.github.io/pixtreme/docs/)** — the complete public API (14 modules, 83 operations) with per-function contracts, plus the full performance report.
+**[API reference and documentation](https://sync-dev-org.github.io/pixtreme/docs/)** — the complete public API (14 modules, 89 operations) with per-function contracts, plus the full performance report.
 
 ## Why pixtreme
 
@@ -48,13 +48,14 @@ least 20 iterations and the same 3-second floor. The test system used an NVIDIA 
 Python 3.12 under WSL2.
 
 The current packed-pixel API uses [PixelBuffer conversions](docs/reference/io.md).
-See [the performance report](docs/performance.md) for its measurements.
+See [the performance report](docs/performance.md) for its measurements. The `from_tensor` row below
+uses the [native tensor comparison](docs/performance.md#native-tensor-conversion) on CUDA 13.2 instead of the earlier baseline.
 
 | Operation | Representative parameters | Median (ms) | FPS | Effective GB/s |
 |---|---|---:|---:|---:|
 | `resize` | 1920x1080 -> 960x540, `nearest` | 0.074 | 13579.6 | 422.4 |
 | `resize` | 1920x1080 -> 3840x2160, `lanczos4` | 0.980 | 1020.2 | 126.9 |
-| `from_array` | CHW uint16, 10-bit -> float32 HWC | 0.123 | 8112.2 | 302.8 |
+| `from_tensor` | CHW uint16, 10-bit -> float32 HWC | 0.122 | 8222.3 | 306.9 |
 | YUVA444P packing (legacy API) | 12-bit legal, alpha full | 0.117 | 8563.1 | 426.2 |
 | `rgb_to_rgb` | ACEScg linear -> sRGB sRGB | 0.141 | 7106.3 | 353.7 |
 | `rgb_to_hsv` | label-driven scene values | 0.121 | 8276.1 | 411.9 |
@@ -147,8 +148,9 @@ unclipped; `px.values.quantize` is the explicit normalized-float-to-integer boun
 
 ## API tour
 
-The package root exposes 14 modules and `__version__`. Types, helpers, and all 83 operations live under one canonical
-two-level path; the root does not re-export them, and `Frame` has no operation methods.
+The package root exposes the feature modules, `Lut1D`, `Lut3D`, `NDArray`, `PixelBuffer`, `PixelBufferLayout` and `__version__`.
+The 89 operations live under their feature modules; the count excludes `core`, types and query helpers.
+`Frame` has no operation methods.
 
 Packed pixels use [`px.PixelBuffer`](https://sync-dev-org.github.io/pixtreme/reference/io/#pixelbuffer), which holds GPU byte storage together with
 format, dimensions, plane offsets and pitches, and color declarations. The `px.io` conversion functions exchange
@@ -156,8 +158,8 @@ pixels between a PixelBuffer and a Frame.
 
 | Namespace | Public members | Responsibility |
 |---|---|---|
-| `px.core` | `Frame`, `Lut`, `Lut1D`, `channels`, and the named-token `Literal` aliases | Core types, channel normalization, and closed vocabulary |
-| `px.io` | `read_image`, `write_image`, `write_exr_channels`, `read_header`, `read_lut`, `decode_lut`, `write_lut`, `decode_image`, `encode_image`, `from_array`, `to_array`, `from_pixel_buffer`, `to_pixel_buffer` | File, byte, device-array, LUT, and PixelBuffer conversion boundaries |
+| `px.core` | `Frame`, `Lut3D`, `Lut1D`, `Stream`, `Event`, `Graph`, `capture_begin`, `capture_end`, `channels`, and the named-token `Literal` aliases | Core types, CUDA graph capture, channel normalization, and closed vocabulary |
+| `px.io` | `read_image`, `write_image`, `write_exr_channels`, `encode_exr_channels`, `read_header`, `read_lut`, `decode_lut`, `write_lut`, `decode_image`, `encode_image`, `from_tensor`, `to_tensor`, `from_pixel_buffer`, `to_pixel_buffer`, `repack_pixel_buffer`, `read_image_as_pixel_buffer`, `decode_image_as_pixel_buffer`, `write_image_from_pixel_buffer`, `encode_image_from_pixel_buffer` | File, byte, device-array, LUT, and PixelBuffer conversion boundaries |
 | `px.color` | `apply_lut`, `gamma_to_linear`, `hsv_to_rgb`, `linear_to_gamma`, `rgb_to_grayscale`, `rgb_to_hsv`, `rgb_to_rgb`, `rgb_to_ycbcr`, `ycbcr_to_rgb`, `ycbcr_to_ycbcr`, `equalize_histogram`, `clahe`, `chromatic_adaptation`, `white_balance`, `white_point_simulation`, `grade` | Colorimetry, transfer functions, YCbCr/HSV, LUTs, histogram operations, white-point adaptation, per-channel Lift / Gamma / Gain, and explicit tonemapping |
 | `px.filter` | `gaussian_blur`, `box_blur`, `median_blur`, `bilateral_blur`, `directional_blur`, `zoom_blur`, `spin_blur`, `vector_blur`, `lens_blur`, `sobel`, `laplacian`, `difference_of_gaussians`, `canny`, `sharpen`, `unsharp_mask`, `convolve_box` | Blur, derivatives, edges, sharpening, and convolution |
 | `px.transform` | `resize`, `warp_affine`, `stack` | Geometry and multi-image layout |
@@ -217,9 +219,9 @@ from temporary-file and encoded-byte I/O measurements.
 
 Color processing is explicit, metadata-aware, and designed to preserve scene values until a declared output boundary.
 
-- The closed vocabulary carries 30 colorspace tokens and 36 transfer (gamma) tokens: the sRGB, Rec.709, Rec.2020,
+- The closed vocabulary carries 31 colorspace tokens and 37 transfer (gamma) tokens: the sRGB, Rec.709, Rec.2020,
   P3, Rec.601-525, Rec.601-625, Adobe RGB, ProPhoto RGB, and ACES families plus the Sony, ARRI, Blackmagic Design, DaVinci, RED, Canon, Panasonic, DJI,
-  Fujifilm, Nikon, Leica, Apple, and Samsung camera encodings. Each token is derived from its published
+  Fujifilm, Nikon, Leica, Apple, and Samsung camera encodings, plus `CIE-XYZ` and `DCDM`. Each token is derived from its published
   specification and documented with its provenance and domain-extension rules in the
   [token reference](https://sync-dev-org.github.io/pixtreme/tokens/).
 - The analytic ACES 2.0 SDR 100-nit Output Transform evaluates the complete AP1 limit, Hellwig JMh, tone, chroma,
@@ -243,3 +245,6 @@ final 0.x release remains available as [pixtreme 0.9.0 on PyPI](https://pypi.org
 1.0 migration-impact summary.
 
 pixtreme is released under the [MIT License](https://github.com/sync-dev-org/pixtreme/blob/main/LICENSE).
+JPEG decoding includes libjpeg-turbo components under the IJG License. This software is based in part on
+the work of the Independent JPEG Group. The wheel includes the complete third-party license texts in its
+distribution metadata.
