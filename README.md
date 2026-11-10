@@ -212,7 +212,7 @@ captioned = px.draw.text(
 ## Full performance
 
 [the full performance report](https://sync-dev-org.github.io/pixtreme/performance/) contains the recorded measured cases, including mean, median, FPS, p5, p95,
-effective bandwidth, parameters, and the 97 cases whose median exceeds 1 ms. It also separates GPU-device throughput
+effective bandwidth, parameters, and the 94 cases whose median exceeds 1 ms. It also separates GPU-device throughput
 from temporary-file and encoded-byte I/O measurements.
 
 ## Color management
