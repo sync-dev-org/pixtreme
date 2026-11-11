@@ -163,7 +163,7 @@ pixels between a PixelBuffer and a Frame.
 | `px.color` | `apply_lut`, `gamma_to_linear`, `hsv_to_rgb`, `linear_to_gamma`, `rgb_to_grayscale`, `rgb_to_hsv`, `rgb_to_rgb`, `rgb_to_ycbcr`, `ycbcr_to_rgb`, `ycbcr_to_ycbcr`, `equalize_histogram`, `clahe`, `chromatic_adaptation`, `white_balance`, `white_point_simulation`, `grade` | Colorimetry, transfer functions, YCbCr/HSV, LUTs, histogram operations, white-point adaptation, per-channel Lift / Gamma / Gain, and explicit tonemapping |
 | `px.filter` | `gaussian_blur`, `box_blur`, `median_blur`, `bilateral_blur`, `directional_blur`, `zoom_blur`, `spin_blur`, `vector_blur`, `lens_blur`, `sobel`, `laplacian`, `difference_of_gaussians`, `canny`, `sharpen`, `unsharp_mask`, `convolve_box` | Blur, derivatives, edges, sharpening, and convolution |
 | `px.transform` | `resize`, `warp_affine`, `stack` | Geometry and multi-image layout |
-| `px.draw` | `line`, `polyline`, `rectangle`, `circle`, `ellipse`, `polygon`, `text`, and the `Font` type | Shape and text drawing |
+| `px.draw` | `Path`, `Drawing`, `add_*`, `transform`, `round_corners`, `dash`, `group`, `render`, `text`, `Font` | Immutable shape construction, GPU rendering, and text |
 | `px.generate` | `ramp`, `grid`, `checkerboard`, `color_bars`, `fractal_noise`, `turbulent_noise`, `grain` | Procedural frames, test patterns, and noise |
 | `px.morphology` | `erosion`, `dilation`, `opening`, `closing`, `morphological_gradient`, `white_tophat`, `black_tophat` | Morphological image operations |
 | `px.metrics` | `psnr`, `ssim`, `ssim_map`, `vmaf` | Image and video quality scores and response maps |
@@ -194,6 +194,20 @@ png_bytes = px.io.encode_image(
 )
 round_trip = px.io.decode_image(png_bytes)
 ```
+
+For an RGB Frame, build shapes as immutable values, attach paint, and render them into a new Frame:
+
+```python
+path = px.draw.add_rectangle(px.draw.Path(), (10, 10), (240, 120))
+path = px.draw.round_corners(path, radius=12)
+drawing = px.draw.add_fill(path, color=(0.1, 0.4, 0.8))
+drawing = px.draw.add_stroke(drawing, color=(1.0, 1.0, 1.0), width=2)
+outlined = px.draw.render(frame, drawing, aa="distance")
+```
+
+Geometry construction uses host values. `render` evaluates the graph on its CUDA stream and preserves the input
+Frame. See the [drawing tokens](https://sync-dev-org.github.io/pixtreme/docs/tokens/#draw-path-commands) for fill
+rules, stroke styles, modes, edits, and paint order.
 
 Text shaping supports bundled CJK fonts, user OpenType/TrueType fonts through `px.draw.Font`, and an opt-in 4x
 supersampled raster path:
