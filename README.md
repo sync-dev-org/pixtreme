@@ -209,18 +209,14 @@ Geometry construction uses host values. `render` evaluates the graph on its CUDA
 Frame. See the [drawing tokens](https://sync-dev-org.github.io/pixtreme/docs/tokens/#draw-path-commands) for fill
 rules, stroke styles, modes, edits, and paint order.
 
-Text shaping supports bundled CJK fonts, user OpenType/TrueType fonts through `px.draw.Font`, and an opt-in 4x
-supersampled raster path:
+Text uses the same native Path and Drawing graph. Choose a catalog family name or load a user font with
+`px.draw.Font.from_file(path)`. Catalog fonts are downloaded to the user's cache when first needed; no font files
+are bundled in the package. To download them explicitly, call `px.fonts.download()`.
 
 ```python
-captioned = px.draw.text(
-    display,
-    text="極彩",
-    position=(48, 96),
-    size=64,
-    color=(1.0, 0.8, 0.2),
-    supersample=True,
-)
+text_path = px.draw.add_text(px.draw.Path(), "極彩", size=64, font="noto-sans-cjk-jp")
+text_path = px.draw.transform(text_path, translate=(48, 96))
+captioned = px.draw.render(display, px.draw.add_fill(text_path, color=(1.0, 0.8, 0.2)), aa="supersample")
 ```
 
 ## Full performance
