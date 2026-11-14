@@ -5,7 +5,7 @@
 ![CUDA](https://img.shields.io/badge/CUDA-13.x-76B900.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/sync-dev-org/pixtreme/blob/main/LICENSE)
 
-GPU-first image processing for Python and C++, built on CUDA.
+GPU-first image processing for C, C++ and Python, built on CUDA.
 
 **[API reference and documentation](https://sync-dev-org.github.io/pixtreme/docs/)** — the complete public API (14 modules, 89 operations) with per-function contracts, plus the full performance report.
 
