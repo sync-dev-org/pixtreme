@@ -5,7 +5,7 @@
 ![CUDA](https://img.shields.io/badge/CUDA-13.x-76B900.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/sync-dev-org/pixtreme/blob/main/LICENSE)
 
-GPU-first image processing for Python, built on CUDA and CuPy.
+GPU-first image processing for Python and C++, built on CUDA.
 
 **[API reference and documentation](https://sync-dev-org.github.io/pixtreme/docs/)** — the complete public API (14 modules, 89 operations) with per-function contracts, plus the full performance report.
 
@@ -19,12 +19,14 @@ Frame and `px.NDArray` provide `view()` to share pixels with an independent desc
 and `clone(stream=None)` to duplicate pixels. Python `copy.copy` and `copy.deepcopy`
 also duplicate pixels; use `view()` when sharing is intended.
 
-Use `cupy.from_dlpack(frame)` or `torch.from_dlpack(frame)` to share writable pixels.
+GPU arrays enter through DLPack; CuPy and PyTorch are optional external libraries.
+Install the library you use separately. Use `cupy.from_dlpack(frame)` or
+`torch.from_dlpack(frame)` to share writable pixels.
 DLPack orders the consumer stream after recorded writers and keeps the pixel owner alive.
 Read shape and dtype through `frame.shape` and `frame.dtype`. To replace the pixel storage,
 construct a new `px.core.Frame` and copy its colorspace, gamma, channels, matrix, range, and bit_depth.
 
-- Purpose-built `RawKernel` implementations and CuPy operations avoid unnecessary host round trips.
+- Native C++ and CUDA implementations process pixels without a GPU array library dependency.
 - Color conversion, format conversion, channel routing, and affine numeric transforms fuse work into a single pass
   where their contracts allow it.
 - Floating-point working values are not clipped to `[0, 1]`: negative values, highlights above 1.0, and filter
@@ -64,7 +66,7 @@ uses the [native tensor comparison](docs/performance.md#native-tensor-conversion
 | `text` | single-line CJK, size 64, one outline, 4x supersampling | 0.401 | 2496.5 | 124.2 |
 | `color_bars` | FHD ARIB STD-B28 normalized | 0.091 | 10969.6 | 273.0 |
 | `read_image` | FHD HALF RGB EXR ZIP, unchanged, temporary-file I/O included | 40.758 | 24.5 | 0.6 |
-| `write_image` | FHD fp32 RGB to EXR ZIP/HALF, dtype omitted, temporary-file I/O included | 40.572 | 24.6 | 0.9 |
+| `write_exr` | FHD fp32 RGB to EXR ZIP/HALF, dtype omitted, temporary-file I/O included | 40.572 | 24.6 | 0.9 |
 
 These figures describe this system and workload, not a hardware-independent guarantee. File and encoded-byte
 boundaries have different I/O-inclusive conditions. See [the full performance report](https://sync-dev-org.github.io/pixtreme/performance/) for every
@@ -140,7 +142,7 @@ frame = px.io.read_image("input.png")
 working = px.color.rgb_to_rgb(frame, output_colorspace="ACEScg", output_gamma="linear")
 working = px.filter.sharpen(working, amount=0.5)
 output = px.color.rgb_to_rgb(working, output_colorspace="sRGB", output_gamma="sRGB")
-px.io.write_image("output.png", px.values.quantize(output, bit_depth=8))
+px.io.write_png("output.png", px.values.quantize(output, bit_depth=8))
 ```
 
 `px.io.read_image` returns a `px.core.Frame` whose pixels already reside on the GPU. Processing remains float32 and
@@ -149,7 +151,7 @@ unclipped; `px.values.quantize` is the explicit normalized-float-to-integer boun
 ## API tour
 
 The package root exposes the feature modules, `Lut1D`, `Lut3D`, `NDArray`, `PixelBuffer`, `PixelBufferLayout` and `__version__`.
-The 89 operations live under their feature modules; the count excludes `core`, types and query helpers.
+Operations live under their feature modules.
 `Frame` has no operation methods.
 
 Packed pixels use [`px.PixelBuffer`](https://sync-dev-org.github.io/pixtreme/reference/io/#pixelbuffer), which holds GPU byte storage together with
@@ -159,7 +161,7 @@ pixels between a PixelBuffer and a Frame.
 | Namespace | Public members | Responsibility |
 |---|---|---|
 | `px.core` | `Frame`, `Lut3D`, `Lut1D`, `Stream`, `Event`, `Graph`, `capture_begin`, `capture_end`, `channels`, and the named-token `Literal` aliases | Core types, CUDA graph capture, channel normalization, and closed vocabulary |
-| `px.io` | `read_image`, `write_image`, `write_exr_channels`, `encode_exr_channels`, `read_header`, `read_lut`, `decode_lut`, `write_lut`, `decode_image`, `encode_image`, `from_tensor`, `to_tensor`, `from_pixel_buffer`, `to_pixel_buffer`, `repack_pixel_buffer`, `read_image_as_pixel_buffer`, `decode_image_as_pixel_buffer`, `write_image_from_pixel_buffer`, `encode_image_from_pixel_buffer` | File, byte, device-array, LUT, and PixelBuffer conversion boundaries |
+| `px.io` | `read_image`, `read_<format>`, `write_<format>`, `write_exr_channels`, `encode_exr_channels`, `read_header`, `read_lut`, `decode_lut`, `write_lut`, `decode_image`, `decode_<format>`, `encode_<format>`, `from_tensor`, `to_tensor`, `from_pixel_buffer`, `to_pixel_buffer`, `repack_pixel_buffer`, `read_image_as_pixel_buffer`, `decode_image_as_pixel_buffer`, `write_jpeg_from_pixel_buffer`, `encode_jpeg_from_pixel_buffer`, `write_jpeg2000_from_pixel_buffer`, `encode_jpeg2000_from_pixel_buffer` | File, byte, device-array, LUT, and PixelBuffer conversion boundaries |
 | `px.color` | `apply_lut`, `gamma_to_linear`, `hsv_to_rgb`, `linear_to_gamma`, `rgb_to_grayscale`, `rgb_to_hsv`, `rgb_to_rgb`, `rgb_to_ycbcr`, `ycbcr_to_rgb`, `ycbcr_to_ycbcr`, `equalize_histogram`, `clahe`, `chromatic_adaptation`, `white_balance`, `white_point_simulation`, `grade` | Colorimetry, transfer functions, YCbCr/HSV, LUTs, histogram operations, white-point adaptation, per-channel Lift / Gamma / Gain, and explicit tonemapping |
 | `px.filter` | `gaussian_blur`, `box_blur`, `median_blur`, `bilateral_blur`, `directional_blur`, `zoom_blur`, `spin_blur`, `vector_blur`, `lens_blur`, `sobel`, `laplacian`, `difference_of_gaussians`, `canny`, `sharpen`, `unsharp_mask`, `convolve_box` | Blur, derivatives, edges, sharpening, and convolution |
 | `px.transform` | `resize`, `warp_affine`, `stack` | Geometry and multi-image layout |
@@ -187,9 +189,8 @@ display = px.color.rgb_to_rgb(
 The bytes boundary mirrors the file boundary without inventing a host-array API:
 
 ```python
-png_bytes = px.io.encode_image(
+png_bytes = px.io.encode_png(
     px.values.quantize(display, bit_depth=8),
-    format="png",
     compression_level=4,
 )
 round_trip = px.io.decode_image(png_bytes)
