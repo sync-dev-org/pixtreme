@@ -93,16 +93,19 @@ linked libwebp on the CPU and accepts `method` and `quality`.
 
 ## Requirements
 
-- Linux x86_64; Windows users run the Linux package under WSL2
+- Linux x86_64 (including WSL2) or Windows x86_64
 - Python 3.12 or newer
 - CUDA 13.x
 - NVIDIA driver R580 or newer
 - An NVIDIA GPU with compute capability 7.5 or higher
 
-The 2.x wheels target Linux x86_64 (`manylinux_2_28`) and CPython 3.12 or newer through the stable ABI.
-2.x does not provide native Windows wheels. On Windows, use the Linux wheel under WSL2, or use 1.x for native Windows.
-Binary wheels need no C++ compiler or CUDA toolkit. Source builds require a C++17 compiler, the CUDA 13 toolkit,
-and the zlib headers and shared library. DWA compression uses native CPU workers. DWA reads decode entropy streams
+The 2.x wheels target Linux x86_64 (`manylinux_2_28`) and native Windows x86_64 (`win_amd64`).
+Each platform has one `cp312-abi3` wheel for standard CPython 3.12 or newer; free-threaded builds are not supported.
+WSL2 uses the Linux wheel. On native Windows, `import pixtreme` registers the package's DLL directory before
+loading its native modules.
+Binary wheels need no C++ compiler or CUDA toolkit. Source builds require a C++17 compiler (MSVC on Windows)
+and C/C++ and CUDA 13 build dependencies supplied through Conan; Windows builds also need the Windows SDK.
+DWA compression uses native CPU workers. DWA reads decode entropy streams
 on the CPU and reconstruct dense colour blocks on the supplied CUDA stream. When `stream` is omitted, they use
 the C++ interface's default stream. Subsequent image processing continues on the GPU.
 
@@ -127,9 +130,11 @@ Upgrading from 0.x? The 1.x series is a ground-up rewrite — see the [changelog
 
 ## Release packages
 
-Download wheels and `SHA256SUMS` from [GitHub Releases](https://github.com/sync-dev-org/pixtreme/releases).
+Download Linux and Windows wheels, prebuilt SDK archives, and `SHA256SUMS` from
+[GitHub Releases](https://github.com/sync-dev-org/pixtreme/releases). Both platform wheels are also available on PyPI.
 The [C and C++ SDK guide](https://sync-dev-org.github.io/pixtreme/cpp/) explains how to use the headers,
-shared library, and CMake package included in the Linux wheel.
+shared library, and CMake package supplied in each platform's SDK archive and wheel.
+The Windows SDK includes `pixtreme-2.dll` and the `pixtreme.lib` import library.
 
 ## Quickstart
 
@@ -249,8 +254,8 @@ Color processing is explicit, metadata-aware, and designed to preserve scene val
 
 ## Status & license
 
-The 2.x series is under development, with native C++ support behind the existing Python API. The 1.x series remains
-the current release line and continues to receive fixes for native Windows users. The 1.x implementation
+The 2.x series provides native C++ support behind the Python API on Linux and Windows.
+The 1.x series accepts bug fixes only. The 1.x implementation
 is a ground-up rewrite and does not connect to the 0.x codebase. The
 final 0.x release remains available as [pixtreme 0.9.0 on PyPI](https://pypi.org/project/pixtreme/0.9.0/). See the [changelog](https://sync-dev-org.github.io/pixtreme/changelog/) for the
 1.0 migration-impact summary.
