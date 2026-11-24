@@ -40,56 +40,43 @@ construct a new `px.core.Frame` and copy its colorspace, gamma, channels, matrix
 
 ## Performance
 
-The current package requires CUDA 13, NVIDIA driver R580 or newer, and a GPU with compute capability 7.5 or higher.
-The table below records the earlier CUDA 12.9 baseline. The DWA and WebP cases of the full performance report
-were measured separately with CUDA 13.
+pixtreme does its image work on the GPU. The table compares pixtreme's median time with a widely used CPU library
+doing the same work on the same machine, measured in two ways:
 
-The following measurements are selected from the original 210-case FHD report, taken from the single full run at
-commit `260fe6e`. GPU cases use at least 1,000 FHD frames and 3 seconds after warmup, while file boundaries use at
-least 20 iterations and the same 3-second floor. The test system used an NVIDIA RTX A6000, CUDA 12.9, CuPy 14.1.1, and
-Python 3.12 under WSL2.
+- **A**: from a GPU `Frame` to a GPU `Frame`. The CPU library's time includes copying the image from the GPU and
+  back; file reads end in a GPU `Frame`, and file writes start from one.
+- **B**: the CPU library starts and ends with host arrays and makes no GPU copies, while pixtreme still starts and
+  ends with GPU `Frame`s.
 
-The current packed-pixel API uses [PixelBuffer conversions](docs/reference/io.md).
-See [the performance report](docs/performance.md) for its measurements. The `from_tensor` row below
-uses the [native tensor comparison](docs/performance.md#native-tensor-conversion) on CUDA 13.2 instead of the earlier baseline.
+Each speed-up is the CPU library's median time divided by pixtreme's. This summary lists the conditions where
+pixtreme is at least 1.5 times as fast in both ways.
 
-| Operation | Representative parameters | Median (ms) | FPS | Effective GB/s |
-|---|---|---:|---:|---:|
-| `resize` | 1920x1080 -> 960x540, `nearest` | 0.074 | 13579.6 | 422.4 |
-| `resize` | 1920x1080 -> 3840x2160, `lanczos4` | 0.980 | 1020.2 | 126.9 |
-| `from_tensor` | CHW uint16, 10-bit -> float32 HWC | 0.122 | 8222.3 | 306.9 |
-| YUVA444P packing (legacy API) | 12-bit legal, alpha full | 0.117 | 8563.1 | 426.2 |
-| `rgb_to_rgb` | ACEScg linear -> sRGB sRGB | 0.141 | 7106.3 | 353.7 |
-| `rgb_to_hsv` | label-driven scene values | 0.121 | 8276.1 | 411.9 |
-| `rgb_to_rgb` | BT.2408 direct mapping -> Rec.2020 pq | 0.173 | 5793.1 | 288.3 |
-| `apply_lut` | 65^3 LUT, tetrahedral | 0.367 | 2726.8 | 135.7 |
-| `text` | single-line CJK, size 64, one outline, 4x supersampling | 0.401 | 2496.5 | 124.2 |
-| `color_bars` | FHD ARIB STD-B28 normalized | 0.091 | 10969.6 | 273.0 |
-| `read_image` | FHD HALF RGB EXR ZIP, unchanged, temporary-file I/O included | 40.758 | 24.5 | 0.6 |
-| `write_exr` | FHD fp32 RGB to EXR ZIP/HALF, dtype omitted, temporary-file I/O included | 40.572 | 24.6 | 0.9 |
+| Operation | Compared with | Input and settings | Speed-up (A) | Speed-up (B) |
+|---|---|---|---:|---:|
+| Gaussian blur | OpenCV, 24 threads | FHD float32 RGB, σ = 1 | 36.02× | 4.45× |
+| Lens blur | OpenCV `filter2D`, 24 threads | FHD float32 RGB, disk radius 4 | 30.01× | 6.63× |
+| Resize | OpenCV, 24 threads | FHD float32 RGB to 960×540, area | 46.44× | 4.35× |
+| JPEG read | Pillow with libjpeg-turbo, 1 thread | FHD uint8 RGB, quality 75, 4:2:0 | 24.00× | 21.12× |
+| JPEG write | Pillow with libjpeg-turbo, 1 thread | FHD uint8 RGB, quality 75, 4:2:0 | 8.31× | 7.65× |
+| PNG read | Pillow with zlib, 1 thread | FHD uint8 RGB, level 6 | 2.99× | 2.64× |
+| PNG write | Pillow with zlib, 1 thread | FHD uint8 RGB, level 6 | 63.60× | 55.33× |
+| EXR read | OpenEXR, 1 thread | FHD HALF RGB, DWAB level 45 | 7.43× | 6.65× |
+| EXR write | OpenEXR, 1 thread | FHD HALF RGB, ZIP | 17.21× | 16.96× |
+| JPEG 2000 read | OpenJPEG through imagecodecs, 1 thread | FHD 12-bit RGB, lossless | 27.21× | 27.10× |
+| JPEG 2000 write | OpenJPEG through imagecodecs, 1 thread | FHD 12-bit RGB, lossless | 19.03× | 18.96× |
+| HTJ2K read | OpenJPH through imagecodecs, 1 thread | FHD 12-bit RGB, lossless | 24.67× | 22.52× |
+| HTJ2K write | OpenJPH through imagecodecs, 1 thread | FHD 12-bit RGB, lossless | 3.40× | 3.40× |
+| ACES 2.0 output transform | OpenColorIO, 1 thread | FHD float32 RGB, ACEScg to Rec.709 100 nit | 7397.27× | 7116.69× |
+| 3D LUT | OpenColorIO, 1 thread | FHD float32 RGB, 33³ tetrahedral | 450.69× | 394.82× |
+| VMAF, per frame | libvmaf with AVX, 1 thread | FHD float32 RGB, 48 frames, `vmaf_v0.6.1` | 134.55× | 120.63× |
 
-These figures describe this system and workload, not a hardware-independent guarantee. File and encoded-byte
-boundaries have different I/O-inclusive conditions. See [the full performance report](https://sync-dev-org.github.io/pixtreme/performance/) for every
-case, distribution statistics, and the complete methodology.
-
-EXR reads support scanline and tiled, single- and multipart files across all ten compression tokens; writes produce
-single-part scanline files for the same ten tokens. Every path uses a pixtreme-owned implementation, with no OpenEXR
-runtime dependency or fallback. Routing is fixed in source rather than benchmarked at runtime: NONE uses the native
-read lane; ZIP, ZIPS, and PXR24 use custom CPU reads; the remaining reads and every write use GPU lanes. A float32
-Frame written without `dtype` stores HALF by default; pass `dtype="float32"` for explicit FLOAT storage. On the system
-above, the default ZIP/HALF path measured 40.758 ms to read unchanged and 40.572 ms to write, including temporary-file
-I/O.
-
-**Faster WebP decoding in 2.1.0.** WebP file reads and decoding from bytes now use pixtreme's C++ and CUDA decoder
-(VP8, VP8L, and alpha), writing pixels directly into a GPU Frame. In same-session comparisons with the former
-libwebp decode path, RGB and lossless RGBA were about 1.4–1.5 times as fast, and lossy RGBA about 1.1 times as fast.
-For FHD (1920×1080) uint8 images on an RTX A6000 with CUDA 13.2 under WSL2, read/decode medians were
-22.137/20.515 ms for lossless RGB, 23.300/20.903 ms for lossless RGBA, and 92.719/91.988 ms for lossy RGBA.
-File reads include temporary-file I/O; bytes decoding includes host-byte exchange, and both include synchronization
-until GPU output is ready. See the [WebP performance comparison](https://sync-dev-org.github.io/pixtreme/performance/#webp-decoder-replacement)
-for the baseline CPU builds, inputs, and sampling conditions. Still-image I/O supports RGBA with alpha. Malformed
-WebP input identified under RFC 6386 or RFC 9649 is rejected with a reason and a remedy. Encoding uses statically
-linked libwebp on the CPU and accepts `method` and `quality`.
+FHD is 1920×1080. Measured on an NVIDIA GeForce RTX 5090 and an Intel Xeon w5-3425 with NVIDIA driver 617.42 and
+CUDA runtime 13.2, under WSL2 on Windows, from 2026-11-17 to 2026-11-22, with pixtreme development builds after
+2.26.0. Results depend on the workload and the comparison method. The
+[performance report](https://sync-dev-org.github.io/pixtreme/performance/#library-comparisons) keeps every measured
+condition, including those where the CPU library is faster, with library versions, thread counts and output checks.
+Its [full results](https://sync-dev-org.github.io/pixtreme/performance/#full-results) give pixtreme's own timings,
+including operations without a CPU comparison.
 
 ## Requirements
 
@@ -225,11 +212,21 @@ text_path = px.draw.transform(text_path, translate=(48, 96))
 captioned = px.draw.render(display, px.draw.add_fill(text_path, color=(1.0, 0.8, 0.2)), aa="supersample")
 ```
 
-## Full performance
+## Image formats
 
-[the full performance report](https://sync-dev-org.github.io/pixtreme/performance/) contains the recorded measured cases, including mean, median, FPS, p5, p95,
-effective bandwidth, parameters, and the 94 cases whose median exceeds 1 ms. It also separates GPU-device throughput
-from temporary-file and encoded-byte I/O measurements.
+`px.io` reads and writes PNG, JPEG, TIFF, JPEG 2000, HTJ2K, WebP, BMP, PNM / PAM, EXR, TGA, HDR and DPX images as
+files or bytes.
+
+EXR reads support scanline and tiled, single- and multipart files across all ten compression tokens; writes produce
+single-part scanline files for the same ten tokens. Every path uses a pixtreme-owned implementation, with no OpenEXR
+runtime dependency or fallback. Routing is fixed in source rather than benchmarked at runtime: NONE uses the native
+read lane; ZIP, ZIPS, and PXR24 use custom CPU reads; the remaining reads and every write use GPU lanes. A float32
+Frame written without `dtype` stores HALF by default; pass `dtype="float32"` for explicit FLOAT storage.
+
+WebP file reads and decoding from bytes use pixtreme's C++ and CUDA decoder (VP8, VP8L, and alpha), writing pixels
+directly into a GPU Frame. Still-image I/O supports RGBA with alpha. Malformed WebP input identified under RFC 6386
+or RFC 9649 is rejected with a reason and a remedy. Encoding uses statically linked libwebp on the CPU and accepts
+`method` and `quality`.
 
 ## Color management
 
