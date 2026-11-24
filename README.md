@@ -7,7 +7,7 @@
 
 GPU-first image processing for C, C++ and Python, built on CUDA.
 
-**[API reference and documentation](https://sync-dev-org.github.io/pixtreme/docs/)** — the complete public API (14 modules, 89 operations) with per-function contracts, plus the full performance report.
+**[API reference and documentation](https://sync-dev-org.github.io/pixtreme/docs/)** — the complete public API (15 modules, 169 public functions) with per-function contracts, plus the full performance report.
 
 ## Why pixtreme
 
@@ -31,7 +31,7 @@ construct a new `px.core.Frame` and copy its colorspace, gamma, channels, matrix
   where their contracts allow it.
 - Floating-point working values are not clipped to `[0, 1]`: negative values, highlights above 1.0, and filter
   overshoot remain valid scene data until an explicit quantization or clipping boundary.
-- The package root exposes 14 focused modules, including `core`, and `__version__`. Named tokens match
+- The package root exposes 15 focused modules, including `core`, and `__version__`. Named tokens match
   case-insensitively and separator-insensitively (`Rec.709`, `rec 709`, and `REC_709` name the same token; see the
   [token reference](https://sync-dev-org.github.io/pixtreme/tokens/)), are validated immediately, and have no
   environment-dependent defaults.
